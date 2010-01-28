@@ -2082,8 +2082,7 @@ h5tools_print_simple_subset(FILE *stream, const h5tool_format_t *info, h5tools_c
     } /* hyperslab_count loop */
 
 CATCH
-
-    if (sm_buf)
+    if(sm_buf)
         HDfree(sm_buf);
 
     return ret_value;
@@ -3385,10 +3384,9 @@ h5tools_print_enum(h5tools_str_t *buffer, hid_t type)
     }
 
 CATCH
-
     if(name) {
         /* Release resources */
-        for (i = 0; i < nmembs; i++)
+        for(i = 0; i < nmembs; i++)
             if(name[i])
                 free(name[i]);
         free(name);
@@ -3400,7 +3398,7 @@ CATCH
     if(super >= 0 && H5Tclose(super) < 0)
         H5E_THROW(FAIL, H5E_tools_min_id_g, "Could not close datatype's super class");
 
-    if (0 == nmembs)
+    if(0 == nmembs)
         h5tools_str_append(buffer, "\n<empty>");
 
     return ret_value;

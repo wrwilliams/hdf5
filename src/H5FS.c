@@ -382,7 +382,7 @@ HDfprintf(stderr, "%s: Real sections to store in file\n", FUNC);
                     fspace->alloc_sect_size = (size_t)fspace->sect_size;
 
                     /* Mark free space header as dirty */
-                    if(H5AC_mark_pinned_or_protected_entry_dirty(f, fspace) < 0)
+                    if(H5AC_mark_pinned_or_protected_entry_dirty(fspace) < 0)
                         HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
                 } /* end if */
             } /* end if */
@@ -439,7 +439,7 @@ HDfprintf(stderr, "%s: Section info went 'go away'\n", FUNC);
                         fspace->alloc_sect_size = 0;
 
                         /* Mark free space header as dirty */
-                        if(H5AC_mark_pinned_or_protected_entry_dirty(f, fspace) < 0)
+                        if(H5AC_mark_pinned_or_protected_entry_dirty(fspace) < 0)
                             HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
                     } /* end else */
                 } /* end if */
@@ -455,7 +455,7 @@ HDfprintf(stderr, "%s: Section info is NOT for file free space\n", FUNC);
                     fspace->alloc_sect_size = 0;
 
                     /* Mark free space header as dirty */
-                    if(H5AC_mark_pinned_or_protected_entry_dirty(f, fspace) < 0)
+                    if(H5AC_mark_pinned_or_protected_entry_dirty(fspace) < 0)
                         HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
 
                     /* Free previous serialized sections disk space */
@@ -559,8 +559,15 @@ H5FS_new(size_t nclasses, const H5FS_section_class_t *classes[],
     ret_value = fspace;
 
 done:
-    if(!ret_value && fspace)
-        fspace = H5FL_FREE(H5FS_t, fspace);
+    if(!ret_value)
+        if(fspace) {
+            /* Should probably call the class 'term' callback for all classes
+             *  that have had their 'init' callback called... -QAK
+             */
+            if(fspace->sect_cls)
+                fspace->sect_cls = (H5FS_section_class_t *)H5FL_SEQ_FREE(H5FS_section_class_t, fspace->sect_cls);
+            fspace = H5FL_FREE(H5FS_t, fspace);
+        } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS_new() */
@@ -629,7 +636,7 @@ HDfprintf(stderr, "%s: Entering, fpace->addr = %a, fspace->rc = %u\n", FUNC, fsp
 
     /* Check if we should pin the header in the cache */
     if(fspace->rc == 0 && H5F_addr_defined(fspace->addr))
-        if(H5AC_pin_protected_entry(f, fspace) < 0)
+        if(H5AC_pin_protected_entry(fspace) < 0)
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTPIN, FAIL, "unable to pin free space header")
 
     /* Increment reference count on header */
@@ -675,7 +682,7 @@ HDfprintf(stderr, "%s: Entering, fpace->addr = %a, fspace->rc = %u\n", FUNC, fsp
     /* Check if we should unpin the header in the cache */
     if(fspace->rc == 0) {
         if(H5F_addr_defined(fspace->addr)) {
-            if(H5AC_unpin_entry(f, fspace) < 0)
+            if(H5AC_unpin_entry(fspace) < 0)
                 HGOTO_ERROR(H5E_FSPACE, H5E_CANTUNPIN, FAIL, "unable to unpin free space header")
         } /* end if */
         else {
@@ -719,7 +726,7 @@ HDfprintf(stderr, "%s: Marking free space header as dirty\n", FUNC);
     /* Check if the free space manager is persistant */
     if(H5F_addr_defined(fspace->addr))
         /* Mark header as dirty in cache */
-        if(H5AC_mark_pinned_or_protected_entry_dirty(f, fspace) < 0)
+        if(H5AC_mark_pinned_or_protected_entry_dirty(fspace) < 0)
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
 
 done:

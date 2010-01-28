@@ -42,6 +42,7 @@ SRCFILE8=h5diff_dset2.h5
 SRCFILE9=h5diff_hyper1.h5
 SRCFILE10=h5diff_hyper2.h5
 SRCFILE11=h5diff_empty.h5
+SRCFILE12=h5diff_links.h5
 
 FILE1="$INDIR/$SRCFILE1"
 FILE2="$INDIR/$SRCFILE2"
@@ -54,7 +55,12 @@ FILE8="$INDIR/$SRCFILE8"
 FILE9="$INDIR/$SRCFILE9"
 FILE10="$INDIR/$SRCFILE10"
 FILE11="$INDIR/$SRCFILE11"
+FILE12="$INDIR/$SRCFILE12"
 
+
+TESTNAME=h5diff
+EXIT_SUCCESS=0
+EXIT_FAILURE=1
 
 H5DIFF=h5diff               # The tool name
 H5DIFF_BIN=`pwd`/$H5DIFF    # The path of the tool binary
@@ -80,6 +86,7 @@ test -d ./testfiles || mkdir ./testfiles
 while [ $# -gt 0 ]; do
     case "$1" in
     -p)	# reset the tool name and bin to run ph5diff tests
+	TESTNAME=ph5diff
 	H5DIFF=ph5diff               # The tool name
 	H5DIFF_BIN=`pwd`/$H5DIFF
 	pmode=yes
@@ -201,7 +208,6 @@ TOOLTEST() {
     fi
 
     # Run test.
-    #TESTING $H5DIFF $@
     (
 	#echo "#############################"
 	#echo "Expected output for '$H5DIFF $@'" 
@@ -322,11 +328,11 @@ TESTING $H5DIFF -v $SRCFILE1 $SRCFILE2
 TOOLTEST h5diff_17.txt -v $FILE1 $FILE2   
 
 # 1.8 test 32-bit INFINITY
-TESTING $H5DIFF $SRCFILE1 $SRCFILE1 /g1/fp19
+TESTING $H5DIFF -v $SRCFILE1 $SRCFILE1 /g1/fp19
 TOOLTEST h5diff_171.txt -v $SRCFILE1 $SRCFILE1 /g1/fp19
 
 # 1.8 test 64-bit INFINITY
-TESTING $H5DIFF $SRCFILE1 $SRCFILE1 /g1/fp20
+TESTING $H5DIFF -v $SRCFILE1 $SRCFILE1 /g1/fp20
 TOOLTEST h5diff_172.txt -v $SRCFILE1 $SRCFILE1 /g1/fp20
 
 # 1.8 quiet mode 
@@ -610,6 +616,13 @@ TESTING $H5DIFF -c $SRCFILE2 $SRCFILE2 g2/dset8  g2/dset9
 TOOLTEST h5diff_207.txt -c $FILE2 $FILE2 g2/dset8  g2/dset9
 
 
+# ##############################################################################
+# # Links
+# ##############################################################################
+# test for bug1749
+TESTING $H5DIFF -v $SRCFILE12 $SRCFILE12 /link_g1 /link_g2
+TOOLTEST h5diff_300.txt -v $FILE12 $FILE12 /link_g1 /link_g2
+
 
 
 # ##############################################################################
@@ -617,7 +630,9 @@ TOOLTEST h5diff_207.txt -c $FILE2 $FILE2 g2/dset8  g2/dset9
 # ##############################################################################
 
 if test $nerrors -eq 0 ; then
-   echo "All $H5DIFF tests passed."
+    echo "All $TESTNAME tests passed."
+    exit $EXIT_SUCCESS
+else
+    echo "$TESTNAME tests failed with $nerrors errors."
+    exit $EXIT_FAILURE
 fi
-
-exit $nerrors

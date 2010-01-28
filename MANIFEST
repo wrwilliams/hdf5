@@ -88,6 +88,7 @@
 ./config/i386-pc-cygwin32
 ./config/i686-pc-cygwin
 ./config/ia64-linux-gnu
+./config/ibm-aix
 ./config/intel-fflags
 ./config/intel-flags
 ./config/irix6.x
@@ -595,6 +596,7 @@
 ./src/H5HL.c
 ./src/H5HLcache.c
 ./src/H5HLdbg.c
+./src/H5HLint.c
 ./src/H5HLpkg.h
 ./src/H5HLprivate.h
 ./src/H5HLpublic.h
@@ -977,8 +979,6 @@
 ./tools/h5import/testfiles/in64.txt
 ./tools/h5import/testfiles/in32.txt
 ./tools/h5import/testfiles/in16.txt
-
-
 
 
 # h5diff sources
@@ -1488,6 +1488,8 @@
 ./tools/h5diff/testfiles/h5diff_205.txt
 ./tools/h5diff/testfiles/h5diff_206.txt
 ./tools/h5diff/testfiles/h5diff_207.txt
+./tools/h5diff/testfiles/h5diff_300.txt
+./tools/h5diff/testfiles/h5diff_links.h5
 
 
 
@@ -1651,10 +1653,8 @@
 ./hl/tools/gif2h5/writehdf.c
 ./hl/tools/gif2h5/h52gifgentst.c
 ./hl/tools/gif2h5/h52giftest.sh
-# testfiles
-./hl/tools/testfiles/image1.gif
-./hl/tools/testfiles/h52giftst.h5
-
+./hl/tools/gif2h5/testfiles/image1.gif
+./hl/tools/gif2h5/testfiles/h52giftst.h5
 
 # hl fortran
 ./hl/fortran/COPYING

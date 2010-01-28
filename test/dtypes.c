@@ -531,21 +531,21 @@ test_compound_1(void)
         ret=H5Tinsert(complex_id, "compound", 0, complex_id);
     } H5E_END_TRY;
     if (ret>=0) {
-        FAIL_PUTS_ERROR("Inserted compound datatype into itself?\n");
+        FAIL_PUTS_ERROR("Inserted compound datatype into itself?");
     } /* end if */
 
     /* Add a couple fields */
-    if (H5Tinsert(complex_id, "real", HOFFSET(complex_t, re),
-		  H5T_NATIVE_DOUBLE) < 0) goto error;
-    if (H5Tinsert(complex_id, "imaginary", HOFFSET(complex_t, im),
-		  H5T_NATIVE_DOUBLE) < 0) goto error;
+    if(H5Tinsert(complex_id, "real", HOFFSET(complex_t, re), H5T_NATIVE_DOUBLE) < 0)
+        goto error;
+    if(H5Tinsert(complex_id, "imaginary", HOFFSET(complex_t, im), H5T_NATIVE_DOUBLE) < 0)
+        goto error;
 
     /* Test some functions that aren't supposed to work for compound type */
     H5E_BEGIN_TRY {
         size=H5Tget_precision(complex_id);
     } H5E_END_TRY;
     if (size>0) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     size = 128;
@@ -553,77 +553,77 @@ test_compound_1(void)
         ret = H5Tset_precision(complex_id, size);
     } H5E_END_TRY;
     if (ret>=0) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         ret = H5Tget_pad(complex_id, &lsb, &msb);
     } H5E_END_TRY;
     if (ret>=0) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         size = H5Tget_ebias(complex_id);
     } H5E_END_TRY;
     if (size>0) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         lsb = H5Tget_inpad(complex_id);
     } H5E_END_TRY;
     if (lsb>=0) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         cset = H5Tget_cset(complex_id);
     } H5E_END_TRY;
     if (cset>-1) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         strpad = H5Tget_strpad(complex_id);
     } H5E_END_TRY;
     if (strpad>-1) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         offset = H5Tget_offset(complex_id);
     } H5E_END_TRY;
     if (offset>=0) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         order = H5Tget_order(complex_id);
     } H5E_END_TRY;
     if (order>-1) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         sign = H5Tget_sign(complex_id);
     } H5E_END_TRY;
     if (sign>-1) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         tag = H5Tget_tag(complex_id);
     } H5E_END_TRY;
     if (tag) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         super = H5Tget_super(complex_id);
     } H5E_END_TRY;
     if (super>=0) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     if (H5Tclose (complex_id) < 0) 
@@ -4151,53 +4151,53 @@ test_conv_str_3(void)
         ret=H5Tset_precision(type, nelmts);
     } H5E_END_TRY;
     if (ret>=0) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         size = H5Tget_ebias(type);
     } H5E_END_TRY;
     if (size>0) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         inpad=H5Tget_inpad(type);
     } H5E_END_TRY;
     if (inpad>-1) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         sign=H5Tget_sign(type);
     } H5E_END_TRY;
     if (sign>-1) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         tag = H5Tget_tag(type);
     } H5E_END_TRY;
     if (tag) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     H5E_BEGIN_TRY {
         super = H5Tget_super(type);
     } H5E_END_TRY;
     if (super>=0) {
-        FAIL_PUTS_ERROR("Operation not allowed for this type.\n");
+        FAIL_PUTS_ERROR("Operation not allowed for this type.");
     } /* end if */
 
     PASSED();
     ret_value = 0;
+
 error:
-    if (buf) 
+    if(buf) 
         HDfree(buf);
-    if (tag) 
+    if(tag) 
         HDfree(tag);
-    if(ret_value)
-        reset_hdf5();
+    reset_hdf5();
     return ret_value;  /* Number of errors */
 }
 
@@ -4475,7 +4475,7 @@ test_conv_bitfield(void)
 static int
 test_bitfield_funcs(void)
 {
-    hid_t		type=-1, super=-1;
+    hid_t		type=-1, ntype=-1, super=-1;
     int                 size;
     char*               tag;
     H5T_pad_t           inpad;
@@ -4500,6 +4500,7 @@ test_bitfield_funcs(void)
     if(H5Tset_pad(type, H5T_PAD_ONE, H5T_PAD_ONE)) goto error;
     if((size=H5Tget_size(type))==0) goto error;
     if(H5Tset_order(type, H5T_ORDER_BE) < 0) goto error;
+    if((ntype = H5Tget_native_type(type, H5T_DIR_ASCEND)) < 0) goto error;
 
     H5E_BEGIN_TRY {
         size=H5Tget_ebias(type);
@@ -4564,16 +4565,8 @@ test_bitfield_funcs(void)
         goto error;
     } /* end if */
 
-    H5E_BEGIN_TRY {
-        super = H5Tget_native_type(type, H5T_DIR_ASCEND);
-    } H5E_END_TRY;
-    if (super>=0) {
-        H5_FAILED();
-        printf("Operation not allowed for this type.\n");
-        goto error;
-    } /* end if */
-
     H5Tclose(type);
+    H5Tclose(ntype);
     PASSED();
     reset_hdf5();
     return 0;

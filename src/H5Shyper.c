@@ -3531,6 +3531,7 @@ done:
 herr_t
 H5S_hyper_add_span_element(H5S_t *space, unsigned rank, hsize_t *coords)
 {
+    H5S_hyper_span_info_t *head = NULL;    /* Pointer to new head of span tree */
     herr_t      ret_value = SUCCEED;       /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5S_hyper_add_span_element)
@@ -3541,8 +3542,6 @@ H5S_hyper_add_span_element(H5S_t *space, unsigned rank, hsize_t *coords)
 
     /* Check if this is the first element in the selection */
     if(NULL == space->select.sel_info.hslab) {
-        H5S_hyper_span_info_t *head = NULL;    /* Pointer to new head of span tree */
-
         /* Allocate a span info node */
         if(NULL == (head = H5FL_MALLOC(H5S_hyper_span_info_t)))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate hyperslab span")
@@ -3554,16 +3553,13 @@ H5S_hyper_add_span_element(H5S_t *space, unsigned rank, hsize_t *coords)
         head->scratch = 0;
 
         /* Build span tree for this coordinate */
-        if(NULL == (head->head = H5S_hyper_coord_to_span(rank, coords))) {
-            H5S_hyper_free_span_info(head);
+        if(NULL == (head->head = H5S_hyper_coord_to_span(rank, coords)))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate hyperslab span")
-        }
 
         /* Allocate selection info */
-        if(NULL == (space->select.sel_info.hslab = H5FL_MALLOC(H5S_hyper_sel_t))) {
-            H5S_hyper_free_span_info(head);
+        if(NULL == (space->select.sel_info.hslab = H5FL_MALLOC(H5S_hyper_sel_t)))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate hyperslab info")
-        }
+
         /* Set the selection to the new span tree */
         space->select.sel_info.hslab->span_lst = head;
 
@@ -3577,7 +3573,7 @@ H5S_hyper_add_span_element(H5S_t *space, unsigned rank, hsize_t *coords)
         space->select.num_elem = 1;
     } /* end if */
     else {
-        if(H5S_hyper_add_span_element_helper(space->select.sel_info.hslab->span_lst,rank,coords) < 0)
+        if(H5S_hyper_add_span_element_helper(space->select.sel_info.hslab->span_lst, rank, coords) < 0)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate hyperslab span")
 
         /* Increment # of elements in selection */
@@ -3585,6 +3581,10 @@ H5S_hyper_add_span_element(H5S_t *space, unsigned rank, hsize_t *coords)
     } /* end else */
 
 done:
+    if(ret_value < 0)
+        if(head)
+            H5S_hyper_free_span_info(head);
+
     FUNC_LEAVE_NOAPI(ret_value)
 }   /* H5S_hyper_add_span_element() */
 
@@ -5436,25 +5436,25 @@ H5S_hyper_make_spans (unsigned rank, const hsize_t *start, const hsize_t *stride
     FUNC_ENTER_NOAPI_NOINIT(H5S_hyper_make_spans);
 
     /* Check args */
-    assert (rank>0);
-    assert (start);
-    assert (stride);
-    assert (count);
-    assert (block);
+    HDassert(rank > 0);
+    HDassert(start);
+    HDassert(stride);
+    HDassert(count);
+    HDassert(block);
 
     /* Start creating spans in fastest changing dimension */
     down = NULL;
-    for(i=(rank-1); i>=0; i--) {
+    for(i = (rank - 1); i >= 0; i--) {
 
         /* Start a new list in this dimension */
         head = NULL;
         last_span = NULL;
 
-        /* Generate all the spans segments for this dimension */
-        for(u=0, stride_iter=0; u<count[i]; u++,stride_iter+=stride[i]) {
+        /* Generate all the span segments for this dimension */
+        for(u = 0, stride_iter = 0; u < count[i]; u++, stride_iter += stride[i]) {
             /* Allocate a span node */
-            if((span = H5FL_MALLOC(H5S_hyper_span_t)) == NULL)
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "can't allocate hyperslab span");
+            if(NULL == (span = H5FL_MALLOC(H5S_hyper_span_t)))
+                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "can't allocate hyperslab span")
 
             /* Set the span's basic information */
             span->low = start[i] + stride_iter;
@@ -5483,7 +5483,7 @@ H5S_hyper_make_spans (unsigned rank, const hsize_t *start, const hsize_t *stride
         } /* end for */
 
         /* Allocate a span info node */
-        if((down = H5FL_MALLOC(H5S_hyper_span_info_t)) == NULL)
+        if(NULL == (down = H5FL_MALLOC(H5S_hyper_span_info_t)))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "can't allocate hyperslab span");
 
         /* Set the reference count */
@@ -5513,20 +5513,20 @@ done:
             do {
                 if(down) {
                     head = down->head;
-                    H5FL_FREE(H5S_hyper_span_info_t,down);
-                }
+                    (void)H5FL_FREE(H5S_hyper_span_info_t, down);
+                } /* end if */
                 down = head->down;
     
                 while(head) {
                     last_span = head->next;
-                    H5FL_FREE(H5S_hyper_span_t,head);
+                    (void)H5FL_FREE(H5S_hyper_span_t, head);
                     head = last_span;
-                }   /*end while */
-    
+                } /* end while */
             } while(down);
-        }
-    }
-    FUNC_LEAVE_NOAPI(ret_value);
+        } /* end if */
+    } /* end if */
+
+    FUNC_LEAVE_NOAPI(ret_value)
 }   /* H5S_hyper_make_spans() */
 
 
@@ -6986,7 +6986,7 @@ H5Scombine_hyperslab(hid_t space_id, H5S_seloper_t op, const hsize_t start[],
 
     /* Copy the first dataspace */
     if (NULL == (new_space = H5S_copy (space, TRUE, TRUE)))
-        HGOTO_ERROR (H5E_DATASPACE, H5E_CANTINIT, NULL, "unable to copy data space");
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, NULL, "unable to copy data space");
 
     /* Go modify the selection in the new dataspace */
     if (H5S_select_hyperslab(new_space, op, start, stride, count, block)<0)
@@ -6994,7 +6994,7 @@ H5Scombine_hyperslab(hid_t space_id, H5S_seloper_t op, const hsize_t start[],
 
     /* Atomize */
     if ((ret_value=H5I_register (H5I_DATASPACE, new_space, TRUE))<0)
-        HGOTO_ERROR (H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register dataspace atom");
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register dataspace atom");
 
 done:
     if (ret_value<0 && new_space)
@@ -7042,7 +7042,7 @@ H5S_combine_select (H5S_t *space1, H5S_seloper_t op, H5S_t *space2)
 
     /* Copy the first dataspace */
     if (NULL == (new_space = H5S_copy (space1, TRUE, TRUE)))
-        HGOTO_ERROR (H5E_DATASPACE, H5E_CANTINIT, NULL, "unable to copy data space");
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, NULL, "unable to copy data space");
 
     /* Free the current selection for the new dataspace */
     if(H5S_SELECT_RELEASE(new_space)<0)
@@ -7122,7 +7122,7 @@ H5Scombine_select(hid_t space1_id, H5S_seloper_t op, hid_t space2_id)
 
     /* Atomize */
     if ((ret_value=H5I_register (H5I_DATASPACE, new_space, TRUE))<0)
-        HGOTO_ERROR (H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register dataspace atom");
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register dataspace atom");
 
 done:
     if (ret_value<0 && new_space)
@@ -7572,7 +7572,8 @@ partial_done:   /* Yes, goto's are evil, so sue me... :-) */
         } /* end while */
 
         /* Check if we are done */
-        if(curr_span && (io_bytes_left==0 || curr_seq>=maxseq)) {
+        if(io_bytes_left==0 || curr_seq>=maxseq) {
+            HDassert(curr_span);
             abs_arr[fast_dim]=curr_span->low+(span_size/elem_size);
 
             /* Check if we are still within the span */

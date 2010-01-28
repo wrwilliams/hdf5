@@ -931,11 +931,13 @@ hsize_t diff(hid_t file1_id,
 			/* the rest (-c, none, ...) */
             else
             {
-                do_print_objname("dataset", path1, path2);
                 nfound = diff_dataset(file1_id, file2_id, path1, path2, options);
                 /* not comparable, no display the different number */
-                if (!options->not_cmp)
+                if (!options->not_cmp && nfound)
+                {
+                    do_print_objname("dataset", path1, path2);
                     print_found(nfound);	
+                }
             }
             break;
 
@@ -1024,7 +1026,7 @@ hsize_t diff(hid_t file1_id,
 
             if(H5Lget_info(file1_id, path1, &li1, H5P_DEFAULT) < 0)
                 goto out;
-            if(H5Lget_info(file1_id, path1, &li2, H5P_DEFAULT) < 0)
+            if(H5Lget_info(file2_id, path2, &li2, H5P_DEFAULT) < 0)
                 goto out;
 
             buf1 = HDmalloc(li1.u.val_size);
@@ -1062,7 +1064,7 @@ hsize_t diff(hid_t file1_id,
 
             if(H5Lget_info(file1_id, path1, &li1, H5P_DEFAULT) < 0)
                 goto out;
-            if(H5Lget_info(file1_id, path1, &li2, H5P_DEFAULT) < 0)
+            if(H5Lget_info(file2_id, path2, &li2, H5P_DEFAULT) < 0)
                 goto out;
 
             /* Only external links will have a query function registered */
@@ -1085,16 +1087,6 @@ hsize_t diff(hid_t file1_id,
 
                 /* If the buffers are the same size, compare them */
                 if(li1.u.val_size == li2.u.val_size) {
-                    if(H5Lget_val(file1_id, path1, buf1, li1.u.val_size, H5P_DEFAULT) < 0) {
-                        HDfree(buf1);
-                        HDfree(buf2);
-                        goto out;
-                    } /* end if */
-                    if(H5Lget_val(file2_id, path2, buf2, li2.u.val_size, H5P_DEFAULT) < 0) {
-                        HDfree(buf1);
-                        HDfree(buf2);
-                        goto out;
-                    } /* end if */
                     ret = HDmemcmp(buf1, buf2, li1.u.val_size);
                 }
                 else

@@ -166,9 +166,6 @@ int h5tools_canreadf(const char* name, /* object name, serves also as boolean pr
  */
 int h5tools_can_encode( H5Z_filter_t filtn)
 {
-
- unsigned int filter_config_flags;
-
   switch (filtn)
   {
     /* user defined filter     */
@@ -177,13 +174,16 @@ int h5tools_can_encode( H5Z_filter_t filtn)
 
   case H5Z_FILTER_DEFLATE:
 #ifndef H5_HAVE_FILTER_DEFLATE
-    return 0;
+   return 0;
 #endif
    break;
   case H5Z_FILTER_SZIP:
 #ifndef H5_HAVE_FILTER_SZIP
-    return 0;
-#endif
+   return 0;
+#else
+   {
+   unsigned int filter_config_flags;
+
    if(H5Zget_filter_info(filtn, &filter_config_flags)<0)
        return -1;
    if ((filter_config_flags &
@@ -205,6 +205,8 @@ int h5tools_can_encode( H5Z_filter_t filtn)
           (H5Z_FILTER_CONFIG_ENCODE_ENABLED|H5Z_FILTER_CONFIG_DECODE_ENABLED)) {
     return 1;
    }
+   }
+#endif
    break;
   case H5Z_FILTER_SHUFFLE:
 #ifndef H5_HAVE_FILTER_SHUFFLE
