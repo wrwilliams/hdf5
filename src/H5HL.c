@@ -238,7 +238,7 @@ H5HL_dblk_realloc(H5F_t *f, hid_t dxpl_id, H5HL_t *heap, size_t new_heap_size)
             HDassert(heap->prfx);
 
             /* Resize the heap prefix in the cache */
-            if(H5AC_resize_pinned_entry(heap->prfx, (size_t)(heap->prfx_size + new_heap_size)) < 0)
+            if(H5AC_resize_entry(heap->prfx, (size_t)(heap->prfx_size + new_heap_size)) < 0)
                 HGOTO_ERROR(H5E_HEAP, H5E_CANTRESIZE, FAIL, "unable to resize heap in cache")
         } /* end if */
         else {
@@ -247,7 +247,7 @@ H5HL_dblk_realloc(H5F_t *f, hid_t dxpl_id, H5HL_t *heap, size_t new_heap_size)
             HDassert(heap->dblk);
 
             /* Resize the heap data block in the cache */
-            if(H5AC_resize_pinned_entry(heap->dblk, (size_t)new_heap_size) < 0)
+            if(H5AC_resize_entry(heap->dblk, (size_t)new_heap_size) < 0)
                 HGOTO_ERROR(H5E_HEAP, H5E_CANTRESIZE, FAIL, "unable to resize heap in cache")
         } /* end else */
     } /* end if */
@@ -260,7 +260,7 @@ H5HL_dblk_realloc(H5F_t *f, hid_t dxpl_id, H5HL_t *heap, size_t new_heap_size)
 
             /* Resize current heap prefix */
             heap->prfx_size = H5HL_SIZEOF_HDR(f);
-            if(H5AC_resize_pinned_entry(heap->prfx, (size_t)heap->prfx_size) < 0)
+            if(H5AC_resize_entry(heap->prfx, (size_t)heap->prfx_size) < 0)
                 HGOTO_ERROR(H5E_HEAP, H5E_CANTRESIZE, FAIL, "unable to resize heap prefix in cache")
 
             /* Insert data block into cache (pinned) */
@@ -276,12 +276,12 @@ H5HL_dblk_realloc(H5F_t *f, hid_t dxpl_id, H5HL_t *heap, size_t new_heap_size)
             /* (ignore [unlikely] case where heap data block ends up
              *      contiguous w/heap prefix again.
              */
-            if(H5AC_resize_pinned_entry(heap->dblk, (size_t)new_heap_size) < 0)
+            if(H5AC_resize_entry(heap->dblk, (size_t)new_heap_size) < 0)
                 HGOTO_ERROR(H5E_HEAP, H5E_CANTRESIZE, FAIL, "unable to resize heap data block in cache")
 
             /* Relocate the heap data block in the cache */
-            if(H5AC_rename(f, H5AC_LHEAP_DBLK, old_addr, new_addr) < 0)
-                HGOTO_ERROR(H5E_HEAP, H5E_CANTRENAME, FAIL, "unable to move heap data block in cache")
+            if(H5AC_move_entry(f, H5AC_LHEAP_DBLK, old_addr, new_addr) < 0)
+                HGOTO_ERROR(H5E_HEAP, H5E_CANTMOVE, FAIL, "unable to move heap data block in cache")
         } /* end else */
     } /* end else */
 
@@ -450,12 +450,13 @@ H5HL_protect(H5F_t *f, hid_t dxpl_id, haddr_t addr, H5AC_protect_t rw)
     /* Construct the user data for protect callback */
     prfx_udata.sizeof_size = H5F_SIZEOF_SIZE(f);
     prfx_udata.sizeof_addr = H5F_SIZEOF_ADDR(f);
+    prfx_udata.prfx_addr = addr;
     prfx_udata.sizeof_prfx = H5HL_SIZEOF_HDR(f);
     prfx_udata.loaded = FALSE;
     prfx_udata.free_block = H5HL_FREE_NULL;
 
     /* Protect the local heap prefix */
-    if(NULL == (prfx = (H5HL_prfx_t *)H5AC_protect(f, dxpl_id, H5AC_LHEAP_PRFX, addr, NULL, &prfx_udata, rw)))
+    if(NULL == (prfx = (H5HL_prfx_t *)H5AC_protect(f, dxpl_id, H5AC_LHEAP_PRFX, addr, &prfx_udata, rw)))
         HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, NULL, "unable to load heap prefix")
 
     /* Get the pointer to the heap */
@@ -479,7 +480,7 @@ H5HL_protect(H5F_t *f, hid_t dxpl_id, haddr_t addr, H5AC_protect_t rw)
             dblk_udata.loaded = FALSE;
 
             /* Protect the local heap data block */
-            if(NULL == (dblk = (H5HL_dblk_t *)H5AC_protect(f, dxpl_id, H5AC_LHEAP_DBLK, heap->dblk_addr, NULL, &dblk_udata, rw)))
+            if(NULL == (dblk = (H5HL_dblk_t *)H5AC_protect(f, dxpl_id, H5AC_LHEAP_DBLK, heap->dblk_addr, &dblk_udata, rw)))
                 HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, NULL, "unable to load heap data block")
 
             /* Pin the prefix, if the data block was loaded from file */
@@ -654,12 +655,12 @@ H5HL_dirty(H5HL_t *heap)
         /* Sanity check */
         HDassert(heap->dblk);
 
-        if(H5AC_mark_pinned_or_protected_entry_dirty(heap->dblk) < 0)
+        if(H5AC_mark_entry_dirty(heap->dblk) < 0)
             HGOTO_ERROR(H5E_HEAP, H5E_CANTMARKDIRTY, FAIL, "unable to mark heap data block as dirty")
     } /* end if */
 
     /* Mark heap prefix as dirty */
-    if(H5AC_mark_pinned_or_protected_entry_dirty(heap->prfx) < 0)
+    if(H5AC_mark_entry_dirty(heap->prfx) < 0)
         HGOTO_ERROR(H5E_HEAP, H5E_CANTMARKDIRTY, FAIL, "unable to mark heap prefix as dirty")
 
 done:
@@ -783,12 +784,12 @@ H5HL_insert(H5F_t *f, hid_t dxpl_id, H5HL_t *heap, size_t buf_size, const void *
             /* Check for prefix & data block contiguous */
             if(heap->single_cache_obj) {
                 /* Resize prefix+data block */
-                if(H5AC_resize_pinned_entry(heap->prfx, (size_t)(heap->prfx_size + new_dblk_size)) < 0)
+                if(H5AC_resize_entry(heap->prfx, (size_t)(heap->prfx_size + new_dblk_size)) < 0)
                     HGOTO_ERROR(H5E_HEAP, H5E_CANTRESIZE, UFAIL, "unable to resize heap prefix in cache")
             } /* end if */
             else {
                 /* Resize 'standalone' data block */
-                if(H5AC_resize_pinned_entry(heap->dblk, (size_t)new_dblk_size) < 0)
+                if(H5AC_resize_entry(heap->dblk, (size_t)new_dblk_size) < 0)
                     HGOTO_ERROR(H5E_HEAP, H5E_CANTRESIZE, UFAIL, "unable to resize heap data block in cache")
             } /* end else */
 
@@ -1066,12 +1067,13 @@ H5HL_delete(H5F_t *f, hid_t dxpl_id, haddr_t addr)
     /* Construct the user data for protect callback */
     prfx_udata.sizeof_size = H5F_SIZEOF_SIZE(f);
     prfx_udata.sizeof_addr = H5F_SIZEOF_ADDR(f);
+    prfx_udata.prfx_addr = addr;
     prfx_udata.sizeof_prfx = H5HL_SIZEOF_HDR(f);
     prfx_udata.loaded = FALSE;
     prfx_udata.free_block = H5HL_FREE_NULL;
 
     /* Protect the local heap prefix */
-    if(NULL == (prfx = (H5HL_prfx_t *)H5AC_protect(f, dxpl_id, H5AC_LHEAP_PRFX, addr, NULL, &prfx_udata, H5AC_WRITE)))
+    if(NULL == (prfx = (H5HL_prfx_t *)H5AC_protect(f, dxpl_id, H5AC_LHEAP_PRFX, addr, &prfx_udata, H5AC_WRITE)))
         HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, FAIL, "unable to load heap prefix")
 
     /* Get the pointer to the heap */
@@ -1088,7 +1090,7 @@ H5HL_delete(H5F_t *f, hid_t dxpl_id, haddr_t addr)
         dblk_udata.loaded = FALSE;
 
         /* Protect the local heap data block */
-        if(NULL == (dblk = (H5HL_dblk_t *)H5AC_protect(f, dxpl_id, H5AC_LHEAP_DBLK, heap->dblk_addr, NULL, &dblk_udata, H5AC_WRITE)))
+        if(NULL == (dblk = (H5HL_dblk_t *)H5AC_protect(f, dxpl_id, H5AC_LHEAP_DBLK, heap->dblk_addr, &dblk_udata, H5AC_WRITE)))
             HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, FAIL, "unable to load heap data block")
 
         /* Pin the prefix, if the data block was loaded from file */
@@ -1145,12 +1147,13 @@ H5HL_get_size(H5F_t *f, hid_t dxpl_id, haddr_t addr, size_t *size)
     /* Construct the user data for protect callback */
     prfx_udata.sizeof_size = H5F_SIZEOF_SIZE(f);
     prfx_udata.sizeof_addr = H5F_SIZEOF_ADDR(f);
+    prfx_udata.prfx_addr = addr;
     prfx_udata.sizeof_prfx = H5HL_SIZEOF_HDR(f);
     prfx_udata.loaded = FALSE;
     prfx_udata.free_block = H5HL_FREE_NULL;
 
     /* Protect the local heap prefix */
-    if(NULL == (prfx = (H5HL_prfx_t *)H5AC_protect(f, dxpl_id, H5AC_LHEAP_PRFX, addr, NULL, &prfx_udata, H5AC_READ)))
+    if(NULL == (prfx = (H5HL_prfx_t *)H5AC_protect(f, dxpl_id, H5AC_LHEAP_PRFX, addr, &prfx_udata, H5AC_READ)))
         HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, FAIL, "unable to load heap prefix")
 
     /* Get the pointer to the heap */
@@ -1198,12 +1201,13 @@ H5HL_heapsize(H5F_t *f, hid_t dxpl_id, haddr_t addr, hsize_t *heap_size)
     /* Construct the user data for protect callback */
     prfx_udata.sizeof_size = H5F_SIZEOF_SIZE(f);
     prfx_udata.sizeof_addr = H5F_SIZEOF_ADDR(f);
+    prfx_udata.prfx_addr = addr;
     prfx_udata.sizeof_prfx = H5HL_SIZEOF_HDR(f);
     prfx_udata.loaded = FALSE;
     prfx_udata.free_block = H5HL_FREE_NULL;
 
     /* Protect the local heap prefix */
-    if(NULL == (prfx = (H5HL_prfx_t *)H5AC_protect(f, dxpl_id, H5AC_LHEAP_PRFX, addr, NULL, &prfx_udata, H5AC_READ)))
+    if(NULL == (prfx = (H5HL_prfx_t *)H5AC_protect(f, dxpl_id, H5AC_LHEAP_PRFX, addr, &prfx_udata, H5AC_READ)))
         HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, FAIL, "unable to load heap prefix")
 
     /* Get the pointer to the heap */

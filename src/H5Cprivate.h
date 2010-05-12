@@ -119,7 +119,7 @@ typedef struct H5C_t H5C_t;
 
 #define H5C_CALLBACK__NO_FLAGS_SET		0x0
 #define H5C_CALLBACK__SIZE_CHANGED_FLAG		0x1
-#define H5C_CALLBACK__RENAMED_FLAG		0x2
+#define H5C_CALLBACK__MOVED_FLAG		0x2
 
 /* Actions that can be reported to 'notify' client callback */
 typedef enum H5C_notify_action_t {
@@ -134,8 +134,7 @@ typedef enum H5C_notify_action_t {
 typedef void *(*H5C_load_func_t)(H5F_t *f,
                                  hid_t dxpl_id,
                                  haddr_t addr,
-                                 const void *udata1,
-                                 void *udata2);
+                                 void *udata);
 typedef herr_t (*H5C_flush_func_t)(H5F_t *f,
                                    hid_t dxpl_id,
                                    hbool_t dest,
@@ -279,10 +278,10 @@ typedef herr_t (*H5C_log_flush_func_t)(H5C_t * cache_ptr,
  *
  * 		This field is set to FALSE in the protect call, and may
  * 		be set to TRUE by the
- * 		H5C_mark_pinned_or_protected_entry_dirty()
+ * 		H5C_mark_entry_dirty()
  * 		call at an time prior to the unprotect call.
  *
- * 		The H5C_mark_pinned_or_protected_entry_dirty() call exists
+ * 		The H5C_mark_entry_dirty() call exists
  * 		as a convenience function for the fractal heap code which
  * 		may not know if an entry is protected or pinned, but knows
  * 		that is either protected or pinned.  The dirtied field was
@@ -458,6 +457,37 @@ typedef herr_t (*H5C_log_flush_func_t)(H5C_t * cache_ptr,
  *		is false, and dirty is false, it should point to the
  *		previous item on the clean LRU list.  In either case, when
  *		there is no previous item, it should be NULL.
+ *
+ *
+ * Fields supporting metadata journaling:
+ *
+ * last_trans:	unit64_t containing the ID of the last transaction in
+ * 		which this entry was dirtied.  If journaling is disabled,
+ * 		or if the entry has never been dirtied in a transaction,
+ * 		this field should be set to zero.  Once we notice that
+ * 		the specified transaction has made it to disk, we will
+ * 		reset this field to zero as well.
+ *
+ * 		We must maintain this field, as to avoid messages from
+ * 		the future, we must not flush a dirty entry to disk
+ * 		until the last transaction in which it was dirtied
+ * 		has made it to disk in the journal file.
+ *
+ * trans_next:  Next pointer in the entries modified in the current
+ * 		transaction list.  This field should always be null
+ * 		unless journaling is enabled, the entry is dirty,
+ * 		and last_trans field contains the current transaction
+ * 		number.  Even if all these conditions are fulfilled,
+ * 		the field will still be NULL if this is the last
+ * 		entry on the list.
+ *
+ * trans_prev:  Previous pointer in the entries modified in the current
+ * 		transaction list.  This field should always be null
+ * 		unless journaling is enabled, the entry is dirty,
+ * 		and last_trans field contains the current transaction
+ * 		number.  Even if all these conditions are fulfilled,
+ * 		the field will still be NULL if this is the first
+ * 		entry on the list.
  *
  *
  * Cache entry stats collection fields:
@@ -1031,13 +1061,9 @@ H5_DLL herr_t H5C_mark_entries_as_clean(H5F_t *  f,
                                         int32_t  ce_array_len,
                                         haddr_t *ce_array_ptr);
 
-H5_DLL herr_t H5C_mark_pinned_entry_dirty(void *  thing,
-					  hbool_t size_changed,
-					  size_t  new_size);
+H5_DLL herr_t H5C_mark_entry_dirty(void *thing);
 
-H5_DLL herr_t H5C_mark_pinned_or_protected_entry_dirty(void *thing);
-
-H5_DLL herr_t H5C_rename_entry(H5C_t *             cache_ptr,
+H5_DLL herr_t H5C_move_entry(H5C_t *             cache_ptr,
                                const H5C_class_t * type,
                                haddr_t             old_addr,
                                haddr_t             new_addr);
@@ -1047,15 +1073,14 @@ H5_DLL herr_t H5C_pin_protected_entry(void *thing);
 H5_DLL void * H5C_protect(H5F_t *             f,
                           hid_t               primary_dxpl_id,
                           hid_t               secondary_dxpl_id,
-                          const H5C_class_t * type,
+			  const H5C_class_t * type,
                           haddr_t             addr,
-                          const void *        udata1,
-                          void *              udata2,
-			  unsigned            flags);
+                          void *              udata,
+                          unsigned            flags);
 
 H5_DLL herr_t H5C_reset_cache_hit_rate_stats(H5C_t * cache_ptr);
 
-H5_DLL herr_t H5C_resize_pinned_entry(void *thing, size_t new_size);
+H5_DLL herr_t H5C_resize_entry(void *thing, size_t new_size);
 
 H5_DLL herr_t H5C_set_cache_auto_resize_config(H5C_t *cache_ptr,
                                                H5C_auto_size_ctl_t *config_ptr);

@@ -34,7 +34,7 @@
 /* Include test header files */
 #include "h5test.h"
 
-#define NO_CHANGE       -1
+#define NO_CHANGE       	-1
 
 /* with apologies for the abuse of terminology... */
 
@@ -74,6 +74,7 @@
 #define NUM_VARIABLE_ENTRIES	(10 * 1024)
 
 #define MAX_ENTRIES		(10 * 1024)
+
 
 /* The choice of the BASE_ADDR below is arbitrary -- it just has to be
  * larger than the superblock.
@@ -130,7 +131,7 @@
 #define FLUSH_OP__NO_OP		0
 #define FLUSH_OP__DIRTY		1
 #define FLUSH_OP__RESIZE	2
-#define FLUSH_OP__RENAME	3
+#define FLUSH_OP__MOVE		3
 #define FLUSH_OP__MAX_OP	3
 
 #define MAX_FLUSH_OPS		10	/* Maximum number of flush operations
@@ -147,7 +148,7 @@ typedef struct flush_op
 					 *   FLUSH_OP__NO_OP
 					 *   FLUSH_OP__DIRTY
 					 *   FLUSH_OP__RESIZE
-					 *   FLUSH_OP__RENAME
+					 *   FLUSH_OP__MOVE
 					 */
     int			type;		/* type code of the cache entry that
 					 * is the target of the operation.
@@ -170,21 +171,21 @@ typedef struct flush_op
 					 * FLUSH_OP__DIRTY: TRUE iff the
 					 *   target is pinned, and is to
 					 *   be dirtied via the
-					 *   H5C_mark_pinned_entry_dirty()
+					 *   H5C_mark_entry_dirty()
 					 *   call.
 					 *
 					 * FLUSH_OP__RESIZE: TRUE iff the
 					 *   target is pinned, and is to
 					 *   be resized via the
-					 *   H5C_mark_pinned_entry_dirty()
+					 *   H5C_resize_entry()
 					 *   call.
 					 *
-					 * FLUSH_OP__RENAME: TRUE iff the
-					 *    target is to be renamed to
+					 * FLUSH_OP__MOVE: TRUE iff the
+					 *    target is to be moved to
 					 *    its main address.
 					 */
     size_t		size;		/* New target size in the
-					 * FLUSH_OP__RENAME operation.
+					 * FLUSH_OP__MOVE operation.
 					 * Unused elsewhere.
 					 */
 } flush_op;
@@ -212,7 +213,7 @@ typedef struct test_entry_t
     haddr_t		  main_addr;    /* initial location of the entry
                                          */
     haddr_t		  alt_addr;	/* location to which the entry
-					 * can be relocated or "renamed"
+					 * can be relocated or "moved"
                                          */
     size_t		  size;         /* how big the cache thinks this
                                          * entry is
@@ -450,7 +451,7 @@ struct fo_flush_cache_test_spec
     hbool_t			expected_destroyed;
 };
 
-struct rename_entry_test_spec
+struct move_entry_test_spec
 {
     int			entry_type;
     int			entry_index;
@@ -557,26 +558,16 @@ herr_t variable_flush(H5F_t *f, hid_t dxpl_id, hbool_t dest,
                       haddr_t addr, void *thing, unsigned * flags_ptr);
 
 
-void * pico_load(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-                 const void *udata1, void *udata2);
-void * nano_load(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-                 const void *udata1, void *udata2);
-void * micro_load(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-                  const void *udata1, void *udata2);
-void * tiny_load(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-                 const void *udata1, void *udata2);
-void * small_load(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-                  const void *udata1, void *udata2);
-void * medium_load(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-                   const void *udata1, void *udata2);
-void * large_load(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-                  const void *udata1, void *udata2);
-void * huge_load(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-                 const void *udata1, void *udata2);
-void * monster_load(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-                    const void *udata1, void *udata2);
-void * variable_load(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-                     const void *udata1, void *udata2);
+void * pico_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
+void * nano_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
+void * micro_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
+void * tiny_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
+void * small_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
+void * medium_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
+void * large_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
+void * huge_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
+void * monster_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
+void * variable_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
 
 
 herr_t pico_size(H5F_t * f, void * thing, size_t * size_ptr);
@@ -630,15 +621,10 @@ void insert_entry(H5F_t * file_ptr,
                   hbool_t dirty,
                   unsigned int flags);
 
-void mark_pinned_entry_dirty(int32_t type,
-		             int32_t idx,
-		             hbool_t size_changed,
-		             size_t  new_size);
+void mark_entry_dirty(int32_t type,
+		              int32_t idx);
 
-void mark_pinned_or_protected_entry_dirty(int32_t type,
-                                          int32_t idx);
-
-void rename_entry(H5C_t * cache_ptr,
+void move_entry(H5C_t * cache_ptr,
                   int32_t type,
                   int32_t idx,
                   hbool_t main_addr);
@@ -669,11 +655,6 @@ void resize_entry(H5F_t * file_ptr,
                    size_t new_size,
                    hbool_t resize_pin);
 
-void resize_pinned_entry(H5C_t * cache_ptr,
-                         int32_t type,
-                         int32_t idx,
-                         size_t new_size);
-
 H5F_t *setup_cache(size_t max_cache_size, size_t min_clean_size);
 
 void row_major_scan_forward(H5F_t * file_ptr,
@@ -684,8 +665,8 @@ void row_major_scan_forward(H5F_t * file_ptr,
                             hbool_t display_detailed_stats,
                             hbool_t do_inserts,
                             hbool_t dirty_inserts,
-                            hbool_t do_renames,
-                            hbool_t rename_to_main_addr,
+                            hbool_t do_moves,
+                            hbool_t move_to_main_addr,
                             hbool_t do_destroys,
                             hbool_t do_mult_ro_protects,
                             int dirty_destroys,
@@ -708,8 +689,8 @@ void row_major_scan_backward(H5F_t * file_ptr,
                              hbool_t display_detailed_stats,
                              hbool_t do_inserts,
                              hbool_t dirty_inserts,
-                             hbool_t do_renames,
-                             hbool_t rename_to_main_addr,
+                             hbool_t do_moves,
+                             hbool_t move_to_main_addr,
                              hbool_t do_destroys,
                              hbool_t do_mult_ro_protects,
                              int dirty_destroys,

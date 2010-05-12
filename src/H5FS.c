@@ -33,6 +33,7 @@
 /* Headers */
 /***********/
 #include "H5private.h"		/* Generic Functions			*/
+#include "H5ACprivate.h"        /* Metadata cache                       */
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5FSpkg.h"		/* File free space			*/
 #include "H5MFprivate.h"	/* File memory management		*/
@@ -55,6 +56,8 @@
 /********************/
 /* Local Prototypes */
 /********************/
+
+/* Section info routines */
 static herr_t H5FS_sinfo_free_sect_cb(void *item, void *key, void *op_data);
 static herr_t H5FS_sinfo_free_node_cb(void *item, void *key, void *op_data);
 
@@ -192,7 +195,7 @@ H5FS_open(H5F_t *f, hid_t dxpl_id, haddr_t fs_addr, size_t nclasses,
     const H5FS_section_class_t *classes[], void *cls_init_udata, hsize_t alignment, hsize_t threshold)
 {
     H5FS_t *fspace = NULL;      /* New free space structure */
-    H5FS_prot_t fs_prot;        /* Information for protecting free space manager */
+    H5FS_hdr_cache_ud_t cache_udata; /* User-data for metadata cache callback */
     H5FS_t *ret_value;          /* Return value */
 
     FUNC_ENTER_NOAPI(H5FS_open, NULL)
@@ -206,12 +209,14 @@ HDfprintf(stderr, "%s: Opening free space manager, fs_addr = %a, nclasses = %Zu\
     HDassert(classes);
 
     /* Initialize user data for protecting the free space manager */
-    fs_prot.nclasses = nclasses;
-    fs_prot.classes = classes;
-    fs_prot.cls_init_udata = cls_init_udata;
+    cache_udata.f = f;
+    cache_udata.nclasses = nclasses;
+    cache_udata.classes = classes;
+    cache_udata.cls_init_udata = cls_init_udata;
+    cache_udata.addr = fs_addr;
 
     /* Protect the free space header */
-    if(NULL == (fspace = (H5FS_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_HDR, fs_addr, &fs_prot, NULL, H5AC_READ)))
+    if(NULL == (fspace = (H5FS_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_HDR, fs_addr, &cache_udata, H5AC_READ)))
         HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, NULL, "unable to load free space header")
 #ifdef H5FS_DEBUG
 HDfprintf(stderr, "%s: fspace->sect_addr = %a\n", FUNC, fspace->sect_addr);
@@ -259,7 +264,7 @@ herr_t
 H5FS_delete(H5F_t *f, hid_t dxpl_id, haddr_t fs_addr)
 {
     H5FS_t *fspace = NULL;              /* Free space header loaded from file */
-    H5FS_prot_t fs_prot;                /* Temporary information for protecting free space header */
+    H5FS_hdr_cache_ud_t cache_udata; /* User-data for metadata cache callback */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI(H5FS_delete, FAIL)
@@ -273,12 +278,14 @@ HDfprintf(stderr, "%s: Deleting free space manager, fs_addr = %a\n", FUNC, fs_ad
 
     /* Initialize user data for protecting the free space manager */
     /* (no class information necessary for delete) */
-    fs_prot.nclasses = 0;
-    fs_prot.classes = NULL;
-    fs_prot.cls_init_udata = NULL;
+    cache_udata.f = f;
+    cache_udata.nclasses = 0;
+    cache_udata.classes = NULL;
+    cache_udata.cls_init_udata = NULL;
+    cache_udata.addr = fs_addr;
 
     /* Protect the free space header */
-    if(NULL == (fspace = (H5FS_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_HDR, fs_addr, &fs_prot, NULL, H5AC_WRITE)))
+    if(NULL == (fspace = (H5FS_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_HDR, fs_addr, &cache_udata, H5AC_WRITE)))
         HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, FAIL, "unable to protect free space header")
 
     /* Sanity check */
@@ -385,7 +392,7 @@ HDfprintf(stderr, "%s: Real sections to store in file\n", FUNC);
                     fspace->alloc_sect_size = (size_t)fspace->sect_size;
 
                     /* Mark free space header as dirty */
-                    if(H5AC_mark_pinned_or_protected_entry_dirty(fspace) < 0)
+                    if(H5AC_mark_entry_dirty(fspace) < 0)
                         HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
                 } /* end if */
             } /* end if */
@@ -442,7 +449,7 @@ HDfprintf(stderr, "%s: Section info went 'go away'\n", FUNC);
                         fspace->alloc_sect_size = 0;
 
                         /* Mark free space header as dirty */
-                        if(H5AC_mark_pinned_or_protected_entry_dirty(fspace) < 0)
+                        if(H5AC_mark_entry_dirty(fspace) < 0)
                             HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
                     } /* end else */
                 } /* end if */
@@ -458,7 +465,7 @@ HDfprintf(stderr, "%s: Section info is NOT for file free space\n", FUNC);
                     fspace->alloc_sect_size = 0;
 
                     /* Mark free space header as dirty */
-                    if(H5AC_mark_pinned_or_protected_entry_dirty(fspace) < 0)
+                    if(H5AC_mark_entry_dirty(fspace) < 0)
                         HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
 
                     /* Free previous serialized sections disk space */
@@ -726,7 +733,7 @@ HDfprintf(stderr, "%s: Marking free space header as dirty\n", FUNC);
     /* Check if the free space manager is persistant */
     if(H5F_addr_defined(fspace->addr))
         /* Mark header as dirty in cache */
-        if(H5AC_mark_pinned_or_protected_entry_dirty(fspace) < 0)
+        if(H5AC_mark_entry_dirty(fspace) < 0)
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
 
 done:

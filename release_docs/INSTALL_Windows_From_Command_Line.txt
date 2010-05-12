@@ -114,7 +114,8 @@ notes in INSTALL_Windows.txt before starting below procedures.
               /fort             Build HDF5 with Fortran libraries
               /ivf101           Build HDF5 Fortran using Intel Visual Fortran 10.1
               /ivf111           Build HDF5 Fortran using Intel Visual Fortran 11.1
-              /nodebug          Note: Default is to build debug and release versions
+              /nodebug          Build HDF5 release versions only
+                                Note: Default is to build debug and release versions
               /useenv           Build HDF5 using compiler settings defined
                                 in the environment, rather than the IDE.
               /?                Help information
@@ -145,10 +146,10 @@ notes in INSTALL_Windows.txt before starting below procedures.
               hdf5check enableall        Test HDF5 C/Fortran libraries and 
                                          tools.  To use this option, HDF5 
                                          Fortran libraries must have been built.
-                                         
-              nodebug                    -- can be added to any of the above to 
-                                            not test debug versions
-                                            
+
+			  nodebug option can be added to any of the above options to only
+			  test the release versions.
+			  
             Invoke a command prompt window and run hdf5check with appropriate 
             option.  Users are encouraged to pipe the test output into a file.  
             You should find no "*FAILED*" marks.

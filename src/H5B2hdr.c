@@ -479,7 +479,7 @@ H5B2_hdr_dirty(H5B2_hdr_t *hdr)
     HDassert(hdr);
 
     /* Mark B-tree header as dirty in cache */
-    if(H5AC_mark_pinned_or_protected_entry_dirty(hdr) < 0)
+    if(H5AC_mark_entry_dirty(hdr) < 0)
         HGOTO_ERROR(H5E_BTREE, H5E_CANTMARKDIRTY, FAIL, "unable to mark v2 B-tree header as dirty")
 
 done:
@@ -599,7 +599,7 @@ H5B2_hdr_delete(H5B2_hdr_t *hdr, hid_t dxpl_id)
 
 done:
     /* Unprotect the header with appropriate flags */
-    if(hdr && H5AC_unprotect(hdr->f, dxpl_id, H5AC_BT2_HDR, hdr->addr, hdr, cache_flags) < 0)
+    if(H5AC_unprotect(hdr->f, dxpl_id, H5AC_BT2_HDR, hdr->addr, hdr, cache_flags) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree header")
 
     FUNC_LEAVE_NOAPI(SUCCEED)

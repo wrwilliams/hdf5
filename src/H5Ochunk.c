@@ -184,7 +184,7 @@ H5O_chunk_protect(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned idx)
         chk_udata.chunk_size = oh->chunk[idx].size;
 
         /* Get the chunk proxy */
-        if(NULL == (chk_proxy = (H5O_chunk_proxy_t *)H5AC_protect(f, dxpl_id, H5AC_OHDR_CHK, oh->chunk[idx].addr, NULL, &chk_udata, H5AC_WRITE)))
+        if(NULL == (chk_proxy = (H5O_chunk_proxy_t *)H5AC_protect(f, dxpl_id, H5AC_OHDR_CHK, oh->chunk[idx].addr, &chk_udata, H5AC_WRITE)))
             HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, NULL, "unable to load object header chunk")
 
         /* Sanity check */
@@ -232,19 +232,16 @@ H5O_chunk_unprotect(H5F_t *f, hid_t dxpl_id, H5O_chunk_proxy_t *chk_proxy,
         /* Check for resizing the first chunk */
         if(chk_flags & H5AC__SIZE_CHANGED_FLAG) {
             /* Resize object header in cache */
-            if(H5AC_resize_pinned_entry(chk_proxy->oh, chk_proxy->oh->chunk[0].size) < 0)
+            if(H5AC_resize_entry(chk_proxy->oh, chk_proxy->oh->chunk[0].size) < 0)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTRESIZE, FAIL, "unable to resize chunk in cache")
         } /* end if */
+
         /* Check for dirtying the first chunk */
-        else if(chk_flags & H5AC__DIRTIED_FLAG) {
+        if(chk_flags & H5AC__DIRTIED_FLAG) {
             /* Mark object header as dirty in cache */
-            if(H5AC_mark_pinned_or_protected_entry_dirty(chk_proxy->oh) < 0)
+            if(H5AC_mark_entry_dirty(chk_proxy->oh) < 0)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTMARKDIRTY, FAIL, "unable to mark object header as dirty")
         } /* end else/if */
-        else {
-            /* Sanity check */
-            HDassert(0 && "Unknown chunk proxy flag(s)?!?");
-        } /* end else */
 
         /* Decrement reference count of object header */
         if(H5O_dec_rc(chk_proxy->oh) < 0)
@@ -301,7 +298,7 @@ H5O_chunk_update_idx(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned idx)
     chk_udata.chunk_size = oh->chunk[idx].size;
 
     /* Get the chunk proxy */
-    if(NULL == (chk_proxy = (H5O_chunk_proxy_t *)H5AC_protect(f, dxpl_id, H5AC_OHDR_CHK, oh->chunk[idx].addr, NULL, &chk_udata, H5AC_WRITE)))
+    if(NULL == (chk_proxy = (H5O_chunk_proxy_t *)H5AC_protect(f, dxpl_id, H5AC_OHDR_CHK, oh->chunk[idx].addr, &chk_udata, H5AC_WRITE)))
         HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, FAIL, "unable to load object header chunk")
 
     /* Update index for chunk proxy in cache */
@@ -353,7 +350,7 @@ H5O_chunk_delete(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned idx)
     chk_udata.chunk_size = oh->chunk[idx].size;
 
     /* Get the chunk proxy */
-    if(NULL == (chk_proxy = (H5O_chunk_proxy_t *)H5AC_protect(f, dxpl_id, H5AC_OHDR_CHK, oh->chunk[idx].addr, NULL, &chk_udata, H5AC_WRITE)))
+    if(NULL == (chk_proxy = (H5O_chunk_proxy_t *)H5AC_protect(f, dxpl_id, H5AC_OHDR_CHK, oh->chunk[idx].addr, &chk_udata, H5AC_WRITE)))
         HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, FAIL, "unable to load object header chunk")
 
     /* Sanity check */

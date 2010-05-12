@@ -29,7 +29,7 @@
 #include "H5Lprivate.h"		/* Links		  		*/
 #include "H5Pprivate.h"		/* Property lists			*/
 #include "H5Tprivate.h"		/* Datatypes				*/
-#include "H5SLprivate.h"    /* Skip lists                           */
+#include "H5SLprivate.h"        /* Skip lists                           */
 
 
 /****************/
