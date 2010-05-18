@@ -479,7 +479,7 @@ H5B2_hdr_dirty(H5B2_hdr_t *hdr)
     HDassert(hdr);
 
     /* Mark B-tree header as dirty in cache */
-    if(H5AC_mark_pinned_or_protected_entry_dirty(hdr) < 0)
+    if(H5AC_mark_entry_dirty(hdr) < 0)
         HGOTO_ERROR(H5E_BTREE, H5E_CANTMARKDIRTY, FAIL, "unable to mark v2 B-tree header as dirty")
 
 done:
@@ -519,7 +519,7 @@ H5B2_hdr_free(H5B2_hdr_t *hdr)
 
     /* Free the B-tree node buffer */
     if(hdr->page)
-        (void)H5FL_BLK_FREE(node_page, hdr->page);
+        hdr->page = H5FL_BLK_FREE(node_page, hdr->page);
 
     /* Free the array of offsets into the native key block */
     if(hdr->nat_off)
@@ -544,7 +544,7 @@ H5B2_hdr_free(H5B2_hdr_t *hdr)
     } /* end if */
 
     /* Free B-tree header info */
-    (void)H5FL_FREE(H5B2_hdr_t, hdr);
+    hdr = H5FL_FREE(H5B2_hdr_t, hdr);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

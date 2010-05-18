@@ -1543,7 +1543,7 @@ H5S_hyper_free_span_info (H5S_hyper_span_info_t *span_info)
         } /* end while */
 
         /* Free this span info */
-        (void)H5FL_FREE(H5S_hyper_span_info_t, span_info);
+        span_info = H5FL_FREE(H5S_hyper_span_info_t, span_info);
     } /* end if */
 
 done:
@@ -1586,7 +1586,7 @@ H5S_hyper_free_span (H5S_hyper_span_t *span)
     } /* end if */
 
     /* Free this span */
-    (void)H5FL_FREE(H5S_hyper_span_t, span);
+    span = H5FL_FREE(H5S_hyper_span_t, span);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
@@ -3174,30 +3174,29 @@ H5S_hyper_is_regular(const H5S_t *space)
  *	when closing some other data space.
 --------------------------------------------------------------------------*/
 herr_t
-H5S_hyper_release (H5S_t *space)
+H5S_hyper_release(H5S_t *space)
 {
-    herr_t ret_value=SUCCEED;
+    herr_t ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI(H5S_hyper_release, FAIL);
+    FUNC_ENTER_NOAPI(H5S_hyper_release, FAIL)
 
     /* Check args */
-    assert (space && H5S_SEL_HYPERSLABS==H5S_GET_SELECT_TYPE(space));
+    HDassert(space && H5S_SEL_HYPERSLABS == H5S_GET_SELECT_TYPE(space));
 
     /* Reset the number of points selected */
-    space->select.num_elem=0;
+    space->select.num_elem = 0;
 
     /* Release irregular hyperslab information */
-    if(space->select.sel_info.hslab->span_lst!=NULL) {
-        if(H5S_hyper_free_span_info(space->select.sel_info.hslab->span_lst)<0)
-            HGOTO_ERROR(H5E_INTERNAL, H5E_CANTFREE, FAIL, "failed to release hyperslab spans");
+    if(space->select.sel_info.hslab->span_lst != NULL) {
+        if(H5S_hyper_free_span_info(space->select.sel_info.hslab->span_lst) < 0)
+            HGOTO_ERROR(H5E_INTERNAL, H5E_CANTFREE, FAIL, "failed to release hyperslab spans")
     } /* end if */
 
     /* Release space for the hyperslab selection information */
-    (void)H5FL_FREE(H5S_hyper_sel_t, space->select.sel_info.hslab);
-    space->select.sel_info.hslab=NULL;
+    space->select.sel_info.hslab = H5FL_FREE(H5S_hyper_sel_t, space->select.sel_info.hslab);
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE_NOAPI(ret_value)
 }   /* H5S_hyper_release() */
 
 
@@ -5421,17 +5420,17 @@ H5S_hyper_spans_nelem (H5S_hyper_span_info_t *spans)
  REVISION LOG
 --------------------------------------------------------------------------*/
 static H5S_hyper_span_info_t *
-H5S_hyper_make_spans (unsigned rank, const hsize_t *start, const hsize_t *stride,
+H5S_hyper_make_spans(unsigned rank, const hsize_t *start, const hsize_t *stride,
     const hsize_t *count, const hsize_t *block)
 {
-    H5S_hyper_span_info_t *down;             /* Pointer to spans in next dimension down */
-    H5S_hyper_span_t      *span;             /* New hyperslab span */
-    H5S_hyper_span_t      *last_span;        /* Current position in hyperslab span list */
-    H5S_hyper_span_t      *head;             /* Head of new hyperslab span list */
-    hsize_t                stride_iter;      /* Iterator over the stride values */
-    int                    i;                /* Counters */
-    unsigned               u;                /* Counters */
-    H5S_hyper_span_info_t *ret_value = NULL;
+    H5S_hyper_span_info_t *down;            /* Pointer to spans in next dimension down */
+    H5S_hyper_span_t      *span;            /* New hyperslab span */
+    H5S_hyper_span_t      *last_span;       /* Current position in hyperslab span list */
+    H5S_hyper_span_t      *head;            /* Head of new hyperslab span list */
+    hsize_t                stride_iter;     /* Iterator over the stride values */
+    int                    i;               /* Counters */
+    unsigned               u;               /* Counters */
+    H5S_hyper_span_info_t *ret_value;       /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5S_hyper_make_spans);
 
@@ -5446,22 +5445,23 @@ H5S_hyper_make_spans (unsigned rank, const hsize_t *start, const hsize_t *stride
     down = NULL;
     for(i = (rank - 1); i >= 0; i--) {
 
+        /* Sanity check */
+        if(0 == count[i])
+            HGOTO_ERROR(H5E_DATASPACE, H5E_BADVALUE, NULL, "count == 0 is invalid")
+
         /* Start a new list in this dimension */
         head = NULL;
         last_span = NULL;
-
-        if(count[i] == 0)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "count == 0 is invalid")
 
         /* Generate all the span segments for this dimension */
         for(u = 0, stride_iter = 0; u < count[i]; u++, stride_iter += stride[i]) {
             /* Allocate a span node */
             if(NULL == (span = H5FL_MALLOC(H5S_hyper_span_t)))
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "can't allocate hyperslab span")
+                HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, NULL, "can't allocate hyperslab span")
 
             /* Set the span's basic information */
             span->low = start[i] + stride_iter;
-            span->high = span->low + (block[i]-1);
+            span->high = span->low + (block[i] - 1);
             span->nelem = block[i];
             span->pstride = stride[i];
             span->next = NULL;
@@ -5487,7 +5487,7 @@ H5S_hyper_make_spans (unsigned rank, const hsize_t *start, const hsize_t *stride
 
         /* Allocate a span info node */
         if(NULL == (down = H5FL_MALLOC(H5S_hyper_span_info_t)))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "can't allocate hyperslab span");
+            HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, NULL, "can't allocate hyperslab span")
 
         /* Set the reference count */
         down->count = 0;
@@ -5512,17 +5512,17 @@ done:
             if(head && down)
                 if(down->head != head)
                     down = NULL;
- 
+
             do {
                 if(down) {
                     head = down->head;
-                    (void)H5FL_FREE(H5S_hyper_span_info_t, down);
+                    down = H5FL_FREE(H5S_hyper_span_info_t, down);
                 } /* end if */
                 down = head->down;
-    
+
                 while(head) {
                     last_span = head->next;
-                    (void)H5FL_FREE(H5S_hyper_span_t, head);
+                    head = H5FL_FREE(H5S_hyper_span_t, head);
                     head = last_span;
                 } /* end while */
             } while(down);
@@ -7487,24 +7487,25 @@ H5S_hyper_get_seq_list_gen(const H5S_t *space,H5S_sel_iter_t *iter,
 
     /* Perform the I/O on the elements, based on the position of the iterator */
     while(io_bytes_left > 0 && curr_seq < maxseq) {
+        /* Sanity check */
         HDassert(curr_span);
 
         /* Adjust location offset of destination to compensate for initial increment below */
         loc_off -= curr_span->pstride;
 
         /* Loop over all the spans in the fastest changing dimension */
-        while(curr_span!=NULL) {
+        while(curr_span != NULL) {
             /* Move location offset of destination */
-            loc_off+=curr_span->pstride;
+            loc_off += curr_span->pstride;
 
             /* Compute the number of elements to attempt in this span */
-            H5_ASSIGN_OVERFLOW(span_size,curr_span->nelem,hsize_t,size_t);
+            H5_ASSIGN_OVERFLOW(span_size, curr_span->nelem, hsize_t, size_t);
 
             /* Check number of elements against upper bounds allowed */
-            if(span_size>=io_bytes_left) {
+            if(span_size >= io_bytes_left) {
                 /* Trim the number of bytes to output */
-                span_size=io_bytes_left;
-                io_bytes_left=0;
+                span_size = io_bytes_left;
+                io_bytes_left = 0;
 
 /* COMMON */
                 /* Store the I/O information for the span */

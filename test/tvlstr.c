@@ -612,6 +612,7 @@ static void test_write_vl_string_attribute(void)
             TestErrPrintf("VL string attributes don't match!, string_att=%s, string_att_check=%s\n",string_att,string_att_check);
 
         HDfree(string_att_check);
+        string_att_check = NULL;
     }
 
     ret = H5Aclose(att);
@@ -643,6 +644,9 @@ static void test_write_vl_string_attribute(void)
          *test_read_vl_string_attribute() test */
         HDfree(string_att_check);
     }
+
+    /* The attribute string written is freed below, in the test_read_vl_string_attribute() test */
+    /* HDfree(string_att_write); */
 
     ret = H5Aclose(att);
     CHECK(ret, FAIL, "HAclose");
@@ -706,6 +710,7 @@ static void test_read_vl_string_attribute(void)
             TestErrPrintf("VL string attributes don't match!, string_att=%s, string_att_check=%s\n",string_att,string_att_check);
 
         HDfree(string_att_check);
+        string_att_check = NULL;
     }
 
     ret = H5Aclose(att);

@@ -254,7 +254,7 @@ done:
                 H5MM_xfree(lnk->u.soft.name);
             if(lnk->type >= H5L_TYPE_UD_MIN && lnk->u.ud.size > 0 && lnk->u.ud.udata != NULL)
                 H5MM_xfree(lnk->u.ud.udata);
-            (void)H5FL_FREE(H5O_link_t, lnk);
+            lnk = H5FL_FREE(H5O_link_t, lnk);
         } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -437,10 +437,13 @@ H5O_link_copy(const void *_mesg, void *_dest)
     ret_value = dest;
 
 done:
-
-    /* if dest is allocated within this function and some function calls are failed, free dest */
-    if (NULL==_dest && NULL==ret_value && NULL != dest)
-        H5FL_FREE(H5O_link_t ,dest);
+    if(NULL == ret_value)
+        if(dest) {
+            if(dest->name && dest->name != lnk->name)
+                dest->name = (char *)H5MM_xfree(dest->name);
+            if(NULL == _dest)
+                dest = H5FL_FREE(H5O_link_t ,dest);
+        } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_link_copy() */
@@ -575,7 +578,7 @@ H5O_link_free(void *_mesg)
 
     /* Free information for link */
     H5O_link_reset(lnk);
-    (void)H5FL_FREE(H5O_link_t, lnk);
+    lnk = H5FL_FREE(H5O_link_t, lnk);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O_link_free() */

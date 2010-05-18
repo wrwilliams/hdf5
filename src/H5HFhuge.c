@@ -719,7 +719,7 @@ H5HF_huge_op_real(H5HF_hdr_t *hdr, hid_t dxpl_id, const uint8_t *id,
 
 done:
     /* Release the buffer for reading */
-    if(read_buf != op_data)
+    if(read_buf && read_buf != op_data)
         read_buf = H5MM_xfree(read_buf);
 
     FUNC_LEAVE_NOAPI(ret_value)

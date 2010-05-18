@@ -186,7 +186,7 @@ dump_error(void)
 herr_t
 custom_print_cb(int n, H5E_error1_t *err_desc, void* client_data)
 {
-    FILE		*stream  = (FILE *)client_data;
+    FILE	*stream  = (FILE *)client_data;
     char        *maj = NULL;
     char        *min = NULL;
     const int	 indent = 4;
@@ -201,13 +201,11 @@ custom_print_cb(int n, H5E_error1_t *err_desc, void* client_data)
 	     indent, "", n, err_desc->file_name,
 	     err_desc->func_name, err_desc->line);
     
-    fprintf(stream, "%*smajor: %s\n", indent*2, "", maj);
+    fprintf(stream, "%*smajor: %s\n", indent * 2, "", maj);
+    fprintf(stream, "%*sminor: %s\n", indent * 2, "", min);
+
     HDfree(maj);
-    maj = NULL;
-    
-    fprintf (stream, "%*sminor: %s\n", indent*2, "", min);
     HDfree(min);
-    min = NULL;
 
     return 0;
 

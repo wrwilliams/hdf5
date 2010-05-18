@@ -59,7 +59,9 @@ H5B_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, int f
 	  const H5B_class_t *type, void *udata)
 {
     H5B_t	*bt = NULL;
+    H5RC_t	*rc_shared;             /* Ref-counted shared info */
     H5B_shared_t *shared;               /* Pointer to shared B-tree info */
+    H5B_cache_ud_t cache_udata;         /* User-data for metadata cache callback */
     unsigned	u;                      /* Local index variable */
     herr_t      ret_value = SUCCEED;    /* Return value */
 
@@ -75,13 +77,20 @@ H5B_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, int f
     HDassert(fwidth >= 0);
     HDassert(type);
 
+    /* Get shared info for B-tree */
+    if(NULL == (rc_shared = (type->get_shared)(f, udata)))
+	HGOTO_ERROR(H5E_BTREE, H5E_CANTGET, FAIL, "can't retrieve B-tree's shared ref. count object")
+    shared = (H5B_shared_t *)H5RC_GET_OBJ(rc_shared);
+    HDassert(shared);
+
     /*
      * Load the tree node.
      */
-    if(NULL == (bt = (H5B_t *)H5AC_protect(f, dxpl_id, H5AC_BT, addr, type, udata, H5AC_READ)))
+    cache_udata.f = f;
+    cache_udata.type = type;
+    cache_udata.rc_shared = rc_shared;
+    if(NULL == (bt = (H5B_t *)H5AC_protect(f, dxpl_id, H5AC_BT, addr, &cache_udata, H5AC_READ)))
 	HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to load B-tree node")
-    shared = (H5B_shared_t *)H5RC_GET_OBJ(bt->rc_shared);
-    HDassert(shared);
 
     /*
      * Print the values.
@@ -126,14 +135,14 @@ H5B_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, int f
             HDfprintf(stream, "%*s%-*s\n", indent + 3, "", MAX(0, fwidth - 3),
                       "Left Key:");
             HDassert(H5B_NKEY(bt,shared,u));
-	    (void)(type->debug_key)(stream, f, dxpl_id, indent + 6, MAX(0, fwidth - 6),
+	    (void)(type->debug_key)(stream, indent + 6, MAX(0, fwidth - 6),
 			      H5B_NKEY(bt, shared, u), udata);
 
             /* Decode the 'right' key & print it */
             HDfprintf(stream, "%*s%-*s\n", indent + 3, "", MAX(0, fwidth - 3),
                       "Right Key:");
             HDassert(H5B_NKEY(bt, shared, u + 1));
-	    (void)(type->debug_key)(stream, f, dxpl_id, indent + 6, MAX (0, fwidth - 6),
+	    (void)(type->debug_key)(stream, indent + 6, MAX (0, fwidth - 6),
 			      H5B_NKEY(bt, shared, u + 1), udata);
 	} /* end if */
     } /* end for */
@@ -165,7 +174,9 @@ herr_t
 H5B_assert(H5F_t *f, hid_t dxpl_id, haddr_t addr, const H5B_class_t *type, void *udata)
 {
     H5B_t	*bt = NULL;
+    H5RC_t	*rc_shared;             /* Ref-counted shared info */
     H5B_shared_t *shared;               /* Pointer to shared B-tree info */
+    H5B_cache_ud_t cache_udata;         /* User-data for metadata cache callback */
     int	i, ncell, cmp;
     static int	ncalls = 0;
     herr_t	status;
@@ -178,15 +189,24 @@ H5B_assert(H5F_t *f, hid_t dxpl_id, haddr_t addr, const H5B_class_t *type, void 
 	struct child_t	       *next;
     } *head = NULL, *tail = NULL, *prev = NULL, *cur = NULL, *tmp = NULL;
 
-    FUNC_ENTER_NOAPI_NOFUNC(H5B_assert)
+    FUNC_ENTER_NOAPI_NOINIT(H5B_assert)
 
     if(0 == ncalls++) {
 	if(H5DEBUG(B))
 	    fprintf(H5DEBUG(B), "H5B: debugging B-trees (expensive)\n");
     } /* end if */
 
+    /* Get shared info for B-tree */
+    if(NULL == (rc_shared = (type->get_shared)(f, udata)))
+	HGOTO_ERROR(H5E_BTREE, H5E_CANTGET, FAIL, "can't retrieve B-tree's shared ref. count object")
+    shared = (H5B_shared_t *)H5RC_GET_OBJ(rc_shared);
+    HDassert(shared);
+
     /* Initialize the queue */
-    bt = (H5B_t *)H5AC_protect(f, dxpl_id, H5AC_BT, addr, type, udata, H5AC_READ);
+    cache_udata.f = f;
+    cache_udata.type = type;
+    cache_udata.rc_shared = rc_shared;
+    bt = (H5B_t *)H5AC_protect(f, dxpl_id, H5AC_BT, addr, &cache_udata, H5AC_READ);
     HDassert(bt);
     shared = (H5B_shared_t *)H5RC_GET_OBJ(bt->rc_shared);
     HDassert(shared);
@@ -207,7 +227,7 @@ H5B_assert(H5F_t *f, hid_t dxpl_id, haddr_t addr, const H5B_class_t *type, void 
      * test.
      */
     for(ncell = 0; cur; ncell++) {
-	bt = (H5B_t *)H5AC_protect(f, dxpl_id, H5AC_BT, cur->addr, type, udata, H5AC_READ);
+	bt = (H5B_t *)H5AC_protect(f, dxpl_id, H5AC_BT, cur->addr, &cache_udata, H5AC_READ);
 	HDassert(bt);
 
 	/* Check node header */
@@ -239,8 +259,7 @@ H5B_assert(H5F_t *f, hid_t dxpl_id, haddr_t addr, const H5B_class_t *type, void 
 		tail = tmp;
 
 		/* Check that the keys are monotonically increasing */
-		cmp = (type->cmp2)(f, dxpl_id, H5B_NKEY(bt, shared, i), udata,
-				    H5B_NKEY(bt, shared, i + 1));
+		cmp = (type->cmp2)(H5B_NKEY(bt, shared, i), udata, H5B_NKEY(bt, shared, i + 1));
 		HDassert(cmp < 0);
 	    } /* end for */
 	} /* end if */
@@ -262,6 +281,7 @@ H5B_assert(H5F_t *f, hid_t dxpl_id, haddr_t addr, const H5B_class_t *type, void 
 	head = tmp;
     } /* end while */
 
+done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5B_assert() */
 #endif /* H5B_DEBUG */

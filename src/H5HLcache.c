@@ -69,15 +69,13 @@
 /********************/
 
 /* Metadata cache callbacks */
-static void *H5HL_prefix_load(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-    const void *udata1, void *udata2);
+static void *H5HL_prefix_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
 static herr_t H5HL_prefix_flush(H5F_t *f, hid_t dxpl_id, hbool_t dest, haddr_t addr,
     void *thing, unsigned *flags_ptr);
 static herr_t H5HL_prefix_dest(H5F_t *f, void *thing);
 static herr_t H5HL_prefix_clear(H5F_t *f, void *thing, hbool_t destroy);
 static herr_t H5HL_prefix_size(const H5F_t *f, const void *thing, size_t *size_ptr);
-static void *H5HL_datablock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-    const void *udata1, void *udata2);
+static void *H5HL_datablock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
 static herr_t H5HL_datablock_flush(H5F_t *f, hid_t dxpl_id, hbool_t dest, haddr_t addr,
     void *thing, unsigned *flags_ptr);
 static herr_t H5HL_datablock_dest(H5F_t *f, void *thing);
@@ -136,8 +134,7 @@ const H5AC_class_t H5AC_LHEAP_DBLK[1] = {{
 static herr_t
 H5HL_fl_deserialize(H5HL_t *heap, hsize_t free_block)
 {
-    H5HL_free_t *fl = NULL;      /* Heap free block nodes */
-    H5HL_free_t *tail = NULL;      /* Heap free block nodes */
+    H5HL_free_t *fl = NULL, *tail = NULL;      /* Heap free block nodes */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5HL_fl_deserialize)
@@ -161,16 +158,6 @@ H5HL_fl_deserialize(H5HL_t *heap, hsize_t free_block)
         fl->prev = tail;
         fl->next = NULL;
 
-        /* Insert node into list */
-        if(tail)
-            tail->next = fl;
-        else {
-            /* Save the first allocation */
-            heap->freelist = fl;
-        }
-        tail = fl;
-        fl = NULL;
-
         /* Decode offset of next free block */
         p = heap->dblk_image + free_block;
         H5F_DECODE_LENGTH_LEN(p, free_block, heap->sizeof_size);
@@ -178,12 +165,24 @@ H5HL_fl_deserialize(H5HL_t *heap, hsize_t free_block)
             HGOTO_ERROR(H5E_HEAP, H5E_BADVALUE, FAIL, "free block size is zero?")
 
         /* Decode length of this free block */
-        H5F_DECODE_LENGTH_LEN(p, tail->size, heap->sizeof_size);
-        if(tail->offset + tail->size > heap->dblk_size)
+        H5F_DECODE_LENGTH_LEN(p, fl->size, heap->sizeof_size);
+        if((fl->offset + fl->size) > heap->dblk_size)
             HGOTO_ERROR(H5E_HEAP, H5E_BADRANGE, FAIL, "bad heap free list")
+
+        /* Append node onto list */
+        if(tail)
+            tail->next = fl;
+        else
+            heap->freelist = fl;
+        tail = fl;
+        fl = NULL;
     } /* end while */
 
 done:
+    if(ret_value < 0)
+        if(fl)
+            fl = H5FL_FREE(H5HL_free_t, fl);
+
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5HL_fl_deserialize() */
 
@@ -246,24 +245,22 @@ H5HL_fl_serialize(const H5HL_t *heap)
  *-------------------------------------------------------------------------
  */
 static void *
-H5HL_prefix_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *udata1,
-    void *_udata)
+H5HL_prefix_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
 {
-    H5HL_t              *heap = NULL; /* Local heap */
-    H5HL_prfx_t         *prfx = NULL; /* Heap prefix deserialized */
-    H5HL_cache_prfx_ud_t *udata = (H5HL_cache_prfx_ud_t *)_udata; /* User data for protecting local heap prefix */
+    H5HL_t *heap = NULL;            /* Local heap */
+    H5HL_prfx_t *prfx = NULL;       /* Heap prefix deserialized */
+    H5HL_cache_prfx_ud_t *udata = (H5HL_cache_prfx_ud_t *)_udata;       /* User data for callback */
     uint8_t		buf[H5HL_SPEC_READ_SIZE];   /* Buffer for decoding */
     size_t	        spec_read_size; /* Size of buffer to speculatively read in */
     const uint8_t	*p;         /* Pointer into decoding buffer */
     haddr_t             eoa;        /* Relative end of file address */
-    void                *ret_value; /* Return value */
+    H5HL_prfx_t *ret_value;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5HL_prefix_load)
 
     /* check arguments */
     HDassert(f);
     HDassert(H5F_addr_defined(addr));
-    HDassert(!udata1);
     HDassert(udata);
     HDassert(udata->sizeof_size > 0);
     HDassert(udata->sizeof_addr > 0);
@@ -290,7 +287,7 @@ H5HL_prefix_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *udata1,
 
     /* Version */
     if(H5HL_VERSION != *p++)
-	HGOTO_ERROR(H5E_HEAP, H5E_BADVALUE, NULL, "wrong version number in global heap")
+	HGOTO_ERROR(H5E_HEAP, H5E_BADVALUE, NULL, "wrong version number in local heap")
 
     /* Reserved */
     p += 3;
@@ -304,7 +301,7 @@ H5HL_prefix_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *udata1,
 	HGOTO_ERROR(H5E_HEAP, H5E_CANTALLOC, NULL, "can't allocate local heap prefix")
 
     /* Store the prefix's address & length */
-    heap->prfx_addr = addr;
+    heap->prfx_addr = udata->prfx_addr;
     heap->prfx_size = udata->sizeof_prfx;
 
     /* Heap data size */
@@ -452,7 +449,7 @@ H5HL_prefix_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr,
 
     /* Should we destroy the memory version? */
     if(destroy)
-        if(H5HL_prfx_dest(prfx) < 0)
+        if(H5HL_prefix_dest(f, prfx) < 0)
 	    HGOTO_ERROR(H5E_HEAP, H5E_CANTFREE, FAIL, "unable to destroy local heap prefix")
 
 done:
@@ -478,7 +475,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5HL_prefix_dest(H5F_t UNUSED *f, void *thing)
+H5HL_prefix_dest(H5F_t *f, void *thing)
 {
     H5HL_prfx_t *prfx = (H5HL_prfx_t *)thing;   /* Local heap prefix to destroy */
     herr_t ret_value = SUCCEED;         /* Return value */
@@ -548,7 +545,7 @@ H5HL_prefix_clear(H5F_t UNUSED *f, void *thing, hbool_t destroy)
     prfx->cache_info.is_dirty = FALSE;
 
     if(destroy)
-        if(H5HL_prfx_dest(prfx) < 0)
+        if(H5HL_prefix_dest(f, prfx) < 0)
 	    HGOTO_ERROR(H5E_HEAP, H5E_CANTFREE, FAIL, "unable to destroy local heap prefix")
 
 done:
@@ -608,22 +605,21 @@ H5HL_prefix_size(const H5F_t UNUSED *f, const void *thing, size_t *size_ptr)
  *-------------------------------------------------------------------------
  */
 static void *
-H5HL_datablock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *udata1,
-    void *_udata)
+H5HL_datablock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
 {
-    H5HL_dblk_t         *dblk = NULL; /* Heap data block deserialized */
-    H5HL_cache_dblk_ud_t *udata = (H5HL_cache_dblk_ud_t *)_udata; /* User data for protecting local heap data block */
-    void                *ret_value; /* Return value */
+    H5HL_dblk_t *dblk = NULL;       /* Local heap data block deserialized */
+    H5HL_cache_dblk_ud_t *udata = (H5HL_cache_dblk_ud_t *)_udata;       /* User data for callback */
+    H5HL_dblk_t *ret_value;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5HL_datablock_load)
 
     /* check arguments */
     HDassert(f);
     HDassert(H5F_addr_defined(addr));
-    HDassert(!udata1);
     HDassert(udata);
     HDassert(udata->heap);
     HDassert(!udata->heap->single_cache_obj);
+    HDassert(NULL == udata->heap->dblk);
 
     /* Allocate space in memory for the heap data block */
     if(NULL == (dblk = H5HL_dblk_new(udata->heap)))
@@ -705,7 +701,7 @@ H5HL_datablock_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr,
 
     /* Should we destroy the memory version? */
     if(destroy)
-        if(H5HL_dblk_dest(dblk) < 0)
+        if(H5HL_datablock_dest(f, dblk) < 0)
 	    HGOTO_ERROR(H5E_HEAP, H5E_CANTFREE, FAIL, "unable to destroy local heap data block")
 
 done:
@@ -727,7 +723,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5HL_datablock_dest(H5F_t UNUSED *f, void *_thing)
+H5HL_datablock_dest(H5F_t *f, void *_thing)
 {
     H5HL_dblk_t *dblk = (H5HL_dblk_t *)_thing; /* Pointer to the local heap data block */
     herr_t ret_value = SUCCEED;         /* Return value */
@@ -777,7 +773,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5HL_datablock_clear(H5F_t UNUSED *f, void *_thing, hbool_t destroy)
+H5HL_datablock_clear(H5F_t *f, void *_thing, hbool_t destroy)
 {
     H5HL_dblk_t *dblk = (H5HL_dblk_t *)_thing; /* Pointer to the local heap data block */
     herr_t ret_value = SUCCEED;         /* Return value */
@@ -791,7 +787,7 @@ H5HL_datablock_clear(H5F_t UNUSED *f, void *_thing, hbool_t destroy)
     dblk->cache_info.is_dirty = FALSE;
 
     if(destroy)
-        if(H5HL_dblk_dest(dblk) < 0)
+        if(H5HL_datablock_dest(f, dblk) < 0)
 	    HGOTO_ERROR(H5E_HEAP, H5E_CANTFREE, FAIL, "unable to destroy local heap data block")
 
 done:

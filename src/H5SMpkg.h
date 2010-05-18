@@ -32,6 +32,7 @@
 #include "H5SMprivate.h"	/* Shared Object Header Messages	*/
 
 /* Other private headers needed by this file */
+#include "H5ACprivate.h"        /* Metadata Cache		  	*/
 #include "H5B2private.h"        /* B-trees                              */
 #include "H5HFprivate.h"        /* Fractal heaps		  	*/
 
@@ -218,6 +219,12 @@ typedef struct H5SM_bt2_ctx_t {
     uint8_t     sizeof_addr;    /* Size of file addresses */
 } H5SM_bt2_ctx_t;
 
+/* Callback info for loading a shared message index into the cache */
+typedef struct H5SM_list_cache_ud_t {
+    H5F_t *f;  /* File that shared message index stored as a list is in */
+    H5SM_index_header_t *header; /* Index header for this list */
+} H5SM_list_cache_ud_t;
+
 
 /****************************/
 /* Package Variables        */
@@ -250,6 +257,10 @@ H5_DLL herr_t H5SM_bt2_convert_to_list_op(const void * record, void *op_data);
 
 /* Fractal heap 'op' callback to compute hash value for message "in place" */
 H5_DLL herr_t H5SM_get_hash_fh_cb(const void *obj, size_t obj_len, void *_udata);
+
+/* Routines to release data structures */
+herr_t H5SM_table_free(H5SM_master_table_t *table);
+herr_t H5SM_list_free(H5SM_list_t *list);
 
 /* Testing functions */
 #ifdef H5SM_TESTING

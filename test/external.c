@@ -20,6 +20,7 @@
  * Purpose:	Tests datasets stored in external raw files.
  */
 #include "h5test.h"
+#include "H5srcdir.h"
 
 /* File for external link test.  Created with gen_udlinks.c */
 #define LINKED_FILE  "be_extlink2.h5"
@@ -60,14 +61,14 @@ same_contents (const char *name1, const char *name2)
     fd2 = HDopen(name2, O_RDONLY, 0666);
     assert(fd1 >= 0 && fd2 >= 0);
 
-    while(1) { 
+    while(1) {
         /* Asserts will catch negative return values */
         n1 = HDread(fd1, buf1, sizeof(buf1));
         n2 = HDread(fd2, buf2, sizeof(buf2));
         assert(n1 >= 0 && (size_t)n1 <= sizeof(buf1));
         assert(n2 >= 0 && (size_t)n2 <= sizeof(buf2));
         assert(n1 == n2);
-    
+
         if(n1 == 0 && n2 == 0)
             break;
         if(HDmemcmp(buf1, buf2, (size_t)n1)) {
