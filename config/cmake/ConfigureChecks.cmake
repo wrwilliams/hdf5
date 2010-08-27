@@ -366,6 +366,8 @@ CHECK_FUNCTION_EXISTS (ioctl             H5_HAVE_IOCTL)
 CHECK_FUNCTION_EXISTS (difftime          H5_HAVE_DIFFTIME)
 CHECK_FUNCTION_EXISTS (fseeko            H5_HAVE_FSEEKO)
 CHECK_FUNCTION_EXISTS (ftello            H5_HAVE_FTELLO)
+CHECK_FUNCTION_EXISTS (fseeko64          H5_HAVE_FSEEKO64)
+CHECK_FUNCTION_EXISTS (ftello64          H5_HAVE_FTELLO64)
 CHECK_FUNCTION_EXISTS (fstat64           H5_HAVE_FSTAT64)
 CHECK_FUNCTION_EXISTS (stat64            H5_HAVE_STAT64)
 
@@ -379,7 +381,7 @@ IF (NOT MSVC)
   IF ("H5_HAVE_TIME_GETTIMEOFDAY" MATCHES "^H5_HAVE_TIME_GETTIMEOFDAY$")
     TRY_COMPILE (HAVE_TIME_GETTIMEOFDAY
         ${CMAKE_BINARY_DIR}
-        ${HDF5_SOURCE_DIR}/Resources/GetTimeOfDayTest.cpp
+        ${HDF5_RESOURCES_DIR}/GetTimeOfDayTest.cpp
         COMPILE_DEFINITIONS -DTRY_TIME_H
         OUTPUT_VARIABLE OUTPUT
     )
@@ -391,7 +393,7 @@ IF (NOT MSVC)
   IF ("H5_HAVE_SYS_TIME_GETTIMEOFDAY" MATCHES "^H5_HAVE_SYS_TIME_GETTIMEOFDAY$")
     TRY_COMPILE (HAVE_SYS_TIME_GETTIMEOFDAY
         ${CMAKE_BINARY_DIR}
-        ${HDF5_SOURCE_DIR}/Resources/GetTimeOfDayTest.cpp
+        ${HDF5_RESOURCES_DIR}/GetTimeOfDayTest.cpp
         COMPILE_DEFINITIONS -DTRY_SYS_TIME_H
         OUTPUT_VARIABLE OUTPUT
     )
@@ -466,7 +468,7 @@ MACRO (HDF5_FUNCTION_TEST OTHER_TEST)
     # (STATUS "Performing ${OTHER_TEST}")
     TRY_COMPILE (${OTHER_TEST}
         ${CMAKE_BINARY_DIR}
-        ${HDF5_SOURCE_DIR}/Resources/HDF5Tests.c
+        ${HDF5_RESOURCES_DIR}/HDF5Tests.c
         CMAKE_FLAGS -DCOMPILE_DEFINITIONS:STRING=${MACRO_CHECK_FUNCTION_DEFINITIONS}
         "${OTHER_TEST_ADD_LIBRARIES}"
         OUTPUT_VARIABLE OUTPUT
@@ -491,6 +493,7 @@ ENDMACRO (HDF5_FUNCTION_TEST)
 IF (WINDOWS)
   SET (H5_HAVE_TIMEZONE 1)
   SET (H5_HAVE_FUNCTION 1)
+  SET (H5_LONE_COLON 0)
 ELSE (WINDOWS)
   FOREACH (test
       TIME_WITH_SYS_TIME
@@ -513,6 +516,7 @@ ELSE (WINDOWS)
       HAVE_C99_FUNC
       HAVE_C99_DESIGNATED_INITIALIZER
       CXX_HAVE_OFFSETOF
+      LONE_COLON
   )
     HDF5_FUNCTION_TEST (${test})
   ENDFOREACH (test)
@@ -523,7 +527,6 @@ ENDIF (WINDOWS)
 #-----------------------------------------------------------------------------
 IF (HAVE_OFF64_T)
   CHECK_FUNCTION_EXISTS (lseek64           H5_HAVE_LSEEK64)
-  CHECK_FUNCTION_EXISTS (fseek64           H5_HAVE_FSEEK64)
 ENDIF (HAVE_OFF64_T)
 
 #-----------------------------------------------------------------------------
@@ -551,7 +554,7 @@ ENDIF (INLINE_TEST___inline__)
 #-----------------------------------------------------------------------------
 # Check how to print a Long Long integer
 #-----------------------------------------------------------------------------
-SET (H5_H5_PRINTF_LL_WIDTH "H5_PRINTF_LL_WIDTH")
+SET (H5_PRINTF_LL_WIDTH "H5_PRINTF_LL_WIDTH")
 IF (H5_PRINTF_LL_WIDTH MATCHES "^H5_PRINTF_LL_WIDTH$")
   SET (PRINT_LL_FOUND 0)
   MESSAGE (STATUS "Checking for appropriate format for 64 bit long:")
@@ -562,7 +565,7 @@ IF (H5_PRINTF_LL_WIDTH MATCHES "^H5_PRINTF_LL_WIDTH$")
     ENDIF (H5_SIZEOF_LONG_LONG)
     TRY_RUN (HDF5_PRINTF_LL_TEST_RUN   HDF5_PRINTF_LL_TEST_COMPILE
         ${HDF5_BINARY_DIR}/CMake
-        ${HDF5_SOURCE_DIR}/Resources/HDF5Tests.c
+        ${HDF5_RESOURCES_DIR}/HDF5Tests.c
         CMAKE_FLAGS -DCOMPILE_DEFINITIONS:STRING=${CURRENT_TEST_DEFINITIONS}
         OUTPUT_VARIABLE OUTPUT
     )
@@ -616,7 +619,7 @@ MACRO (H5ConversionTests TEST msg)
    # MESSAGE (STATUS "===> ${TEST}")
     TRY_RUN (${TEST}_RUN   ${TEST}_COMPILE
         ${HDF5_BINARY_DIR}/CMake
-        ${HDF5_SOURCE_DIR}/Resources/ConversionTests.c
+        ${HDF5_RESOURCES_DIR}/ConversionTests.c
         CMAKE_FLAGS -DCOMPILE_DEFINITIONS:STRING=-D${TEST}_TEST
         OUTPUT_VARIABLE OUTPUT
     )

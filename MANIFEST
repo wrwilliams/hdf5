@@ -614,6 +614,7 @@
 ./src/H5Ipkg.h
 ./src/H5Iprivate.h
 ./src/H5Ipublic.h
+./src/H5Itest.c
 ./src/H5L.c
 ./src/H5Lexternal.c
 ./src/H5Lpkg.h
@@ -827,6 +828,7 @@
 ./test/gen_old_group.c			_DO_NOT_DISTRIBUTE_
 ./test/gen_old_layout.c			_DO_NOT_DISTRIBUTE_
 ./test/gen_old_mtime.c			_DO_NOT_DISTRIBUTE_
+./test/gen_sizes_lheap.c        _DO_NOT_DISTRIBUTE_
 ./test/gen_udlinks.c			_DO_NOT_DISTRIBUTE_
 ./test/getname.c
 ./test/gheap.c
@@ -887,6 +889,7 @@
 ./test/trefer.c
 ./test/trefstr.c
 ./test/tselect.c
+./test/tsizeslheap.h5
 ./test/tskiplist.c
 ./test/tsohm.c
 ./test/ttst.c
@@ -927,6 +930,7 @@
 ./testpar/t_filter_read.c
 ./testpar/t_span_tree.c
 ./testpar/t_posix_compliant.c
+./testpar/t_rank_projection.c
 ./testpar/testpar.h
 ./testpar/testphdf5.c
 ./testpar/testphdf5.h
@@ -1110,7 +1114,6 @@
 ./tools/testfiles/family_file00015.h5
 ./tools/testfiles/family_file00016.h5
 ./tools/testfiles/family_file00017.h5
-./tools/testfiles/h5repack_filters.h5.ddl
 ./tools/testfiles/tall-1.ddl
 ./tools/testfiles/tall-2.ddl
 ./tools/testfiles/tall-3.ddl
@@ -1119,7 +1122,6 @@
 ./tools/testfiles/tall.h5
 ./tools/testfiles/tarray1.ddl
 ./tools/testfiles/tarray1.h5
-./tools/testfiles/tarray1.ls
 ./tools/testfiles/tarray2.ddl
 ./tools/testfiles/tarray2.h5
 ./tools/testfiles/tarray3.ddl
@@ -1141,6 +1143,8 @@
 ./tools/testfiles/tattrreg.h5
 ./tools/testfiles/tattrreg.ddl 
 ./tools/testfiles/tattrregR.ddl 
+./tools/testfiles/tbinregR.exp
+./tools/testfiles/tbinregR.ddl
 ./tools/testfiles/tbitfields.h5
 ./tools/testfiles/tchar.h5
 ./tools/testfiles/tchar1.ddl
@@ -1161,34 +1165,19 @@
 ./tools/testfiles/tdset2.h5
 ./tools/testfiles/tempty.ddl
 ./tools/testfiles/tempty.h5
-./tools/testfiles/tempty.ls
 ./tools/testfiles/tenum.h5
+./tools/testfiles/texceedsubblock.ddl
+./tools/testfiles/texceedsubcount.ddl
+./tools/testfiles/texceedsubstart.ddl
+./tools/testfiles/texceedsubstride.ddl
 ./tools/testfiles/textlink.h5
 ./tools/testfiles/textlink.h5.xml
-./tools/testfiles/textlink-1.ls
 ./tools/testfiles/textlinkfar.ddl
 ./tools/testfiles/textlinkfar.h5
 ./tools/testfiles/textlinksrc.ddl
 ./tools/testfiles/textlinksrc.h5
-./tools/testfiles/textlinksrc-1.ls
-./tools/testfiles/textlinksrc-2.ls
-./tools/testfiles/textlinksrc-3.ls
-./tools/testfiles/textlinksrc-4.ls
-./tools/testfiles/textlinksrc-5.ls
-./tools/testfiles/textlinksrc-6.ls
-./tools/testfiles/textlinksrc-7.ls
-./tools/testfiles/textlinksrc-1-old.ls
-./tools/testfiles/textlinksrc-2-old.ls
-./tools/testfiles/textlinksrc-3-old.ls
-./tools/testfiles/textlinksrc-6-old.ls
-./tools/testfiles/textlinksrc-7-old.ls
 ./tools/testfiles/textlinktar.h5
 ./tools/testfiles/tsoftlinks.h5
-./tools/testfiles/tsoftlinks-1.ls
-./tools/testfiles/tsoftlinks-2.ls
-./tools/testfiles/tsoftlinks-3.ls
-./tools/testfiles/tsoftlinks-4.ls
-./tools/testfiles/tsoftlinks-5.ls
 ./tools/testfiles/tfamily.ddl
 ./tools/testfiles/tfamily00000.h5
 ./tools/testfiles/tfamily00001.h5
@@ -1250,7 +1239,6 @@
 ./tools/testfiles/tstr-2.ddl
 ./tools/testfiles/tvldtypes1.ddl
 ./tools/testfiles/tvldtypes1.h5
-./tools/testfiles/tvldtypes1.ls
 ./tools/testfiles/tvldtypes2.ddl
 ./tools/testfiles/tvldtypes2.h5
 ./tools/testfiles/tvldtypes3.ddl
@@ -1265,7 +1253,6 @@
 ./tools/testfiles/tudlink.h5.xml
 ./tools/testfiles/tudlink-1.ddl
 ./tools/testfiles/tudlink-2.ddl
-./tools/testfiles/tudlink-1.ls
 ./tools/testfiles/tattr2.h5
 ./tools/testfiles/tall-2A.ddl
 ./tools/testfiles/tall-2B.ddl
@@ -1308,10 +1295,6 @@
 ./tools/testfiles/tindicessub3.ddl
 ./tools/testfiles/tindicessub4.ddl
 ./tools/testfiles/tindicessub1.ddl
-./tools/testfiles/texceedsubblock.ddl
-./tools/testfiles/texceedsubcount.ddl
-./tools/testfiles/texceedsubstart.ddl
-./tools/testfiles/texceedsubstride.ddl
 ./tools/testfiles/thyperslab.ddl
 ./tools/testfiles/tbigdims.ddl
 ./tools/testfiles/tbigdims.h5
@@ -1345,6 +1328,8 @@
 ./tools/testfiles/torderattr.h5
 ./tools/testfiles/tfpformat.ddl
 ./tools/testfiles/tfpformat.h5
+# h5dump h5repack validation
+./tools/testfiles/h5repack_filters.h5.ddl
 
 
 # Expected output from h5ls tests
@@ -1360,17 +1345,44 @@
 ./tools/testfiles/tgroup-2.ls
 ./tools/testfiles/tgroup-3.ls
 ./tools/testfiles/tgroup.ls
-./tools/testfiles/thlink-1.ls
 ./tools/testfiles/tloop-1.ls
 ./tools/testfiles/tnestcomp-1.ls
 ./tools/testfiles/tsaf.ls
-./tools/testfiles/tslink-1.ls
 ./tools/testfiles/tstr-1.ls
 ./tools/testfiles/tattr2.ls
+./tools/testfiles/tvldtypes1.ls
 ./tools/testfiles/tvldtypes2le.ls
-./tools/testfiles/tdataregle.ls
 ./tools/testfiles/tvldtypes2be.ls
+./tools/testfiles/tdataregle.ls
 ./tools/testfiles/tdataregbe.ls
+./tools/testfiles/tarray1.ls
+./tools/testfiles/tempty.ls
+./tools/testfiles/thlink-1.ls
+./tools/testfiles/tslink-1.ls
+./tools/testfiles/textlink-1.ls
+./tools/testfiles/textlinksrc-1.ls
+./tools/testfiles/textlinksrc-2.ls
+./tools/testfiles/textlinksrc-3.ls
+./tools/testfiles/textlinksrc-4.ls
+./tools/testfiles/textlinksrc-5.ls
+./tools/testfiles/textlinksrc-6.ls
+./tools/testfiles/textlinksrc-7.ls
+./tools/testfiles/textlinksrc-1-old.ls
+./tools/testfiles/textlinksrc-2-old.ls
+./tools/testfiles/textlinksrc-3-old.ls
+./tools/testfiles/textlinksrc-6-old.ls
+./tools/testfiles/textlinksrc-7-old.ls
+./tools/testfiles/tsoftlinks-1.ls
+./tools/testfiles/tsoftlinks-2.ls
+./tools/testfiles/tsoftlinks-3.ls
+./tools/testfiles/tsoftlinks-4.ls
+./tools/testfiles/tsoftlinks-5.ls
+./tools/testfiles/textlinksrc-nodangle-1.ls
+./tools/testfiles/textlinksrc-nodangle-2.ls
+./tools/testfiles/tsoftlinks-nodangle-1.ls
+./tools/testfiles/thlinks-nodangle-1.ls
+./tools/testfiles/tudlink-1.ls
+
 
 
 #additional test input and output for h5dump XML
@@ -1850,25 +1862,25 @@
 ./vms/tools/testfiles/tperror.ddl
 
 # CMake-specific Files
-./Resources/CMake/FindSZIP.cmake
-./Resources/ConversionTests.c
-./Resources/GetTimeOfDayTest.cpp
-./Resources/HDF5Tests.c
-./Resources/xlatefile.c
-./Resources/CheckTypeSize.cmake
-./Resources/H5cxx_config.h.in
-./Resources/H5pubconf.h.in
-./Resources/hdf5_zlib.h.in
-./Resources/FindHDF5.cmake
-./Resources/HDF5-config.cmake.build.in
-./Resources/HDF5-config.cmake.install.in
-./Resources/HDF5Macros.cmake
-./Resources/libhdf5.settings.cmake.in
-./Resources/cacheinit.cmake
-./Resources/runTest.cmake
-./Resources/CTestCustom.ctest
+./config/cmake/FindSZIP.cmake
+./config/cmake/ConversionTests.c
+./config/cmake/GetTimeOfDayTest.cpp
+./config/cmake/HDF5Tests.c
+./config/cmake/xlatefile.c
+./config/cmake/CheckTypeSize.cmake
+./config/cmake/H5cxx_config.h.in
+./config/cmake/H5pubconf.h.in
+./config/cmake/FindHDF5.cmake
+./config/cmake/hdf5-config.cmake.build.in
+./config/cmake/hdf5-config.cmake.install.in
+./config/cmake/hdf5-config-version.cmake.in
+./config/cmake/HDF5Macros.cmake
+./config/cmake/libhdf5.settings.cmake.in
+./config/cmake/cacheinit.cmake
+./config/cmake/runTest.cmake
+./config/cmake/CTestCustom.ctest
+./config/cmake/ConfigureChecks.cmake
 ./CMakeLists.txt
-./ConfigureChecks.cmake
 ./CTestConfig.cmake
 ./c++/CMakeLists.txt
 ./c++/examples/CMakeLists.txt

@@ -118,7 +118,7 @@ H5O_chunk_add(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned idx)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTINC, FAIL, "can't increment reference count on object header")
 
     /* Insert the chunk proxy into the cache */
-    if(H5AC_set(f, dxpl_id, H5AC_OHDR_CHK, oh->chunk[idx].addr, chk_proxy, H5AC__NO_FLAGS_SET) < 0)
+    if(H5AC_insert_entry(f, dxpl_id, H5AC_OHDR_CHK, oh->chunk[idx].addr, chk_proxy, H5AC__NO_FLAGS_SET) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTINSERT, FAIL, "unable to cache object header chunk")
     chk_proxy = NULL;
 
@@ -148,8 +148,8 @@ done:
 H5O_chunk_proxy_t *
 H5O_chunk_protect(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned idx)
 {
-    H5O_chunk_proxy_t *chk_proxy = NULL;       /* Proxy for protected chunk */
-    H5O_chunk_proxy_t *ret_value = NULL;       /* Return value */
+    H5O_chunk_proxy_t *chk_proxy = NULL;        /* Proxy for protected chunk */
+    H5O_chunk_proxy_t *ret_value;               /* Return value */
 
     FUNC_ENTER_NOAPI(H5O_chunk_protect, NULL)
 
@@ -197,7 +197,7 @@ H5O_chunk_protect(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned idx)
 
 done:
     /* Cleanup on error */
-    if (!ret_value)
+    if(!ret_value)
         if(0 == idx && chk_proxy)
             chk_proxy = H5FL_FREE(H5O_chunk_proxy_t, chk_proxy);
 
