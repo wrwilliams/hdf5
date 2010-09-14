@@ -74,6 +74,17 @@
 #define H5O_SHMESG_MAX_NINDEXES 8
 #define H5O_SHMESG_MAX_LIST_SIZE 5000
 
+/* Flags for H5Oget_info.
+ * Theses flags determine which fields will be filled in in the H5O_info_t
+ * struct.  Some fields are always filled in because there is no performance
+ * penalty.
+ */
+#define H5O_INFO_TIME           0x0001u         /* Fill in the atime, mtime, ctime, and btime fields */
+#define H5O_INFO_NUM_ATTRS      0x0002u         /* Fill in the num_attrs field */
+#define H5O_INFO_HDR            0x0004u         /* Fill in the hdr field */
+#define H5O_INFO_META_SIZE      0x0008u         /* Fill in the meta_size field */
+#define H5O_INFO_ALL            (H5O_INFO_TIME | H5O_INFO_NUM_ATTRS | H5O_INFO_HDR | H5O_INFO_META_SIZE)
+
 /*******************/
 /* Public Typedefs */
 /*******************/
@@ -149,7 +160,10 @@ H5_DLL hid_t H5Oopen_by_addr(hid_t loc_id, haddr_t addr);
 H5_DLL hid_t H5Oopen_by_idx(hid_t loc_id, const char *group_name,
     H5_index_t idx_type, H5_iter_order_t order, hsize_t n, hid_t lapl_id);
 H5_DLL htri_t H5Oexists_by_name(hid_t loc_id, const char *name, hid_t lapl_id);
+H5_DLL herr_t H5Oget_info2(hid_t loc_id, H5O_info_t *oinfo, unsigned fields);
 H5_DLL herr_t H5Oget_info(hid_t loc_id, H5O_info_t *oinfo);
+H5_DLL herr_t H5Oget_info_by_name2(hid_t loc_id, const char *name, H5O_info_t *oinfo,
+    unsigned fields, hid_t lapl_id);
 H5_DLL herr_t H5Oget_info_by_name(hid_t loc_id, const char *name, H5O_info_t *oinfo,
     hid_t lapl_id);
 H5_DLL herr_t H5Oget_info_by_idx(hid_t loc_id, const char *group_name,

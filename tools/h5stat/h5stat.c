@@ -1604,7 +1604,7 @@ main(int argc, const char *argv[])
 
         u = 0;
         while(hand[u].obj) {
-            if (h5trav_visit(fid, hand[u].obj, TRUE, TRUE, obj_stats, lnk_stats, &iter) < 0)
+            if (h5trav_visit(fid, hand[u].obj, TRUE, TRUE, obj_stats, lnk_stats, &iter, H5O_INFO_ALL) < 0)
 		warn_msg("Unable to traverse object \"%s\"\n", hand[u].obj);
 	    else
 		print_statistics(hand[u].obj, &iter);
@@ -1612,7 +1612,7 @@ main(int argc, const char *argv[])
         } /* end while */
     } /* end if */
     else {
-        if (h5trav_visit(fid, "/", TRUE, TRUE, obj_stats, lnk_stats, &iter) < 0)
+        if (h5trav_visit(fid, "/", TRUE, TRUE, obj_stats, lnk_stats, &iter, H5O_INFO_ALL) < 0)
 	    warn_msg("Unable to traverse objects/links in file \"%s\"\n", fname);
 	else
 	    print_statistics("/", &iter);

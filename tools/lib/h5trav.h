@@ -112,7 +112,7 @@ extern "C" {
  */
 H5TOOLS_DLL int h5trav_visit(hid_t file_id, const char *grp_name, hbool_t visit_start,
     hbool_t recurse, h5trav_obj_func_t visit_obj, h5trav_lnk_func_t visit_lnk,
-    void *udata);
+    void *udata, unsigned fields);
 
 /*-------------------------------------------------------------------------
  * "h5trav info" public functions

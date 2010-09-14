@@ -637,7 +637,7 @@ init_objs(hid_t fid, find_objs_t *info, table_t **group_table,
     info->dset_table = *dset_table;
 
     /* Find all shared objects */
-    return(h5trav_visit(fid, "/", TRUE, TRUE, find_objs_cb, NULL, info));
+    return(h5trav_visit(fid, "/", TRUE, TRUE, find_objs_cb, NULL, info, 0));
 }
 
 

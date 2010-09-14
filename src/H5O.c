@@ -582,6 +582,45 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5Oget_info2
+ *
+ * Purpose:     Retrieve information about an object.
+ *
+ * Return:      Success:        Non-negative
+ *              Failure:        Negative
+ *
+ * Programmer:  Neil Fortner
+ *              July 7 2010
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Oget_info2(hid_t loc_id, H5O_info_t *oinfo, unsigned fields)
+{
+    H5G_loc_t   loc;                    /* Location of group */
+    herr_t      ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_API(H5Oget_info2, FAIL)
+    H5TRACE3("e", "i*xIu", loc_id, oinfo, fields);
+
+    /* Check args */
+    if(H5G_loc(loc_id, &loc) < 0)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
+    if(!oinfo)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no info struct")
+    if(fields & ~H5O_INFO_ALL)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid fields")
+
+    /* Retrieve the object's information */
+    if(H5G_loc_info(&loc, ".", oinfo/*out*/, fields, H5P_LINK_ACCESS_DEFAULT, H5AC_ind_dxpl_id) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object not found")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* end H5Oget_info2() */
+
+
+/*-------------------------------------------------------------------------
  * Function:	H5Oget_info
  *
  * Purpose:	Retrieve information about an object.
@@ -610,12 +649,57 @@ H5Oget_info(hid_t loc_id, H5O_info_t *oinfo)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no info struct")
 
     /* Retrieve the object's information */
-    if(H5G_loc_info(&loc, ".", TRUE, oinfo/*out*/, H5P_LINK_ACCESS_DEFAULT, H5AC_ind_dxpl_id) < 0)
+    if(H5G_loc_info(&loc, ".", oinfo/*out*/, H5O_INFO_ALL, H5P_LINK_ACCESS_DEFAULT, H5AC_ind_dxpl_id) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object not found")
 
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Oget_info() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Oget_info_by_name2
+ *
+ * Purpose:     Retrieve information about an object.
+ *
+ * Return:      Success:        Non-negative
+ *              Failure:        Negative
+ *
+ * Programmer:  Neil Fortner
+ *              July 7 2010
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Oget_info_by_name2(hid_t loc_id, const char *name, H5O_info_t *oinfo,
+    unsigned fields, hid_t lapl_id)
+{
+    H5G_loc_t   loc;                    /* Location of group */
+    herr_t      ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_API(H5Oget_info_by_name2, FAIL)
+    H5TRACE5("e", "i*s*xIui", loc_id, name, oinfo, fields, lapl_id);
+
+    /* Check args */
+    if(H5G_loc(loc_id, &loc) < 0)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
+    if(!name || !*name)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name")
+    if(!oinfo)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no info struct")
+    if(H5P_DEFAULT == lapl_id)
+        lapl_id = H5P_LINK_ACCESS_DEFAULT;
+    else
+        if(TRUE != H5P_isa_class(lapl_id, H5P_LINK_ACCESS))
+            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not link access property list ID")
+
+    /* Retrieve the object's information */
+    if(H5G_loc_info(&loc, name, oinfo/*out*/, fields, lapl_id, H5AC_ind_dxpl_id) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object not found")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* end H5Oget_info_by_name2() */
 
 
 /*-------------------------------------------------------------------------
@@ -654,7 +738,7 @@ H5Oget_info_by_name(hid_t loc_id, const char *name, H5O_info_t *oinfo, hid_t lap
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not link access property list ID")
 
     /* Retrieve the object's information */
-    if(H5G_loc_info(&loc, name, TRUE, oinfo/*out*/, lapl_id, H5AC_ind_dxpl_id) < 0)
+    if(H5G_loc_info(&loc, name, oinfo/*out*/, H5O_INFO_ALL, lapl_id, H5AC_ind_dxpl_id) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object not found")
 
 done:
@@ -719,7 +803,7 @@ H5Oget_info_by_idx(hid_t loc_id, const char *group_name, H5_index_t idx_type,
     loc_found = TRUE;
 
     /* Retrieve the object's information */
-    if(H5O_get_info(obj_loc.oloc, H5AC_ind_dxpl_id, TRUE, oinfo) < 0)
+    if(H5O_get_info(obj_loc.oloc, H5AC_ind_dxpl_id, oinfo, H5O_INFO_ALL) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "can't retrieve object info")
 
 done:
@@ -2767,8 +2851,8 @@ H5O_get_hdr_info_real(const H5O_t *oh, H5O_hdr_info_t *hdr)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5O_get_info(const H5O_loc_t *loc, hid_t dxpl_id, hbool_t want_ih_info,
-    H5O_info_t *oinfo)
+H5O_get_info(const H5O_loc_t *loc, hid_t dxpl_id, H5O_info_t *oinfo,
+    unsigned fields)
 {
     const H5O_obj_class_t *obj_class;   /* Class of object for header */
     H5O_t *oh = NULL;                   /* Object header */
@@ -2804,56 +2888,60 @@ H5O_get_info(const H5O_loc_t *loc, hid_t dxpl_id, hbool_t want_ih_info,
     oinfo->rc = oh->nlink;
 
     /* Get modification time for object */
-    if(oh->version > H5O_VERSION_1) {
-        oinfo->atime = oh->atime;
-        oinfo->mtime = oh->mtime;
-        oinfo->ctime = oh->ctime;
-        oinfo->btime = oh->btime;
-    } /* end if */
-    else {
-        htri_t	exists;                 /* Flag if header message of interest exists */
-
-        /* No information for access & modification fields */
-        /* (we stopped updating the "modification time" header message for
-         *      raw data changes, so the "modification time" header message
-         *      is closest to the 'change time', in POSIX terms - QAK)
-         */
-        oinfo->atime = 0;
-        oinfo->mtime = 0;
-        oinfo->btime = 0;
-
-        /* Might be information for modification time */
-        if((exists = H5O_msg_exists_oh(oh, H5O_MTIME_ID)) < 0)
-            HGOTO_ERROR(H5E_OHDR, H5E_NOTFOUND, FAIL, "unable to check for MTIME message")
-        if(exists > 0) {
-            /* Get "old style" modification time info */
-            if(NULL == H5O_msg_read_oh(loc->file, dxpl_id, oh, H5O_MTIME_ID, &oinfo->ctime))
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "can't read MTIME message")
+    if(fields & H5O_INFO_TIME) {
+        if(oh->version > H5O_VERSION_1) {
+            oinfo->atime = oh->atime;
+            oinfo->mtime = oh->mtime;
+            oinfo->ctime = oh->ctime;
+            oinfo->btime = oh->btime;
         } /* end if */
         else {
-            /* Check for "new style" modification time info */
-            if((exists = H5O_msg_exists_oh(oh, H5O_MTIME_NEW_ID)) < 0)
-                HGOTO_ERROR(H5E_OHDR, H5E_NOTFOUND, FAIL, "unable to check for MTIME_NEW message")
+            htri_t	exists;                 /* Flag if header message of interest exists */
+
+            /* No information for access & modification fields */
+            /* (we stopped updating the "modification time" header message for
+            *      raw data changes, so the "modification time" header message
+            *      is closest to the 'change time', in POSIX terms - QAK)
+            */
+            oinfo->atime = 0;
+            oinfo->mtime = 0;
+            oinfo->btime = 0;
+
+            /* Might be information for modification time */
+            if((exists = H5O_msg_exists_oh(oh, H5O_MTIME_ID)) < 0)
+                HGOTO_ERROR(H5E_OHDR, H5E_NOTFOUND, FAIL, "unable to check for MTIME message")
             if(exists > 0) {
-                /* Get "new style" modification time info */
-                if(NULL == H5O_msg_read_oh(loc->file, dxpl_id, oh, H5O_MTIME_NEW_ID, &oinfo->ctime))
-                    HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "can't read MTIME_NEW message")
+                /* Get "old style" modification time info */
+                if(NULL == H5O_msg_read_oh(loc->file, dxpl_id, oh, H5O_MTIME_ID, &oinfo->ctime))
+                    HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "can't read MTIME message")
             } /* end if */
-            else
-                oinfo->ctime = 0;
+            else {
+                /* Check for "new style" modification time info */
+                if((exists = H5O_msg_exists_oh(oh, H5O_MTIME_NEW_ID)) < 0)
+                    HGOTO_ERROR(H5E_OHDR, H5E_NOTFOUND, FAIL, "unable to check for MTIME_NEW message")
+                if(exists > 0) {
+                    /* Get "new style" modification time info */
+                    if(NULL == H5O_msg_read_oh(loc->file, dxpl_id, oh, H5O_MTIME_NEW_ID, &oinfo->ctime))
+                        HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "can't read MTIME_NEW message")
+                } /* end if */
+                else
+                    oinfo->ctime = 0;
+            } /* end else */
         } /* end else */
-    } /* end else */
+    } /* end if */
 
     /* Get the information for the object header */
-    if(H5O_get_hdr_info_real(oh, &oinfo->hdr) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "can't retrieve object header info")
+    if(fields & H5O_INFO_HDR)
+        if(H5O_get_hdr_info_real(oh, &oinfo->hdr) < 0)
+            HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "can't retrieve object header info")
 
     /* Retrieve # of attributes */
-    if(H5O_attr_count_real(loc->file, dxpl_id, oh, &oinfo->num_attrs) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "can't retrieve attribute count")
+    if(fields & H5O_INFO_NUM_ATTRS)
+        if(H5O_attr_count_real(loc->file, dxpl_id, oh, &oinfo->num_attrs) < 0)
+            HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "can't retrieve attribute count")
 
     /* Get B-tree & heap metadata storage size, if requested */
-    if(want_ih_info) {
+    if(fields & H5O_INFO_META_SIZE) {
         /* Check for 'bh_info' callback for this type of object */
         if(obj_class->bh_info) {
             /* Call the object's class 'bh_info' routine */
@@ -2862,7 +2950,7 @@ H5O_get_info(const H5O_loc_t *loc, hid_t dxpl_id, hbool_t want_ih_info,
         } /* end if */
 
         /* Get B-tree & heap info for any attributes */
-        if(oinfo->num_attrs > 0) {
+        if(!(fields & H5O_INFO_NUM_ATTRS) || oinfo->num_attrs > 0) {
             if(H5O_attr_bh_info(loc->file, dxpl_id, oh, &oinfo->meta_size.attr) < 0)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "can't retrieve attribute btree & heap info")
         } /* end if */
@@ -3172,7 +3260,7 @@ H5O_visit_cb(hid_t UNUSED group, const char *name, const H5L_info_t *linfo,
             H5O_info_t oinfo;           /* Object info */
 
             /* Get the object's info */
-            if(H5O_get_info(&obj_oloc, udata->dxpl_id, TRUE, &oinfo) < 0)
+            if(H5O_get_info(&obj_oloc, udata->dxpl_id, &oinfo, H5O_INFO_ALL) < 0)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, H5_ITER_ERROR, "unable to get object info")
 
             /* Make the application callback */
@@ -3276,7 +3364,7 @@ H5O_visit(hid_t loc_id, const char *obj_name, H5_index_t idx_type,
     loc_found = TRUE;
 
     /* Get the object's info */
-    if(H5O_get_info(&obj_oloc, dxpl_id, TRUE, &oinfo) < 0)
+    if(H5O_get_info(&obj_oloc, dxpl_id, &oinfo, H5O_INFO_ALL) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to get object info")
 
     /* Open the object */
