@@ -374,26 +374,26 @@ done:
 int
 H5AC_term_interface(void)
 {
-    int		n=0;
+    int	n = 0;
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5AC_term_interface)
 
     if (H5_interface_initialize_g) {
 #ifdef H5_HAVE_PARALLEL
-        if(H5AC_dxpl_id>0 || H5AC_noblock_dxpl_id>0 || H5AC_ind_dxpl_id>0) {
+        if(H5AC_dxpl_id > 0 || H5AC_noblock_dxpl_id > 0 || H5AC_ind_dxpl_id > 0) {
             /* Indicate more work to do */
             n = 1; /* H5I */
 
             /* Close H5AC dxpl */
-            if (H5I_dec_ref(H5AC_dxpl_id, FALSE) < 0 ||
-                    H5I_dec_ref(H5AC_noblock_dxpl_id, FALSE) < 0 ||
-                    H5I_dec_ref(H5AC_ind_dxpl_id, FALSE) < 0)
+            if(H5I_dec_ref(H5AC_dxpl_id) < 0 ||
+                    H5I_dec_ref(H5AC_noblock_dxpl_id) < 0 ||
+                    H5I_dec_ref(H5AC_ind_dxpl_id) < 0)
                 H5E_clear_stack(NULL); /*ignore error*/
             else {
                 /* Reset static IDs */
-                H5AC_dxpl_id=(-1);
-                H5AC_noblock_dxpl_id=(-1);
-                H5AC_ind_dxpl_id=(-1);
+                H5AC_dxpl_id = (-1);
+                H5AC_noblock_dxpl_id = (-1);
+                H5AC_ind_dxpl_id = (-1);
 
                 /* Reset interface initialization flag */
                 H5_interface_initialize_g = 0;
@@ -1710,6 +1710,40 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5AC_dump_cache
+ *
+ * Purpose:     Dumps a summary of the contents of the metadata cache
+ *              to stdout.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              Sunday, October 10, 2010
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5AC_dump_cache(const H5F_t *f)
+{
+    herr_t              ret_value = SUCCEED;   /* Return value */
+
+    FUNC_ENTER_NOAPI(H5AC_dump_cache, FAIL)
+
+    HDassert(f);
+    HDassert(f->shared);
+    HDassert(f->shared->cache);
+
+    if ( H5C_dump_cache(f->shared->cache, H5F_OPEN_NAME(f)) < 0 ) {
+
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_dump_cache() failed.")
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5AC_dump_cache() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5AC_get_cache_auto_resize_config
  *
  * Purpose:     Wrapper function for H5C_get_cache_auto_resize_config().
@@ -2278,16 +2312,6 @@ done:
  *
  * Programmer:  John Mainzer
  *              6/1/06
- *
- * Changes:	Replaced call to sprintf with call to HDsnprintf() to 
- *		placate coverity.  There was no issue here, as string 
- *		lengths were checked prior to call to sprintf(), but
- *		so it goes.
- *
- *		Note that we will have lots more of these if we ever
- *		run coverity on a parallel build, or with trace file
- *		enabled.
- *						JRM -- 10/1/10
  *
  *-------------------------------------------------------------------------
  */

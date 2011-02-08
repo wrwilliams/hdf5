@@ -115,8 +115,8 @@ static void test_compound_2()
     const int	   nelmts = NTESTELEM;
     const hsize_t  four = 4;
     int		   i;
-    unsigned char *buf=NULL, *orig=NULL, *bkg=NULL;
-    ArrayType* array_dt = NULL;
+    unsigned char *buf = NULL, *orig = NULL, *bkg = NULL;
+    ArrayType *array_dt = NULL;
 
     // Output message about test being performed
     SUBTEST("Compound Element Reordering");
@@ -204,7 +204,8 @@ static void test_compound_2()
 cerr << "test_compound_2 in catch" << endl;
         issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
-    if (array_dt)
+
+    if(array_dt)
         delete array_dt;
 }   // test_compound_2()
 
@@ -239,7 +240,7 @@ static void test_compound_3()
     int		   i;
     const int	   nelmts = NTESTELEM;
     const hsize_t  four = 4;
-    unsigned char *buf=NULL, *orig=NULL, *bkg=NULL;
+    unsigned char *buf = NULL, *orig = NULL, *bkg = NULL;
     ArrayType* array_dt = NULL;
 
     // Output message about test being performed
@@ -325,7 +326,8 @@ static void test_compound_3()
 cerr << "test_compound_3 in catch" << endl;
 	issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
-    if (array_dt)
+
+    if(array_dt)
         delete array_dt;
 }   // test_compound_3()
 
@@ -365,7 +367,7 @@ static void test_compound_4()
     int		   i;
     const int	   nelmts = NTESTELEM;
     const hsize_t  four = 4;
-    unsigned char *buf=NULL, *orig=NULL, *bkg=NULL;
+    unsigned char *buf = NULL, *orig = NULL, *bkg = NULL;
     ArrayType* array_dt = NULL;
 
     // Output message about test being performed
@@ -389,7 +391,7 @@ static void test_compound_4()
 	memcpy(buf, orig, nelmts*sizeof(src_typ_t));
 
 	/* Build hdf5 datatypes */
-        array_dt = new ArrayType(PredType::NATIVE_INT, 1, &four);
+	array_dt = new ArrayType(PredType::NATIVE_INT, 1, &four);
 
 	// Create an empty compound datatype
 	CompType st(sizeof(src_typ_t));
@@ -456,7 +458,8 @@ static void test_compound_4()
 cerr << "test_compound_4 in catch" << endl;
         issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
-    if (array_dt)
+
+    if(array_dt)
         delete array_dt;
 }   // test_compound_4()
 
@@ -509,9 +512,9 @@ static void test_compound_5()
 	CompType short_array(4*sizeof(short));
 	short_array.insertMember("_", 0, *array_dt);
 	array_dt->close();
+        delete array_dt;
 
 	CompType int_array(4*sizeof(int));
-        delete array_dt;
 	array_dt = new ArrayType(PredType::NATIVE_INT, 1, dims);
 	int_array.insertMember("_", 0, *array_dt);
 	array_dt->close();
@@ -559,7 +562,8 @@ static void test_compound_5()
 cerr << "test_compound_5 in catch" << endl;
         issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
-    if (array_dt)
+
+    if(array_dt)
         delete array_dt;
 }   // test_compound_5()
 

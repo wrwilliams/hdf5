@@ -129,7 +129,6 @@ void test_vlstr_free_custom(void *_mem, void *info)
  *-------------------------------------------------------------------------
  */
 // String for testing datasets
-static char *dynstring_ds_write=NULL;
 static char stastring_ds_write[1]={'A'};
 
 // Info for a string dataset
@@ -138,9 +137,11 @@ const H5std_string DSET1_DATA("String Dataset");
 
 static void test_vlstring_dataset()
 {
+    char *dynstring_ds_write = NULL;
+    char *string_ds_check = NULL;
+
     // Output message about test being performed
     SUBTEST("VL String on Datasets");
-    char *string_ds_check = NULL;
 
     try {
 	// Open the file
@@ -209,14 +210,11 @@ static void test_vlstring_dataset()
     catch (Exception E) {
 	issue_fail_msg("test_vlstring_dataset()", __LINE__, __FILE__, E.getCDetailMsg());
     }
-    if (dynstring_ds_write) {
+
+    if(dynstring_ds_write)
         HDfree(dynstring_ds_write);
-        dynstring_ds_write = NULL;
-    }
-    if (string_ds_check) {
+    if(string_ds_check)
 	HDfree(string_ds_check);
-        string_ds_check = NULL;
-    }
 }   // test_vlstring_dataset()
 
 /*-------------------------------------------------------------------------
@@ -241,10 +239,10 @@ static void test_vlstring_array_dataset()
     // Output message about test being performed
     SUBTEST("VL String Array on Datasets");
 
-    H5File* file1;
+    H5File* file1 = NULL;
     try {
         // Create file.
-	file1 = new H5File (FILENAME, H5F_ACC_RDWR);
+	file1 = new H5File(FILENAME, H5F_ACC_RDWR);
 
         // Create dataspace for datasets.
         hsize_t dims1[] = {SPACE1_DIM1};
@@ -303,7 +301,6 @@ static void test_vlstring_array_dataset()
 	dataset2.close();
 	vlst.close();
 	file1->close();
-        delete file1;
 
 	PASSED();
     } // end try
@@ -312,8 +309,10 @@ static void test_vlstring_array_dataset()
     catch (Exception E)
     {
 	issue_fail_msg("test_vlstring_array_dataset()", __LINE__, __FILE__, E.getCDetailMsg());
-	delete file1;
     }
+
+    if(file1)
+	delete file1;
 } // end test_vlstring_array_dataset()
 
 /*-------------------------------------------------------------------------
@@ -509,7 +508,6 @@ static void test_vlstring_type()
 	// Close datatype and file
 	vlst.close();
 	file1->close();
-        delete file1;
 
 	PASSED();
     } // end try block
@@ -518,8 +516,10 @@ static void test_vlstring_type()
     catch (Exception E)
     {
         issue_fail_msg("test_vlstring_type()", __LINE__, __FILE__, E.getCDetailMsg());
-	delete file1;
     }
+
+    if(file1)
+	delete file1;
 } // end test_vlstring_type()
 
 /*-------------------------------------------------------------------------

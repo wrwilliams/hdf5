@@ -222,15 +222,13 @@ main(int argc, const char *argv[])
     }
 
     ifid = HDopen(input_file,O_RDONLY,0);
-
-    if (ifid < 0) {
+    if(ifid < 0) {
         error_msg("unable to open input HDF5 file \"%s\"\n", input_file);
         exit(EXIT_FAILURE);
     }
 
     res = HDfstat(ifid, &sbuf);
-
-    if (res < 0) {
+    if(res < 0) {
         error_msg("Can't stat file \"%s\"\n", input_file);
         exit(EXIT_FAILURE);
     }

@@ -32,9 +32,6 @@
 *
 * Comments:
 *
-* Modifications:
-*
-*
 *-------------------------------------------------------------------------
 */
 int_f
@@ -58,11 +55,7 @@ nh5tbmake_table_c(int_f *namelen1,
     hsize_t num_elem;
     hsize_t i;
     int max_len = 1;
-    hid_t c_loc_id = *loc_id;
-    hsize_t c_nfields = *nfields;
-    hsize_t c_nrecords = *nrecords;
-    hsize_t c_chunk_size = *chunk_size;
-    size_t c_type_size = *type_size;
+    hsize_t c_nfields = (hsize_t)*nfields;
     size_t *c_field_offset = NULL;
     hid_t *c_field_types = NULL;
     char **c_field_names = NULL;
@@ -70,10 +63,9 @@ nh5tbmake_table_c(int_f *namelen1,
     int_f ret_value = 0;
 
     num_elem = *nfields;
-    for(i = 0; i < num_elem; i++) {
+    for(i = 0; i < num_elem; i++)
         if(namelen2[i] > max_len)
             max_len = namelen2[i];
-    }
 
     /*
      * convert FORTRAN name to C name
@@ -87,10 +79,10 @@ nh5tbmake_table_c(int_f *namelen1,
     if(NULL == (c_field_types = (hid_t *)HDmalloc(sizeof(hid_t) * (size_t)c_nfields)))
         HGOTO_DONE(FAIL)
 
-    for (i = 0; i < num_elem; i++) {
+    for(i = 0; i < num_elem; i++) {
         c_field_offset[i] = field_offset[i];
         c_field_types[i] = field_types[i];
-    }
+    } /* end for */
 
     /*
      * allocate array of character pointers
@@ -118,9 +110,9 @@ nh5tbmake_table_c(int_f *namelen1,
     /*
      * call H5TBmake_table function.
      */
-    if(H5TBmake_table(c_name1, c_loc_id, c_name, c_nfields, c_nrecords,
-            c_type_size, c_field_names, c_field_offset, c_field_types,
-            c_chunk_size, NULL, *compress, NULL) < 0)
+    if(H5TBmake_table(c_name1, (hid_t)*loc_id, c_name, c_nfields, (hsize_t)*nrecords,
+            (size_t)*type_size, (const char **)c_field_names, c_field_offset, c_field_types,
+            (hsize_t)*chunk_size, NULL, *compress, NULL) < 0)
         HGOTO_DONE(FAIL)
 
 done:
@@ -132,7 +124,7 @@ done:
         for(i = 0; i < num_elem; i++) {
             if(c_field_names[i])
                 HDfree(c_field_names[i]);
-        }
+        } /* end for */
         HDfree(c_field_names);
     } /* end if */
     if(tmp)
@@ -143,8 +135,7 @@ done:
         HDfree(c_field_types);
 
     return ret_value;
-}
-
+} /* end nh5tbmake_table_c() */
 
 /*-------------------------------------------------------------------------
 * Function: h5tbwrite_field_name_c
@@ -159,12 +150,8 @@ done:
 *
 * Comments:
 *
-* Modifications:
-*
-*
 *-------------------------------------------------------------------------
 */
-
 int_f
 nh5tbwrite_field_name_c(hid_t_f *loc_id,
                         int_f *namelen,
@@ -177,28 +164,23 @@ nh5tbwrite_field_name_c(hid_t_f *loc_id,
                         void *buf)
 {
     char   *c_name = NULL;
-    char   *c_name1 =  NULL;
-    hid_t   c_loc_id     = *loc_id;
-    hsize_t c_start      = *start;
-    hsize_t c_nrecords   = *nrecords;
-    size_t  c_type_size[1]  = {0};
+    char   *c_name1 = NULL;
+    size_t  c_type_size[1]  = {(size_t)*type_size};
     int_f   ret_value = 0;
 
-    c_type_size[0]  = *type_size;
-
     /*
-    * convert FORTRAN name to C name
-    */
+     * convert FORTRAN name to C name
+     */
     if(NULL == (c_name = (char *)HD5f2cstring(name, (size_t)*namelen)))
         HGOTO_DONE(FAIL)
     if(NULL == (c_name1 = (char *)HD5f2cstring(field_name, (size_t)*namelen1)))
         HGOTO_DONE(FAIL)
 
     /*
-    * call H5TBwrite_fields_name function.
-    */
-    if(H5TBwrite_fields_name(c_loc_id, c_name, c_name1, c_start, c_nrecords,
-            c_type_size[0], 0, c_type_size, buf) < 0)
+     * call H5TBwrite_fields_name function.
+     */
+    if(H5TBwrite_fields_name((hid_t)*loc_id, c_name, c_name1, (hsize_t)*start,
+            (hsize_t)*nrecords, c_type_size[0], 0, c_type_size, buf) < 0)
         HGOTO_DONE(FAIL)
 
 done:
@@ -221,8 +203,10 @@ nh5tbwrite_field_name_int_c(hid_t_f *loc_id,
                             size_t_f *type_size,
                             void *buf)
 {
-    return nh5tbwrite_field_name_c(loc_id,namelen,name,namelen1,field_name,start,nrecords,type_size,buf);
+    return nh5tbwrite_field_name_c(loc_id, namelen, name, namelen1, field_name,
+            start, nrecords, type_size, buf);
 }
+
 int_f
 nh5tbwrite_field_name_fl_c(hid_t_f *loc_id,
                            int_f *namelen,
@@ -234,7 +218,8 @@ nh5tbwrite_field_name_fl_c(hid_t_f *loc_id,
                            size_t_f *type_size,
                            void *buf)
 {
-    return nh5tbwrite_field_name_c(loc_id,namelen,name,namelen1,field_name,start,nrecords,type_size,buf);
+    return nh5tbwrite_field_name_c(loc_id, namelen, name, namelen1, field_name,
+            start, nrecords, type_size, buf);
 }
 
 int_f
@@ -248,7 +233,8 @@ nh5tbwrite_field_name_dl_c(hid_t_f *loc_id,
                            size_t_f *type_size,
                            void *buf)
 {
-    return nh5tbwrite_field_name_c(loc_id,namelen,name,namelen1,field_name,start,nrecords,type_size,buf);
+    return nh5tbwrite_field_name_c(loc_id, namelen, name, namelen1, field_name,
+            start, nrecords, type_size, buf);
 }
 
 int_f
@@ -262,7 +248,8 @@ nh5tbwrite_field_name_st_c(hid_t_f *loc_id,
                            size_t_f *type_size,
                            void *buf)
 {
-    return nh5tbwrite_field_name_c(loc_id,namelen,name,namelen1,field_name,start,nrecords,type_size,buf);
+    return nh5tbwrite_field_name_c(loc_id, namelen, name, namelen1, field_name,
+            start, nrecords, type_size, buf);
 }
 
 /*-------------------------------------------------------------------------
@@ -278,12 +265,8 @@ nh5tbwrite_field_name_st_c(hid_t_f *loc_id,
 *
 * Comments:
 *
-* Modifications:
-*
-*
 *-------------------------------------------------------------------------
 */
-
 int_f
 nh5tbread_field_name_c(hid_t_f *loc_id,
                        int_f *namelen,
@@ -297,27 +280,22 @@ nh5tbread_field_name_c(hid_t_f *loc_id,
 {
     char   *c_name = NULL;
     char   *c_name1 = NULL;
-    hid_t   c_loc_id     = *loc_id;
-    hsize_t c_start      = *start;
-    hsize_t c_nrecords   = *nrecords;
-    size_t  c_type_size[1]  = {0};
+    size_t  c_type_size[1]  = {(size_t)*type_size};
     int_f   ret_value = 0;
 
-    c_type_size[0]  = *type_size;
-
     /*
-    * convert FORTRAN name to C name
-    */
+     * convert FORTRAN name to C name
+     */
     if(NULL == (c_name = (char *)HD5f2cstring(name, (size_t)*namelen)))
         HGOTO_DONE(FAIL)
     if(NULL == (c_name1 = (char *)HD5f2cstring(field_name, (size_t)*namelen1)))
         HGOTO_DONE(FAIL)
 
     /*
-    * call H5TBread_fields_name function.
-    */
-    if(H5TBread_fields_name(c_loc_id, c_name, c_name1, c_start, c_nrecords,
-            c_type_size[0], 0, c_type_size, buf) < 0)
+     * call H5TBread_fields_name function.
+     */
+    if(H5TBread_fields_name((hid_t)*loc_id, c_name, c_name1, (hsize_t)*start,
+            (hsize_t)*nrecords, c_type_size[0], 0, c_type_size, buf) < 0)
         HGOTO_DONE(FAIL)
 
 done:
@@ -340,7 +318,8 @@ nh5tbread_field_name_int_c(hid_t_f *loc_id,
                            size_t_f *type_size,
                            void *buf)
 {
-    return nh5tbread_field_name_c(loc_id,namelen,name,namelen1,field_name,start,nrecords,type_size,buf);
+    return nh5tbread_field_name_c(loc_id, namelen, name, namelen1, field_name,
+            start, nrecords, type_size, buf);
 }
 
 int_f
@@ -354,7 +333,8 @@ nh5tbread_field_name_fl_c(hid_t_f *loc_id,
                           size_t_f *type_size,
                           void *buf)
 {
-    return nh5tbread_field_name_c(loc_id,namelen,name,namelen1,field_name,start,nrecords,type_size,buf);
+    return nh5tbread_field_name_c(loc_id, namelen, name, namelen1, field_name,
+            start, nrecords, type_size, buf);
 }
 
 int_f
@@ -368,7 +348,8 @@ nh5tbread_field_name_dl_c(hid_t_f *loc_id,
                           size_t_f *type_size,
                           void *buf)
 {
-    return nh5tbread_field_name_c(loc_id,namelen,name,namelen1,field_name,start,nrecords,type_size,buf);
+    return nh5tbread_field_name_c(loc_id, namelen, name, namelen1, field_name,
+            start, nrecords, type_size, buf);
 }
 
 int_f
@@ -382,7 +363,8 @@ nh5tbread_field_name_st_c(hid_t_f *loc_id,
                           size_t_f *type_size,
                           void *buf)
 {
-    return nh5tbread_field_name_c(loc_id,namelen,name,namelen1,field_name,start,nrecords,type_size,buf);
+    return nh5tbread_field_name_c(loc_id, namelen, name, namelen1, field_name,
+            start, nrecords, type_size, buf);
 }
 
 /*-------------------------------------------------------------------------
@@ -398,12 +380,8 @@ nh5tbread_field_name_st_c(hid_t_f *loc_id,
 *
 * Comments:
 *
-* Modifications:
-*
-*
 *-------------------------------------------------------------------------
 */
-
 int_f
 nh5tbwrite_field_index_c(hid_t_f *loc_id,
                          int_f *namelen,
@@ -415,25 +393,22 @@ nh5tbwrite_field_index_c(hid_t_f *loc_id,
                          void *buf)
 {
     char   *c_name =  NULL;
-    hid_t   c_loc_id     = *loc_id;
-    hsize_t c_start      = *start;
-    hsize_t c_nrecords   = *nrecords;
     size_t  c_type_size  = *type_size;
     int     c_field_index = *field_index - 1; /* C zero based index */
     int_f   ret_value = 0;
 
     /*
-    * convert FORTRAN name to C name
-    */
+     * convert FORTRAN name to C name
+     */
     if(NULL == (c_name = (char *)HD5f2cstring(name, (size_t)*namelen)))
         HGOTO_DONE(FAIL)
 
 
     /*
-    * call H5TBwrite_fields_name function.
-    */
-    if(H5TBwrite_fields_index(c_loc_id, c_name, (hsize_t)1, &c_field_index,
-            c_start, c_nrecords, c_type_size, 0, &c_type_size, buf) < 0)
+     * call H5TBwrite_fields_name function.
+     */
+    if(H5TBwrite_fields_index((hid_t)*loc_id, c_name, (hsize_t)1, &c_field_index,
+            (hsize_t)*start, (hsize_t)*nrecords, c_type_size, 0, &c_type_size, buf) < 0)
         HGOTO_DONE(FAIL)
 
 done:
@@ -453,7 +428,8 @@ nh5tbwrite_field_index_int_c(hid_t_f *loc_id,
                              size_t_f *type_size,
                              void *buf)
 {
-    return nh5tbwrite_field_index_c(loc_id,namelen,name,field_index,start,nrecords,type_size,buf);
+    return nh5tbwrite_field_index_c(loc_id, namelen, name, field_index, start,
+            nrecords, type_size, buf);
 }
 
 int_f
@@ -466,7 +442,8 @@ nh5tbwrite_field_index_fl_c(hid_t_f *loc_id,
                             size_t_f *type_size,
                             void *buf)
 {
-    return nh5tbwrite_field_index_c(loc_id,namelen,name,field_index,start,nrecords,type_size,buf);
+    return nh5tbwrite_field_index_c(loc_id, namelen, name, field_index, start,
+            nrecords, type_size, buf);
 }
 
 int_f
@@ -479,7 +456,8 @@ nh5tbwrite_field_index_dl_c(hid_t_f *loc_id,
                             size_t_f *type_size,
                             void *buf)
 {
-    return nh5tbwrite_field_index_c(loc_id,namelen,name,field_index,start,nrecords,type_size,buf);
+    return nh5tbwrite_field_index_c(loc_id, namelen, name, field_index, start,
+            nrecords, type_size, buf);
 }
 
 int_f
@@ -492,7 +470,8 @@ nh5tbwrite_field_index_st_c(hid_t_f *loc_id,
                             size_t_f *type_size,
                             void *buf)
 {
-    return nh5tbwrite_field_index_c(loc_id,namelen,name,field_index,start,nrecords,type_size,buf);
+    return nh5tbwrite_field_index_c(loc_id, namelen, name, field_index, start,
+            nrecords, type_size, buf);
 }
 
 /*-------------------------------------------------------------------------
@@ -508,12 +487,8 @@ nh5tbwrite_field_index_st_c(hid_t_f *loc_id,
 *
 * Comments:
 *
-* Modifications:
-*
-*
 *-------------------------------------------------------------------------
 */
-
 int_f
 nh5tbread_field_index_c(hid_t_f *loc_id,
                         int_f *namelen,
@@ -525,9 +500,6 @@ nh5tbread_field_index_c(hid_t_f *loc_id,
                         void *buf)
 {
     char   *c_name = NULL;
-    hid_t   c_loc_id     = *loc_id;
-    hsize_t c_start      = *start;
-    hsize_t c_nrecords   = *nrecords;
     size_t  c_type_size  = *type_size;
     int     c_field_index = *field_index - 1; /* C zero based index */
     int_f   ret_value = 0;
@@ -541,8 +513,8 @@ nh5tbread_field_index_c(hid_t_f *loc_id,
     /*
      * call H5TBread_fields_index function.
      */
-    if(H5TBread_fields_index(c_loc_id, c_name,(hsize_t)1, &c_field_index,
-            c_start, c_nrecords, c_type_size, 0, &c_type_size, buf) < 0)
+    if(H5TBread_fields_index((hid_t)*loc_id, c_name,(hsize_t)1, &c_field_index,
+            (hsize_t)*start, (hsize_t)*nrecords, c_type_size, 0, &c_type_size, buf) < 0)
         HGOTO_DONE(FAIL)
 
 done:
@@ -562,7 +534,8 @@ nh5tbread_field_index_int_c(hid_t_f *loc_id,
                             size_t_f *type_size,
                             void *buf)
 {
-    return nh5tbread_field_index_c(loc_id,namelen,name,field_index,start,nrecords,type_size,buf);
+    return nh5tbread_field_index_c(loc_id, namelen, name, field_index, start,
+        nrecords, type_size, buf);
 }
 
 int_f
@@ -575,7 +548,8 @@ nh5tbread_field_index_fl_c(hid_t_f *loc_id,
                            size_t_f *type_size,
                            void *buf)
 {
-    return nh5tbread_field_index_c(loc_id,namelen,name,field_index,start,nrecords,type_size,buf);
+    return nh5tbread_field_index_c(loc_id, namelen, name, field_index, start,
+            nrecords, type_size, buf);
 }
 
 int_f
@@ -588,7 +562,8 @@ nh5tbread_field_index_dl_c(hid_t_f *loc_id,
                            size_t_f *type_size,
                            void *buf)
 {
-    return nh5tbread_field_index_c(loc_id,namelen,name,field_index,start,nrecords,type_size,buf);
+    return nh5tbread_field_index_c(loc_id, namelen, name, field_index, start,
+            nrecords, type_size, buf);
 }
 
 int_f
@@ -601,7 +576,8 @@ nh5tbread_field_index_st_c(hid_t_f *loc_id,
                            size_t_f *type_size,
                            void *buf)
 {
-    return nh5tbread_field_index_c(loc_id,namelen,name,field_index,start,nrecords,type_size,buf);
+    return nh5tbread_field_index_c(loc_id, namelen, name, field_index, start,
+            nrecords, type_size, buf);
 }
 
 /*-------------------------------------------------------------------------
@@ -617,12 +593,8 @@ nh5tbread_field_index_st_c(hid_t_f *loc_id,
 *
 * Comments:
 *
-* Modifications:
-*
-*
 *-------------------------------------------------------------------------
 */
-
 int_f
 nh5tbinsert_field_c(hid_t_f *loc_id,
                     int_f *namelen,
@@ -635,29 +607,25 @@ nh5tbinsert_field_c(hid_t_f *loc_id,
 {
     char   *c_name = NULL;
     char   *c_name1 = NULL;
-    hid_t   c_loc_id     = *loc_id;
-    hid_t   c_field_type = *field_type;
-    hsize_t c_position   = *position;
     int_f   ret_value = 0;
 
     /*
-    * convert FORTRAN name to C name
-    */
+     * convert FORTRAN name to C name
+     */
     if(NULL == (c_name = (char *)HD5f2cstring(name, (size_t)*namelen)))
         HGOTO_DONE(FAIL)
     if(NULL == (c_name1 = (char *)HD5f2cstring(field_name, (size_t)*namelen1)))
         HGOTO_DONE(FAIL)
 
     /*
-    * call H5TBinsert_field function.
-    */
-
-    if(H5TBinsert_field(c_loc_id, c_name, c_name1, c_field_type, c_position,
-            NULL, buf) < 0)
+     * call H5TBinsert_field function.
+     */
+    if(H5TBinsert_field((hid_t)*loc_id, c_name, c_name1, (hid_t)*field_type, 
+            (hsize_t)*position, NULL, buf) < 0)
         HGOTO_DONE(FAIL)
 
 done:
-    if(c_name )
+    if(c_name)
         HDfree(c_name);
     if(c_name1)
         HDfree(c_name1);
@@ -675,7 +643,8 @@ nh5tbinsert_field_int_c(hid_t_f *loc_id,
                         int_f *position,
                         void *buf)
 {
-    return nh5tbinsert_field_c(loc_id,namelen,name,namelen1,field_name,field_type,position,buf);
+    return nh5tbinsert_field_c(loc_id, namelen, name, namelen1, field_name,
+            field_type, position, buf);
 }
 
 int_f
@@ -688,7 +657,8 @@ nh5tbinsert_field_fl_c(hid_t_f *loc_id,
                        int_f *position,
                        void *buf)
 {
-    return nh5tbinsert_field_c(loc_id,namelen,name,namelen1,field_name,field_type,position,buf);
+    return nh5tbinsert_field_c(loc_id, namelen, name, namelen1, field_name,
+            field_type, position, buf);
 }
 
 int_f
@@ -701,7 +671,8 @@ nh5tbinsert_field_dl_c(hid_t_f *loc_id,
                        int_f *position,
                        void *buf)
 {
-    return nh5tbinsert_field_c(loc_id,namelen,name,namelen1,field_name,field_type,position,buf);
+    return nh5tbinsert_field_c(loc_id, namelen, name, namelen1, field_name,
+            field_type, position, buf);
 }
 
 int_f
@@ -714,7 +685,8 @@ nh5tbinsert_field_st_c(hid_t_f *loc_id,
                        int_f *position,
                        void *buf)
 {
-    return nh5tbinsert_field_c(loc_id,namelen,name,namelen1,field_name,field_type,position,buf);
+    return nh5tbinsert_field_c(loc_id, namelen, name, namelen1, field_name,
+            field_type, position, buf);
 }
 
 /*-------------------------------------------------------------------------
@@ -730,12 +702,8 @@ nh5tbinsert_field_st_c(hid_t_f *loc_id,
 *
 * Comments:
 *
-* Modifications:
-*
-*
 *-------------------------------------------------------------------------
 */
-
 int_f
 nh5tbdelete_field_c(hid_t_f *loc_id,
                     int_f *namelen,
@@ -745,7 +713,6 @@ nh5tbdelete_field_c(hid_t_f *loc_id,
 {
     char   *c_name = NULL;
     char   *c_name1 = NULL;
-    hid_t   c_loc_id     = *loc_id;
     int_f   ret_value = 0;
 
     /*
@@ -759,13 +726,12 @@ nh5tbdelete_field_c(hid_t_f *loc_id,
     /*
      * call H5TBinsert_field function.
      */
-    if(H5TBdelete_field(c_loc_id, c_name, c_name1) < 0)
+    if(H5TBdelete_field((hid_t)*loc_id, c_name, c_name1) < 0)
         HGOTO_DONE(FAIL)
 
 done:
     if(c_name)
         HDfree(c_name);
-
     if(c_name1)
         HDfree(c_name1);
 
@@ -785,12 +751,8 @@ done:
 *
 * Comments:
 *
-* Modifications:
-*
-*
 *-------------------------------------------------------------------------
 */
-
 int_f
 nh5tbget_table_info_c(hid_t_f *loc_id,
                       int_f *namelen,
@@ -799,7 +761,6 @@ nh5tbget_table_info_c(hid_t_f *loc_id,
                       hsize_t_f *nrecords)
 {
     char   *c_name = NULL;
-    hid_t   c_loc_id = *loc_id;
     hsize_t c_nfields;
     hsize_t c_nrecords;
     int_f   ret_value = 0;
@@ -813,7 +774,7 @@ nh5tbget_table_info_c(hid_t_f *loc_id,
     /*
      * call H5TBread_fields_index function.
      */
-    if(H5TBget_table_info(c_loc_id, c_name, &c_nfields, &c_nrecords) < 0)
+    if(H5TBget_table_info((hid_t)*loc_id, c_name, &c_nfields, &c_nrecords) < 0)
         HGOTO_DONE(FAIL)
 
     *nfields = (hsize_t_f) c_nfields;;
@@ -825,8 +786,6 @@ done:
 
     return ret_value;
 }
-
-
 
 /*-------------------------------------------------------------------------
 * Function: h5tbget_field_info_c
@@ -840,9 +799,6 @@ done:
 * Date: October 13, 2004
 *
 * Comments:
-*
-* Modifications:
-*
 *
 *-------------------------------------------------------------------------
 */
@@ -860,9 +816,7 @@ nh5tbget_field_info_c(hid_t_f *loc_id,
 {
     char   *c_name = NULL;
     hsize_t num_elem;
-    hsize_t i;
     int     max_len = 1;
-    hid_t   c_loc_id   = *loc_id;
     hsize_t c_nfields  = *nfields;
     size_t *c_field_sizes = NULL;
     size_t *c_field_offsets = NULL;
@@ -870,13 +824,13 @@ nh5tbget_field_info_c(hid_t_f *loc_id,
     char  **c_field_names = NULL;
     char   *tmp = NULL, *tmp_p;
     int     c_lenmax = HLTB_MAX_FIELD_LEN;
+    hsize_t i;
     int_f   ret_value = 0;
 
     num_elem = c_nfields;
-    for(i = 0; i < num_elem; i++) {
+    for(i = 0; i < num_elem; i++)
         if(namelen2[i] > max_len)
             max_len = namelen2[i];
-    }
 
     /*
      * convert FORTRAN name to C name
@@ -897,11 +851,11 @@ nh5tbget_field_info_c(hid_t_f *loc_id,
     /*
      * call H5TBget_field_info function.
      */
-    if(H5TBget_field_info(c_loc_id, c_name, c_field_names, c_field_sizes,
+    if(H5TBget_field_info((hid_t)*loc_id, c_name, c_field_names, c_field_sizes,
             c_field_offsets, &c_type_size) < 0)
         HGOTO_DONE(FAIL)
 
-    /* return values*/
+    /* return values */
 
     /* names array */
     if(NULL == (tmp = (char *)HDmalloc((c_lenmax * (size_t)c_nfields) + 1)))
@@ -916,14 +870,14 @@ nh5tbget_field_info_c(hid_t_f *loc_id,
         HDmemcpy(tmp_p, c_field_names[i], field_name_len);
         namelen2[i] = (int_f)field_name_len;
         tmp_p += c_lenmax;
-    }
+    } /* end for */
     HD5packFstring(tmp, _fcdtocp(field_names), (int)(c_lenmax * c_nfields));
 
     *type_size = (size_t_f)c_type_size;
     for(i = 0; i < num_elem; i++) {
         field_sizes[i]   = (size_t_f)c_field_sizes[i];
         field_offsets[i] = (size_t_f)c_field_offsets[i];
-    }
+    } /* end for */
 
 done:
     if(c_name)

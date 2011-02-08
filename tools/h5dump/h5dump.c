@@ -93,7 +93,7 @@ static int          display_ai        = TRUE;  /*array index */
 static int          display_escape    = FALSE; /*escape non printable characters */
 static int          display_region    = FALSE; /*print region reference data */
 #ifdef H5_HAVE_H5DUMP_PACKED_BITS
-static int          display_packed_bits = FALSE; /*print 1-byte numbers as packed bits*/
+static int          display_packed_bits = FALSE; /*print 1-8 byte numbers as packed bits*/
 #endif
 
 /* sort parameters */
@@ -102,9 +102,9 @@ static H5_iter_order_t sort_order     = H5_ITER_INC; /*sort_order [ascending | d
 
 #ifdef H5_HAVE_H5DUMP_PACKED_BITS
 #define PACKED_BITS_MAX         8	/* Maximum number of packed-bits to display */
-#define PACKED_BITS_SIZE_MAX    8	/* Maximum bits size of integer types of packed-bits */
+#define PACKED_BITS_SIZE_MAX    8*sizeof(long long)	/* Maximum bits size of integer types of packed-bits */
 /* mask list for packed bits */
-static unsigned int packed_mask[PACKED_BITS_MAX];  /* packed bits are restricted to 1 byte */
+static unsigned long long packed_mask[PACKED_BITS_MAX];  /* packed bits are restricted to 8*sizeof(llong) bytes */
 
 /* packed bits display parameters */
 static int packed_offset[PACKED_BITS_MAX];
@@ -131,7 +131,7 @@ static int              indent;              /*how far in to indent the line    
 static hid_t    h5_fileaccess(void);
 static void     dump_oid(hid_t oid);
 #ifdef H5_HAVE_H5DUMP_PACKED_BITS
-static void     dump_packed_bits(unsigned int packed_index);
+static void     dump_packed_bits(unsigned int packed_index, hid_t type);
 #endif
 static void     print_enum(hid_t type);
 static int      xml_name_to_XID(const char *, char *, int , int );
@@ -149,7 +149,7 @@ static h5tool_format_t         dataformat = {
     "",             /*fmt_raw */
     "%d",           /*fmt_int */
     "%u",           /*fmt_uint */
-    "%d",           /*fmt_schar */
+    "%hhd",           /*fmt_schar */
     "%u",           /*fmt_uchar */
     "%d",           /*fmt_short */
     "%u",           /*fmt_ushort */
@@ -233,7 +233,7 @@ static h5tool_format_t         xml_dataformat = {
     "",             /*fmt_raw */
     "%d",           /*fmt_int */
     "%u",           /*fmt_uint */
-    "%d",           /*fmt_schar */
+    "%hhd",           /*fmt_schar */
     "%u",           /*fmt_uchar */
     "%d",           /*fmt_short */
     "%u",           /*fmt_ushort */
@@ -2286,42 +2286,41 @@ dump_dataset(hid_t did, const char *name, struct subset_t *sset)
 
     if(display_data) {
 #ifdef H5_HAVE_H5DUMP_PACKED_BITS
-	int	data_loop = 1;
-	int	i;
+        int	data_loop = 1;
+        int	i;
         if(display_packed_bits)
             data_loop = packed_bits_num;
         for(i=0;i<data_loop;i++) {
-        if(display_packed_bits) {
-            dump_packed_bits(i);
-            packed_data_mask = packed_mask[i];
-            packed_data_offset = packed_offset[i];
-        }
+            if(display_packed_bits) {
+                dump_packed_bits(i, type);
+                packed_data_mask = packed_mask[i];
+                packed_data_offset = packed_offset[i];
+            }
 #endif
+                switch(H5Tget_class(type)) {
+                case H5T_TIME:
+                    indentation(indent + COL);
+                    printf("DATA{ not yet implemented.}\n");
+                    break;
 
-        switch(H5Tget_class(type)) {
-            case H5T_TIME:
-                indentation(indent + COL);
-                printf("DATA{ not yet implemented.}\n");
-                break;
+                case H5T_INTEGER:
+                case H5T_FLOAT:
+                case H5T_STRING:
+                case H5T_BITFIELD:
+                case H5T_OPAQUE:
+                case H5T_COMPOUND:
+                case H5T_REFERENCE:
+                case H5T_ENUM:
+                case H5T_VLEN:
+                case H5T_ARRAY:
+                    dump_data(did, DATASET_DATA, sset, display_ai);
+                    break;
 
-            case H5T_INTEGER:
-            case H5T_FLOAT:
-            case H5T_STRING:
-            case H5T_BITFIELD:
-            case H5T_OPAQUE:
-            case H5T_COMPOUND:
-            case H5T_REFERENCE:
-            case H5T_ENUM:
-            case H5T_VLEN:
-            case H5T_ARRAY:
-                dump_data(did, DATASET_DATA, sset, display_ai);
-                break;
-
-            default:
-                break;
-        } /* end switch */
+                default:
+                    break;
+                } /* end switch */
 #ifdef H5_HAVE_H5DUMP_PACKED_BITS
-        }
+        } /* for(i=0;i<data_loop;i++) */
 #endif
     }
 
@@ -2700,9 +2699,50 @@ dump_oid(hid_t oid)
  *-------------------------------------------------------------------------
  */
 static void
-dump_packed_bits(unsigned int packed_index)
+dump_packed_bits(unsigned int packed_index, hid_t type)
 {
+    int packed_bits_size = 0;
+    hid_t n_type = h5tools_get_native_type(type);
+    if(H5Tget_class(n_type)==H5T_INTEGER) {
+        if(H5Tequal(n_type, H5T_NATIVE_SCHAR) == TRUE) {
+            packed_bits_size = 8 * sizeof(char);
+        } 
+        else if(H5Tequal(n_type, H5T_NATIVE_UCHAR) == TRUE) {
+            packed_bits_size = 8 * sizeof(unsigned char);
+        } 
+        else if(H5Tequal(n_type, H5T_NATIVE_SHORT) == TRUE) {
+            packed_bits_size = 8 * sizeof(short);
+        } 
+        else if(H5Tequal(n_type, H5T_NATIVE_USHORT) == TRUE) {
+            packed_bits_size = 8 * sizeof(unsigned short);
+        } 
+        else if(H5Tequal(n_type, H5T_NATIVE_INT) == TRUE) {
+            packed_bits_size = 8 * sizeof(int);
+        } 
+        else if(H5Tequal(n_type, H5T_NATIVE_UINT) == TRUE) {
+            packed_bits_size = 8 * sizeof(unsigned int);
+        } 
+        else if(H5Tequal(n_type, H5T_NATIVE_LONG) == TRUE) {
+            packed_bits_size = 8 * sizeof(long);
+        } 
+        else if(H5Tequal(n_type, H5T_NATIVE_ULONG) == TRUE) {
+            packed_bits_size = 8 * sizeof(unsigned long);
+        } 
+        else if(H5Tequal(n_type, H5T_NATIVE_LLONG) == TRUE) {
+            packed_bits_size = 8 * sizeof(long long);
+        } 
+        else if(H5Tequal(n_type, H5T_NATIVE_ULLONG) == TRUE) {
+            packed_bits_size = 8 * sizeof(unsigned long long);
+        }
+        else
+            error_msg("Packed Bit not valid for this datatype");
+    }
     indentation(indent + COL);
+    if ((packed_bits_size>0) && (packed_offset[packed_index] + packed_length[packed_index]) > packed_bits_size) {
+        error_msg("Packed Bit offset+length value(%d) too large. Max is %d\n",
+                packed_offset[packed_index]+packed_length[packed_index], packed_bits_size);
+        packed_mask[packed_index] = 0;
+    };
     printf("%s %s=%d %s=%d\n", PACKED_BITS, PACKED_OFFSET, packed_offset[packed_index], PACKED_LENGTH, packed_length[packed_index]);
 }
 #endif
@@ -2723,15 +2763,27 @@ dump_packed_bits(unsigned int packed_index)
 static void
 dump_comment(hid_t obj_id)
 {
-    char comment[50];
+    size_t buf_size = 0;
+    char* comment = NULL;
+    ssize_t cmt_bufsize = -1;
 
-    comment[0] = '\0';
-    H5Oget_comment(obj_id, comment, sizeof(comment));
+    cmt_bufsize = H5Oget_comment(obj_id, comment, buf_size);
 
-    if(comment[0]) {
-        indentation(indent);
-        printf("COMMENT \"%s\"\n", comment);
-    } /* end if */
+    /* if the actual length of the comment is longer than cmt_bufsize, then call
+     * H5Oget_comment again with the correct value.
+     * If the call to H5Oget_comment returned an error, skip this block */
+    if (cmt_bufsize > 0) {
+        comment = (char *)HDmalloc((size_t)cmt_bufsize); /* new_size including null terminator */
+        if(comment) {
+            cmt_bufsize = H5Oget_comment(obj_id, comment, cmt_bufsize);
+            if(cmt_bufsize > 0) {
+                indentation(indent);
+                printf("COMMENT \"%s\"\n", comment);
+            } /* end if */
+            HDfree(comment);
+        }
+    }
+
 } /* end dump_comment() */
 
 
@@ -3610,6 +3662,7 @@ parse_mask_list(const char *h_list)
 {
     const char     *ptr;
     int             offset_value, length_value;
+    unsigned long long temp_mask;
 
     /* sanity check */
     HDassert(h_list);
@@ -3674,7 +3727,13 @@ parse_mask_list(const char *h_list)
 	/* create the bit mask by left shift 1's by length, then negate it. */
 	/* After packed_mask is calculated, packed_length is not needed but  */
 	/* keep it for debug purpose. */
-	packed_mask[packed_bits_num] = ~(~0<<length_value);
+	temp_mask = ~0L;
+	if(length_value<8*sizeof(unsigned long long)) {
+	    temp_mask = temp_mask << length_value;
+	    packed_mask[packed_bits_num] = ~temp_mask;
+    }
+	else
+        packed_mask[packed_bits_num] = temp_mask;
 	packed_bits_num++;
 
 	/* skip a possible comma separator */

@@ -4,24 +4,14 @@ PROJECT (HDF5_TOOLS_H5DUMP)
 #-----------------------------------------------------------------------------
 # Setup include Directories
 #-----------------------------------------------------------------------------
-INCLUDE_DIRECTORIES (${HDF5_TOOLS_SOURCE_DIR}/lib)
+INCLUDE_DIRECTORIES (${HDF5_TOOLS_SRC_DIR}/lib)
 INCLUDE_DIRECTORIES (${HDF5_PROJECT_DIR}/test)
 
 # --------------------------------------------------------------------
 # Add the h5dump executables
 # --------------------------------------------------------------------
 ADD_EXECUTABLE (h5dump ${HDF5_TOOLS_H5DUMP_SOURCE_DIR}/h5dump.c)
-H5_NAMING (h5dump)
-IF (WIN32)
-  IF (MSVC)
-    IF (NOT BUILD_SHARED_LIBS)
-      SET_TARGET_PROPERTIES (h5dump
-          PROPERTIES
-              LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-      ) 
-    ENDIF (NOT BUILD_SHARED_LIBS)
-  ENDIF (MSVC)
-ENDIF (WIN32)
+H5_NAMING (h5dump ${LIB_TYPE})
 TARGET_LINK_LIBRARIES (h5dump  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
 
 SET (H5_DEP_EXECUTABLES h5dump)
@@ -36,26 +26,19 @@ IF (BUILD_TESTING)
   # --------------------------------------------------------------------
   # Add the h5dump test executable
   # --------------------------------------------------------------------
-  IF (NOT BUILD_SHARED_LIBS)
+  IF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
     ADD_EXECUTABLE (h5dumpgentest ${HDF5_TOOLS_H5DUMP_SOURCE_DIR}/h5dumpgentest.c)
-    H5_NAMING (h5dumpgentest)
-    IF (WIN32)
-      IF (MSVC)
-        SET_TARGET_PROPERTIES (h5dumpgentest
-            PROPERTIES
-                LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-        ) 
-      ENDIF (MSVC)
-    ENDIF (WIN32)
+    H5_NAMING (h5dumpgentest ${LIB_TYPE})
     TARGET_LINK_LIBRARIES (h5dumpgentest ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
     
     #ADD_TEST (NAME h5dumpgentest COMMAND $<TARGET_FILE:h5dumpgentest>)
-  ENDIF (NOT BUILD_SHARED_LIBS)
+  ENDIF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
   
   # --------------------------------------------------------------------
   # Copy all the HDF5 files from the test directory into the source directory
   # --------------------------------------------------------------------
   SET (HDF5_REFERENCE_FILES
+      packedbits.ddl
       tall-1.ddl
       tall-2.ddl
       tall-2A.ddl
@@ -100,6 +83,7 @@ IF (BUILD_TESTING)
       texternal.ddl
       textlinksrc.ddl
       textlinkfar.ddl
+      textlink.ddl
       tfamily.ddl
       tfill.ddl
       tfletcher32.ddl
@@ -235,6 +219,7 @@ IF (BUILD_TESTING)
       tbin3.ddl
       tbin4.ddl
       out3.h5import
+      packedbits.h5
       taindices.h5
       tall.h5
       tarray1.h5
@@ -259,6 +244,7 @@ IF (BUILD_TESTING)
       textlinkfar.h5
       textlinksrc.h5
       textlinktar.h5
+      textlink.h5
       tfamily00000.h5
       tfamily00001.h5
       tfamily00002.h5
@@ -341,7 +327,7 @@ IF (BUILD_TESTING)
         TARGET     h5dump
         POST_BUILD
         COMMAND    ${XLATE_UTILITY}
-        ARGS       ${HDF5_TOOLS_SOURCE_DIR}/testfiles/${ddl_file} ${ddldest} -l3
+        ARGS       ${HDF5_TOOLS_SRC_DIR}/testfiles/${ddl_file} ${ddldest} -l3
     )
   ENDFOREACH (ddl_file ${HDF5_REFERENCE_FILES})
 
@@ -352,7 +338,7 @@ IF (BUILD_TESTING)
         TARGET     h5dump
         POST_BUILD
         COMMAND    ${XLATE_UTILITY}
-        ARGS       ${HDF5_TOOLS_SOURCE_DIR}/testfiles/${xml_file} ${xmldest} -l3
+        ARGS       ${HDF5_TOOLS_SRC_DIR}/testfiles/${xml_file} ${xmldest} -l3
     )
   ENDFOREACH (xml_file ${HDF5_XML_REFERENCE_FILES})
 
@@ -363,7 +349,7 @@ IF (BUILD_TESTING)
         TARGET     h5dump
         POST_BUILD
         COMMAND    ${CMAKE_COMMAND}
-        ARGS       -E copy_if_different ${HDF5_TOOLS_SOURCE_DIR}/testfiles/${h5_file} ${dest}
+        ARGS       -E copy_if_different ${HDF5_TOOLS_SRC_DIR}/testfiles/${h5_file} ${dest}
     )
   ENDFOREACH (h5_file ${HDF5_REFERENCE_TEST_FILES})
 
@@ -374,7 +360,7 @@ IF (BUILD_TESTING)
         TARGET     h5dump
         POST_BUILD
         COMMAND    ${CMAKE_COMMAND}
-        ARGS       -E copy_if_different ${HDF5_TOOLS_SOURCE_DIR}/testfiles/${h5_xml_file} ${dest}
+        ARGS       -E copy_if_different ${HDF5_TOOLS_SRC_DIR}/testfiles/${h5_xml_file} ${dest}
     )
   ENDFOREACH (h5_xml_file ${HDF5_XML_REFERENCE_TEST_FILES})
   
@@ -388,17 +374,17 @@ IF (BUILD_TESTING)
       ARGS       -E copy_if_different ${HDF5_TOOLS_SOURCE_DIR}/testfiles/tbin1.ddl ${PROJECT_BINARY_DIR}/tbin1LE.ddl
   )
   
-  IF (WIN32 AND NOT MINGW)
-    FILE (READ ${HDF5_TOOLS_SOURCE_DIR}/testfiles/tbinregR.exp TEST_STREAM)
+  IF (WIN32 AND NOT CYGWIN)
+    FILE (READ ${HDF5_TOOLS_SRC_DIR}/testfiles/tbinregR.exp TEST_STREAM)
     FILE (WRITE ${PROJECT_BINARY_DIR}/tbinregR.exp "${TEST_STREAM}")
-  ELSE (WIN32 AND NOT MINGW)
+  ELSE (WIN32 AND NOT CYGWIN)
     ADD_CUSTOM_COMMAND (
         TARGET     h5dump
         POST_BUILD
         COMMAND    ${CMAKE_COMMAND}
-        ARGS       -E copy_if_different ${HDF5_TOOLS_SOURCE_DIR}/testfiles/tbinregR.exp ${PROJECT_BINARY_DIR}/tbinregR.exp
+        ARGS       -E copy_if_different ${HDF5_TOOLS_SRC_DIR}/testfiles/tbinregR.exp ${PROJECT_BINARY_DIR}/tbinregR.exp
     )
-  ENDIF (WIN32 AND NOT MINGW)
+  ENDIF (WIN32 AND NOT CYGWIN)
   
   # --------------------------------------------------------------------
   # Special option for Packed Bits
@@ -411,17 +397,54 @@ IF (BUILD_TESTING)
         tpbitsCompound.ddl
         tpbitsIncomplete.ddl
         tpbitsLengthExceeded.ddl
+        tpbitsCharLengthExceeded.ddl
+        tpbitsIntLengthExceeded.ddl
+        tpbitsLongLengthExceeded.ddl
         tpbitsLengthPositive.ddl
         tpbitsMax.ddl
         tpbitsMaxExceeded.ddl
         tpbitsOffsetExceeded.ddl
+        tpbitsCharOffsetExceeded.ddl
+        tpbitsIntOffsetExceeded.ddl
+        tpbitsLongOffsetExceeded.ddl
         tpbitsOffsetNegative.ddl
         tpbitsOverlapped.ddl
         tpbitsSigned.ddl
         tpbitsUnsigned.ddl
-    )
-    SET (HDF5_REFERENCE_TEST_PBITS
-        packedbits.h5
+        tpbitsSignedInt.ddl
+        tpbitsUnsignedInt.ddl
+        tpbitsSignedLong.ddl
+        tpbitsUnsignedLong.ddl
+        tpbitsSignedLongLong.ddl
+        tpbitsUnsignedLongLong.ddl
+        tpbitsSignedWhole.ddl
+        tpbitsUnsignedWhole.ddl
+        tpbitsSignedIntWhole.ddl
+        tpbitsUnsignedIntWhole.ddl
+        tpbitsSignedLongWhole.ddl
+        tpbitsUnsignedLongWhole.ddl
+        tpbitsSignedLongLongWhole.ddl
+        tpbitsUnsignedLongLongWhole.ddl
+        tpbitsSignedLongLongWhole1.ddl
+        tpbitsUnsignedLongLongWhole1.ddl
+        tpbitsSignedLongLongWhole63.ddl
+        tpbitsUnsignedLongLongWhole63.ddl
+        tpbitsSigned4.ddl
+        tpbitsUnsigned4.ddl
+        tpbitsSignedInt8.ddl
+        tpbitsUnsignedInt8.ddl
+        tpbitsSignedLong16.ddl
+        tpbitsUnsignedLong16.ddl
+        tpbitsSignedLongLong32.ddl
+        tpbitsUnsignedLongLong32.ddl
+        tpbitsSigned2.ddl
+        tpbitsUnsigned2.ddl
+        tpbitsSignedInt4.ddl
+        tpbitsUnsignedInt4.ddl
+        tpbitsSignedLong8.ddl
+        tpbitsUnsignedLong8.ddl
+        tpbitsSignedLongLong16.ddl
+        tpbitsUnsignedLongLong16.ddl
     )
 
     FOREACH (ddl_pbits ${HDF5_REFERENCE_PBITS})
@@ -431,20 +454,9 @@ IF (BUILD_TESTING)
           TARGET     h5dump
           POST_BUILD
           COMMAND    ${XLATE_UTILITY}
-          ARGS       ${HDF5_TOOLS_SOURCE_DIR}/testfiles/${ddl_pbits} ${ddldest} -l3
+          ARGS       ${HDF5_TOOLS_SRC_DIR}/testfiles/${ddl_pbits} ${ddldest} -l3
       )
     ENDFOREACH (ddl_pbits ${HDF5_REFERENCE_PBITS})
-
-    FOREACH (h5_pbits ${HDF5_REFERENCE_TEST_PBITS})
-      SET (dest "${PROJECT_BINARY_DIR}/${h5_pbits}")
-      #MESSAGE (STATUS " Copying ${h5_pbits}")
-      ADD_CUSTOM_COMMAND (
-          TARGET     h5dump
-          POST_BUILD
-          COMMAND    ${CMAKE_COMMAND}
-          ARGS       -E copy_if_different ${HDF5_TOOLS_SOURCE_DIR}/testfiles/${h5_pbits} ${dest}
-      )
-    ENDFOREACH (h5_pbits ${HDF5_REFERENCE_TEST_PBITS})
 
   ENDIF (HDF5_USE_H5DUMP_PACKED_BITS)
   
@@ -509,7 +521,7 @@ IF (BUILD_TESTING)
           COMMAND ${CMAKE_COMMAND} -E echo "SKIP ${skipresultfile}.xml --xml ${ARGN}"
       )
     ELSE (${testtype} STREQUAL "SKIP")
-      ADD_H5_TEST (${skipresultfile} ${skipresultcode} ${ARGN})
+      ADD_XML_H5_TEST (${skipresultfile} ${skipresultcode} ${ARGN})
     ENDIF (${testtype} STREQUAL "SKIP")
   ENDMACRO (ADD_XML_SKIP_H5_TEST)
 
@@ -548,6 +560,240 @@ IF (BUILD_TESTING)
 ##############################################################################
 ##############################################################################
 
+  # Remove any output file left over from previous test run
+  ADD_TEST (
+      NAME H5DUMP-clearall-objects
+      COMMAND    ${CMAKE_COMMAND}
+          -E remove 
+          packedbits.out
+          packedbits.out.err
+          tall-1.out
+          tall-1.out.err
+          tall-2.out
+          tall-2.out.err
+          tall-2A.out
+          tall-2A.out.err
+          tall-2B.out
+          tall-2B.out.err
+          tall-3.out
+          tall-3.out.err
+          tall-4s.out
+          tall-4s.out.err
+          tall-5s.out
+          tall-5s.out.err
+          tallfilters.out
+          tallfilters.out.err
+          tarray1.out
+          tarray1.out.err
+          tarray2.out
+          tarray2.out.err
+          tarray3.out
+          tarray3.out.err
+          tarray4.out
+          tarray4.out.err
+          tarray5.out
+          tarray5.out.err
+          tarray6.out
+          tarray6.out.err
+          tarray7.out
+          tarray7.out.err
+          tarray8.out
+          tarray8.out.err
+          tattr-1.out
+          tattr-1.out.err
+          tattr-2.out
+          tattr-2.out.err
+          tattr-3.out
+          tattr-3.out.err
+          tattrreg.out
+          tattrreg.out.err
+          tattrregR.out
+          tattrregR.out.err
+          tbinregR.out
+          tbinregR.out.err
+          tbigdims.out
+          tbigdims.out.err
+          tboot1.out
+          tboot1.out.err
+          tboot2.out
+          tboot2.out.err
+          tchar1.out
+          tchar1.out.err
+          tchunked.out
+          tchunked.out.err
+          tcomp-1.out
+          tcomp-1.out.err
+          tcomp-2.out
+          tcomp-2.out.err
+          tcomp-3.out
+          tcomp-3.out.err
+          tcomp-4.out
+          tcomp-4.out.err
+          tcompact.out
+          tcompact.out.err
+          tcontents.out
+          tcontents.out.err
+          tcontiguos.out
+          tcontiguos.out.err
+          tdatareg.out
+          tdatareg.out.err
+          tdataregR.out
+          tdataregR.out.err
+          tdeflate.out
+          tdeflate.out.err
+          tdset-1.out
+          tdset-1.out.err
+          tdset-2.out
+          tdset-2.out.err
+          tdset-3s.out
+          tdset-3s.out.err
+          tempty.out
+          tempty.out.err
+          texternal.out
+          texternal.out.err
+          textlinksrc.out
+          textlinksrc.out.err
+          textlinkfar.out
+          textlinkfar.out.err
+          textlink.out
+          textlink.out.err
+          tfamily.out
+          tfamily.out.err
+          tfill.out
+          tfill.out.err
+          tfletcher32.out
+          tfletcher32.out.err
+          tfpformat.out
+          tfpformat.out.err
+          tgroup-1.out
+          tgroup-1.out.err
+          tgroup-2.out
+          tgroup-2.out.err
+          tgrp_comments.out
+          tgrp_comments.out.err
+          thlink-1.out
+          thlink-1.out.err
+          thlink-2.out
+          thlink-2.out.err
+          thlink-3.out
+          thlink-3.out.err
+          thlink-4.out
+          thlink-4.out.err
+          thlink-5.out
+          thlink-5.out.err
+          thyperslab.out
+          thyperslab.out.err
+          tindicesno.out
+          tindicesno.out.err
+          tindicessub1.out
+          tindicessub1.out.err
+          tindicessub2.out
+          tindicessub2.out.err
+          tindicessub3.out
+          tindicessub3.out.err
+          tindicessub4.out
+          tindicessub4.out.err
+          tindicesyes.out
+          tindicesyes.out.err
+          tlarge_objname.out
+          tlarge_objname.out.err
+          tldouble.out
+          tldouble.out.err
+          tlonglinks.out
+          tlonglinks.out.err
+          tloop-1.out
+          tloop-1.out.err
+          tmulti.out
+          tmulti.out.err
+          tnamed_dtype_attr.out
+          tnamed_dtype_attr.out.err
+          tnestcomp-1.out
+          tnestcomp-1.out.err
+          tnbit.out
+          tnbit.out.err
+          tnofilename.out
+          tnofilename.out.err
+          tnullspace.out
+          tnullspace.out.err
+          tordergr1.out
+          tordergr1.out.err
+          tordergr2.out
+          tordergr2.out.err
+          tordergr3.out
+          tordergr3.out.err
+          tordergr4.out
+          tordergr4.out.err
+          tordergr5.out
+          tordergr5.out.err
+          torderattr1.out
+          torderattr1.out.err
+          torderattr2.out
+          torderattr2.out.err
+          torderattr3.out
+          torderattr3.out.err
+          torderattr4.out
+          torderattr4.out.err
+          tperror.out
+          tperror.out.err
+          treference.out
+          treference.out.err
+          tsaf.out
+          tsaf.out.err
+          tscaleoffset.out
+          tscaleoffset.out.err
+          tshuffle.out
+          tshuffle.out.err
+          tslink-1.out
+          tslink-1.out.err
+          tslink-2.out
+          tslink-2.out.err
+          tsplit_file.out
+          tsplit_file.out.err
+          tstr-1.out
+          tstr-1.out.err
+          tstr-2.out
+          tstr-2.out.err
+          tstring.out
+          tstring.out.err
+          tstring2.out
+          tstring2.out.err
+          tstringe.out
+          tstringe.out.err
+          tszip.out
+          tszip.out.err
+          tudlink-1.out
+          tudlink-1.out.err
+          tudlink-2.out
+          tudlink-2.out.err
+          tuserfilter.out
+          tuserfilter.out.err
+          tvldtypes1.out
+          tvldtypes1.out.err
+          tvldtypes2.out
+          tvldtypes2.out.err
+          tvldtypes3.out
+          tvldtypes3.out.err
+          tvldtypes4.out
+          tvldtypes4.out.err
+          tvldtypes5.out
+          tvldtypes5.out.err
+          tvlstr.out
+          tvlstr.out.err
+          tvms.out
+          tvms.out.err
+  )
+
+  # If using memchecker add tests without using scripts
+  IF (HDF5_ENABLE_USING_MEMCHECKER)
+    ADD_TEST (NAME H5DUMP-tgroup COMMAND h5dump tgroup.h5)
+    ADD_TEST (NAME H5DUMP-tdset COMMAND h5dump tdset.h5)
+    ADD_TEST (NAME H5DUMP-tattr COMMAND h5dump tattr.h5)
+    ADD_TEST (NAME H5DUMP-tslink COMMAND h5dump tslink.h5)
+    ADD_TEST (NAME H5DUMP-thlink COMMAND h5dump thlink.h5)
+  ENDIF (HDF5_ENABLE_USING_MEMCHECKER)
+
+  # test for signed/unsigned datasets
+  ADD_H5_TEST (packedbits 0 packedbits.h5)
   # test for displaying groups
   ADD_H5_TEST (tgroup-1 0 tgroup.h5)
   # test for displaying the selected groups
@@ -657,12 +903,10 @@ IF (BUILD_TESTING)
   ADD_H5_TEST (tchar1 0 -r tchar.h5)
 
   # test failure handling
-  # Missing file name
-  IF (${USE_PACKED_BITS})
-    ADD_H5_TEST (tnofilename-with-packed-bits 1)
-  ELSE (${USE_PACKED_BITS})
+  IF (NOT HDF5_USE_H5DUMP_PACKED_BITS)
+    # Missing file name
     ADD_H5_TEST (tnofilename 1)
-  ENDIF (${USE_PACKED_BITS})
+  ENDIF (NOT HDF5_USE_H5DUMP_PACKED_BITS)
 
   # rev. 2004
 
@@ -849,45 +1093,350 @@ IF (BUILD_TESTING)
   ADD_H5_TEST (textlinksrc 0 textlinksrc.h5)
   ADD_H5_TEST (textlinkfar 0 textlinkfar.h5)
 
-  # test for dataset packed bits 
-  SET (TESTTYPE "TEST")
-  IF (NOT ${USE_PACKED_BITS})
-    SET (TESTTYPE "SKIP")
-  ENDIF (NOT ${USE_PACKED_BITS})
-  # Limits:
-  # Maximum number of packed bits is 8 (for now).
-  # Maximum integer size is 8 (for now).
-  # Maximun Offset is 7 (Maximum size - 1).
-  # Maximum Offset+Length is 8 (Maximum size).
-  # Tests:
-  # Normal operation on both signed and unsigned int datasets.
-  # Their rawdata output should be the same.
-  ADD_SKIP_H5_TEST (tpbitsSigned 0 ${TESTTYPE} -d /DS08BITS -M 0,2,2,6 packedbits.h5)
-  ADD_SKIP_H5_TEST (tpbitsUnsigned 0 ${TESTTYPE} -d /DU08BITS -M 0,2,2,6 packedbits.h5)
-  # Overlapped packed bits.
-  ADD_SKIP_H5_TEST (tpbitsOverlapped 0 ${TESTTYPE} -d /DS08BITS -M 0,1,1,1,2,1,0,3 packedbits.h5)
-  # Maximum number of packed bits.
-  ADD_SKIP_H5_TEST (tpbitsMax 0 ${TESTTYPE} -d /DS08BITS -M 0,1,1,1,2,1,3,1,4,1,5,1,6,1,7,1 packedbits.h5)
-  # Compound type.
-  ADD_SKIP_H5_TEST (tpbitsCompound 0 ${TESTTYPE} -d /dset1 -M 0,1,1,1 tcompound.h5)
-  # Array type.
-  ADD_SKIP_H5_TEST (tpbitsArray 0 ${TESTTYPE} -d /Dataset1 -M 0,1,1,1 tarray1.h5)
-  # Test Error handling.
-  # Too many packed bits requested. Max is 8 for now.
-  ADD_SKIP_H5_TEST (tpbitsMaxExceeded 1 ${TESTTYPE} -d /DS08BITS -M 0,1,0,1,1,1,2,1,3,1,4,1,5,1,6,1,7,1 packedbits.h5)
-  # Offset too large. Max is 7 (8-1) for now.
-  ADD_SKIP_H5_TEST (tpbitsOffsetExceeded 1 ${TESTTYPE} -d /DS08BITS -M 8,1 packedbits.h5)
-  # Bad offset, must not be negative.
-  ADD_SKIP_H5_TEST (tpbitsOffsetNegative 1 ${TESTTYPE} -d /DS08BITS -M -1,1 packedbits.h5)
-  # Bad length, must not be positive.
-  ADD_SKIP_H5_TEST (tpbitsLengthPositive 1 ${TESTTYPE} -d /DS08BITS -M 4,0 packedbits.h5)
-  # Offset+Length is too large. Max is 8 for now.
-  ADD_SKIP_H5_TEST (tpbitsLengthExceeded 1 ${TESTTYPE} -d /DS08BITS -M 2,7 packedbits.h5)
-  # Incomplete pair of packed bits request.
-  ADD_SKIP_H5_TEST (tpbitsIncomplete 1 ${TESTTYPE} -d /DS08BITS -M 0,2,2,1,0,2,2, packedbits.h5)
+  # test for dangling external links
+  ADD_H5_TEST (textlink 0 textlink.h5)
+
+  ####### test for dataset packed bits ######
+  IF (HDF5_USE_H5DUMP_PACKED_BITS)
+    # Remove any output file left over from previous test run
+    ADD_TEST (
+        NAME H5DUMP_PACKED_BITS-clearall-objects
+        COMMAND    ${CMAKE_COMMAND}
+            -E remove 
+            tnofilename-with-packed-bits.out
+            tnofilename-with-packed-bits.out.err
+            tpbitsArray.out
+            tpbitsArray.out.err
+            tpbitsCompound.out
+            tpbitsCompound.out.err
+            tpbitsIncomplete.out
+            tpbitsIncomplete.out.err
+            tpbitsLengthExceeded.out
+            tpbitsLengthExceeded.out.err
+            tpbitsCharLengthExceeded.out
+            tpbitsCharLengthExceeded.out.err
+            tpbitsIntLengthExceeded.out
+            tpbitsIntLengthExceeded.out.err
+            tpbitsLongLengthExceeded.out
+            tpbitsLongLengthExceeded.out.err
+            tpbitsLengthPositive.out
+            tpbitsLengthPositive.out.err
+            tpbitsMax.out
+            tpbitsMax.out.err
+            tpbitsMaxExceeded.out
+            tpbitsMaxExceeded.out.err
+            tpbitsOffsetExceeded.out
+            tpbitsOffsetExceeded.out.err
+            tpbitsCharOffsetExceeded.out
+            tpbitsCharOffsetExceeded.out.err
+            tpbitsIntOffsetExceeded.out
+            tpbitsIntOffsetExceeded.out.err
+            tpbitsLongOffsetExceeded.out
+            tpbitsLongOffsetExceeded.out.err
+            tpbitsOffsetNegative.out
+            tpbitsOffsetNegative.out.err
+            tpbitsOverlapped.out
+            tpbitsOverlapped.out.err
+            tpbitsSigned.out
+            tpbitsSigned.out.err
+            tpbitsUnsigned.out
+            tpbitsUnsigned.out.err
+            tpbitsSignedInt.out
+            tpbitsSignedInt.out.err
+            tpbitsUnsignedInt.out
+            tpbitsUnsignedInt.out.err
+            tpbitsSignedLong.out
+            tpbitsSignedLong.out.err
+            tpbitsUnsignedLong.out
+            tpbitsUnsignedLong.out.err
+            tpbitsSignedLongLong.out
+            tpbitsSignedLongLong.out.err
+            tpbitsUnsignedLongLong.out
+            tpbitsUnsignedLongLong.out.err
+            tpbitsSignedWhole.out
+            tpbitsSignedWhole.out.err
+            tpbitsUnsignedWhole.out
+            tpbitsUnsignedWhole.out.err
+            tpbitsSignedIntWhole.out
+            tpbitsSignedIntWhole.out.err
+            tpbitsUnsignedIntWhole.out
+            tpbitsUnsignedIntWhole.out.err
+            tpbitsSignedLongWhole.out
+            tpbitsSignedLongWhole.out.err
+            tpbitsUnsignedLongWhole.out
+            tpbitsUnsignedLongWhole.out.err
+            tpbitsSignedLongLongWhole.out
+            tpbitsSignedLongLongWhole.out.err
+            tpbitsUnsignedLongLongWhole.out
+            tpbitsUnsignedLongLongWhole.out.err
+            tpbitsSignedLongLongWhole1.out
+            tpbitsSignedLongLongWhole1.out.err
+            tpbitsUnsignedLongLongWhole1.out
+            tpbitsUnsignedLongLongWhole1.out.err
+            tpbitsSignedLongLongWhole63.out
+            tpbitsSignedLongLongWhole63.out.err
+            tpbitsUnsignedLongLongWhole63.out
+            tpbitsUnsignedLongLongWhole63.out.err
+            tpbitsSigned4.out
+            tpbitsSigned4.out.err
+            tpbitsUnsigned4.out
+            tpbitsUnsigned4.out.err
+            tpbitsSignedInt8.out
+            tpbitsSignedInt8.out.err
+            tpbitsUnsignedInt8.out
+            tpbitsUnsignedInt8.out.err
+            tpbitsSignedLong16.out
+            tpbitsSignedLong16.out.err
+            tpbitsUnsignedLong16.out
+            tpbitsUnsignedLong16.out.err
+            tpbitsSignedLongLong32.out
+            tpbitsSignedLongLong32.out.err
+            tpbitsUnsignedLongLong32.out
+            tpbitsUnsignedLongLong32.out.err
+            tpbitsSigned2.out
+            tpbitsSigned2.out.err
+            tpbitsUnsigned2.out
+            tpbitsUnsigned2.out.err
+            tpbitsSignedInt4.out
+            tpbitsSignedInt4.out.err
+            tpbitsUnsignedInt4.out
+            tpbitsUnsignedInt4.out.err
+            tpbitsSignedLong8.out
+            tpbitsSignedLong8.out.err
+            tpbitsUnsignedLong8.out
+            tpbitsUnsignedLong8.out.err
+            tpbitsSignedLongLong16.out
+            tpbitsSignedLongLong16.out.err
+            tpbitsUnsignedLongLong16.out
+            tpbitsUnsignedLongLong16.out.err
+    )
+
+    # test failure handling
+    # Missing file name
+    ADD_H5_TEST (tnofilename-with-packed-bits 1)
+    # Limits:
+    # Maximum number of packed bits is 8 (for now).
+    # Maximum integer size is 8*sizeof(long long).
+    # Maximun Offset is Maximum size - 1.
+    # Maximum Offset+Length is Maximum size.
+    # Tests:
+    # Normal operation on both signed and unsigned int datasets.
+    # Sanity check
+    # Their rawdata output should be the same.
+    ADD_H5_TEST (tpbitsSignedWhole 0 -d /DS08BITS -M 0,8 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedWhole 0 -d /DU08BITS -M 0,8 packedbits.h5)
+    ADD_H5_TEST (tpbitsSignedIntWhole 0 -d /DS16BITS -M 0,16 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedIntWhole 0 -d /DU16BITS -M 0,16 packedbits.h5)
+    ADD_H5_TEST (tpbitsSignedLongWhole 0 -d /DS32BITS -M 0,32 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedLongWhole 0 -d /DU32BITS -M 0,32 packedbits.h5)
+    ADD_H5_TEST (tpbitsSignedLongLongWhole 0 -d /DS64BITS -M 0,64 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedLongLongWhole 0 -d /DU64BITS -M 0,64 packedbits.h5)
+    ADD_H5_TEST (tpbitsSignedLongLongWhole63 0 -d /DS64BITS -M 0,63 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedLongLongWhole63 0 -d /DU64BITS -M 0,63 packedbits.h5)
+    ADD_H5_TEST (tpbitsSignedLongLongWhole1 0 -d /DS64BITS -M 1,63 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedLongLongWhole1 0 -d /DU64BITS -M 1,63 packedbits.h5)
+    # Half sections
+    ADD_H5_TEST (tpbitsSigned4 0 -d /DS08BITS -M 0,4,4,4 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsigned4 0 -d /DU08BITS -M 0,4,4,4 packedbits.h5)
+    ADD_H5_TEST (tpbitsSignedInt8 0 -d /DS16BITS -M 0,8,8,8 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedInt8 0 -d /DU16BITS -M 0,8,8,8 packedbits.h5)
+    ADD_H5_TEST (tpbitsSignedLong16 0 -d /DS32BITS -M 0,16,16,16 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedLong16 0 -d /DU32BITS -M 0,16,16,16 packedbits.h5)
+    ADD_H5_TEST (tpbitsSignedLongLong32 0 -d /DS64BITS -M 0,32,32,32 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedLongLong32 0 -d /DU64BITS -M 0,32,32,32 packedbits.h5)
+    # Quarter sections
+    ADD_H5_TEST (tpbitsSigned2 0 -d /DS08BITS -M 0,2,2,2,4,2,6,2 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsigned2 0 -d /DU08BITS -M 0,2,2,2,4,2,6,2 packedbits.h5)
+    ADD_H5_TEST (tpbitsSignedInt4 0 -d /DS16BITS -M 0,4,4,4,8,4,12,4 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedInt4 0 -d /DU16BITS -M 0,4,4,4,8,4,12,4 packedbits.h5)
+    ADD_H5_TEST (tpbitsSignedLong8 0 -d /DS32BITS -M 0,8,8,8,16,8,24,8 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedLong8 0 -d /DU32BITS -M 0,8,8,8,16,8,24,8 packedbits.h5)
+    ADD_H5_TEST (tpbitsSignedLongLong16 0 -d /DS64BITS -M 0,16,16,16,32,16,48,16 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedLongLong16 0 -d /DU64BITS -M 0,16,16,16,32,16,48,16 packedbits.h5)
+    # Begin and End
+    ADD_H5_TEST (tpbitsSigned 0 -d /DS08BITS -M 0,2,2,6 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsigned 0 -d /DU08BITS -M 0,2,2,6 packedbits.h5)
+    ADD_H5_TEST (tpbitsSignedInt 0 -d /DS16BITS -M 0,2,10,6 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedInt 0 -d /DU16BITS -M 0,2,10,6 packedbits.h5)
+    ADD_H5_TEST (tpbitsSignedLong 0 -d /DS32BITS -M 0,2,26,6 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedLong 0 -d /DU32BITS -M 0,2,26,6 packedbits.h5)
+    ADD_H5_TEST (tpbitsSignedLongLong 0 -d /DS64BITS -M 0,2,58,6 packedbits.h5)
+    ADD_H5_TEST (tpbitsUnsignedLongLong 0 -d /DU64BITS -M 0,2,58,6 packedbits.h5)
+    # Overlapped packed bits.
+    ADD_H5_TEST (tpbitsOverlapped 0 -d /DS08BITS -M 0,1,1,1,2,1,0,3 packedbits.h5)
+    # Maximum number of packed bits.
+    ADD_H5_TEST (tpbitsMax 0 -d /DS08BITS -M 0,1,1,1,2,1,3,1,4,1,5,1,6,1,7,1 packedbits.h5)
+    # Compound type.
+    ADD_H5_TEST (tpbitsCompound 0 -d /dset1 -M 0,1,1,1 tcompound.h5)
+    # Array type.
+    ADD_H5_TEST (tpbitsArray 0 -d /Dataset1 -M 0,1,1,1 tarray1.h5)
+    # Test Error handling.
+    # Too many packed bits requested. Max is 8 for now.
+    ADD_H5_TEST (tpbitsMaxExceeded 1 -d /DS08BITS -M 0,1,0,1,1,1,2,1,3,1,4,1,5,1,6,1,7,1 packedbits.h5)
+    # Offset too large. Max is 8*sizeof(long long.
+    ADD_H5_TEST (tpbitsOffsetExceeded 1 -d /DS08BITS -M 64,1 packedbits.h5)
+    ADD_H5_TEST (tpbitsCharOffsetExceeded 0 -d /DS08BITS -M 8,1 packedbits.h5)
+    ADD_H5_TEST (tpbitsIntOffsetExceeded 0 -d /DS16BITS -M 16,1 packedbits.h5)
+    ADD_H5_TEST (tpbitsLongOffsetExceeded 0 -d /DS32BITS -M 32,1 packedbits.h5)
+    # Bad offset, must not be negative.
+    ADD_H5_TEST (tpbitsOffsetNegative 1 -d /DS08BITS -M -1,1 packedbits.h5)
+    # Bad length, must not be positive.
+    ADD_H5_TEST (tpbitsLengthPositive 1 -d /DS08BITS -M 4,0 packedbits.h5)
+    # Offset+Length is too large. Max is 8*sizeof(long long).
+    ADD_H5_TEST (tpbitsLengthExceeded 1 -d /DS08BITS -M 37,28 packedbits.h5)
+    ADD_H5_TEST (tpbitsCharLengthExceeded 0 -d /DS08BITS -M 2,7 packedbits.h5)
+    ADD_H5_TEST (tpbitsIntLengthExceeded 0 -d /DS16BITS -M 10,7 packedbits.h5)
+    ADD_H5_TEST (tpbitsLongLengthExceeded 0 -d /DS32BITS -M 26,7 packedbits.h5)
+    # Incomplete pair of packed bits request.
+    ADD_H5_TEST (tpbitsIncomplete 1 -d /DS08BITS -M 0,2,2,1,0,2,2, packedbits.h5)
+  ENDIF (HDF5_USE_H5DUMP_PACKED_BITS)
    
+  # Remove any output file left over from previous test run
+  ADD_TEST (
+      NAME H5DUMP-XML-clearall-objects
+      COMMAND    ${CMAKE_COMMAND}
+          -E remove 
+          tall.h5.out
+          tall.h5.out.err
+          tall-2A.h5.out
+          tall-2A.h5.out.err
+          tarray1.h5.out
+          tarray1.h5.out.err
+          tarray2.h5.out
+          tarray2.h5.out.err
+          tarray3.h5.out
+          tarray3.h5.out.err
+          tarray6.h5.out
+          tarray6.h5.out.err
+          tarray7.h5.out
+          tarray7.h5.out.err
+          tattr.h5.out
+          tattr.h5.out.err
+          tbitfields.h5.out
+          tbitfields.h5.out.err
+          tcompound.h5.out
+          tcompound.h5.out.err
+          tcompound2.h5.out
+          tcompound2.h5.out.err
+          tcompound_complex.h5.out
+          tcompound_complex.h5.out.err
+          tdatareg.h5.out
+          tdatareg.h5.out.err
+          tdset.h5.out
+          tdset.h5.out.err
+          tdset2.h5.out
+          tdset2.h5.out.err
+          tempty-dtd-2.h5.out
+          tempty-dtd-2.h5.out.err
+          tempty-dtd-uri.h5.out
+          tempty-dtd-uri.h5.out.err
+          tempty-dtd.h5.out
+          tempty-dtd.h5.out.err
+          tempty-nons-2.h5.out
+          tempty-nons-2.h5.out.err
+          tempty-nons-uri.h5.out
+          tempty-nons-uri.h5.out.err
+          tempty-nons.h5.out
+          tempty-nons.h5.out.err
+          tempty-ns-2.h5.out
+          tempty-ns-2.h5.out.err
+          tempty-ns.h5.out
+          tempty-ns.h5.out.err
+          tempty.h5.out
+          tempty.h5.out.err
+          tenum.h5.out
+          tenum.h5.out.err
+          textlink.h5.out
+          textlink.h5.out.err
+          tfpformat.h5.out
+          tfpformat.h5.out.err
+          tgroup.h5.out
+          tgroup.h5.out.err
+          thlink.h5.out
+          thlink.h5.out.err
+          tloop.h5.out
+          tloop.h5.out.err
+          tloop2.h5.out
+          tloop2.h5.out.err
+          tmany.h5.out
+          tmany.h5.out.err
+          tname-amp.h5.out
+          tname-amp.h5.out.err
+          tname-apos.h5.out
+          tname-apos.h5.out.err
+          tname-gt.h5.out
+          tname-gt.h5.out.err
+          tname-lt.h5.out
+          tname-lt.h5.out.err
+          tname-quot.h5.out
+          tname-quot.h5.out.err
+          tname-sp.h5.out
+          tname-sp.h5.out.err
+          tnamed_dtype_attr.h5.out
+          tnamed_dtype_attr.h5.out.err
+          tnestedcomp.h5.out
+          tnestedcomp.h5.out.err
+          tnodata.h5.out
+          tnodata.h5.out.err
+          tnoname.h5.out
+          tnoname.h5.out.err
+          tobjref.h5.out
+          tobjref.h5.out.err
+          topaque.h5.out
+          topaque.h5.out.err
+          torderattr1.h5.out
+          torderattr1.h5.out.err
+          torderattr2.h5.out
+          torderattr2.h5.out.err
+          torderattr3.h5.out
+          torderattr3.h5.out.err
+          torderattr4.h5.out
+          torderattr4.h5.out.err
+          tref-escapes-at.h5.out
+          tref-escapes-at.h5.out.err
+          tref-escapes.h5.out
+          tref-escapes.h5.out.err
+          tref.h5.out
+          tref.h5.out.err
+          tsaf.h5.out
+          tsaf.h5.out.err
+          tslink.h5.out
+          tslink.h5.out.err
+          tstr.h5.out
+          tstr.h5.out.err
+          tstr2.h5.out
+          tstr2.h5.out.err
+          tstring.h5.out
+          tstring.h5.out.err
+          tstring-at.h5.out
+          tstring-at.h5.out.err
+          tudlink.h5.out
+          tudlink.h5.out.err
+          tvldtypes1.h5.out
+          tvldtypes1.h5.out.err
+          tvldtypes2.h5.out
+          tvldtypes2.h5.out.err
+          tvldtypes3.h5.out
+          tvldtypes3.h5.out.err
+          tvldtypes4.h5.out
+          tvldtypes4.h5.out.err
+          tvldtypes5.h5.out
+          tvldtypes5.h5.out.err
+          tvlstr.h5.out
+          tvlstr.h5.out.err
+  )
 
   ########## test XML
+
+  # If using memchecker add tests without using scripts
+  IF (HDF5_ENABLE_USING_MEMCHECKER)
+    ADD_TEST (NAME H5DUMP-XML-tgroup COMMAND h5dump --xml tgroup.h5)
+    ADD_TEST (NAME H5DUMP-XML-tdset COMMAND h5dump --xml tdset.h5)
+    ADD_TEST (NAME H5DUMP-XML-tattr COMMAND h5dump --xml tattr.h5)
+    ADD_TEST (NAME H5DUMP-XML-tslink COMMAND h5dump --xml tslink.h5)
+    ADD_TEST (NAME H5DUMP-XML-thlink COMMAND h5dump --xml thlink.h5)
+  ENDIF (HDF5_ENABLE_USING_MEMCHECKER)
+
   ADD_XML_H5_TEST (tall.h5 0 tall.h5)
   ADD_XML_H5_TEST (tattr.h5 0 tattr.h5)
   ADD_XML_H5_TEST (tbitfields.h5 0 tbitfields.h5)
@@ -951,7 +1500,7 @@ IF (BUILD_TESTING)
   SET (TESTTYPE "TEST")
   IF (NOT "H5_LONE_COLON")
     SET (TESTTYPE "SKIP")
-  ENDIF ("H5_LONE_COLON")
+  ENDIF (NOT "H5_LONE_COLON")
   ADD_XML_SKIP_H5_TEST (tempty-nons.h5 0 ${TESTTYPE} -X : tempty.h5)
 
   ADD_XML_H5_TEST (tempty-nons-2.h5 0 --xml-ns=: tempty.h5)
@@ -990,7 +1539,7 @@ INSTALL (
     TARGETS
         h5dump
     RUNTIME DESTINATION
-        bin/tools
+        ${HDF5_INSTALL_BIN_DIR}/tools
     COMPONENT
         toolsapplications
 )

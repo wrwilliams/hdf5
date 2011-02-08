@@ -45,7 +45,7 @@ int         region_output; /* region output */
 #ifdef H5_HAVE_H5DUMP_PACKED_BITS
 int         packed_bits_num; /* number of packed bits to display */
 int         packed_data_offset; /* offset of packed bits to display */
-unsigned int packed_data_mask;  /* mask in which packed bits to display */
+unsigned long long packed_data_mask;  /* mask in which packed bits to display */
 #endif
 
 static h5tool_format_t h5tools_dataformat = {
@@ -54,7 +54,7 @@ static h5tool_format_t h5tools_dataformat = {
 "", /*fmt_raw */
 "%d", /*fmt_int */
 "%u", /*fmt_uint */
-"%d", /*fmt_schar */
+"%hhd", /*fmt_schar */
 "%u", /*fmt_uchar */
 "%d", /*fmt_short */
 "%u", /*fmt_ushort */
@@ -1304,8 +1304,8 @@ static int
 h5tools_print_region_data_blocks(hid_t region_id,
         FILE *stream, const h5tool_format_t *info, h5tools_context_t ctx,
         h5tools_str_t *buffer/*string into which to render */, size_t ncols,
-        int ndims, hid_t type_id, hssize_t nblocks, hsize_t *ptdata) {
-    HERR_INIT(int, SUCCEED)
+        int ndims, hid_t type_id, hssize_t nblocks, hsize_t *ptdata)
+{
     hbool_t      dimension_break = TRUE;
     hsize_t     *dims1 = NULL;
     hsize_t     *start = NULL;
@@ -1316,12 +1316,13 @@ h5tools_print_region_data_blocks(hid_t region_id,
     unsigned int region_flags; /* buffer extent flags */
     hsize_t      curr_pos;
     int          jndx;
-    hsize_t      indx;
+    size_t       indx;
     int          type_size;
     hid_t        mem_space = -1;
     void        *region_buf = NULL;
     int          blkndx;
     hid_t        sid1 = -1;
+    int          ret_value = SUCCEED;
 
     /* Get the dataspace of the dataset */
     if((sid1 = H5Dget_space(region_id)) < 0)
@@ -1386,7 +1387,7 @@ h5tools_print_region_data_blocks(hid_t region_id,
         if (blkndx == nblocks - 1)
             region_flags |= END_OF_DATA;
 
-        for (indx = 0; indx < ctx.ndims; indx++)
+        for (indx = 0; indx < (size_t)ctx.ndims; indx++)
             ctx.p_max_idx[indx] = dims1[indx];
 
         curr_pos = 0;
@@ -1429,7 +1430,6 @@ h5tools_print_region_data_blocks(hid_t region_id,
     if(H5Sclose(sid1) < 0)
         HERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Sclose failed");
 
-CATCH
     return ret_value;
 }
 
@@ -1463,7 +1463,8 @@ h5tools_dump_region_data_blocks(hid_t region_space, hid_t region_id,
         h5tools_str_t *buffer/*string into which to render */,
         hsize_t *curr_pos/*total data element position*/,
         size_t ncols, hsize_t region_elmt_counter/*element counter*/,
-        hsize_t elmt_counter) {
+        hsize_t elmt_counter)
+{
     HERR_INIT(hbool_t, TRUE)
     hbool_t      dimension_break = TRUE;
     hssize_t     nblocks;
@@ -1649,17 +1650,17 @@ h5tools_print_region_data_points(hid_t region_space, hid_t region_id,
         h5tools_str_t *buffer, size_t ncols,
         int ndims, hid_t type_id, hssize_t npoints, hsize_t *ptdata)
 {
-    HERR_INIT(int, SUCCEED)
     hbool_t  dimension_break = TRUE;
     hsize_t *dims1 = NULL;
     hsize_t  elmtno; /* elemnt index  */
     unsigned int region_flags; /* buffer extent flags */
     hsize_t  curr_pos;
-    hsize_t  indx;
+    size_t   indx;
     int      jndx;
     int      type_size;
     hid_t    mem_space = -1;
     void    *region_buf = NULL;
+    int      ret_value = SUCCEED;
 
     if((type_size = H5Tget_size(type_id)) == 0)
         HGOTO_ERROR(FAIL, H5E_tools_min_id_g, "H5Tget_size failed");
@@ -1737,7 +1738,7 @@ h5tools_print_region_data_points(hid_t region_space, hid_t region_id,
 
     if(H5Sclose(mem_space) < 0)
         HERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Sclose failed");
-CATCH
+
     return ret_value;
 }
 
@@ -1775,7 +1776,7 @@ h5tools_dump_region_data_points(hid_t region_space, hid_t region_id,
     hsize_t  alloc_size;
     hsize_t *ptdata;
     int      ndims;
-    int      indx;
+    hssize_t indx;
     hid_t    dtype;
     hid_t    type_id;
 
@@ -1802,7 +1803,7 @@ h5tools_dump_region_data_points(hid_t region_space, hid_t region_id,
 
     alloc_size = npoints * ndims * sizeof(ptdata[0]);
     assert(alloc_size == (hsize_t) ((size_t) alloc_size)); /*check for overflow*/
-    if((ptdata = malloc((size_t) alloc_size)) == NULL)
+    if(NULL == (ptdata = (hsize_t *)HDmalloc((size_t) alloc_size)))
         HGOTO_ERROR(dimension_break, H5E_tools_min_id_g, "Could not allocate buffer for ptdata");
 
     H5_CHECK_OVERFLOW(npoints, hssize_t, hsize_t);
@@ -1971,7 +1972,7 @@ h5tools_print_simple_subset(FILE *stream, const h5tool_format_t *info, h5tools_c
     HERR_INIT(herr_t, SUCCEED)
     size_t            i;                       /* counters  */
     size_t            j;                       /* counters  */
-    hsize_t           zero[1] = {0};           /* vector of zero */
+    hsize_t           zero[1] = {0};           /* vector of zeros */
     unsigned int      flags;                   /* buffer extent flags */
     hsize_t           elmtno;                  /* elemnt index  */
     hsize_t           low[H5S_MAX_RANK];       /* low bound of hyperslab */
@@ -2034,7 +2035,7 @@ h5tools_print_simple_subset(FILE *stream, const h5tool_format_t *info, h5tools_c
                 }
 
             assert(sm_nbytes == (hsize_t) ((size_t) sm_nbytes)); /*check for overflow*/
-            if((sm_buf = HDmalloc((size_t) sm_nelmts * p_type_nbytes)) == NULL)
+            if(NULL == (sm_buf = (unsigned char *)HDmalloc((size_t) sm_nelmts * p_type_nbytes)))
                 H5E_THROW(FAIL, H5E_tools_min_id_g, "Could not allocate buffer for strip-mine");
 
             if((sm_space = H5Screate_simple(1, &sm_nelmts, NULL)) < 0)
@@ -2135,7 +2136,6 @@ h5tools_display_simple_subset(FILE *stream, const h5tool_format_t *info, h5tools
                            hid_t dset, hid_t p_type, struct subset_t *sset,
                            hid_t f_space, hsize_t *total_size)
 {
-    HERR_INIT(herr_t, SUCCEED)
     size_t            i;                       /* counters  */
     hsize_t           n;                       /* counters  */
     hsize_t           count;                   /* hyperslab count */
@@ -2148,6 +2148,7 @@ h5tools_display_simple_subset(FILE *stream, const h5tool_format_t *info, h5tools
     hsize_t           temp_block[H5S_MAX_RANK];/* temporary block size used in loop  */
     hsize_t           temp_stride[H5S_MAX_RANK];/* temporary stride size used in loop  */
     int               reset_dim;
+    herr_t            ret_value = SUCCEED;
 
     if (ctx->ndims == 1)
         row_dim = 0;
@@ -2236,7 +2237,6 @@ h5tools_display_simple_subset(FILE *stream, const h5tool_format_t *info, h5tools
 
     } /* outer_count */
 
-CATCH
     return ret_value;
 }
 
@@ -2446,7 +2446,7 @@ h5tools_dump_simple_dset(FILE *stream, const h5tool_format_t *info,
     }
 
     assert(sm_nbytes == (hsize_t)((size_t)sm_nbytes)); /*check for overflow*/
-    sm_buf = malloc((size_t)sm_nbytes);
+    sm_buf = (unsigned char *)HDmalloc((size_t)sm_nbytes);
 
     sm_nelmts = sm_nbytes / p_type_nbytes;
     sm_space = H5Screate_simple(1, &sm_nelmts, NULL);
@@ -2522,7 +2522,7 @@ h5tools_dump_simple_dset(FILE *stream, const h5tool_format_t *info,
     H5Sclose(sm_space);
     H5Sclose(f_space);
 
-    free(sm_buf);
+    HDfree(sm_buf);
 
     return SUCCEED;
 }
@@ -3339,9 +3339,9 @@ h5tools_print_enum(h5tools_str_t *buffer, hid_t type)
         dst_size = type_size;
 
     /* Get the names and raw values of all members */
-    if((name = calloc(nmembs, sizeof(char *))) == NULL)
+    if(NULL == (name = (char **)HDcalloc(nmembs, sizeof(char *))))
         H5E_THROW(FAIL, H5E_tools_min_id_g, "Could not allocate buffer for member name");
-    if((value = calloc(nmembs, MAX(type_size, dst_size))) == NULL)
+    if(NULL == (value = (unsigned char *)HDcalloc(nmembs, MAX(type_size, dst_size))))
         H5E_THROW(FAIL, H5E_tools_min_id_g, "Could not allocate buffer for member value");
 
     for (i = 0; i < nmembs; i++) {
@@ -3920,7 +3920,6 @@ static int
 render_bin_output_region_data_blocks(hid_t region_id, FILE *stream,
     hid_t container, int ndims, hid_t type_id, hssize_t nblocks, hsize_t *ptdata)
 {
-    HERR_INIT(int, SUCCEED)
     hsize_t     *dims1 = NULL;
     hsize_t     *start = NULL;
     hsize_t     *count = NULL;
@@ -3932,6 +3931,7 @@ render_bin_output_region_data_blocks(hid_t region_id, FILE *stream,
     void        *region_buf = NULL;
     int          blkndx;
     hid_t        sid1 = -1;
+    int          ret_value = SUCCEED;
 
     /* Get the dataspace of the dataset */
     if((sid1 = H5Dget_space(region_id)) < 0)
@@ -4000,7 +4000,6 @@ render_bin_output_region_data_blocks(hid_t region_id, FILE *stream,
     if(H5Sclose(sid1) < 0)
         HERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Sclose failed");
 
-CATCH
     return ret_value;
 }
 
@@ -4091,12 +4090,12 @@ render_bin_output_region_data_points(hid_t region_space, hid_t region_id,
         FILE *stream, hid_t container,
         int ndims, hid_t type_id, hssize_t npoints, hsize_t *ptdata)
 {
-    HERR_INIT(int, SUCCEED)
     hsize_t *dims1 = NULL;
     int      jndx;
     int      type_size;
     hid_t    mem_space = -1;
     void    *region_buf = NULL;
+    int      ret_value = SUCCEED;
 
     if((type_size = H5Tget_size(type_id)) == 0)
         HGOTO_ERROR(FAIL, H5E_tools_min_id_g, "H5Tget_size failed");
@@ -4128,7 +4127,7 @@ render_bin_output_region_data_points(hid_t region_space, hid_t region_id,
 
     if(H5Sclose(mem_space) < 0)
         HERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Sclose failed");
-CATCH
+
     return ret_value;
 }
 
@@ -4166,7 +4165,7 @@ render_bin_output_region_points(hid_t region_space, hid_t region_id,
 
     alloc_size = npoints * ndims * sizeof(ptdata[0]);
     assert(alloc_size == (hsize_t) ((size_t) alloc_size)); /*check for overflow*/
-    if((ptdata = malloc((size_t) alloc_size)) == NULL)
+    if(NULL == (ptdata = (hsize_t *)HDmalloc((size_t) alloc_size)))
         HGOTO_ERROR(FALSE, H5E_tools_min_id_g, "Could not allocate buffer for ptdata");
 
     H5_CHECK_OVERFLOW(npoints, hssize_t, hsize_t);

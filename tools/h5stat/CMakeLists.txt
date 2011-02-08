@@ -4,24 +4,14 @@ PROJECT (HDF5_TOOLS_H5STAT)
 #-----------------------------------------------------------------------------
 # Setup include Directories
 #-----------------------------------------------------------------------------
-INCLUDE_DIRECTORIES (${HDF5_TOOLS_SOURCE_DIR}/lib)
+INCLUDE_DIRECTORIES (${HDF5_TOOLS_SRC_DIR}/lib)
 INCLUDE_DIRECTORIES (${HDF5_PROJECT_DIR}/test)
 
 # --------------------------------------------------------------------
 # Add the h5stat executables
 # --------------------------------------------------------------------
 ADD_EXECUTABLE (h5stat ${HDF5_TOOLS_H5STAT_SOURCE_DIR}/h5stat.c)
-H5_NAMING (h5stat)
-IF (WIN32)
-  IF (MSVC)
-    IF (NOT BUILD_SHARED_LIBS)
-      SET_TARGET_PROPERTIES (h5stat
-          PROPERTIES
-              LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-      ) 
-    ENDIF (NOT BUILD_SHARED_LIBS)
-  ENDIF (MSVC)
-ENDIF (WIN32)
+H5_NAMING (h5stat ${LIB_TYPE})
 TARGET_LINK_LIBRARIES (h5stat  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
 
 SET (H5_DEP_EXECUTABLES h5stat)
@@ -36,21 +26,13 @@ IF (BUILD_TESTING)
   # --------------------------------------------------------------------
   # Add the h5stat test executables
   # --------------------------------------------------------------------
-  IF (NOT BUILD_SHARED_LIBS)
+  IF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
     ADD_EXECUTABLE (h5stat_gentest ${HDF5_TOOLS_H5STAT_SOURCE_DIR}/h5stat_gentest.c)
-    H5_NAMING (h5stat_gentest)
-    IF (WIN32)
-      IF (MSVC)
-        SET_TARGET_PROPERTIES (h5stat_gentest
-            PROPERTIES
-                LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-        ) 
-      ENDIF (MSVC)
-    ENDIF (WIN32)
+    H5_NAMING (h5stat_gentest ${LIB_TYPE})
     TARGET_LINK_LIBRARIES (h5stat_gentest ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
     
     #ADD_TEST (NAME h5stat_gentest COMMAND $<TARGET_FILE:h5stat_gentest>)
-  ENDIF (NOT BUILD_SHARED_LIBS)
+  ENDIF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
   
   # --------------------------------------------------------------------
   # Copy all the HDF5 files from the test directory into the source directory
@@ -125,6 +107,47 @@ IF (BUILD_TESTING)
 ##############################################################################
 ##############################################################################
 
+  # Remove any output file left over from previous test run
+  ADD_TEST (
+      NAME H5STAT-clearall-objects
+      COMMAND    ${CMAKE_COMMAND}
+          -E remove 
+          h5stat_help1.out
+          h5stat_help1.out.err
+          h5stat_help2.out
+          h5stat_help2.out.err
+          h5stat_filters.out
+          h5stat_filters.out.err
+          h5stat_filters-file.out
+          h5stat_filters-file.out.err
+          h5stat_filters-F.out
+          h5stat_filters-F.out.err
+          h5stat_filters-d.out
+          h5stat_filters-d.out.err
+          h5stat_filters-g.out
+          h5stat_filters-g.out.err
+          h5stat_filters-dT.out
+          h5stat_filters-dT.out.err
+          h5stat_filters-UD.out
+          h5stat_filters-UD.out.err
+          h5stat_filters-UT.out
+          h5stat_filters-UT.out.err
+          h5stat_tsohm.out
+          h5stat_tsohm.out.err
+          h5stat_newgrat.out
+          h5stat_newgrat.out.err
+          h5stat_newgrat-UG.out
+          h5stat_newgrat-UG.out.err
+          h5stat_newgrat-UA.out
+          h5stat_newgrat-UA.out.err
+  )
+
+  # If using memchecker add tests without using scripts
+  IF (HDF5_ENABLE_USING_MEMCHECKER)
+    ADD_TEST (NAME H5STAT-help COMMAND h5stat -h)
+    ADD_TEST (NAME H5STAT-filters COMMAND h5stat h5stat_filters.h5)
+  ENDIF (HDF5_ENABLE_USING_MEMCHECKER)
+
 # Test for help flag
   ADD_H5_TEST (h5stat_help1 0 -h)
   ADD_H5_TEST (h5stat_help2 0 --help)
@@ -161,7 +184,7 @@ INSTALL (
     TARGETS
         h5stat
     RUNTIME DESTINATION
-        bin/tools
+        ${HDF5_INSTALL_BIN_DIR}/tools
     COMPONENT
         toolsapplications
 )
