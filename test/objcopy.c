@@ -1186,7 +1186,6 @@ compare_datasets(hid_t did, hid_t did2, hid_t pid, const void *wbuf)
     size_t elmt_size;                           /* Size of datatype */
     htri_t is_committed;                        /* If the datatype is committed */
     htri_t is_committed2;                       /* If the datatype is committed */
-    int ext_count;                              /* Number of external files in plist */
     int nfilters;                               /* Number of filters applied to dataset */
     hssize_t nelmts;                            /* # of elements in dataspace */
     void *rbuf = NULL;                          /* Buffer for reading raw data */
@@ -13519,13 +13518,26 @@ main(void)
 
     puts ("All object copying tests passed.");
 
-    /* call H5Pclose(fapl2) to mask property list management bug.
+    /* close property list.
+     * NOTE: if this property list is not closed and the test is
+     *          run with the split or multi driver, an interesting
+     *          problem is exposed in the property list shutdown code.
      *
-     * Needless to say, this bug must be fixed properly, but we 
-     * will sweep it under the rug for now.
+     *          Namely, since the split/multi driver copies property
+     *          lists for internal use, there's a (high) chance that
+     *          leaving the FAPL open and having the library's shutdown
+     *          code close it will cause the underlying property lists
+     *          to be cleaned up first, causing the actual property list
+     *          close operation to fail (since it won't be able to close
+     *          the already closed underlying property list).
      *
-     * To expose the bug, delete this call, and run with either split
-     * or multi file driver.
+     *          The could be addressed by converting the split/multi to
+     *          use non-public API routines, or putting some way into the
+     *          public H5I routines to indicate ordering at shutdown.
+     *
+     *          For now, we just make certain to close the property list.
+     *          (QAK - 2016/04/06)
+     *
      */
     H5Pclose(fapl2);
 
