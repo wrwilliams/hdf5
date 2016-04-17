@@ -32,10 +32,10 @@
 
 #include "h5test.h"
 #include "H5srcdir.h"
-#include "H5FDpkg.h"        /* File drivers         */
-#include "H5Gpkg.h"		    /* Groups 				*/
-#include "H5Iprivate.h"		/* IDs                  */
-#include "H5Lprivate.h"     /* Links                */
+#include "H5FDpkg.h"            /* File drivers         */
+#include "H5Gpkg.h"		/* Groups 				*/
+#include "H5Iprivate.h"		/* IDs			  		*/
+#include "H5Lprivate.h"         /* Links                                */
 
 /* File for external link test.  Created with gen_udlinks.c */
 #define LINKED_FILE  "be_extlink2.h5"
