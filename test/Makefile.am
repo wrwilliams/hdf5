@@ -150,12 +150,14 @@ flush2.chkexe_: flush1.chkexe_
 # specifying a file prefix or low-level driver.  Changing the file
 # prefix or low-level driver with environment variables will influence
 # the temporary file name in ways that the makefile is not aware of.
-CHECK_CLEANFILES+=accum.h5 cmpd_dset.h5 compact_dataset.h5 dataset.h5 \
-    dset_offset.h5 chunk_fixed.h5 cache_logging.out \
+CHECK_CLEANFILES+=accum.h5 cmpd_dset.h5 compact_dataset.h5 dataset.h5 dset_offset.h5 \
     max_compact_dataset.h5 simple.h5 set_local.h5 random_chunks.h5 \
-    huge_chunks.h5 chunk_cache.h5 big_chunk.h5 chunk_fast.h5 \
-    chunk_expand.h5 layout_extend.h5 swmr_fail.h5 partial_chunks.h5 \
-    copy_dcpl_newfile.h5 extend.h5 istore.h5 extlinks*.h5 frspace.h5 links*.h5 \
+    huge_chunks.h5 chunk_cache.h5 big_chunk.h5 chunk_fast.h5 chunk_expand.h5 \
+    chunk_fixed.h5 copy_dcpl_newfile.h5 partial_chunks.h5 layout_extend.h5 \
+    zero_chunk.h5 chunk_single.h5 swmr_non_latest.h5 \
+    earray_hdr_fd.h5 farray_hdr_fd.h5 bt2_hdr_fd.h5 \
+    storage_size.h5 dls_01_strings.h5 \
+    extend.h5 istore.h5 extlinks*.h5 frspace.h5 links*.h5 \
     sys_file1 tfile[1-7].h5 th5s[1-4].h5 lheap.h5 fheap.h5 ohdr.h5 \
     stab.h5 extern_[1-5].h5 extern_[1-4][rw].raw gheap[0-4].h5 \
     dt_arith[1-2] links.h5 links[0-6]*.h5 extlinks[0-15].h5 tmp \
@@ -182,8 +184,7 @@ CHECK_CLEANFILES+=accum.h5 cmpd_dset.h5 compact_dataset.h5 dataset.h5 \
     flushrefresh.h5 flushrefresh_VERIFICATION_START                  \
     flushrefresh_VERIFICATION_CHECKPOINT1 flushrefresh_VERIFICATION_CHECKPOINT2 \
     flushrefresh_VERIFICATION_DONE atomic_data accum_swmr_big.h5 ohdr_swmr.h5 \
-    test_swmr*.h5 cache_logging.h5 vds_swmr.h5 vds_swmr_src_*.h5 \
-    earray_hdr_fd.h5
+    test_swmr*.h5 cache_logging.h5 cache_logging.out vds_swmr.h5 vds_swmr_src_*.h5
 
 # Sources for testhdf5 executable
 testhdf5_SOURCES=testhdf5.c tarray.c tattr.c tchecksum.c tconfig.c tfile.c \
