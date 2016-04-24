@@ -1390,7 +1390,8 @@ H5D__earray_idx_remove(const H5D_chk_idx_info_t *idx_info, H5D_chunk_common_ud_t
         if(H5D__earray_idx_open(idx_info) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTOPENOBJ, FAIL, "can't open extensible array")
     } else  /* Patch the top level file pointer contained in ea if needed */
-        H5EA_patch_file(idx_info->storage->u.earray.ea, idx_info->f);
+        if(H5EA_patch_file(idx_info->storage->u.earray.ea, idx_info->f) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTOPENOBJ, FAIL, "can't patch earray file pointer")
 
     /* Set convenience pointer to extensible array structure */
     ea = idx_info->storage->u.earray.ea;
@@ -1806,7 +1807,8 @@ H5D__earray_idx_dest(const H5D_chk_idx_info_t *idx_info)
     if(idx_info->storage->u.earray.ea) {
 
 	/* Patch the top level file pointer contained in ea if needed */
-        H5EA_patch_file(idx_info->storage->u.earray.ea, idx_info->f);
+        if(H5EA_patch_file(idx_info->storage->u.earray.ea, idx_info->f) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTOPENOBJ, FAIL, "can't patch earray file pointer")
 
         /* Close extensible array */
         if(H5EA_close(idx_info->storage->u.earray.ea, idx_info->dxpl_id) < 0)

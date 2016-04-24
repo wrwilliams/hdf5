@@ -31,7 +31,6 @@
 #include "H5MMprivate.h"        /* Memory management                        */
 #include "H5Opkg.h"             /* Object headers                           */
 #include "H5Pprivate.h"         /* Property lists                           */
-#include "H5Sprivate.h"         /* Dataspaces                               */
 
 
 /* Local macros */
