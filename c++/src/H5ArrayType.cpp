@@ -35,7 +35,7 @@ namespace H5 {
 ///\brief	Default constructor: Creates a stub ArrayType
 // Programmer	Binh-Minh Ribler - May 2004
 //--------------------------------------------------------------------------
-ArrayType::ArrayType() : DataType(), rank(-1), dimensions(NULL) {}
+ArrayType::ArrayType() : DataType() {}
 
 //--------------------------------------------------------------------------
 // Function:	ArrayType overloaded constructor
@@ -44,26 +44,14 @@ ArrayType::ArrayType() : DataType(), rank(-1), dimensions(NULL) {}
 ///\exception	H5::DataTypeIException
 // Programmer	Binh-Minh Ribler - May 2004
 //--------------------------------------------------------------------------
-ArrayType::ArrayType( const hid_t existing_id ) : DataType( existing_id )
-{
-    setArrayInfo();
-}
+ArrayType::ArrayType( const hid_t existing_id ) : DataType( existing_id ) {}
 
 //--------------------------------------------------------------------------
 // Function:	ArrayType copy constructor
 ///\brief	Copy constructor: makes a copy of the original ArrayType object.
 // Programmer	Binh-Minh Ribler - May 2004
 //--------------------------------------------------------------------------
-ArrayType::ArrayType( const ArrayType& original ) : DataType( original )
-{
-    // Copy the rank of the original array
-    rank = original.rank;
-
-    // Allocate space then copy the dimensions from the original array
-    dimensions = new hsize_t[rank];
-    for (int i = 0; i < rank; i++)
-	dimensions[i] = original.dimensions[i];
-}
+ArrayType::ArrayType(const ArrayType& original) : DataType(original) {}
 
 //--------------------------------------------------------------------------
 // Function:	ArrayType overloaded constructor
@@ -82,50 +70,39 @@ ArrayType::ArrayType(const DataType& base_type, int ndims, const hsize_t* dims) 
     if (new_type_id < 0)
 	throw DataTypeIException("ArrayType constructor", "H5Tarray_create2 failed");
 
-    // Set the id and rank for this object
+    // Set the id for this object
     id = new_type_id;
-    rank = ndims;
-
-    // Allocate space then set the dimensions as provided by caller
-    dimensions = new hsize_t[rank];
-    for (int i = 0; i < rank; i++)
-	dimensions[i] = dims[i];
 }
 
 //--------------------------------------------------------------------------
-// Function:	ArrayType::setArrayInfo
-///\brief	Retrieves the rank and dimensions from the array datatype
-///		and store the info in this ArrayType object.
+// Function:	ArrayType::operator=
+///\brief	Assignment operator
+///\param	rhs - IN: Reference to the existing array datatype
+///\return	Reference to ArrayType instance
 ///\exception	H5::DataTypeIException
-// Programmer	Binh-Minh Ribler - January 2016
+///		std::bad_alloc
+// Description
+// 		Closes the id on the lhs object first with setId, then copies
+//		each data member from the rhs object.
+// Programmer	Binh-Minh Ribler - Mar 2016
+// Modification
 //--------------------------------------------------------------------------
-void ArrayType::setArrayInfo()
+ArrayType& ArrayType::operator=(const ArrayType& rhs)
 {
-    // Get the rank of the array type specified by id from the C API
-    int ndims = H5Tget_array_ndims(id);
-    if (ndims < 0)
+    if (this != &rhs)
     {
-	throw DataTypeIException("ArrayType::setArrayInfo", "H5Tget_array_ndims failed");
+        // handling references to this id
+        try {
+            setId(rhs.id);
+            // Note: a = b, so there are two objects with the same hdf5 id
+            // that's why incRefCount is needed, and it is called by setId
+        }
+        catch (Exception& close_error) {
+            throw DataTypeIException(inMemFunc("operator="), close_error.getDetailMsg());
+        }
     }
-
-    // Get the dimensions from the C API
-    hsize_t* dims;
-    dims = new hsize_t[ndims];
-    if (dims != NULL)
-    {
-	// Get the dimensions
-	ndims = H5Tget_array_dims2(id, dims);
-	if (ndims < 0)
-	    throw DataTypeIException("ArrayType::setArrayInfo", "H5Tget_array_dims2 failed");
-
-	// Store the array's info in memory
-	rank = ndims;
-	dimensions = new hsize_t[rank];
-	for (int i = 0; i < rank; i++)
-	    dimensions[i] = dims[i];
-	delete []dims;
-    }
-} // setArrayInfo
+    return(*this);
+}
 
 //--------------------------------------------------------------------------
 // Function:	ArrayType::getArrayNDims
@@ -134,26 +111,36 @@ void ArrayType::setArrayInfo()
 ///\exception	H5::DataTypeIException
 // Programmer	Binh-Minh Ribler - May 2004
 // Modification
-//		Modified to use setArrayInfo().
-//		If rank is positive, return rank
-//		If rank is invalid but object has a valid identifier, obtain the
-//		  rank and dimensions, store them in the object, and return rank
-//		Otherwise, i.e., rank is invalid and object doesn't have a
-//		  valid identifier, throw an exception
+//	Apr, 2016
+//		Became const.
+//--------------------------------------------------------------------------
+int ArrayType::getArrayNDims() const
+{
+    // Get the rank of the array type specified by id from the C API
+    int ndims = H5Tget_array_ndims(id);
+    if (ndims < 0)
+    {
+	throw DataTypeIException("ArrayType::setArrayInfo", "H5Tget_array_ndims failed");
+    }
+
+    return(ndims);
+}
+//---------------------------- Deprecated ----------------------------------
+// Function:	ArrayType::getArrayNDims
+// This non-const version of the above method is here for compatibility
+// purposes and may be removed in the future.
+// -BMR, Apr 2016
 //--------------------------------------------------------------------------
 int ArrayType::getArrayNDims()
 {
-    // Validate the id first, this object could be a default object
-    if (!p_valid_id(id))
-	throw DataTypeIException("ArrayType::getArrayNDims", "ArrayType object is not a valid array type.");
+    // Get the rank of the array type specified by id from the C API
+    int ndims = H5Tget_array_ndims(id);
+    if (ndims < 0)
+    {
+	throw DataTypeIException("ArrayType::setArrayInfo", "H5Tget_array_ndims failed");
+    }
 
-    // If the array's info has not been stored, i.e. "rank" still has its
-    // initial value, -1, and "dimensions" is still NULL, retrieve rank and
-    // dimensions via the C API and store them in this ArrayType object.
-    if (rank < 0 && dimensions == NULL)
-	setArrayInfo();
-
-    return(rank);
+    return(ndims);
 }
 
 //--------------------------------------------------------------------------
@@ -164,29 +151,34 @@ int ArrayType::getArrayNDims()
 ///\exception	H5::DataTypeIException
 // Programmer	Binh-Minh Ribler - May 2004
 // Modification
-//	Jan, 2016
-//		Modified to use setArrayInfo().
-//		If the array information has not been stored, retrieve rank and
-//		dimensions of the array type identified by "id" via the C API.
-//		Copy "dimensions" to the user's buffer
+//	Apr, 2016
+//		Became const.
+//--------------------------------------------------------------------------
+int ArrayType::getArrayDims(hsize_t* dims) const
+{
+    // Get the dimensions
+    int ndims = H5Tget_array_dims2(id, dims);
+    if (ndims < 0)
+	throw DataTypeIException("ArrayType::setArrayInfo", "H5Tget_array_dims2 failed");
+
+    // Return the number of dimensions
+    return(ndims);
+}
+//---------------------------- Deprecated ----------------------------------
+// Function:	ArrayType::getArrayDims
+// This non-const version of the above method is here for compatibility
+// purposes and may be removed in the future.
+// -BMR, Apr 2016
 //--------------------------------------------------------------------------
 int ArrayType::getArrayDims(hsize_t* dims)
 {
-    // Validate the id first, this object could be a default object
-    if (!p_valid_id(id))
-	throw DataTypeIException("ArrayType::getArrayDims", "ArrayType object is not a valid array type.");
+    // Get the dimensions
+    int ndims = H5Tget_array_dims2(id, dims);
+    if (ndims < 0)
+	throw DataTypeIException("ArrayType::setArrayInfo", "H5Tget_array_dims2 failed");
 
-    // If the array's info has not been stored, i.e. "rank" still has its
-    // initial value, -1, and "dimensions" is still NULL, retrieve rank and
-    // dimensions via the C API and store them in this ArrayType object.
-    if (rank < 0 && dimensions == NULL)
-	setArrayInfo();
-
-    // Copy what's in "dimensions" to user's buffer "dims"
-    for (int i = 0; i < rank; i++)
-	dims[i] = dimensions[i];
-
-    return(rank);
+    // Return the number of dimensions
+    return(ndims);
 }
 
 //--------------------------------------------------------------------------
@@ -194,12 +186,7 @@ int ArrayType::getArrayDims(hsize_t* dims)
 ///\brief	Properly terminates access to this array datatype.
 // Programmer	Binh-Minh Ribler - May 2004
 //--------------------------------------------------------------------------
-ArrayType::~ArrayType()
-{
-   // Free allocated memory
-   if (dimensions != NULL)
-      delete []dimensions;
-}
+ArrayType::~ArrayType() {}
 
 #ifndef H5_NO_NAMESPACE
 } // end namespace

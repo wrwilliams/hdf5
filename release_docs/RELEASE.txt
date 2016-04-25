@@ -1,4 +1,4 @@
-HDF5 version 1.8.17-snap14 currently under development
+HDF5 version 1.8.17-snap15 currently under development
 ================================================================================
 
 INTRODUCTION
@@ -83,7 +83,17 @@ New Features
 
     Library
     -------
-    - None
+    - New API calls that determine the search path for dataset external
+      storage.
+
+      H5Pset/get_efile_prefix() API calls were added to the library. These
+      functions give control over the search path for dataset external storage
+      that has been configured with H5Pset_external().
+
+      Additionally, the HDF5_EXTFILE_PREFIX environment variable can be
+      used to control the search path.
+
+      (DER, 2016/04/20, HDFFV-8740)
 
     Parallel Library
     ----------------
@@ -168,6 +178,11 @@ Bug Fixes since HDF5-1.8.16
       under normal operation.
 
       (DER, 2016/01/13, HDFFV-9640)
+
+    - Fixed a library segmentation fault when accessing a corrupted
+      file provided by a user.
+
+      (MSC, 2016/02/19, HDFFV-9670)
 
     Parallel Library
     ----------------

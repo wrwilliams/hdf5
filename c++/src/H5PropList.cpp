@@ -104,9 +104,8 @@ PropList::PropList() : IdComponent(), id(H5P_DEFAULT) {}
 ///\param	original - IN: The original property list to copy
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-PropList::PropList(const PropList& original) : IdComponent()
+PropList::PropList(const PropList& original) : IdComponent(), id(original.id)
 {
-    id = original.getId();
     incRefCount(); // increment number of references to this id
 }
 
@@ -170,7 +169,7 @@ void PropList::copy( const PropList& like_plist )
     try {
 	close();
     }
-    catch (Exception close_error) {
+    catch (Exception& close_error) {
 	throw PropListIException(inMemFunc("copy"), close_error.getDetailMsg());
     }
 
@@ -302,7 +301,7 @@ void PropList::p_setId(const hid_t new_id)
     try {
         close();
     }
-    catch (Exception close_error) {
+    catch (Exception& close_error) {
         throw PropListIException(inMemFunc("p_setId"), close_error.getDetailMsg());
     }
    // reset object's id to the given id
@@ -593,7 +592,7 @@ void PropList::setProperty(const char* name, void* value) const
 //--------------------------------------------------------------------------
 void PropList::setProperty(const char* name, const char* charptr) const
 {
-   herr_t ret_value = H5Pset(id, name, (void*) charptr);
+   herr_t ret_value = H5Pset(id, name, (void*)charptr);
    if (ret_value < 0)
    {
       throw PropListIException(inMemFunc("setProperty"), "H5Pset failed");
@@ -748,7 +747,7 @@ PropList::~PropList()
     try {
 	close();
     }
-    catch (Exception close_error) {
+    catch (Exception& close_error) {
 	cerr << "PropList::~PropList - " << close_error.getDetailMsg() << endl;
     }
 }

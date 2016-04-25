@@ -132,9 +132,8 @@ DataSpace::DataSpace( int rank, const hsize_t * dims, const hsize_t * maxdims) :
 ///\exception	H5::DataSpaceIException
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-DataSpace::DataSpace(const hid_t existing_id) : IdComponent()
+DataSpace::DataSpace(const hid_t existing_id) : IdComponent(), id(existing_id)
 {
-    id = existing_id;
     incRefCount(); // increment number of references to this id
 }
 
@@ -144,9 +143,8 @@ DataSpace::DataSpace(const hid_t existing_id) : IdComponent()
 ///\param	original - IN: DataSpace object to copy
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-DataSpace::DataSpace(const DataSpace& original) : IdComponent()
+DataSpace::DataSpace(const DataSpace& original) : IdComponent(), id(original.id)
 {
-    id = original.getId();
     incRefCount(); // increment number of references to this id
 }
 
@@ -169,7 +167,7 @@ void DataSpace::copy( const DataSpace& like_space )
       try {
          close();
       }
-      catch (Exception close_error) {
+      catch (Exception& close_error) {
          throw DataSpaceIException("DataSpace::copy", close_error.getDetailMsg());
       }
    }  // end if
@@ -329,6 +327,8 @@ H5S_class_t DataSpace::getSimpleExtentType () const
 ///\param	dest_space  - IN: Dataspace to copy from
 ///\exception	H5::DataSpaceIException
 // Programmer	Binh-Minh Ribler - 2000
+// Modification
+//		Replaced the version without const parameter - Apr, 2014
 //--------------------------------------------------------------------------
 void DataSpace::extentCopy (const DataSpace& dest_space) const
 {
@@ -338,20 +338,6 @@ void DataSpace::extentCopy (const DataSpace& dest_space) const
    {
       throw DataSpaceIException("DataSpace::extentCopy", "H5Sextent_copy failed");
    }
-}
-
-//--------------------------------------------------------------------------
-// Function:	DataSpace::extentCopy
-///\brief	This is an overloaded member function, kept for backward
-///		compatibility.  It differs from the above function in that it
-///		misses const.  This wrapper will be removed in future release.
-///\param	dest_space  - IN: Dataspace to copy from
-///\exception	H5::DataSpaceIException
-// Programmer	Binh-Minh Ribler - 2000
-//--------------------------------------------------------------------------
-void DataSpace::extentCopy( DataSpace& dest_space ) const
-{
-    extentCopy((const DataSpace)dest_space);
 }
 
 //--------------------------------------------------------------------------
@@ -655,7 +641,7 @@ void DataSpace::p_setId(const hid_t new_id)
     try {
         close();
     }
-    catch (Exception close_error) {
+    catch (Exception& close_error) {
         throw DataSpaceIException(inMemFunc("p_setId"), close_error.getDetailMsg());
     }
    // reset object's id to the given id
@@ -699,7 +685,7 @@ DataSpace::~DataSpace()
 {
     try {
 	close();
-    } catch (Exception close_error) {
+    } catch (Exception& close_error) {
 	cerr << "DataSpace::~DataSpace - " << close_error.getDetailMsg() << endl;
     }
 }

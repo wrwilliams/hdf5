@@ -88,7 +88,7 @@ H5File::H5File( const char* name, unsigned int flags, const FileCreatPropList& c
 {
     try {
 	p_get_file(name, flags, create_plist, access_plist);
-    } catch (FileIException open_file) {
+    } catch (FileIException& open_file) {
 	throw open_file;
     }
 }
@@ -113,7 +113,7 @@ H5File::H5File( const H5std_string& name, unsigned int flags, const FileCreatPro
 {
     try {
 	p_get_file(name.c_str(), flags, create_plist, access_plist);
-    } catch (FileIException open_file) {
+    } catch (FileIException& open_file) {
 	throw open_file;
     }
 }
@@ -245,7 +245,7 @@ void H5File::openFile(const char* name, unsigned int flags, const FileAccPropLis
     try {
         close();
     }
-    catch (Exception close_error) {
+    catch (Exception& close_error) {
         throw FileIException("H5File::openFile", close_error.getDetailMsg());
     }
 
@@ -294,7 +294,7 @@ void H5File::reOpen()
     try {
         close();
     }
-    catch (Exception close_error) {
+    catch (Exception& close_error) {
         throw FileIException("H5File::reOpen", close_error.getDetailMsg());
     }
 
@@ -454,6 +454,8 @@ void H5File::getObjIDs(unsigned types, size_t max_objs, hid_t *oid_list) const
 ///		the file remains open; it will be invalid if the file is
 ///		closed and reopened or opened during a subsequent session.
 // Programmer   Binh-Minh Ribler - May 2004
+// Modification
+//		Replaced the version without const parameter - Apr, 2014
 //--------------------------------------------------------------------------
 void H5File::getVFDHandle(const FileAccPropList& fapl, void **file_handle) const
 {
@@ -463,23 +465,6 @@ void H5File::getVFDHandle(const FileAccPropList& fapl, void **file_handle) const
    {
       throw FileIException("H5File::getVFDHandle", "H5Fget_vfd_handle failed");
    }
-}
-
-//--------------------------------------------------------------------------
-// Function:	H5File::getVFDHandle
-///\brief	This is an overloaded member function, kept for backward
-///		compatibility.  It differs from the above function in that it
-///		misses const.  This wrapper will be removed in future release.
-///\param	fapl        - File access property list
-///\param	file_handle - Pointer to the file handle being used by
-///			      the low-level virtual file driver
-///\exception	H5::FileIException
-// Programmer   Binh-Minh Ribler - May 2004
-// Note:	Retiring April, 2014
-//--------------------------------------------------------------------------
-void H5File::getVFDHandle(FileAccPropList& fapl, void **file_handle) const
-{
-    getVFDHandle((const FileAccPropList)fapl, file_handle);
 }
 
 //--------------------------------------------------------------------------
@@ -584,7 +569,7 @@ void H5File::p_setId(const hid_t new_id)
     try {
         close();
     }
-    catch (Exception E) {
+    catch (Exception& E) {
         throw FileIException("H5File::p_setId", E.getDetailMsg());
     }
    // reset object's id to the given id
@@ -648,7 +633,7 @@ H5File::~H5File()
 {
     try {
 	close();
-    } catch (Exception close_error) {
+    } catch (Exception& close_error) {
 	cerr << "H5File::~H5File - " << close_error.getDetailMsg() << endl;
     }
 }

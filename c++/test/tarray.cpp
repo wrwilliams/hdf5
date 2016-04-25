@@ -42,9 +42,9 @@
 #include "h5cpputil.h"  // C++ utilility header file
 
 const H5std_string    FILENAME("tarray.h5");
-const hsize_t SPACE1_RANK = 1;
+const int SPACE1_RANK = 1;
 const hsize_t SPACE1_DIM1 = 4;
-const hsize_t ARRAY1_RANK = 1;
+const int ARRAY1_RANK = 1;
 const hsize_t ARRAY1_DIM1 = 4;
 
 typedef enum flt_t {
@@ -83,15 +83,19 @@ static void test_array_compound_array()
     hsize_t sdims1[] = {SPACE1_DIM1};
     hsize_t tdims1[] = {ARRAY1_DIM1};
     int     nmemb;      // Number of compound members
-    int     ii, jj, kk; // counting variables
+    int     ii;		// counting variables
+    hsize_t idxi, idxj, idxk; // dimension indicing variables
     H5T_class_t mclass; // Datatype class for field
 
     // Initialize array data to write
-    for (ii =0; ii < SPACE1_DIM1; ii++)
-        for (jj = 0; jj < ARRAY1_DIM1; jj++) {
-            wdata[ii][jj].i = ii * 10 + jj;
-            for(kk = 0; kk < ARRAY1_DIM1; kk++)
-                wdata[ii][jj].f[kk]=(float)(ii * 10.0F + jj * 2.5F + kk);
+    for (idxi =0; idxi < SPACE1_DIM1; idxi++)
+        for (idxj = 0; idxj < ARRAY1_DIM1; idxj++) {
+            wdata[idxi][idxj].i = idxi * 10 + idxj;
+            for(idxk = 0; idxk < ARRAY1_DIM1; idxk++)
+	    {
+                float temp = idxi * 10.0 + idxj * 2.5 + idxk;
+                wdata[idxi][idxj].f[idxk] = temp;
+	    }
         } // end for
 
     try {
@@ -153,7 +157,8 @@ static void test_array_compound_array()
 	// Verify that it is an array of compounds
 	DataType dstype = dataset.getDataType();
 	mclass = dstype.getClass();
-	verify_val(mclass, H5T_ARRAY, "f2_type.getClass", __LINE__, __FILE__);
+	verify_val(mclass==H5T_ARRAY, true, "f2_type.getClass", __LINE__, __FILE__);
+
 	dstype.close();
 
 	// Get the array datatype to check
@@ -170,7 +175,7 @@ static void test_array_compound_array()
 	// Check the array dimensions
 	for (ii =0; ii <ndims; ii++)
 	    if (rdims1[ii]!=tdims1[ii]) {
-		TestErrPrintf("Array dimension information doesn't match!, rdims1[%d]=%d, tdims1[%d]=%d\n", (int)ii, (int)rdims1[ii], (int)ii, (int)tdims1[ii]);
+		TestErrPrintf("Array dimension information doesn't match!, rdims1[%d]=%zd, tdims1[%d]=z%d\n", ii, rdims1[ii], ii, tdims1[ii]);
             continue;
         } // end if
 
@@ -187,7 +192,7 @@ static void test_array_compound_array()
 	// Check the array dimensions
 	for (ii = 0; ii < ndims; ii++)
 	    if (rdims1[ii] != tdims1[ii]) {
-		TestErrPrintf("Array dimension information doesn't match!, rdims1[%d]=%d, tdims1[%d]=%d\n", (int)ii, (int)rdims1[ii], (int)ii, (int)tdims1[ii]);
+		TestErrPrintf("Array dimension information doesn't match!, rdims1[%d]=%zd, tdims1[%d]=%zd\n", ii, rdims1[ii], ii, tdims1[ii]);
             continue;
         } // end if
 
@@ -199,7 +204,7 @@ static void test_array_compound_array()
 	// array datatype atype_check.
 	DataType base_type = atype_check.getSuper();
 	mclass = base_type.getClass();
-	verify_val(mclass, H5T_COMPOUND, "atype_check.getClass", __LINE__, __FILE__);
+	verify_val(mclass==H5T_COMPOUND, true, "atype_check.getClass", __LINE__, __FILE__);
 
 	// Verify the compound datatype info
 	CompType ctype_check(base_type.getId());
@@ -219,7 +224,7 @@ static void test_array_compound_array()
 
 	// Get the 2nd field's class, this 2nd field should have an array type
 	mclass = f2_type.getClass();
-	verify_val(mclass, H5T_ARRAY, "f2_type.getClass", __LINE__, __FILE__);
+	verify_val(mclass==H5T_ARRAY, true, "f2_type.getClass", __LINE__, __FILE__);
 	f2_type.close();
 
 	// Get the 2nd field, array of floats datatype, to check
@@ -236,7 +241,7 @@ static void test_array_compound_array()
 	// Check the array dimensions
 	for (ii = 0; ii < ndims; ii++)
 	    if (rdims1[ii] != tdims1[ii]) {
-	        TestErrPrintf("Array dimension information doesn't match!, rdims1[%d]=%d, tdims1[%d]=%d\n",(int)ii, (int)rdims1[ii], (int)ii, (int)tdims1[ii]);
+		TestErrPrintf("Array dimension information doesn't match!, rdims1[%d]=%zd, tdims1[%d]=%zd\n", ii, rdims1[ii], ii, tdims1[ii]);
 		continue;
 	    } // end if
 
@@ -248,10 +253,10 @@ static void test_array_compound_array()
 	dataset.read(rdata, atype_check);
 
 	// Compare data read in
-	for (ii = 0; ii < SPACE1_DIM1; ii++) {
-	    for (jj = 0; jj < ARRAY1_DIM1; jj++) {
-		if (wdata[ii][jj].i != rdata[ii][jj].i) {
-		    TestErrPrintf("Array data information doesn't match!, wdata[%d][%d].i=%d, rdata[%d][%d].i=%d\n",(int)ii,(int)jj,(int)wdata[ii][jj].i,(int)ii,(int)jj,(int)rdata[ii][jj].i);
+	for (idxi = 0; idxi < SPACE1_DIM1; idxi++) {
+	    for (idxj = 0; idxj < ARRAY1_DIM1; idxj++) {
+		if (wdata[idxi][idxj].i != rdata[idxi][idxj].i) {
+		    TestErrPrintf("Array data information doesn't match!, wdata[%d][%d].i=%d, rdata[%d][%d].i=%d\n",idxi,idxj,wdata[idxi][idxj].i,idxi,idxj,rdata[idxi][idxj].i);
 		    continue;
 		} // end if
 	    } // end for
@@ -263,11 +268,209 @@ static void test_array_compound_array()
 	file1.close();
         PASSED();
     }   // end of try block
-    catch (Exception E) {
+    catch (Exception& E)
+    {
         issue_fail_msg("test_array_compound_array", __LINE__, __FILE__, E.getCDetailMsg());
     }
 
 } // end test_array_compound_array()
+
+
+/*-------------------------------------------------------------------------
+ * Function:    test_array_assignment
+ *
+ * Purpose:     Tests the operator=
+ *
+ * Return:      None.
+ *
+ * Programmer:  Binh-Minh Ribler (using C version)
+ *		March, 2016
+ *
+ * Description:
+ *		Used user's sample code in HDFFV-9562
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+/*
+ * Helper routine to demonstrate the issue in HDFFV-9562
+ */
+H5::DataType getArr()
+{
+    hsize_t *dims = new hsize_t; 
+    *dims = 5; 
+    H5::ArrayType ret; 
+    ret = H5::ArrayType(H5::PredType::NATIVE_INT, 1, dims); 
+    delete[] dims; 
+    return ret; }
+
+static void test_array_assignment()
+{
+    hsize_t sdims1[] = {SPACE1_DIM1};
+    SUBTEST("ArrayType::operator=");
+
+    try {
+	// Create File
+	H5File file1(FILENAME, H5F_ACC_TRUNC);
+
+	// Create dataspace for datasets
+	DataSpace space(SPACE1_RANK, sdims1, NULL);
+
+	/*
+	 * Create an array datatype of compounds, arrtype.  Each compound
+	 * datatype, comptype, contains an integer and an array of floats,
+	 * arrfltype.
+	 */
+
+	// Create a compound datatype
+	CompType comptype(static_cast<size_t>(24));
+
+	// Insert integer field
+	comptype.insertMember("i", 0, PredType::NATIVE_INT);
+
+	// Insert float array field
+	comptype.insertMember("a", 4, getArr());
+
+	// Create a dataset
+	DataSet dataset = file1.createDataSet("Dataset1", comptype, space);
+
+	// Close all
+	dataset.close();
+	comptype.close();
+	space.close();
+	file1.close();
+
+        PASSED();
+    }   // end of try block
+    catch (Exception& E)
+    {
+        issue_fail_msg("test_array_assignment", __LINE__, __FILE__, E.getCDetailMsg());
+    }
+} // end test_array_assignment()
+
+
+/*-------------------------------------------------------------------------
+ * Function:    test_array_info
+ *
+ * Purpose:     Tests getting array information using the const methods.
+ *
+ * Return:      None.
+ *
+ * Programmer:  Binh-Minh Ribler
+ *		April, 2016
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static void test_array_info()
+{
+    SUBTEST("ArrayType Const Methods");
+    typedef struct {        // Typedef for compound datatype */
+        int i;
+        float f[ARRAY1_DIM1];
+    } s1_t;
+    s1_t wdata[SPACE1_DIM1][ARRAY1_DIM1];   // Information to write
+    s1_t rdata[SPACE1_DIM1][ARRAY1_DIM1];   // Information read in
+    hsize_t sdims1[] = {SPACE1_DIM1};
+    hsize_t tdims1[] = {ARRAY1_DIM1};
+    int     nmemb;      // Number of compound members
+    int     ii;		// counting variables
+    hsize_t idxi, idxj, idxk; // dimension indicing variables
+    H5T_class_t mclass; // Datatype class for field
+
+    // Initialize array data to write
+    for (idxi =0; idxi < SPACE1_DIM1; idxi++)
+        for (idxj = 0; idxj < ARRAY1_DIM1; idxj++) {
+            wdata[idxi][idxj].i = idxi * 10 + idxj;
+            for(idxk = 0; idxk < ARRAY1_DIM1; idxk++)
+	    {
+                float temp = idxi * 10.0 + idxj * 2.5 + idxk;
+                wdata[idxi][idxj].f[idxk] = temp;
+	    }
+        } // end for
+
+    try {
+	// Create File
+	H5File file1(FILENAME, H5F_ACC_TRUNC);
+
+	// Create dataspace for datasets
+	DataSpace space(SPACE1_RANK, sdims1, NULL);
+
+	/*
+	 * Create some array datatypes, then close the file.
+	 */
+
+	// Create an array of floats datatype
+	ArrayType arrfltype(PredType::NATIVE_FLOAT, ARRAY1_RANK, tdims1);
+
+	// Create an array datatype of the compound datatype
+	ArrayType arrtype(PredType::NATIVE_UINT, ARRAY1_RANK, tdims1);
+
+	// Create a dataset
+	DataSet dataset = file1.createDataSet("Dataset1", arrtype, space);
+
+	// Write dataset to disk
+	dataset.write(wdata, arrtype);
+
+	// Close array of floats field datatype
+	arrfltype.close();
+
+	// Close all
+	dataset.close();
+	arrtype.close();
+	space.close();
+	file1.close();
+
+	// Re-open file
+	file1.openFile(FILENAME, H5F_ACC_RDONLY);
+
+	// Open the dataset
+	dataset = file1.openDataSet("Dataset1");
+
+	/*
+	 * Check the datatype array of compounds
+	 */
+
+	// Verify that it is an array of compounds
+	DataType dstype = dataset.getDataType();
+	mclass = dstype.getClass();
+	verify_val(mclass==H5T_ARRAY, true, "f2_type.getClass", __LINE__, __FILE__);
+
+	dstype.close();
+
+	{ // Let atype_check go out of scope
+	// Get the array datatype, declared as const
+	const ArrayType atype_check = dataset.getArrayType();
+
+	// Check the array rank with the const method
+	int ndims = atype_check.getArrayNDims();
+	verify_val(ndims, ARRAY1_RANK, "atype_check.getArrayNDims", __LINE__, __FILE__);
+
+	// Get the array dimensions with the const method
+	hsize_t rdims1[H5S_MAX_RANK];
+	atype_check.getArrayDims(rdims1);
+
+	// Check the array dimensions
+	for (ii =0; ii <ndims; ii++)
+	    if (rdims1[ii]!=tdims1[ii]) {
+		TestErrPrintf("Array dimension information doesn't match!, rdims1[%d]=%zd, tdims1[%d]=z%d\n", ii, rdims1[ii], ii, tdims1[ii]);
+            continue;
+        } // end if
+	}
+
+	// Close all
+	dataset.close();
+	file1.close();
+        PASSED();
+    }   // end of try block
+    catch (Exception& E)
+    {
+        issue_fail_msg("test_array_info", __LINE__, __FILE__, E.getCDetailMsg());
+    }
+
+} // end test_array_info()
 
 
 /****************************************************************
@@ -285,6 +488,12 @@ void test_array()
 
     // Test array of compounds with array field
     test_array_compound_array();
+
+    // Test operator= (HDFFV-9562)
+    test_array_assignment();
+
+    // Test const functions (HDFFV-9725)
+    test_array_info();
 
 }   // test_array()
 
