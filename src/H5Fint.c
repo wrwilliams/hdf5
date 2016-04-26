@@ -859,8 +859,8 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                  */
                 if(flush) {
 		    /* Clear status_flags */
-                    f->shared->sblock->status_flags &= ~H5F_SUPER_WRITE_ACCESS;
-                    f->shared->sblock->status_flags &= ~H5F_SUPER_SWMR_WRITE_ACCESS;
+                    f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_WRITE_ACCESS);
+                    f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_SWMR_WRITE_ACCESS);
                     /* Mark superblock dirty in cache, so change will get encoded */
                     /* Push error, but keep going*/
                     if(H5F_super_dirty(f) < 0)
@@ -1724,6 +1724,10 @@ H5F_build_actual_name(const H5F_t *f, const H5P_genplist_t *fapl, const char *na
     char **actual_name/*out*/)
 {
     hid_t       new_fapl_id = -1;       /* ID for duplicated FAPL */
+#ifdef H5_HAVE_SYMLINK
+    /* This has to be declared here to avoid unfreed resources on errors */
+    char *realname = NULL;              /* Fully resolved path name of file */
+#endif /* H5_HAVE_SYMLINK */
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -1755,8 +1759,11 @@ H5F_build_actual_name(const H5F_t *f, const H5P_genplist_t *fapl, const char *na
             int *fd;                    /* POSIX I/O file descriptor */
             h5_stat_t st;               /* Stat info from stat() call */
             h5_stat_t fst;              /* Stat info from fstat() call */
-            char realname[PATH_MAX];    /* Fully resolved path name of file */
             hbool_t want_posix_fd;      /* Flag for retrieving file descriptor from VFD */
+
+            /* Allocate realname buffer */
+            if(NULL == (realname = (char *)HDcalloc((size_t)PATH_MAX, sizeof(char))))
+                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
 
             /* Perform a sanity check that the file or link wasn't switched
              * between when we opened it and when we called lstat().  This is
@@ -1798,6 +1805,7 @@ H5F_build_actual_name(const H5F_t *f, const H5P_genplist_t *fapl, const char *na
             /* Duplicate the resolved path for the file name */
             if(NULL == (*actual_name = (char *)H5MM_strdup(realname)))
                 HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "can't duplicate real path")
+
         } /* end if */
     } /* end if */
 #endif /* H5_HAVE_SYMLINK */
@@ -1814,6 +1822,11 @@ done:
     if(new_fapl_id > 0)
         if(H5I_dec_app_ref(new_fapl_id) < 0)
             HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEOBJ, FAIL, "can't close duplicated FAPL")
+
+#ifdef H5_HAVE_SYMLINK
+    if(realname)
+        HDfree(realname);
+#endif /* H5_HAVE_SYMLINK */
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5F_build_actual_name() */
