@@ -8856,6 +8856,11 @@ H5C_load_entry(H5F_t *              f,
     entry->aux_next             = NULL;
     entry->aux_prev             = NULL;
 
+#ifdef H5_HAVE_PARALLEL
+    entry->coll_next            = NULL;
+    entry->coll_prev            = NULL;
+#endif /* H5_HAVE_PARALLEL */
+
     /* initialize cache image related fields */
     entry->include_in_image     = FALSE;
     entry->lru_rank		= 0;
@@ -8865,11 +8870,6 @@ H5C_load_entry(H5F_t *              f,
     entry->fd_child_count	= 0;
     entry->prefetched		= FALSE;
     entry->prefetch_type_id	= 0;
-
-#ifdef H5_HAVE_PARALLEL
-    entry->coll_next            = NULL;
-    entry->coll_prev            = NULL;
-#endif /* H5_HAVE_PARALLEL */
 
     H5C__RESET_CACHE_ENTRY_STATS(entry);
 

@@ -3630,7 +3630,6 @@ H5C_reconstruct_cache_entry(H5C_t * cache_ptr, int i)
     pf_entry_ptr->flush_marker		= FALSE;
     pf_entry_ptr->flush_me_last		= FALSE;
 #ifdef H5_HAVE_PARALLEL
-    pf_entry_ptr->flush_me_collectively	= FALSE;
     pf_entry_ptr->clear_on_unprotect	= FALSE;
     pf_entry_ptr->flush_immediately	= FALSE;
 #endif
@@ -3656,6 +3655,10 @@ H5C_reconstruct_cache_entry(H5C_t * cache_ptr, int i)
     pf_entry_ptr->prev			= NULL;
     pf_entry_ptr->aux_next		= NULL;
     pf_entry_ptr->aux_prev		= NULL;
+#ifdef H5_HAVE_PARALLEL
+    pf_entry_ptr->coll_next             = NULL;
+    pf_entry_ptr->coll_prev             = NULL;
+#endif /* H5_HAVE_PARALLEL */
 
     /* Initialize cache image related fields */
     pf_entry_ptr->include_in_image	= FALSE;
