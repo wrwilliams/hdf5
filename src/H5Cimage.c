@@ -372,7 +372,8 @@ H5C_construct_cache_image_buffer(H5F_t * f, H5C_t * cache_ptr)
 
 	HDassert(chksum == old_chksum);
 
-	fake_cache_ptr = (H5C_t *)H5MM_xfree((void *)fake_cache_ptr);
+	fake_cache_ptr->image_entries = (H5C_image_entry_t *)H5MM_xfree(fake_cache_ptr->image_entries);
+	fake_cache_ptr = (H5C_t *)H5MM_xfree(fake_cache_ptr);
     }
 #endif /* NDEBUG */
 
