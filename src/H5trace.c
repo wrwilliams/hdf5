@@ -155,8 +155,7 @@ H5_trace(const double *returning, const char *func, const char *type, ...)
     } /* end if */
 
     /* Get time for event */
-    if(HDfabs(first_time.etime) < 0.0000000001F)
-        /* That is == 0.0, but direct comparison between floats is bad */
+    if(H5_DBL_ABS_EQUAL(first_time.etime, H5_DOUBLE(0.0)))
         H5_timer_begin(&first_time);
     if(H5_debug_g.ttimes)
         H5_timer_begin(&event_time);
@@ -269,8 +268,8 @@ H5_trace(const double *returning, const char *func, const char *type, ...)
                         fprintf(out, "NULL");
                     } /* end if */
                 else {
-                    hbool_t bool_var = va_arg(ap, hbool_t); /*lint !e732 Loss of sign not really occuring */
-
+                    /* Can't pass hbool_t to va_arg() */
+                    hbool_t bool_var = (hbool_t)va_arg(ap, int);
                     if(TRUE == bool_var)
                         fprintf(out, "TRUE");
                     else if(!bool_var)
@@ -491,6 +490,52 @@ H5_trace(const double *returning, const char *func, const char *type, ...)
 
                                 default:
                                     fprintf(out, "%ld", (long)actual_io_mode);
+                                    break;
+                            } /* end switch */
+                        } /* end else */
+                        break;
+
+                    case 'k':
+                        if(ptr) {
+                            if(vp)
+                                fprintf(out, "0x%lx", (unsigned long)vp);
+                            else
+                                fprintf(out, "NULL");
+                        } /* end if */
+                        else {
+                            H5D_chunk_index_t idx = (H5D_chunk_index_t)va_arg(ap, int);
+
+                            switch(idx) {
+                                case H5D_CHUNK_IDX_BTREE:
+                                    fprintf(out, "H5D_CHUNK_IDX_BTREE");
+                                    break;
+
+                                case H5D_CHUNK_IDX_NONE:
+                                    fprintf(out, "H5D_CHUNK_IDX_NONE");
+                                    break;
+
+                                case H5D_CHUNK_IDX_FARRAY:
+                                    fprintf(out, "H5D_CHUNK_IDX_FARRAY");
+                                    break;
+
+                                case H5D_CHUNK_IDX_EARRAY:
+                                    fprintf(out, "H5D_CHUNK_IDX_EARRAY");
+                                    break;
+
+                                case H5D_CHUNK_IDX_BT2:
+                                    fprintf(out, "H5D_CHUNK_IDX_BT2");
+                                    break;
+
+                                case H5D_CHUNK_IDX_SINGLE:
+                                    fprintf(out, "H5D_CHUNK_IDX_SINGLE");
+                                    break;
+
+                                case H5D_CHUNK_IDX_NTYPES:
+                                    fprintf(out, "ERROR: H5D_CHUNK_IDX_NTYPES (invalid value)");
+                                    break;
+
+                                default:
+                                    fprintf(out, "UNKNOWN VALUE: %ld", (long)idx);
                                     break;
                             } /* end switch */
                         } /* end else */

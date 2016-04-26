@@ -29,14 +29,14 @@
 /****************/
 
 #include "H5Pmodule.h"          /* This source code file is part of the H5P module */
+#define H5D_FRIEND		        /* Suppress error about including H5Dpkg	       */
 
 
 /***********/
 /* Headers */
 /***********/
 #include "H5private.h"		/* Generic Functions			*/
-#include "H5ACprivate.h"	/* Metadata cache			*/
-#include "H5Dprivate.h"		/* Datasets				*/
+#include "H5Dpkg.h"		/* Datasets 				*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5FLprivate.h"	/* Free Lists                           */
 #include "H5Iprivate.h"		/* IDs			  		*/
@@ -45,6 +45,7 @@
 #include "H5Ppkg.h"		/* Property lists		  	*/
 #include "H5Sprivate.h"         /* Dataspaces                           */
 #include "H5Tprivate.h"		/* Datatypes 				*/
+#include "H5VMprivate.h"	/* Vectors and arrays 			*/
 #include "H5Zprivate.h"		/* Data filters				*/
 
 
@@ -55,28 +56,28 @@
 /* Define default layout information */
 #define H5D_DEF_STORAGE_COMPACT_INIT  {(hbool_t)FALSE, (size_t)0, NULL}
 #define H5D_DEF_STORAGE_CONTIG_INIT   {HADDR_UNDEF, (hsize_t)0}
-#define H5D_DEF_STORAGE_CHUNK_INIT    {H5D_CHUNK_IDX_BTREE, HADDR_UNDEF,  NULL, {{HADDR_UNDEF, NULL}}}
-#define H5D_DEF_LAYOUT_CHUNK_INIT    {(unsigned)0, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, (uint32_t)0, (hsize_t)0, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}}
+#define H5D_DEF_STORAGE_CHUNK_INIT    {H5D_CHUNK_IDX_BTREE, HADDR_UNDEF, H5D_COPS_BTREE, {{HADDR_UNDEF, NULL}}}
+#define H5D_DEF_LAYOUT_CHUNK_INIT    {H5D_CHUNK_IDX_BTREE, (uint8_t)0, (unsigned)0, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, (unsigned)0, (uint32_t)0, (hsize_t)0, (hsize_t)0, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, {{{(uint8_t)0}}}}
 #define H5D_DEF_STORAGE_VIRTUAL_INIT  {{HADDR_UNDEF, 0}, 0, NULL, 0, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, H5D_VDS_ERROR, HSIZE_UNDEF, -1, -1, FALSE}
 #ifdef H5_HAVE_C99_DESIGNATED_INITIALIZER
 #define H5D_DEF_STORAGE_COMPACT  {H5D_COMPACT, { .compact = H5D_DEF_STORAGE_COMPACT_INIT }}
 #define H5D_DEF_STORAGE_CONTIG   {H5D_CONTIGUOUS, { .contig = H5D_DEF_STORAGE_CONTIG_INIT }}
 #define H5D_DEF_STORAGE_CHUNK    {H5D_CHUNKED, { .chunk = H5D_DEF_STORAGE_CHUNK_INIT }}
 #define H5D_DEF_STORAGE_VIRTUAL  {H5D_VIRTUAL, { .virt = H5D_DEF_STORAGE_VIRTUAL_INIT }}
-#define H5D_DEF_LAYOUT_COMPACT  {H5D_COMPACT, H5O_LAYOUT_VERSION_3, NULL, {H5D_DEF_LAYOUT_CHUNK_INIT}, H5D_DEF_STORAGE_COMPACT}
-#define H5D_DEF_LAYOUT_CONTIG   {H5D_CONTIGUOUS, H5O_LAYOUT_VERSION_3, NULL, {H5D_DEF_LAYOUT_CHUNK_INIT}, H5D_DEF_STORAGE_CONTIG}
-#define H5D_DEF_LAYOUT_CHUNK    {H5D_CHUNKED, H5O_LAYOUT_VERSION_3, NULL, {H5D_DEF_LAYOUT_CHUNK_INIT}, H5D_DEF_STORAGE_CHUNK}
-#define H5D_DEF_LAYOUT_VIRTUAL  {H5D_VIRTUAL, H5O_LAYOUT_VERSION_3, NULL, {H5D_DEF_LAYOUT_CHUNK_INIT}, H5D_DEF_STORAGE_VIRTUAL}
+#define H5D_DEF_LAYOUT_COMPACT  {H5D_COMPACT, H5O_LAYOUT_VERSION_DEFAULT, H5D_LOPS_COMPACT, {H5D_DEF_LAYOUT_CHUNK_INIT}, H5D_DEF_STORAGE_COMPACT}
+#define H5D_DEF_LAYOUT_CONTIG   {H5D_CONTIGUOUS, H5O_LAYOUT_VERSION_DEFAULT, H5D_LOPS_CONTIG, {H5D_DEF_LAYOUT_CHUNK_INIT}, H5D_DEF_STORAGE_CONTIG}
+#define H5D_DEF_LAYOUT_CHUNK    {H5D_CHUNKED, H5O_LAYOUT_VERSION_DEFAULT, H5D_LOPS_CHUNK, {H5D_DEF_LAYOUT_CHUNK_INIT}, H5D_DEF_STORAGE_CHUNK}
+#define H5D_DEF_LAYOUT_VIRTUAL  {H5D_VIRTUAL, H5O_LAYOUT_VERSION_4, H5D_LOPS_VIRTUAL, {H5D_DEF_LAYOUT_CHUNK_INIT}, H5D_DEF_STORAGE_VIRTUAL}
 #else /* H5_HAVE_C99_DESIGNATED_INITIALIZER */
 /* Note that the compact & chunked layout initialization values are using the
  *      contiguous layout initialization in the union, because the contiguous
  *      layout is first in the union.  These values are overridden in the
  *      H5P__init_def_layout() routine. -QAK
  */
-#define H5D_DEF_LAYOUT_COMPACT  {H5D_COMPACT, H5O_LAYOUT_VERSION_3, NULL, {H5D_DEF_LAYOUT_CHUNK_INIT}, {H5D_CONTIGUOUS, H5D_DEF_STORAGE_CONTIG_INIT}}
-#define H5D_DEF_LAYOUT_CONTIG   {H5D_CONTIGUOUS, H5O_LAYOUT_VERSION_3, NULL, {H5D_DEF_LAYOUT_CHUNK_INIT}, {H5D_CONTIGUOUS, H5D_DEF_STORAGE_CONTIG_INIT}}
-#define H5D_DEF_LAYOUT_CHUNK    {H5D_CHUNKED, H5O_LAYOUT_VERSION_3, NULL, {H5D_DEF_LAYOUT_CHUNK_INIT}, {H5D_CONTIGUOUS, H5D_DEF_STORAGE_CONTIG_INIT}}
-#define H5D_DEF_LAYOUT_VIRTUAL  {H5D_VIRTUAL, H5O_LAYOUT_VERSION_3, NULL, {H5D_DEF_LAYOUT_CHUNK_INIT}, {H5D_CONTIGUOUS, H5D_DEF_STORAGE_CONTIG_INIT}}
+#define H5D_DEF_LAYOUT_COMPACT  {H5D_COMPACT, H5O_LAYOUT_VERSION_DEFAULT, NULL, {H5D_DEF_LAYOUT_CHUNK_INIT}, {H5D_CONTIGUOUS, H5D_DEF_STORAGE_CONTIG_INIT}}
+#define H5D_DEF_LAYOUT_CONTIG   {H5D_CONTIGUOUS, H5O_LAYOUT_VERSION_DEFAULT, NULL, {H5D_DEF_LAYOUT_CHUNK_INIT}, {H5D_CONTIGUOUS, H5D_DEF_STORAGE_CONTIG_INIT}}
+#define H5D_DEF_LAYOUT_CHUNK    {H5D_CHUNKED, H5O_LAYOUT_VERSION_DEFAULT, NULL, {H5D_DEF_LAYOUT_CHUNK_INIT}, {H5D_CONTIGUOUS, H5D_DEF_STORAGE_CONTIG_INIT}}
+#define H5D_DEF_LAYOUT_VIRTUAL  {H5D_VIRTUAL, H5O_LAYOUT_VERSION_4, NULL, {H5D_DEF_LAYOUT_CHUNK_INIT}, {H5D_CONTIGUOUS, H5D_DEF_STORAGE_CONTIG_INIT}}
 #endif /* H5_HAVE_C99_DESIGNATED_INITIALIZER */
 
 /* ========  Dataset creation properties ======== */
@@ -288,7 +289,6 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-/* ARGSUSED */
 static herr_t
 H5P__dcrt_layout_set(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED *name,
     size_t H5_ATTR_UNUSED size, void *value)
@@ -769,12 +769,10 @@ H5P__dcrt_layout_cmp(const void *_layout1, const void *_layout2,
     HDassert(size == sizeof(H5O_layout_t));
 
     /* Check for different layout type */
-    if(layout1->type < layout2->type) HGOTO_DONE(-1)
-    if(layout1->type > layout2->type) HGOTO_DONE(1)
-
-    /* Check for different layout version */
-    if(layout1->version < layout2->version) HGOTO_DONE(-1)
-    if(layout1->version > layout2->version) HGOTO_DONE(1)
+    if(layout1->type < layout2->type)
+        HGOTO_DONE(-1)
+    if(layout1->type > layout2->type)
+        HGOTO_DONE(1)
 
     /* Compare non-dataset-specific fields in layout info */
     switch(layout1->type) {
@@ -787,13 +785,17 @@ H5P__dcrt_layout_cmp(const void *_layout1, const void *_layout2,
                 unsigned u;     /* Local index variable */
 
                 /* Check the number of dimensions */
-                if(layout1->u.chunk.ndims < layout2->u.chunk.ndims) HGOTO_DONE(-1)
-                if(layout1->u.chunk.ndims > layout2->u.chunk.ndims) HGOTO_DONE(1)
+                if(layout1->u.chunk.ndims < layout2->u.chunk.ndims)
+                    HGOTO_DONE(-1)
+                if(layout1->u.chunk.ndims > layout2->u.chunk.ndims)
+                    HGOTO_DONE(1)
 
                 /* Compare the chunk dims */
                 for(u = 0; u < layout1->u.chunk.ndims - 1; u++) {
-                    if(layout1->u.chunk.dim[u] < layout2->u.chunk.dim[u]) HGOTO_DONE(-1)
-                    if(layout1->u.chunk.dim[u] > layout2->u.chunk.dim[u]) HGOTO_DONE(1)
+                    if(layout1->u.chunk.dim[u] < layout2->u.chunk.dim[u])
+                        HGOTO_DONE(-1)
+                    if(layout1->u.chunk.dim[u] > layout2->u.chunk.dim[u])
+                        HGOTO_DONE(1)
                 } /* end for */
             } /* end case */
             break;
@@ -1643,14 +1645,6 @@ H5P__dcrt_ext_file_list_cmp(const void *_efl1, const void *_efl2,
     HDassert(efl2);
     HDassert(size == sizeof(H5O_efl_t));
 
-    /* Check the heap address of external file lists */
-    if(H5F_addr_defined(efl1->heap_addr) || H5F_addr_defined(efl2->heap_addr)) {
-        if(!H5F_addr_defined(efl1->heap_addr) && H5F_addr_defined(efl2->heap_addr)) HGOTO_DONE(-1);
-        if(H5F_addr_defined(efl1->heap_addr) && !H5F_addr_defined(efl2->heap_addr)) HGOTO_DONE(1);
-        if((cmp_value = H5F_addr_cmp(efl1->heap_addr, efl2->heap_addr)) != 0)
-            HGOTO_DONE(cmp_value);
-    } /* end if */
-
     /* Check the number of allocated efl entries */
     if(efl1->nalloc < efl2->nalloc) HGOTO_DONE(-1);
     if(efl1->nalloc > efl2->nalloc) HGOTO_DONE(1);
@@ -2133,7 +2127,6 @@ H5Pset_virtual(hid_t dcpl_id, hid_t vspace_id, const char *src_file_name,
     H5O_storage_virtual_ent_t *old_list = NULL; /* List pointer previously on property list */
     H5O_storage_virtual_ent_t *ent = NULL; /* Convenience pointer to new VDS entry */
     hbool_t retrieved_layout = FALSE;   /* Whether the layout has been retrieved */
-    hbool_t adding_entry = FALSE;   /* Whether we are in the middle of adding an entry */
     hbool_t free_list = FALSE;      /* Whether to free the list of virtual entries */
     herr_t ret_value = SUCCEED;     /* Return value */
 
@@ -2207,10 +2200,9 @@ H5Pset_virtual(hid_t dcpl_id, hid_t vspace_id, const char *src_file_name,
     HDmemset(ent, 0, sizeof(H5O_storage_virtual_ent_t));        /* Clear before starting to set up */
     if(NULL == (ent->source_dset.virtual_select = H5S_copy(vspace, FALSE, TRUE)))
         HGOTO_ERROR(H5E_PLIST, H5E_CANTCOPY, FAIL, "unable to copy virtual selection")
-    adding_entry = TRUE;
-    if(NULL == (ent->source_file_name = HDstrdup(src_file_name)))
+    if(NULL == (ent->source_file_name = H5MM_xstrdup(src_file_name)))
         HGOTO_ERROR(H5E_PLIST, H5E_RESOURCE, FAIL, "can't duplicate source file name")
-    if(NULL == (ent->source_dset_name = HDstrdup(src_dset_name)))
+    if(NULL == (ent->source_dset_name = H5MM_xstrdup(src_dset_name)))
         HGOTO_ERROR(H5E_PLIST, H5E_RESOURCE, FAIL, "can't duplicate source file name")
     if(NULL == (ent->source_select = H5S_copy(src_space, FALSE, TRUE)))
         HGOTO_ERROR(H5E_PLIST, H5E_CANTCOPY, FAIL, "unable to copy source selection")
@@ -2498,8 +2490,8 @@ done:
  *
  *              If the length of the filename, which determines the
  *              required value of size, is unknown, a preliminary call to
- *              H5Pget_virtual_filename with the last two parameters set
- *              to NULL can be made.  The return value of this call will
+ *              H5Pget_virtual_filename with 'name' set to NULL and 'size'
+ *              set to zero can be made. The return value of this call will
  *              be the size in bytes of the filename.  That value, plus 1
  *              for a NULL terminator, is then assigned to size for a
  *              second H5Pget_virtual_filename call, which will retrieve
@@ -2559,14 +2551,14 @@ done:
  *              additional characters, if any, are not returned to the
  *              user application.
  *
- *              If the length of the filename, which determines the
+ *              If the length of the dataset name, which determines the
  *              required value of size, is unknown, a preliminary call to
- *              H5Pget_virtual_dsetname with the last two parameters set
- *              to NULL can be made.  The return value of this call will
- *              be the size in bytes of the filename.  That value, plus 1
+ *              H5Pget_virtual_dsetname with 'name' set to NULL and 'size'
+ *              set to zero can be made.  The return value of this call will
+ *              be the size in bytes of the dataset name.  That value, plus 1
  *              for a NULL terminator, is then assigned to size for a
  *              second H5Pget_virtual_dsetname call, which will retrieve
- *              the actual filename. 
+ *              the actual dataset name. 
  *
  * Return:      Returns the length of the name if successful, otherwise
  *              returns a negative value.
@@ -2609,6 +2601,127 @@ H5Pget_virtual_dsetname(hid_t dcpl_id, size_t index, char *name/*out*/,
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Pget_virtual_dsetname() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Pset_chunk_opts
+ *
+ * Purpose:     Sets the options related to chunked storage for a dataset.
+ *              The storage must already be set to chunked.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Neil Fortner
+ *              Thursday, January 21, 2010
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_chunk_opts(hid_t plist_id, unsigned options)
+{
+    H5P_genplist_t      *plist;         /* Property list pointer */
+    H5O_layout_t        layout;         /* Layout information for setting chunk info */
+    uint8_t             layout_flags = 0; /* "options" translated into layout message flags format */
+    herr_t              ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE2("e", "iIu", plist_id, options);
+
+    /* Check arguments */
+    if(options & ~(H5D_CHUNK_DONT_FILTER_PARTIAL_CHUNKS))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "unknown chunk options")
+
+#ifndef H5_HAVE_C99_DESIGNATED_INITIALIZER
+    /* If the compiler doesn't support C99 designated initializers, check if
+     *  the default layout structs have been initialized yet or not.  *ick* -QAK
+     */
+    if(!H5P_dcrt_def_layout_init_g)
+        if(H5P__init_def_layout() < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTINIT, FAIL, "can't initialize default layout info")
+#endif /* H5_HAVE_C99_DESIGNATED_INITIALIZER */
+
+    /* Get the plist structure */
+    if(NULL == (plist = H5P_object_verify(plist_id, H5P_DATASET_CREATE)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
+
+    /* Retrieve the layout property */
+    if(H5P_peek(plist, H5D_CRT_LAYOUT_NAME, &layout) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "can't get layout")
+    if(H5D_CHUNKED != layout.type)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "not a chunked storage layout")
+
+    /* Translate options into flags that can be used with the layout message */
+    if(options & H5D_CHUNK_DONT_FILTER_PARTIAL_CHUNKS)
+        layout_flags |= H5O_LAYOUT_CHUNK_DONT_FILTER_PARTIAL_BOUND_CHUNKS;
+
+    /* Update the layout message, including the version (if necessary) */
+    /* This probably isn't the right way to do this, and should be changed once
+     * this branch gets the "real" way to set the layout version */
+    layout.u.chunk.flags = layout_flags;
+    if(layout.version < H5O_LAYOUT_VERSION_4)
+        layout.version = H5O_LAYOUT_VERSION_4;
+
+    /* Set layout value */
+    if(H5P_poke(plist, H5D_CRT_LAYOUT_NAME, &layout) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINIT, FAIL, "can't set layout")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* end H5Pset_chunk_opts() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Pget_chunk_opts
+ *
+ * Purpose:     Gets the options related to chunked storage for a dataset.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Neil Fortner
+ *              Friday, January 22, 2010
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_chunk_opts(hid_t plist_id, unsigned *options)
+{
+    H5P_genplist_t      *plist;         /* Property list pointer */
+    H5O_layout_t        layout;         /* Layout information for setting chunk info */
+    herr_t              ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE2("e", "i*Iu", plist_id, options);
+
+#ifndef H5_HAVE_C99_DESIGNATED_INITIALIZER
+    /* If the compiler doesn't support C99 designated initializers, check if
+     *  the default layout structs have been initialized yet or not.  *ick* -QAK
+     */
+    if(!H5P_dcrt_def_layout_init_g)
+        if(H5P__init_def_layout() < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTINIT, FAIL, "can't initialize default layout info")
+#endif /* H5_HAVE_C99_DESIGNATED_INITIALIZER */
+
+    /* Get the plist structure */
+    if(NULL == (plist = H5P_object_verify(plist_id, H5P_DATASET_CREATE)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
+
+    /* Retrieve the layout property */
+    if(H5P_peek(plist, H5D_CRT_LAYOUT_NAME, &layout) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "can't get layout")
+    if(H5D_CHUNKED != layout.type)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "not a chunked storage layout")
+
+    if(options) {
+        /* Translate options from flags that can be used with the layout message
+         * to those known to the public */
+        *options = 0;
+        if(layout.u.chunk.flags & H5O_LAYOUT_CHUNK_DONT_FILTER_PARTIAL_BOUND_CHUNKS)
+            *options |= H5D_CHUNK_DONT_FILTER_PARTIAL_CHUNKS;
+    } /* end if */
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* end H5Pget_chunk_opts() */
 
 
 /*-------------------------------------------------------------------------
@@ -3106,7 +3219,7 @@ H5Pset_fill_value(hid_t plist_id, hid_t type_id, const void *value)
         HDmemcpy(fill.buf, value, (size_t)fill.size);
 
         /* Set up type conversion function */
-        if(NULL == (tpath = H5T_path_find(type, type, NULL, NULL, H5AC_ind_dxpl_id, FALSE)))
+        if(NULL == (tpath = H5T_path_find(type, type, NULL, NULL, H5AC_ind_read_dxpl_id, FALSE)))
             HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL, "unable to convert between src and dest data types")
 
         /* If necessary, convert fill value datatypes (which copies VL components, etc.) */
@@ -3118,7 +3231,7 @@ H5Pset_fill_value(hid_t plist_id, hid_t type_id, const void *value)
                 HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
 
             /* Convert the fill value */
-            if(H5T_convert(tpath, type_id, type_id, (size_t)1, (size_t)0, (size_t)0, fill.buf, bkg_buf, H5AC_ind_dxpl_id) < 0) {
+            if(H5T_convert(tpath, type_id, type_id, (size_t)1, (size_t)0, (size_t)0, fill.buf, bkg_buf, H5AC_ind_read_dxpl_id) < 0) {
                 if(bkg_buf)
                     bkg_buf = H5FL_BLK_FREE(type_conv, bkg_buf);
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTCONVERT, FAIL, "datatype conversion failed")
@@ -3273,7 +3386,7 @@ H5Pget_fill_value(hid_t plist_id, hid_t type_id, void *value/*out*/)
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
     /* Get the fill value */
-    if(H5P_get_fill_value(plist, type, value, H5AC_ind_dxpl_id) < 0)
+    if(H5P_get_fill_value(plist, type, value, H5AC_ind_read_dxpl_id) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get fill value")
 
 done:

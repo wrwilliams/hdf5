@@ -98,6 +98,7 @@
 #define FILE66  "packedbits.h5"
 #define FILE67  "zerodim.h5"
 #define FILE68  "charsets.h5"
+#define FILE68a "tdset_idx.h5"
 #define FILE69  "tattrintsize.h5"
 #define FILE70  "tcmpdintsize.h5"
 #define FILE71  "tcmpdattrintsize.h5"
@@ -110,6 +111,7 @@
 #define FILE78  "tscalarintattrsize.h5"
 #define FILE79  "tintsattrs.h5"
 #define FILE80  "tbitnopaque.h5"
+#define FILE81  "tints4dims.h5"
 
 /*-------------------------------------------------------------------------
  * prototypes
@@ -271,20 +273,30 @@ typedef struct s1_t {
 #define THRESHOLD10   10          /* Free space section threshold */
 
 /* "FILE66" macros and for FILE69 */
-#define F66_XDIM	    8
+#define F66_XDIM        8
 #define F66_DATASETU08        "DU08BITS"
 #define F66_DATASETS08        "DS08BITS"
-#define F66_YDIM8	    8
+#define F66_YDIM8        8
 #define F66_DATASETU16       "DU16BITS"
 #define F66_DATASETS16       "DS16BITS"
-#define F66_YDIM16	    16
+#define F66_YDIM16        16
 #define F66_DATASETU32       "DU32BITS"
 #define F66_DATASETS32       "DS32BITS"
-#define F66_YDIM32	    32
+#define F66_YDIM32        32
 #define F66_DATASETU64       "DU64BITS"
 #define F66_DATASETS64       "DS64BITS"
 #define F66_YDIM64      64
-#define F66_DUMMYDBL	    "DummyDBL"
+#define F66_DUMMYDBL        "DummyDBL"
+
+/* Declarations for gent_dataset_idx() for "FILE68a" */
+#define F68a_DSET_FIXED		"dset_fixed"
+#define F68a_DSET_FIXED_FILTER	"dset_filter"
+#define F68a_DSET_BTREE		"dset_btree"
+#define F68a_DIM200		200
+#define F68a_DIM100		100
+#define F68a_DIM20		20
+#define F68a_DIM10		10
+#define F68a_CHUNK		5
 
 /* "FILE70" macros and for FILE71 */
 /* Name of dataset to create in datafile   */
@@ -351,6 +363,13 @@ typedef struct s1_t {
 #define F77_LENGTH      64
 
 #define F80_DIM32      32
+
+#define F81_DATASETNAME   "FourDimInts"
+#define F81_RANK        4
+#define F81_WDIM        10
+#define F81_XDIM        8
+#define F81_YDIM        6
+#define F81_ZDIM        4
 
 static void
 gent_group(void)
@@ -568,7 +587,7 @@ static void gent_softlink(void)
  * Function: gent_softlink2
  *
  * Purpose: Create soft links to various objects.
- * Return: 
+ * Return:
  *    SUCCEED
  *    FAIL
  * Programmer: Jonathan Kim
@@ -582,7 +601,7 @@ static int gent_softlink2(void)
     hid_t       gid1 = -1, gid2 = -1;
     hid_t       datatype = -1;
     hid_t       dset1 = -1, dset2 = -1;
-    hid_t       dataspace = -1;   
+    hid_t       dataspace = -1;
     hsize_t     dimsf[2];              /* dataset dimensions */
     int data1[NX][NY] = {{0,0},{1,1},{2,2},{3,3}};
     int data2[NX][NY] = {{0,0},{0,1},{0,2},{3,3}};
@@ -626,7 +645,7 @@ static int gent_softlink2(void)
     status = H5Tcommit2(fileid1, "dtype", datatype, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     if (status < 0)
     {
-        fprintf(stderr, "Error: %s> H5Tcommit2 failed.\n", FILE4_1); 
+        fprintf(stderr, "Error: %s> H5Tcommit2 failed.\n", FILE4_1);
         status = FAIL;
         goto out;
     }
@@ -2896,9 +2915,9 @@ static void gent_vldatatypes5(void)
 }
 
 /* This is big enough to make h5dump to use hyperslap to read
-   from file and display portion by portion. This also prints out array indices 
+   from file and display portion by portion. This also prints out array indices
    via region reference for testing refion reference output.
-   Note: this was added originally prepared for bug2092. before the fix h5dump didn't 
+   Note: this was added originally prepared for bug2092. before the fix h5dump didn't
          display array indices every 262 x N (N > 0) based on 2000x1000 dims.
  */
 #define SPACE_ARRAY1BIG_DIM 2000
@@ -2945,7 +2964,7 @@ static void gent_array1_big(void)
     fid1 = H5Fcreate(FILE25_BIG, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
     /*-------------------------
-     * Array type dataset 
+     * Array type dataset
      */
     /* Create dataspace for datasets */
     sid1 = H5Screate_simple(SPACE1_RANK, sdims1, NULL);
@@ -2961,7 +2980,7 @@ static void gent_array1_big(void)
     HDassert(ret >= 0);
 
     /*---------------------------
-     * Region Reference dataset 
+     * Region Reference dataset
      */
     /* Create dataspace for the reference dataset */
     sid2 = H5Screate_simple(SPACE1_RANK, dims2, NULL);
@@ -5210,7 +5229,7 @@ static void gent_zero_dim_size(void)
     space = H5Screate_simple(SPACE3_RANK, dims1, NULL);
 
     /* dataset */
-    dataset = H5Dcreate2(fid, "dset of 0 dimension size", H5T_STD_I32BE, space, H5P_DEFAULT, 
+    dataset = H5Dcreate2(fid, "dset of 0 dimension size", H5T_STD_I32BE, space, H5P_DEFAULT,
             H5P_DEFAULT, H5P_DEFAULT);
     /* nothing should be written */
     H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &dset_buf);
@@ -7012,6 +7031,90 @@ gent_fs_strategy_threshold(void)
     H5Pclose(fcpl);
 }
 
+/*
+ * Create a file with new format:
+ * Create one dataset with (set_chunk, fixed dims, null max. dims) 
+ *	so that Fixed Array indexing will be used.
+ * Create one dataset with (set_chunk, fixed dims, null max. dims, filter) 
+ *	so that Fixed Array indexing will be used.
+ * Create one dataset with (set_chunk, fixed dims, fixed max. dims)
+ *	so that Fixed Array indexing will be used.
+ * 
+ * Modifications:
+ *	Fixed Array indexing will be used for chunked dataset
+ *	with fixed max. dims setting.
+ *
+ */
+static void
+gent_dataset_idx(void)
+{
+    hid_t fid, space, dcpl, fapl;
+    hsize_t dims[2];
+    hsize_t maxdims[2];
+    int buf[20][10];
+    int i, j, ret;
+
+    /* Get a copy of the file aaccess property */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+
+    /* Set the "use the latest version of the format" bounds for creating objects in the file */
+    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    assert(ret >= 0);
+
+    fid = H5Fcreate(FILE68a, H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
+    dcpl = H5Pcreate(H5P_DATASET_CREATE);
+
+    dims[0] = F68a_CHUNK;
+    dims[1] = F68a_CHUNK;
+
+    /* set chunk */
+    ret = H5Pset_chunk(dcpl, RANK, dims);
+    assert(ret >= 0);
+
+    /* dataset with fixed dimensions */
+    dims[0] = F68a_DIM20; 
+    dims[1] = F68a_DIM10;
+    space = H5Screate_simple(RANK, dims, NULL);
+
+    for(i = 0; i < F68a_DIM20; i++)
+         for(j = 0; j < F68a_DIM10; j++)
+              buf[i][j] = j;
+
+    ret = make_dset(fid, F68a_DSET_FIXED, space, H5T_NATIVE_INT, dcpl, buf);
+    assert(ret >= 0);
+    H5Sclose(space);
+
+    /* dataset with non-fixed dimensions */
+    maxdims[0] = F68a_DIM200; 
+    maxdims[1] = F68a_DIM100;
+    space = H5Screate_simple(RANK, dims, maxdims);
+
+    ret = make_dset(fid, F68a_DSET_BTREE, space, H5T_NATIVE_INT, dcpl, buf);
+    assert(ret >= 0);
+    H5Sclose(space);
+
+#if defined (H5_HAVE_FILTER_DEFLATE)
+
+    /* dataset with fixed dimensions and filters */
+    /* remove the filters from the dcpl */
+    ret = H5Premove_filter(dcpl, H5Z_FILTER_ALL);
+    assert(ret >= 0);
+
+    /* set deflate data */
+    ret = H5Pset_deflate(dcpl, 9);
+    assert(ret >= 0);
+
+    space = H5Screate_simple(RANK, dims, NULL);
+    ret = make_dset(fid, F68a_DSET_FIXED_FILTER, space, H5T_NATIVE_INT, dcpl, buf);
+    assert(ret >= 0);
+
+    H5Sclose(space);
+#endif
+
+    H5Pclose(dcpl);
+    H5Fclose(fid);
+}
+
 /*-------------------------------------------------------------------------
  * Function:    gent_packedbits
  *
@@ -7050,9 +7153,8 @@ gent_packedbits(void)
     valu8bits = (uint8_t) ~0u;  /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dsetu8[i][0] = valu8bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dsetu8[i][j] = dsetu8[i][j-1] << 1;
-        }
         valu8bits <<= 1;
     }
 
@@ -7065,12 +7167,11 @@ gent_packedbits(void)
     space = H5Screate_simple(2, dims, NULL);
     dataset = H5Dcreate2(fid, F66_DATASETU16, H5T_STD_U16LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-    valu16bits = (uint16_t) ~0u;	/* all 1s */
+    valu16bits = (uint16_t) ~0u;    /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dsetu16[i][0] = valu16bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dsetu16[i][j] = dsetu16[i][j-1] << 1;
-        }
         valu16bits <<= 1;
     }
 
@@ -7083,12 +7184,11 @@ gent_packedbits(void)
     space = H5Screate_simple(2, dims, NULL);
     dataset = H5Dcreate2(fid, F66_DATASETU32, H5T_STD_U32LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-    valu32bits = (uint32_t) ~0u;	/* all 1s */
+    valu32bits = (uint32_t) ~0u;    /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dsetu32[i][0] = valu32bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dsetu32[i][j] = dsetu32[i][j-1] << 1;
-        }
         valu32bits <<= 1;
     }
 
@@ -7104,9 +7204,8 @@ gent_packedbits(void)
     valu64bits = (uint64_t) ~0Lu;    /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dsetu64[i][0] = valu64bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dsetu64[i][j] = dsetu64[i][j-1] << 1;
-        }
         valu64bits <<= 1;
     }
 
@@ -7119,12 +7218,11 @@ gent_packedbits(void)
     space = H5Screate_simple(2, dims, NULL);
     dataset = H5Dcreate2(fid, F66_DATASETS08, H5T_STD_I8LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-    val8bits = (int8_t) ~0;	/* all 1s */
+    val8bits = (int8_t) ~0;    /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dset8[i][0] = val8bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dset8[i][j] = dset8[i][j-1] << 1;
-        }
         val8bits <<= 1;
     }
 
@@ -7137,12 +7235,11 @@ gent_packedbits(void)
     space = H5Screate_simple(2, dims, NULL);
     dataset = H5Dcreate2(fid, F66_DATASETS16, H5T_STD_I16LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-    val16bits = (int16_t) ~0;	/* all 1s */
+    val16bits = (int16_t) ~0;    /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dset16[i][0] = val16bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dset16[i][j] = dset16[i][j-1] << 1;
-        }
         val16bits <<= 1;
     }
 
@@ -7155,12 +7252,11 @@ gent_packedbits(void)
     space = H5Screate_simple(2, dims, NULL);
     dataset = H5Dcreate2(fid, F66_DATASETS32, H5T_STD_I32LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-    val32bits = (int32_t) ~0;	/* all 1s */
+    val32bits = (int32_t) ~0;    /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dset32[i][0] = val32bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dset32[i][j] = dset32[i][j-1] << 1;
-        }
         val32bits <<= 1;
     }
 
@@ -7176,9 +7272,8 @@ gent_packedbits(void)
     val64bits = (int64_t) ~0L;   /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dset64[i][0] = val64bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dset64[i][j] = dset64[i][j-1] << 1;
-        }
         val64bits <<= 1;
     }
 
@@ -8646,7 +8741,7 @@ static void gent_compound_int_array(void) {
 
         valu8bits = (uint8_t) ~0u;  /* all 1s */
         for(n = 0; n < dims[0]; n++){
-        	Cmpd1[m].dsetu8[n] = valu8bits;
+            Cmpd1[m].dsetu8[n] = valu8bits;
             valu8bits <<= 1;
         }
 
@@ -8655,7 +8750,7 @@ static void gent_compound_int_array(void) {
 
         valu16bits = (uint16_t) ~0u;  /* all 1s */
         for(n = 0; n < dims[0]; n++){
-        	Cmpd1[m].dsetu16[n] = valu16bits;
+            Cmpd1[m].dsetu16[n] = valu16bits;
             valu16bits <<= 1;
         }
 
@@ -8664,7 +8759,7 @@ static void gent_compound_int_array(void) {
 
         valu32bits = (uint32_t) ~0u;  /* all 1s */
         for(n = 0; n < dims[0]; n++){
-        	Cmpd1[m].dsetu32[n] = valu32bits;
+            Cmpd1[m].dsetu32[n] = valu32bits;
             valu32bits <<= 1;
         }
 
@@ -8673,7 +8768,7 @@ static void gent_compound_int_array(void) {
 
         valu64bits = (uint64_t) ~0Lu;  /* all 1s */
         for(n = 0; n < dims[0]; n++){
-        	Cmpd1[m].dsetu64[n] = valu64bits;
+            Cmpd1[m].dsetu64[n] = valu64bits;
             valu64bits <<= 1;
         }
 
@@ -8682,7 +8777,7 @@ static void gent_compound_int_array(void) {
 
         val8bits = (int8_t) ~0;  /* all 1s */
         for(n = 0; n < dims[0]; n++){
-        	Cmpd1[m].dset8[n] = val8bits;
+            Cmpd1[m].dset8[n] = val8bits;
             val8bits <<= 1;
         }
 
@@ -8691,7 +8786,7 @@ static void gent_compound_int_array(void) {
 
         val16bits = (int16_t) ~0;  /* all 1s */
         for(n = 0; n < dims[0]; n++){
-        	Cmpd1[m].dset16[n] = val16bits;
+            Cmpd1[m].dset16[n] = val16bits;
             val16bits <<= 1;
         }
 
@@ -8700,7 +8795,7 @@ static void gent_compound_int_array(void) {
 
         val32bits = (int32_t) ~0;  /* all 1s */
         for(n = 0; n < dims[0]; n++){
-        	Cmpd1[m].dset32[n] = val32bits;
+            Cmpd1[m].dset32[n] = val32bits;
             val32bits <<= 1;
         }
 
@@ -8709,7 +8804,7 @@ static void gent_compound_int_array(void) {
 
         val64bits = (int64_t) ~0L;  /* all 1s */
         for(n = 0; n < dims[0]; n++){
-        	Cmpd1[m].dset64[n] = val64bits;
+            Cmpd1[m].dset64[n] = val64bits;
             val64bits <<= 1;
         }
 
@@ -8717,7 +8812,7 @@ static void gent_compound_int_array(void) {
         dims[0] = F76_DIM8;
 
         for(n = 0; n < dims[0]; n++)
-           	Cmpd1[m].dsetdbl[n] = 0.0001F + n;
+            Cmpd1[m].dsetdbl[n] = 0.0001F + n;
     }
 
     /* Create the array data type for the 8 bits signed int array             */
@@ -8892,64 +8987,64 @@ static void gent_compound_ints(void) {
     for (m = 0; m < F77_LENGTH; m++) {
 
         /* Array of 8 bits unsigned int */
-    	if((m % F76_DIM8) == 0)
-    		valu8bits = (uint8_t) ~0u;  /* all 1s */
-       	Cmpd1[m].dsetu8 = valu8bits;
-       	Cmpd2[m].dsetu8 = valu8bits;
+        if((m % F76_DIM8) == 0)
+            valu8bits = (uint8_t) ~0u;  /* all 1s */
+        Cmpd1[m].dsetu8 = valu8bits;
+        Cmpd2[m].dsetu8 = valu8bits;
         valu8bits <<= 1;
 
         /* Array of 16 bits unsigned int */
-    	if((m % F76_DIM16) == 0)
+        if((m % F76_DIM16) == 0)
             valu16bits = (uint16_t) ~0u;  /* all 1s */
-		Cmpd1[m].dsetu16 = valu16bits;
-		Cmpd2[m].dsetu16 = valu16bits;
-		valu16bits <<= 1;
+        Cmpd1[m].dsetu16 = valu16bits;
+        Cmpd2[m].dsetu16 = valu16bits;
+        valu16bits <<= 1;
 
         /* Array of 32 bits unsigned int */
-    	if((m % F76_DIM32) == 0)
+        if((m % F76_DIM32) == 0)
             valu32bits = (uint32_t) ~0u;  /* all 1s */
-		Cmpd1[m].dsetu32 = valu32bits;
-		Cmpd2[m].dsetu32 = valu32bits;
-		valu32bits <<= 1;
+        Cmpd1[m].dsetu32 = valu32bits;
+        Cmpd2[m].dsetu32 = valu32bits;
+        valu32bits <<= 1;
 
         /* Array of 64 bits unsigned int */
-    	if((m % F76_DIM64) == 0)
+        if((m % F76_DIM64) == 0)
             valu64bits = (uint64_t) ~0Lu;  /* all 1s */
-		Cmpd1[m].dsetu64 = valu64bits;
-		Cmpd2[m].dsetu64 = valu64bits;
-		valu64bits <<= 1;
+        Cmpd1[m].dsetu64 = valu64bits;
+        Cmpd2[m].dsetu64 = valu64bits;
+        valu64bits <<= 1;
 
         /* Array of 8 bits signed int */
-    	if((m % F76_DIM8) == 0)
+        if((m % F76_DIM8) == 0)
             val8bits = (int8_t) ~0;  /* all 1s */
-		Cmpd1[m].dset8 = val8bits;
-		Cmpd2[m].dset8 = val8bits;
-		val8bits <<= 1;
+        Cmpd1[m].dset8 = val8bits;
+        Cmpd2[m].dset8 = val8bits;
+        val8bits <<= 1;
 
         /* Array of 16 bits signed int */
-    	if((m % F76_DIM16) == 0)
+        if((m % F76_DIM16) == 0)
             val16bits = (int16_t) ~0;  /* all 1s */
-		Cmpd1[m].dset16 = val16bits;
-		Cmpd2[m].dset16 = val16bits;
-		val16bits <<= 1;
+        Cmpd1[m].dset16 = val16bits;
+        Cmpd2[m].dset16 = val16bits;
+        val16bits <<= 1;
 
         /* Array of 32 bits signed int */
-    	if((m % F76_DIM32) == 0)
+        if((m % F76_DIM32) == 0)
             val32bits = (int32_t) ~0;  /* all 1s */
-		Cmpd1[m].dset32 = val32bits;
-		Cmpd2[m].dset32 = val32bits;
-		val32bits <<= 1;
+        Cmpd1[m].dset32 = val32bits;
+        Cmpd2[m].dset32 = val32bits;
+        val32bits <<= 1;
 
         /* Array of 64 bits signed int */
-    	if((m % F76_DIM64) == 0)
+        if((m % F76_DIM64) == 0)
             val64bits = (int64_t) ~0L;  /* all 1s */
-		Cmpd1[m].dset64 = val64bits;
-		Cmpd2[m].dset64 = val64bits;
-		val64bits <<= 1;
+        Cmpd1[m].dset64 = val64bits;
+        Cmpd2[m].dset64 = val64bits;
+        val64bits <<= 1;
 
         /* Double Dummy set for failure tests */
-       	Cmpd1[m].dsetdbl = 0.0001F + m;
-       	Cmpd2[m].dsetdbl = 0.0001F + m;
+        Cmpd1[m].dsetdbl = 0.0001F + m;
+        Cmpd2[m].dsetdbl = 0.0001F + m;
     }
 
     /* Create the dataspace                                           */
@@ -9360,7 +9455,7 @@ gent_intsattrs(void)
     space = H5Screate_simple(2, dims, NULL);
     dataset = H5Dcreate2(fid, F66_DATASETU16, H5T_STD_U16LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-    valu16bits = (uint16_t) ~0u;	/* all 1s */
+    valu16bits = (uint16_t) ~0u;    /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dsetu16[i][0] = valu16bits;
         asetu16[i*dims[1]] = dsetu16[i][0];
@@ -9387,7 +9482,7 @@ gent_intsattrs(void)
     space = H5Screate_simple(2, dims, NULL);
     dataset = H5Dcreate2(fid, F66_DATASETU32, H5T_STD_U32LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-    valu32bits = (uint32_t) ~0u;	/* all 1s */
+    valu32bits = (uint32_t) ~0u;    /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dsetu32[i][0] = valu32bits;
         asetu32[i*dims[1]] = dsetu32[i][0];
@@ -9441,7 +9536,7 @@ gent_intsattrs(void)
     space = H5Screate_simple(2, dims, NULL);
     dataset = H5Dcreate2(fid, F66_DATASETS08, H5T_STD_I8LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-    val8bits = (int8_t) ~0;	/* all 1s */
+    val8bits = (int8_t) ~0;    /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dset8[i][0] = val8bits;
         aset8[i*dims[1]] = dset8[i][0];
@@ -9468,7 +9563,7 @@ gent_intsattrs(void)
     space = H5Screate_simple(2, dims, NULL);
     dataset = H5Dcreate2(fid, F66_DATASETS16, H5T_STD_I16LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-    val16bits = (int16_t) ~0;	/* all 1s */
+    val16bits = (int16_t) ~0;    /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dset16[i][0] = val16bits;
         aset16[i*dims[1]] = dset16[i][0];
@@ -9495,7 +9590,7 @@ gent_intsattrs(void)
     space = H5Screate_simple(2, dims, NULL);
     dataset = H5Dcreate2(fid, F66_DATASETS32, H5T_STD_I32LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-    val32bits = (int32_t) ~0;	/* all 1s */
+    val32bits = (int32_t) ~0;    /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dset32[i][0] = val32bits;
         aset32[i*dims[1]] = dset32[i][0];
@@ -9718,6 +9813,41 @@ static void gent_bitnopaquefields(void)
     H5Fclose(file);
 }
 
+/*-------------------------------------------------------------------------
+ * Function:    gent_intsfourdims
+ *
+ * Purpose:     Generate a file to be used in the h5dump subsetting tests.
+ *   One datasets of unsigned int types are created in four dimensions 2,4,6,10.
+ *-------------------------------------------------------------------------
+ */
+static void
+gent_intsfourdims(void)
+{
+    hid_t fid, dataset, space, tid;
+    hsize_t dims[F81_RANK];
+    uint32_t dset1[F81_ZDIM][F81_YDIM][F81_XDIM][F81_WDIM];
+    unsigned int i, j, k, l;
+
+    fid = H5Fcreate(FILE81, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+
+    /* Dataset of 32 bits unsigned int */
+    dims[0] = F81_ZDIM; dims[1] = F81_YDIM; dims[2] = F81_XDIM; dims[3] = F81_WDIM;
+    space = H5Screate_simple(F81_RANK, dims, NULL);
+    dataset = H5Dcreate2(fid, F81_DATASETNAME, H5T_STD_U32LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+    for(i = 0; i < F81_ZDIM; i++)
+        for(j = 0; j < F81_YDIM; j++)
+            for(k = 0; k < F81_XDIM; k++)
+                for(l = 0; l < F81_WDIM; l++)
+            dset1[i][j][k][l] = i*F81_YDIM*F81_XDIM*F81_WDIM + j*F81_XDIM*F81_WDIM + k*F81_WDIM + l;
+
+    H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset1);
+    H5Sclose(space);
+    H5Dclose(dataset);
+
+    H5Fclose(fid);
+}
+
 
 /*-------------------------------------------------------------------------
  * Function: main
@@ -9795,6 +9925,7 @@ int main(void)
     gent_extlinks();
     gent_fs_strategy_threshold();
     gent_packedbits();
+    gent_dataset_idx();
     gent_attr_intsize();
     gent_charsets();
     gent_compound_intsizes();
@@ -9809,6 +9940,8 @@ int main(void)
     gent_intattrscalars();
     gent_intsattrs();
     gent_bitnopaquefields();
+
+    gent_intsfourdims();
 
     return 0;
 }

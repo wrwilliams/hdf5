@@ -256,7 +256,7 @@ H5SM__cache_table_deserialize(const void *_image, size_t len, void *_udata,
         /* Address of the index's heap */
         H5F_addr_decode(f, &image, &(table->indexes[u].heap_addr));
 
-        /* Compute the size of a list index for this SOHM index */
+	/* Compute the size of a list index for this SOHM index */
         table->indexes[u].list_size = H5SM_LIST_SIZE(f, table->indexes[u].list_max);
     } /* end for */
 
@@ -678,9 +678,8 @@ H5SM__cache_list_serialize(const H5F_t *f, void *_image, size_t len,
     /* sanity check */
     HDassert((size_t)(image - (uint8_t *)_image) <= list->header->list_size);
 
-#ifdef H5_CLEAR_MEMORY
+    /* Clear memory */
     HDmemset(image, 0, (list->header->list_size - (size_t)(image - (uint8_t *)_image)));
-#endif /* H5_CLEAR_MEMORY */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

@@ -587,6 +587,68 @@ void HDsrand(unsigned int seed)
 #endif /* H5_HAVE_RAND_R */
 
 
+
+/*-------------------------------------------------------------------------
+ * Function:    Pflock
+ *
+ * Purpose:     Wrapper function for POSIX systems where flock(2) is not
+ *              available.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
+/* NOTE: Compile this all the time on POSIX systems, even when flock(2) is
+ *       present so that it's less likely to become dead code.
+ */
+#ifdef H5_HAVE_FCNTL
+int
+Pflock(int fd, int operation) {
+    
+    struct flock    flk;
+
+    /* Set the lock type */
+    if(operation & LOCK_UN)
+        flk.l_type = F_UNLCK;
+    else if(operation & LOCK_SH)
+        flk.l_type = F_RDLCK;
+    else
+        flk.l_type = F_WRLCK;
+
+    /* Set the other flock struct values */
+    flk.l_whence = SEEK_SET;
+    flk.l_start = 0;
+    flk.l_len = 0;              /* to EOF */
+    flk.l_pid = 0;              /* not used with set */
+
+    /* Lock or unlock */
+    if(HDfcntl(fd, F_SETLK, flk) < 0)
+        return -1;
+
+    return 0;
+
+} /* end Pflock() */
+#endif /* H5_HAVE_FCNTL */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    Nflock
+ *
+ * Purpose:     Wrapper function for systems where no file locking is
+ *              available.
+ *
+ * Return:      Failure:    -1 (always fails)
+ *
+ *-------------------------------------------------------------------------
+ */
+int H5_ATTR_CONST
+Nflock(int H5_ATTR_UNUSED fd, int H5_ATTR_UNUSED operation) {
+    /* just fail */
+    return -1;
+} /* end Nflock() */
+
+
 /*-------------------------------------------------------------------------
  * Function:	H5_make_time
  *
@@ -666,7 +728,7 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5_make_time() */
 
-#ifdef H5_HAVE_VISUAL_STUDIO
+#ifdef H5_HAVE_WIN32_API
 
 /* Offset between 1/1/1601 and 1/1/1970 in 100 nanosecond units */
 #define _W32_FT_OFFSET (116444736000000000ULL)
@@ -695,7 +757,7 @@ done:
  */
 int
 Wgettimeofday(struct timeval *tv, struct timezone *tz)
- {
+{
   union {
     unsigned long long ns100; /*time since 1 Jan 1601 in 100ns units */
     FILETIME ft;
@@ -721,7 +783,42 @@ Wgettimeofday(struct timeval *tv, struct timezone *tz)
   /* Always return 0 as per Open Group Base Specifications Issue 6.
      Do not set errno on error.  */
   return 0;
-}
+} /* end Wgettimeofday() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    Wsetenv
+ *
+ * Purpose:     Wrapper function for setenv on Windows systems.
+ *              Interestingly, getenv *is* available in the Windows
+ *              POSIX layer, just not setenv.
+ *
+ * Return:      Success:    0
+ *              Failure:    non-zero error code
+ *
+ * Programmer:  Dana Robinson
+ *              February 2016
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+Wsetenv(const char *name, const char *value, int overwrite)
+{
+    size_t bufsize;
+    errno_t err;
+
+    /* If we're not overwriting, check if the environment variable exists.
+     * If it does (i.e.: the required buffer size to store the variable's
+     * value is non-zero), then return an error code.
+     */
+    if(!overwrite) {
+        err = getenv_s(&bufsize, NULL, 0, name);
+        if (err || bufsize)
+            return (int)err;
+    } /* end if */
+
+    return (int)_putenv_s(name, value);
+} /* end Wsetenv() */
 
 #ifdef H5_HAVE_WINSOCK2_H
 #pragma comment(lib, "advapi32.lib")
@@ -767,30 +864,77 @@ int c99_vsnprintf(char* str, size_t size, const char* format, va_list ap)
     return count;
 }
 
-#endif
+
+/*-------------------------------------------------------------------------
+ * Function:    Wflock
+ *
+ * Purpose:     Wrapper function for flock on Windows systems
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+Wflock(int H5_ATTR_UNUSED fd, int H5_ATTR_UNUSED operation) {
+
+/* This is a no-op while we implement a Win32 VFD */
+#if 0
+int
+Wflock(int fd, int operation) {
+
+    HANDLE          hFile;
+    DWORD           dwFlags = LOCKFILE_FAIL_IMMEDIATELY;
+    DWORD           dwReserved = 0;
+                    /* MAXDWORD for entire file */
+    DWORD           nNumberOfBytesToLockLow = MAXDWORD;
+    DWORD           nNumberOfBytesToLockHigh = MAXDWORD;
+                    /* Must initialize OVERLAPPED struct */
+    OVERLAPPED      overlapped = {0};
+
+    /* Get Windows HANDLE */
+    hFile = _get_osfhandle(fd);
+
+    /* Convert to Windows flags */
+    if(operation & LOCK_EX)
+        dwFlags |= LOCKFILE_EXCLUSIVE_LOCK;
+
+    /* Lock or unlock */
+    if(operation & LOCK_UN)
+        if(0 == UnlockFileEx(hFile, dwReserved, nNumberOfBytesToLockLow,
+                            nNumberOfBytesToLockHigh, &overlapped))
+            return -1;
+    else
+        if(0 == LockFileEx(hFile, dwFlags, dwReserved, nNumberOfBytesToLockLow,
+                            nNumberOfBytesToLockHigh, &overlapped))
+            return -1;
+#endif /* 0 */
+    return 0;
+} /* end Wflock() */
+
+#endif /* H5_HAVE_WIN32_API */
 
 
 /*-------------------------------------------------------------------------
- * Function: H5_build_extpath
+ * Function:    H5_build_extpath
  *
- * Purpose:  To build the path for later searching of target file for external
- *    link.  This path can be either:
+ * Purpose:     To build the path for later searching of target file for external
+ *              links and external files.  This path can be either:
  *                  1. The absolute path of NAME
  *                      or
  *                  2. The current working directory + relative path of NAME
  *
- * Return:  Success:        0
- *    Failure:  -1
+ * Return:      SUCCEED/FAIL
  *
  * Programmer:  Vailin Choi
- *    April 2, 2008
+ *              April 2, 2008
  *
  *-------------------------------------------------------------------------
  */
 #define MAX_PATH_LEN     1024
 
 herr_t
-H5_build_extpath(const char *name, char **extpath/*out*/)
+H5_build_extpath(const char *name, char **extpath /*out*/)
 {
     char        *full_path = NULL;      /* Pointer to the full path, as built or passed in */
     char        *cwdpath = NULL;        /* Pointer to the current working directory path */
@@ -888,5 +1032,80 @@ done:
         H5MM_xfree(new_name);
 
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5_build_extpath() */
+} /* end H5_build_extpath() */
+
+
+/*--------------------------------------------------------------------------
+ * Function:    H5_combine_path
+ *
+ * Purpose:     If path2 is relative, interpret path2 as relative to path1
+ *              and store the result in full_name. Otherwise store path2
+ *              in full_name.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ * Programmer:  Steffen Kiess
+ *              June 22, 2015
+ *--------------------------------------------------------------------------
+ */
+herr_t
+H5_combine_path(const char* path1, const char* path2, char **full_name /*out*/)
+{
+    size_t      path1_len;            /* length of path1 */
+    size_t      path2_len;            /* length of path2 */
+    herr_t      ret_value = SUCCEED;  /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    HDassert(path1);
+    HDassert(path2);
+
+    path1_len = HDstrlen(path1);
+    path2_len = HDstrlen(path2);
+
+    if(*path1 == '\0' || H5_CHECK_ABSOLUTE(path2)) {
+
+        /* If path1 is empty or path2 is absolute, simply use path2 */
+        if(NULL == (*full_name = (char *)H5MM_strdup(path2)))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
+
+    } /* end if */ 
+    else if(H5_CHECK_ABS_PATH(path2)) {
+
+        /* On windows path2 is a path absolute name */
+        if (H5_CHECK_ABSOLUTE(path1) || H5_CHECK_ABS_DRIVE(path1)) {
+            /* path1 is absolute or drive absolute and path2 is path absolute.
+             * Use the drive letter of path1 + path2
+             */
+            if(NULL == (*full_name = (char *)H5MM_malloc(path2_len + 3)))
+                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "unable to allocate path2 buffer")
+            HDsnprintf(*full_name, (path2_len + 3), "%c:%s", path1[0], path2);
+        } /* end if */
+        else {
+            /* On windows path2 is path absolute name ("\foo\bar"),
+             * path1 does not have a drive letter (i.e. is "a\b" or "\a\b").
+             * Use path2.
+             */
+            if(NULL == (*full_name = (char *)H5MM_strdup(path2)))
+                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
+        } /* end else */
+
+    } /* end else if */
+    else {
+
+        /* Relative path2:
+         * Allocate a buffer to hold path1 + path2 + possibly the delimiter
+         *      + terminating null byte
+         */
+        if(NULL == (*full_name = (char *)H5MM_malloc(path1_len + path2_len + 2)))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "unable to allocate filename buffer")
+
+        /* Compose the full file name */
+        HDsnprintf(*full_name, (path1_len + path2_len + 2), "%s%s%s", path1,
+                   (H5_CHECK_DELIMITER(path1[path1_len - 1]) ? "" : H5_DIR_SEPS), path2);
+    } /* end else */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5_combine_name() */
 

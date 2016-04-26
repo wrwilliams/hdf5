@@ -531,6 +531,7 @@ H5B__split(H5F_t *f, hid_t dxpl_id, H5B_ins_ud_t *bt_ud, unsigned idx,
     } /* end if */
 
     bt_ud->bt->right = split_bt_ud->addr;
+    HDassert(bt_ud->cache_flags & H5AC__DIRTIED_FLAG);
 
 done:
     if(ret_value < 0) {
@@ -611,6 +612,7 @@ H5B_insert(H5F_t *f, hid_t dxpl_id, const H5B_class_t *type, haddr_t addr, void 
 
     /* Check if the root node split */
     if(H5B_INS_NOOP == my_ins) {
+        /* The root node did not split - just return */
         HDassert(!split_bt_ud.bt);
         HGOTO_DONE(SUCCEED)
     } /* end if */
@@ -647,11 +649,11 @@ H5B_insert(H5F_t *f, hid_t dxpl_id, const H5B_class_t *type, haddr_t addr, void 
     /* Unprotect the old root so we can move it.  Also force it to be marked
      * dirty so it is written to the new location. */
     if(H5AC_unprotect(f, dxpl_id, H5AC_BT, bt_ud.addr, bt_ud.bt, H5AC__DIRTIED_FLAG) < 0)
-        HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release old root")
+	HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release old root")
     bt_ud.bt = NULL;  /* Make certain future references will be caught */
 
     /* Move the location of the old root on the disk */
-    if(H5AC_move_entry(f, H5AC_BT, bt_ud.addr, old_root_addr) < 0)
+    if(H5AC_move_entry(f, H5AC_BT, bt_ud.addr, old_root_addr, dxpl_id) < 0)
 	HGOTO_ERROR(H5E_BTREE, H5E_CANTSPLIT, FAIL, "unable to move B-tree root node")
     bt_ud.addr = old_root_addr;
 
@@ -1060,7 +1062,7 @@ H5B__insert_helper(H5F_t *f, hid_t dxpl_id, H5B_ins_ud_t *bt_ud,
 	bt->child[idx] = new_child_bt_ud.addr;
         bt_ud->cache_flags |= H5AC__DIRTIED_FLAG;
     } else if(H5B_INS_LEFT == my_ins || H5B_INS_RIGHT == my_ins) {
-        hbool_t *tmp_bt_flags_ptr = NULL;
+        unsigned *tmp_bt_flags_ptr = NULL;
         H5B_t	*tmp_bt;
 
 	/*
@@ -1729,14 +1731,13 @@ H5B_shared_new(const H5F_t *f, const H5B_class_t *type, size_t sizeof_rkey)
 	    (shared->two_k + 1) * shared->sizeof_rkey);	/*keys		*/
     HDassert(shared->sizeof_rnode);
 
-    /* Allocate shared buffers */
+    /* Allocate and clear shared buffers */
     if(NULL == (shared->page = H5FL_BLK_MALLOC(page, shared->sizeof_rnode)))
-	HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, NULL, "memory allocation failed for B-tree page")
-#ifdef H5_CLEAR_MEMORY
-HDmemset(shared->page, 0, shared->sizeof_rnode);
-#endif /* H5_CLEAR_MEMORY */
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, NULL, "memory allocation failed for B-tree page")
+    HDmemset(shared->page, 0, shared->sizeof_rnode);
+
     if(NULL == (shared->nkey = H5FL_SEQ_MALLOC(size_t, (size_t)(shared->two_k + 1))))
-	HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, NULL, "memory allocation failed for B-tree native keys")
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, NULL, "memory allocation failed for B-tree native keys")
 
     /* Initialize the offsets into the native key buffer */
     for(u = 0; u < (shared->two_k + 1); u++)
@@ -2034,7 +2035,7 @@ htri_t
 H5B_valid(H5F_t *f, hid_t dxpl_id, const H5B_class_t *type, haddr_t addr)
 {
     H5B_t               *bt = NULL;             /* The B-tree */
-    H5UC_t	        *rc_shared;             /* Ref-counted shared info */
+    H5UC_t              *rc_shared;             /* Ref-counted shared info */
     H5B_shared_t        *shared;                /* Pointer to shared B-tree info */
     H5B_cache_ud_t      cache_udata;            /* User-data for metadata cache callback */
     htri_t		ret_value = SUCCEED;    /* Return value */

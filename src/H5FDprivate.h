@@ -96,6 +96,25 @@ typedef struct {
     const void *driver_info;    /* Driver info, for open callbacks */
 } H5FD_driver_prop_t;
 
+#ifdef H5_HAVE_PARALLEL
+/* MPIO-specific file access properties */
+typedef struct H5FD_mpio_fapl_t {
+    MPI_Comm		comm;		/*communicator			*/
+    MPI_Info		info;		/*file information		*/
+} H5FD_mpio_fapl_t;
+#endif /* H5_HAVE_PARALLEL */
+
+#ifdef H5_DEBUG_BUILD
+/* Definitions for the internal DXPL types created in H5AC__init_package() */
+typedef enum {
+    H5FD_METADATA_DXPL = 0,
+    H5FD_NOIO_DXPL,
+    H5FD_RAWDATA_DXPL
+} H5FD_dxpl_type_t;
+
+#define H5FD_DXPL_TYPE_NAME              "H5P_dxpl_type"
+#endif /* H5_DEBUG_BUILD */
+
 
 /*****************************/
 /* Library Private Variables */
@@ -141,6 +160,8 @@ H5_DLL herr_t H5FD_write(H5FD_t *file, const H5P_genplist_t *dxpl, H5FD_mem_t ty
     haddr_t addr, size_t size, const void *buf);
 H5_DLL herr_t H5FD_flush(H5FD_t *file, hid_t dxpl_id, unsigned closing);
 H5_DLL herr_t H5FD_truncate(H5FD_t *file, hid_t dxpl_id, hbool_t closing);
+H5_DLL herr_t H5FD_lock(H5FD_t *file, hbool_t rw);
+H5_DLL herr_t H5FD_unlock(H5FD_t *file);
 H5_DLL herr_t H5FD_get_fileno(const H5FD_t *file, unsigned long *filenum);
 H5_DLL herr_t H5FD_get_vfd_handle(H5FD_t *file, hid_t fapl, void** file_handle);
 H5_DLL herr_t H5FD_set_base_addr(H5FD_t *file, haddr_t base_addr);

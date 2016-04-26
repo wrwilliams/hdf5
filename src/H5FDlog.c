@@ -179,6 +179,8 @@ static herr_t H5FD_log_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr
 static herr_t H5FD_log_write(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
             size_t size, const void *buf);
 static herr_t H5FD_log_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing);
+static herr_t H5FD_log_lock(H5FD_t *_file, hbool_t rw);
+static herr_t H5FD_log_unlock(H5FD_t *_file);
 
 static const H5FD_class_t H5FD_log_g = {
     "log",					/*name			*/
@@ -210,8 +212,8 @@ static const H5FD_class_t H5FD_log_g = {
     H5FD_log_write,				/*write			*/
     NULL,					/*flush			*/
     H5FD_log_truncate,				/*truncate		*/
-    NULL,                                       /*lock                  */
-    NULL,                                       /*unlock                */
+    H5FD_log_lock,                              /*lock                  */
+    H5FD_log_unlock,                            /*unlock                */
     H5FD_FLMAP_DICHOTOMY			/*fl_map		*/
 };
 
@@ -404,7 +406,7 @@ H5FD_log_fapl_copy(const void *_old_fa)
 
     /* Deep copy the log file name */
     if(old_fa->logfile != NULL)
-        if(NULL == (new_fa->logfile = H5MM_xstrdup(old_fa->logfile)))
+        if(NULL == (new_fa->logfile = H5MM_strdup(old_fa->logfile)))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to allocate log file name")
 
     /* Set return value */
@@ -414,7 +416,7 @@ done:
     if(NULL == ret_value)
         if(new_fa) {
             if(new_fa->logfile)
-                H5MM_free(new_fa->logfile);
+                new_fa->logfile = H5MM_xfree(new_fa->logfile);
             H5MM_free(new_fa);
         } /* end if */
 
@@ -443,7 +445,7 @@ H5FD_log_fapl_free(void *_fa)
 
     /* Free the fapl information */
     if(fa->logfile)
-        H5MM_xfree(fa->logfile);
+        fa->logfile = H5MM_xfree(fa->logfile);
     H5MM_xfree(fa);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
@@ -592,7 +594,7 @@ H5FD_log_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
     /* Get the flags for logging */
     file->fa.flags = fa->flags;
     if(fa->logfile)
-        file->fa.logfile = HDstrdup(fa->logfile);
+        file->fa.logfile = H5MM_strdup(fa->logfile);
     else
         file->fa.logfile = NULL;
     file->fa.buf_size = fa->buf_size;
@@ -796,10 +798,8 @@ H5FD_log_close(H5FD_t *_file)
             HDfclose(file->logfp);
     } /* end if */
 
-    if(file->fa.logfile) {
-        HDfree(file->fa.logfile);
-        file->fa.logfile = NULL;
-    }
+    if(file->fa.logfile)
+        file->fa.logfile = H5MM_xfree(file->fa.logfile);
 
     /* Release the file info */
     file = H5FL_FREE(H5FD_log_t, file);
@@ -888,11 +888,11 @@ H5FD_log_query(const H5FD_t *_file, unsigned long *flags /* out */)
     /* Set the VFL feature flags that this driver supports */
     if(flags) {
         *flags = 0;
-        *flags |= H5FD_FEAT_AGGREGATE_METADATA; /* OK to aggregate metadata allocations */
-        *flags |= H5FD_FEAT_ACCUMULATE_METADATA; /* OK to accumulate metadata for faster writes */
-        *flags |= H5FD_FEAT_DATA_SIEVE;       /* OK to perform data sieving for faster raw data reads & writes */
-        *flags |= H5FD_FEAT_AGGREGATE_SMALLDATA; /* OK to aggregate "small" raw data allocations */
-        *flags |= H5FD_FEAT_POSIX_COMPAT_HANDLE; /* VFD handle is POSIX I/O call compatible */
+        *flags |= H5FD_FEAT_AGGREGATE_METADATA;     /* OK to aggregate metadata allocations                             */
+        *flags |= H5FD_FEAT_ACCUMULATE_METADATA;    /* OK to accumulate metadata for faster writes                      */
+        *flags |= H5FD_FEAT_DATA_SIEVE;             /* OK to perform data sieving for faster raw data reads & writes    */
+        *flags |= H5FD_FEAT_AGGREGATE_SMALLDATA;    /* OK to aggregate "small" raw data allocations                     */
+        *flags |= H5FD_FEAT_POSIX_COMPAT_HANDLE;    /* VFD handle is POSIX I/O call compatible                          */
 
         /* Check for flags that are set by h5repart */
         if(file && file->fam_to_sec2)
@@ -1555,4 +1555,69 @@ H5FD_log_truncate(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, hbool_t H5_ATTR_U
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD_log_truncate() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FD_log_lock
+ *
+ * Purpose:     Place a lock on the file
+ *
+ * Return:      Success:    SUCCEED
+ *              Failure:    FAIL, file not locked.
+ *
+ * Programmer:  Vailin Choi; May 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5FD_log_lock(H5FD_t *_file, hbool_t rw)
+{
+    H5FD_log_t	*file = (H5FD_log_t *)_file;
+    int lock;
+    herr_t ret_value = SUCCEED;                 /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    /* Sanity check */
+    HDassert(file);
+
+    /* Determine the type of lock */
+    lock = rw ? LOCK_EX : LOCK_SH;
+
+    /* Place the lock with non-blocking */
+    if(HDflock(file->fd, lock | LOCK_NB) < 0)
+        HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, FAIL, "unable to flock file")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5FD_log_lock() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FD_log_unlock
+ *
+ * Purpose:     Remove the existing lock on the file
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ * Programmer:  Vailin Choi; May 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5FD_log_unlock(H5FD_t *_file)
+{
+    H5FD_log_t  *file = (H5FD_log_t *)_file;       /* VFD file struct */
+    herr_t ret_value = SUCCEED;                         /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    HDassert(file);
+
+    if(HDflock(file->fd, LOCK_UN) < 0)
+        HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, FAIL, "unable to flock (unlock) file")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5FD_log_unlock() */
 

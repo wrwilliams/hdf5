@@ -775,7 +775,7 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
     }
 
     if ( H5C__flush_single_entry(f, dxpl_id, pf_entry_ptr, 
-                                 flush_flags, NULL) < 0 )
+                                 flush_flags, NULL, NULL) < 0 )
 
         HGOTO_ERROR(H5E_CACHE, H5E_CANTEXPUNGE, FAIL, \
                     "can't expunge prefetched entry")
@@ -1752,13 +1752,6 @@ H5C_validate_cache_image_config(H5C_cache_image_ctl_t * ctl_ptr)
 
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
                     "Unknown cache image control version.")
-    }
-
-    if ( ( ctl_ptr->generate_image != FALSE ) &&
-         ( ctl_ptr->generate_image != TRUE ) ) {
-
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                    "generate_image field corrupted?")
     }
 
     /* at present, max image size is always limited only by cache size,
@@ -4491,7 +4484,7 @@ H5C__write_cache_image_superblock_msg(H5F_t *f, hid_t dxpl_id, hbool_t create)
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    /* sanity checks */
+    /* Sanity checks */
     HDassert(f);
     HDassert(f->shared);
     HDassert(f->shared->cache);
@@ -4510,15 +4503,10 @@ H5C__write_cache_image_superblock_msg(H5F_t *f, hid_t dxpl_id, hbool_t create)
     mdci_msg.size = cache_ptr->image_len;
 
     /* Write metadata cache image message to superblock extension */
-    if ( H5F_super_ext_write_msg(f, dxpl_id, &mdci_msg, 
-                                 H5O_MDCI_MSG_ID, create, mesg_flags) < 0 )
-
-        HGOTO_ERROR(H5E_CACHE, H5E_WRITEERROR, FAIL, \
-	    "can't write metadata cache image message to superblock extension")
+    if(H5F_super_ext_write_msg(f, dxpl_id, H5O_MDCI_MSG_ID, &mdci_msg, create, mesg_flags) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_WRITEERROR, FAIL, "can't write metadata cache image message to superblock extension")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5C__write_cache_image_superblock_msg() */
 

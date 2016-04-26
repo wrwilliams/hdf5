@@ -119,10 +119,23 @@ TESTS =
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/aclocal_cxx.m4 \
-	$(top_srcdir)/m4/aclocal_fc.m4 $(top_srcdir)/m4/libtool.m4 \
-	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
-	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
-	$(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/aclocal_fc.m4 \
+	$(top_srcdir)/m4/ax_check_class.m4 \
+	$(top_srcdir)/m4/ax_check_classpath.m4 \
+	$(top_srcdir)/m4/ax_check_java_home.m4 \
+	$(top_srcdir)/m4/ax_check_junit.m4 \
+	$(top_srcdir)/m4/ax_java_options.m4 \
+	$(top_srcdir)/m4/ax_jni_include_dir.m4 \
+	$(top_srcdir)/m4/ax_prog_jar.m4 \
+	$(top_srcdir)/m4/ax_prog_java.m4 \
+	$(top_srcdir)/m4/ax_prog_java_works.m4 \
+	$(top_srcdir)/m4/ax_prog_javac.m4 \
+	$(top_srcdir)/m4/ax_prog_javac_works.m4 \
+	$(top_srcdir)/m4/ax_prog_javadoc.m4 \
+	$(top_srcdir)/m4/ax_try_compile_java.m4 \
+	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
+	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
+	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 DIST_COMMON = $(srcdir)/Makefile.am $(include_HEADERS) \
@@ -166,36 +179,38 @@ am__libhdf5_la_SOURCES_DIST = H5.c H5checksum.c H5dbg.c H5system.c \
 	H5timer.c H5trace.c H5A.c H5Abtree2.c H5Adense.c H5Adeprec.c \
 	H5Aint.c H5Atest.c H5AC.c H5B.c H5Bcache.c H5Bdbg.c H5B2.c \
 	H5B2cache.c H5B2dbg.c H5B2hdr.c H5B2int.c H5B2stat.c \
-	H5B2test.c H5C.c H5Cimage.c H5CS.c H5D.c H5Dbtree.c H5Dchunk.c \
-	H5Dcompact.c H5Dcontig.c H5Ddbg.c H5Ddeprec.c H5Defl.c \
-	H5Dfill.c H5Dint.c H5Dio.c H5Dlayout.c H5Doh.c H5Dscatgath.c \
-	H5Dselect.c H5Dtest.c H5Dvirtual.c H5E.c H5Edeprec.c H5Eint.c \
-	H5EA.c H5EAcache.c H5EAdbg.c H5EAdblkpage.c H5EAdblock.c \
-	H5EAhdr.c H5EAiblock.c H5EAint.c H5EAsblock.c H5EAstat.c \
-	H5EAtest.c H5F.c H5Fint.c H5Faccum.c H5Fcwfs.c H5Fdbg.c \
-	H5Fdeprec.c H5Fefc.c H5Ffake.c H5Fio.c H5Fmount.c H5Fquery.c \
-	H5Fsfile.c H5Fsuper.c H5Fsuper_cache.c H5Ftest.c H5FA.c \
-	H5FAcache.c H5FAdbg.c H5FAdblock.c H5FAdblkpage.c H5FAhdr.c \
-	H5FAstat.c H5FAtest.c H5FD.c H5FDcore.c H5FDfamily.c H5FDint.c \
-	H5FDlog.c H5FDmulti.c H5FDsec2.c H5FDspace.c H5FDstdio.c \
-	H5FL.c H5FO.c H5FS.c H5FScache.c H5FSdbg.c H5FSsection.c \
-	H5FSstat.c H5FStest.c H5G.c H5Gbtree2.c H5Gcache.c \
-	H5Gcompact.c H5Gdense.c H5Gdeprec.c H5Gent.c H5Gint.c \
-	H5Glink.c H5Gloc.c H5Gname.c H5Gnode.c H5Gobj.c H5Goh.c \
-	H5Groot.c H5Gstab.c H5Gtest.c H5Gtraverse.c H5HF.c \
-	H5HFbtree2.c H5HFcache.c H5HFdbg.c H5HFdblock.c H5HFdtable.c \
-	H5HFhdr.c H5HFhuge.c H5HFiblock.c H5HFiter.c H5HFman.c \
-	H5HFsection.c H5HFspace.c H5HFstat.c H5HFtest.c H5HFtiny.c \
-	H5HG.c H5HGcache.c H5HGdbg.c H5HGquery.c H5HL.c H5HLcache.c \
-	H5HLdbg.c H5HLint.c H5HP.c H5I.c H5Itest.c H5L.c H5Lexternal.c \
-	H5lib_settings.c H5MF.c H5MFaggr.c H5MFdbg.c H5MFsection.c \
-	H5MM.c H5MP.c H5MPtest.c H5O.c H5Oainfo.c H5Oalloc.c H5Oattr.c \
+	H5B2test.c H5C.c H5Cimage.c H5CS.c H5D.c H5Dbtree.c \
+	H5Dbtree2.c H5Dchunk.c H5Dcompact.c H5Dcontig.c H5Ddbg.c \
+	H5Ddeprec.c H5Dearray.c H5Defl.c H5Dfarray.c H5Dfill.c \
+	H5Dint.c H5Dio.c H5Dlayout.c H5Dnone.c H5Doh.c H5Dscatgath.c \
+	H5Dselect.c H5Dsingle.c H5Dtest.c H5Dvirtual.c H5E.c \
+	H5Edeprec.c H5Eint.c H5EA.c H5EAcache.c H5EAdbg.c \
+	H5EAdblkpage.c H5EAdblock.c H5EAhdr.c H5EAiblock.c H5EAint.c \
+	H5EAsblock.c H5EAstat.c H5EAtest.c H5F.c H5Fint.c H5Faccum.c \
+	H5Fcwfs.c H5Fdbg.c H5Fdeprec.c H5Fefc.c H5Ffake.c H5Fio.c \
+	H5Fmount.c H5Fquery.c H5Fsfile.c H5Fsuper.c H5Fsuper_cache.c \
+	H5Ftest.c H5FA.c H5FAcache.c H5FAdbg.c H5FAdblock.c \
+	H5FAdblkpage.c H5FAhdr.c H5FAstat.c H5FAtest.c H5FD.c \
+	H5FDcore.c H5FDfamily.c H5FDint.c H5FDlog.c H5FDmulti.c \
+	H5FDsec2.c H5FDspace.c H5FDstdio.c H5FL.c H5FO.c H5FS.c \
+	H5FScache.c H5FSdbg.c H5FSsection.c H5FSstat.c H5FStest.c \
+	H5G.c H5Gbtree2.c H5Gcache.c H5Gcompact.c H5Gdense.c \
+	H5Gdeprec.c H5Gent.c H5Gint.c H5Glink.c H5Gloc.c H5Gname.c \
+	H5Gnode.c H5Gobj.c H5Goh.c H5Groot.c H5Gstab.c H5Gtest.c \
+	H5Gtraverse.c H5HF.c H5HFbtree2.c H5HFcache.c H5HFdbg.c \
+	H5HFdblock.c H5HFdtable.c H5HFhdr.c H5HFhuge.c H5HFiblock.c \
+	H5HFiter.c H5HFman.c H5HFsection.c H5HFspace.c H5HFstat.c \
+	H5HFtest.c H5HFtiny.c H5HG.c H5HGcache.c H5HGdbg.c H5HGquery.c \
+	H5HL.c H5HLcache.c H5HLdbg.c H5HLint.c H5HLprfx.c H5HLdblk.c \
+	H5HP.c H5I.c H5Itest.c H5L.c H5Lexternal.c H5lib_settings.c \
+	H5MF.c H5MFaggr.c H5MFdbg.c H5MFsection.c H5MM.c H5MP.c \
+	H5MPtest.c H5O.c H5Oainfo.c H5Oalloc.c H5Oattr.c \
 	H5Oattribute.c H5Obogus.c H5Obtreek.c H5Ocache.c H5Ochunk.c \
 	H5Ocont.c H5Ocopy.c H5Odbg.c H5Odrvinfo.c H5Odtype.c H5Oefl.c \
 	H5Ofill.c H5Ofsinfo.c H5Oginfo.c H5Olayout.c H5Olinfo.c \
 	H5Olink.c H5Omdci_msg.c H5Omessage.c H5Omtime.c H5Oname.c \
 	H5Onull.c H5Opline.c H5Orefcount.c H5Osdspace.c H5Oshared.c \
-	H5Ostab.c H5Oshmesg.c H5Otest.c H5Ounknown.c H5P.c H5Pacpl.c \
+	H5Oshmesg.c H5Ostab.c H5Otest.c H5Ounknown.c H5P.c H5Pacpl.c \
 	H5Pdapl.c H5Pdcpl.c H5Pdeprec.c H5Pdxpl.c H5Pencdec.c \
 	H5Pfapl.c H5Pfcpl.c H5Pfmpl.c H5Pgcpl.c H5Pint.c H5Plapl.c \
 	H5Plcpl.c H5Pocpl.c H5Pocpypl.c H5Pstrcpl.c H5Ptest.c H5PL.c \
@@ -220,10 +235,11 @@ am_libhdf5_la_OBJECTS = H5.lo H5checksum.lo H5dbg.lo H5system.lo \
 	H5Adeprec.lo H5Aint.lo H5Atest.lo H5AC.lo H5B.lo H5Bcache.lo \
 	H5Bdbg.lo H5B2.lo H5B2cache.lo H5B2dbg.lo H5B2hdr.lo \
 	H5B2int.lo H5B2stat.lo H5B2test.lo H5C.lo H5Cimage.lo H5CS.lo \
-	H5D.lo H5Dbtree.lo H5Dchunk.lo H5Dcompact.lo H5Dcontig.lo \
-	H5Ddbg.lo H5Ddeprec.lo H5Defl.lo H5Dfill.lo H5Dint.lo H5Dio.lo \
-	H5Dlayout.lo H5Doh.lo H5Dscatgath.lo H5Dselect.lo H5Dtest.lo \
-	H5Dvirtual.lo H5E.lo H5Edeprec.lo H5Eint.lo H5EA.lo \
+	H5D.lo H5Dbtree.lo H5Dbtree2.lo H5Dchunk.lo H5Dcompact.lo \
+	H5Dcontig.lo H5Ddbg.lo H5Ddeprec.lo H5Dearray.lo H5Defl.lo \
+	H5Dfarray.lo H5Dfill.lo H5Dint.lo H5Dio.lo H5Dlayout.lo \
+	H5Dnone.lo H5Doh.lo H5Dscatgath.lo H5Dselect.lo H5Dsingle.lo \
+	H5Dtest.lo H5Dvirtual.lo H5E.lo H5Edeprec.lo H5Eint.lo H5EA.lo \
 	H5EAcache.lo H5EAdbg.lo H5EAdblkpage.lo H5EAdblock.lo \
 	H5EAhdr.lo H5EAiblock.lo H5EAint.lo H5EAsblock.lo H5EAstat.lo \
 	H5EAtest.lo H5F.lo H5Fint.lo H5Faccum.lo H5Fcwfs.lo H5Fdbg.lo \
@@ -242,31 +258,32 @@ am_libhdf5_la_OBJECTS = H5.lo H5checksum.lo H5dbg.lo H5system.lo \
 	H5HFiblock.lo H5HFiter.lo H5HFman.lo H5HFsection.lo \
 	H5HFspace.lo H5HFstat.lo H5HFtest.lo H5HFtiny.lo H5HG.lo \
 	H5HGcache.lo H5HGdbg.lo H5HGquery.lo H5HL.lo H5HLcache.lo \
-	H5HLdbg.lo H5HLint.lo H5HP.lo H5I.lo H5Itest.lo H5L.lo \
-	H5Lexternal.lo H5lib_settings.lo H5MF.lo H5MFaggr.lo \
-	H5MFdbg.lo H5MFsection.lo H5MM.lo H5MP.lo H5MPtest.lo H5O.lo \
-	H5Oainfo.lo H5Oalloc.lo H5Oattr.lo H5Oattribute.lo H5Obogus.lo \
-	H5Obtreek.lo H5Ocache.lo H5Ochunk.lo H5Ocont.lo H5Ocopy.lo \
-	H5Odbg.lo H5Odrvinfo.lo H5Odtype.lo H5Oefl.lo H5Ofill.lo \
-	H5Ofsinfo.lo H5Oginfo.lo H5Olayout.lo H5Olinfo.lo H5Olink.lo \
-	H5Omdci_msg.lo H5Omessage.lo H5Omtime.lo H5Oname.lo H5Onull.lo \
-	H5Opline.lo H5Orefcount.lo H5Osdspace.lo H5Oshared.lo \
-	H5Ostab.lo H5Oshmesg.lo H5Otest.lo H5Ounknown.lo H5P.lo \
-	H5Pacpl.lo H5Pdapl.lo H5Pdcpl.lo H5Pdeprec.lo H5Pdxpl.lo \
-	H5Pencdec.lo H5Pfapl.lo H5Pfcpl.lo H5Pfmpl.lo H5Pgcpl.lo \
-	H5Pint.lo H5Plapl.lo H5Plcpl.lo H5Pocpl.lo H5Pocpypl.lo \
-	H5Pstrcpl.lo H5Ptest.lo H5PL.lo H5R.lo H5Rdeprec.lo H5UC.lo \
-	H5RS.lo H5S.lo H5Sall.lo H5Sdbg.lo H5Shyper.lo H5Snone.lo \
-	H5Spoint.lo H5Sselect.lo H5Stest.lo H5SL.lo H5SM.lo \
-	H5SMbtree2.lo H5SMcache.lo H5SMmessage.lo H5SMtest.lo H5ST.lo \
-	H5T.lo H5Tarray.lo H5Tbit.lo H5Tcommit.lo H5Tcompound.lo \
-	H5Tconv.lo H5Tcset.lo H5Tdbg.lo H5Tdeprec.lo H5Tenum.lo \
-	H5Tfields.lo H5Tfixed.lo H5Tfloat.lo H5Tinit.lo H5Tnative.lo \
-	H5Toffset.lo H5Toh.lo H5Topaque.lo H5Torder.lo H5Tpad.lo \
-	H5Tprecis.lo H5Tstrpad.lo H5Tvisit.lo H5Tvlen.lo H5TS.lo \
-	H5VM.lo H5WB.lo H5Z.lo H5Zdeflate.lo H5Zfletcher32.lo \
-	H5Znbit.lo H5Zshuffle.lo H5Zscaleoffset.lo H5Zszip.lo \
-	H5Ztrans.lo $(am__objects_1) $(am__objects_2)
+	H5HLdbg.lo H5HLint.lo H5HLprfx.lo H5HLdblk.lo H5HP.lo H5I.lo \
+	H5Itest.lo H5L.lo H5Lexternal.lo H5lib_settings.lo H5MF.lo \
+	H5MFaggr.lo H5MFdbg.lo H5MFsection.lo H5MM.lo H5MP.lo \
+	H5MPtest.lo H5O.lo H5Oainfo.lo H5Oalloc.lo H5Oattr.lo \
+	H5Oattribute.lo H5Obogus.lo H5Obtreek.lo H5Ocache.lo \
+	H5Ochunk.lo H5Ocont.lo H5Ocopy.lo H5Odbg.lo H5Odrvinfo.lo \
+	H5Odtype.lo H5Oefl.lo H5Ofill.lo H5Ofsinfo.lo H5Oginfo.lo \
+	H5Olayout.lo H5Olinfo.lo H5Olink.lo H5Omdci_msg.lo \
+	H5Omessage.lo H5Omtime.lo H5Oname.lo H5Onull.lo H5Opline.lo \
+	H5Orefcount.lo H5Osdspace.lo H5Oshared.lo H5Oshmesg.lo \
+	H5Ostab.lo H5Otest.lo H5Ounknown.lo H5P.lo H5Pacpl.lo \
+	H5Pdapl.lo H5Pdcpl.lo H5Pdeprec.lo H5Pdxpl.lo H5Pencdec.lo \
+	H5Pfapl.lo H5Pfcpl.lo H5Pfmpl.lo H5Pgcpl.lo H5Pint.lo \
+	H5Plapl.lo H5Plcpl.lo H5Pocpl.lo H5Pocpypl.lo H5Pstrcpl.lo \
+	H5Ptest.lo H5PL.lo H5R.lo H5Rdeprec.lo H5UC.lo H5RS.lo H5S.lo \
+	H5Sall.lo H5Sdbg.lo H5Shyper.lo H5Snone.lo H5Spoint.lo \
+	H5Sselect.lo H5Stest.lo H5SL.lo H5SM.lo H5SMbtree2.lo \
+	H5SMcache.lo H5SMmessage.lo H5SMtest.lo H5ST.lo H5T.lo \
+	H5Tarray.lo H5Tbit.lo H5Tcommit.lo H5Tcompound.lo H5Tconv.lo \
+	H5Tcset.lo H5Tdbg.lo H5Tdeprec.lo H5Tenum.lo H5Tfields.lo \
+	H5Tfixed.lo H5Tfloat.lo H5Tinit.lo H5Tnative.lo H5Toffset.lo \
+	H5Toh.lo H5Topaque.lo H5Torder.lo H5Tpad.lo H5Tprecis.lo \
+	H5Tstrpad.lo H5Tvisit.lo H5Tvlen.lo H5TS.lo H5VM.lo H5WB.lo \
+	H5Z.lo H5Zdeflate.lo H5Zfletcher32.lo H5Znbit.lo H5Zshuffle.lo \
+	H5Zscaleoffset.lo H5Zszip.lo H5Ztrans.lo $(am__objects_1) \
+	$(am__objects_2)
 libhdf5_la_OBJECTS = $(am_libhdf5_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -539,18 +556,22 @@ AM_CPPFLAGS = @AM_CPPFLAGS@ @H5_CPPFLAGS@
 AM_CXXFLAGS = @AM_CXXFLAGS@ @H5_CXXFLAGS@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AM_FCFLAGS = @AM_FCFLAGS@ @H5_FCFLAGS@
+AM_JAVACFLAGS = @AM_JAVACFLAGS@
+AM_JAVAFLAGS = @AM_JAVAFLAGS@
+AM_JNIFLAGS = @AM_JNIFLAGS@
 AM_LDFLAGS = @AM_LDFLAGS@ @H5_LDFLAGS@
 AR = @AR@
+ASSERTS = @ASSERTS@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BUILD_MODE = @BUILD_MODE@
 BYTESEX = @BYTESEX@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CC_VERSION = @CC_VERSION@
 CFLAGS = @CFLAGS@
-CLEARFILEBUF = @CLEARFILEBUF@
 CODESTACK = @CODESTACK@
 CONFIG_DATE = @CONFIG_DATE@
 CONFIG_MODE = @CONFIG_MODE@
@@ -563,7 +584,6 @@ CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CXX_VERSION = @CXX_VERSION@
 CYGPATH_W = @CYGPATH_W@
-DEBUG_PKG = @DEBUG_PKG@
 DEFAULT_API_VERSION = @DEFAULT_API_VERSION@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
@@ -601,10 +621,14 @@ H5CONFIG_F_NUM_RKIND = @H5CONFIG_F_NUM_RKIND@
 H5CONFIG_F_RKIND = @H5CONFIG_F_RKIND@
 H5CONFIG_F_RKIND_SIZEOF = @H5CONFIG_F_RKIND_SIZEOF@
 H5_CFLAGS = @H5_CFLAGS@
+H5_CLASSPATH = @H5_CLASSPATH@
 H5_CPPFLAGS = @H5_CPPFLAGS@
 H5_CXXFLAGS = @H5_CXXFLAGS@
 H5_FCFLAGS = @H5_FCFLAGS@
 H5_FORTRAN_SHARED = @H5_FORTRAN_SHARED@
+H5_JAVACFLAGS = @H5_JAVACFLAGS@
+H5_JAVAFLAGS = @H5_JAVAFLAGS@
+H5_JNIFLAGS = @H5_JNIFLAGS@
 H5_LDFLAGS = @H5_LDFLAGS@
 H5_VERSION = @H5_VERSION@
 HADDR_T = @HADDR_T@
@@ -615,6 +639,7 @@ HDF5_HL = @HDF5_HL@
 HDF5_INTERFACES = @HDF5_INTERFACES@
 HDF_CXX = @HDF_CXX@
 HDF_FORTRAN = @HDF_FORTRAN@
+HDF_JAVA = @HDF_JAVA@
 HID_T = @HID_T@
 HL = @HL@
 HL_FOR = @HL_FOR@
@@ -625,8 +650,20 @@ INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
-INSTRUMENT = @INSTRUMENT@
 INSTRUMENT_LIBRARY = @INSTRUMENT_LIBRARY@
+INTERNAL_DEBUG_OUTPUT = @INTERNAL_DEBUG_OUTPUT@
+JAR = @JAR@
+JAVA = @JAVA@
+JAVAC = @JAVAC@
+JAVACFLAGS = @JAVACFLAGS@
+JAVADOC = @JAVADOC@
+JAVAFLAGS = @JAVAFLAGS@
+JAVAPREFIX = @JAVAPREFIX@
+JAVA_JUNIT = @JAVA_JUNIT@
+JAVA_PATH_NAME = @JAVA_PATH_NAME@
+JAVA_VERSION = @JAVA_VERSION@
+JNIFLAGS = @JNIFLAGS@
+JUNIT = @JUNIT@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
@@ -641,6 +678,8 @@ LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
+MEMORYALLOCSANITYCHECK = @MEMORYALLOCSANITYCHECK@
+METADATATRACEFILE = @METADATATRACEFILE@
 MKDIR_P = @MKDIR_P@
 MPE = @MPE@
 NM = @NM@
@@ -648,6 +687,7 @@ NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
 OBJECT_NAMELEN_DEFAULT_F = @OBJECT_NAMELEN_DEFAULT_F@
 OBJEXT = @OBJEXT@
+OPTIMIZATION = @OPTIMIZATION@
 OTOOL = @OTOOL@
 OTOOL64 = @OTOOL64@
 PACKAGE = @PACKAGE@
@@ -671,6 +711,7 @@ PAC_FORTRAN_NATIVE_REAL_KIND = @PAC_FORTRAN_NATIVE_REAL_KIND@
 PAC_FORTRAN_NATIVE_REAL_SIZEOF = @PAC_FORTRAN_NATIVE_REAL_SIZEOF@
 PARALLEL = @PARALLEL@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PROFILING = @PROFILING@
 RANLIB = @RANLIB@
 ROOT = @ROOT@
 RUNPARALLEL = @RUNPARALLEL@
@@ -686,7 +727,9 @@ STATIC_EXEC = @STATIC_EXEC@
 STATIC_SHARED = @STATIC_SHARED@
 STRICT_FORMAT_CHECKS = @STRICT_FORMAT_CHECKS@
 STRIP = @STRIP@
+SYMBOLS = @SYMBOLS@
 TESTPARALLEL = @TESTPARALLEL@
+TESTS_JUNIT = @TESTS_JUNIT@
 THREADSAFE = @THREADSAFE@
 TIME = @TIME@
 TR = @TR@
@@ -695,8 +738,10 @@ UNAME_INFO = @UNAME_INFO@
 USE_FILTER_DEFLATE = @USE_FILTER_DEFLATE@
 USE_FILTER_SZIP = @USE_FILTER_SZIP@
 USINGMEMCHECKER = @USINGMEMCHECKER@
+UUDECODE = @UUDECODE@
 VERSION = @VERSION@
 WORDS_BIGENDIAN = @WORDS_BIGENDIAN@
+_ACJNI_JAVAC = @_ACJNI_JAVAC@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -775,6 +820,7 @@ LIBH5TEST = $(top_builddir)/test/libh5test.la
 LIBH5F = $(top_builddir)/fortran/src/libhdf5_fortran.la
 LIBH5FTEST = $(top_builddir)/fortran/test/libh5test_fortran.la
 LIBH5CPP = $(top_builddir)/c++/src/libhdf5_cpp.la
+LIBH5JNI = $(top_builddir)/java/src/jni/libhdf5_java.la
 LIBH5TOOLS = $(top_builddir)/tools/lib/libh5tools.la
 LIBH5_HL = $(top_builddir)/hl/src/libhdf5_hl.la
 LIBH5F_HL = $(top_builddir)/hl/fortran/src/libhdf5hl_fortran.la
@@ -813,9 +859,30 @@ CHECK_CLEANFILES = *.chkexe *.chklog *.clog *.clog2
 # See libtool versioning documentation online.
 # After making changes, run bin/reconfigure to update other configure related
 # files like Makefile.in.
-LT_VERS_INTERFACE = 6
-LT_VERS_REVISION = 223
+LT_VERS_INTERFACE = 1000
 LT_VERS_AGE = 0
+LT_VERS_REVISION = 0
+LT_CXX_VERS_INTERFACE = 1000
+LT_CXX_VERS_REVISION = 0
+LT_CXX_VERS_AGE = 0
+LT_F_VERS_INTERFACE = 1000
+LT_F_VERS_REVISION = 0
+LT_F_VERS_AGE = 0
+LT_HL_VERS_INTERFACE = 1000
+LT_HL_VERS_REVISION = 0
+LT_HL_VERS_AGE = 0
+LT_HL_CXX_VERS_INTERFACE = 1000
+LT_HL_CXX_VERS_REVISION = 0
+LT_HL_CXX_VERS_AGE = 0
+LT_HL_F_VERS_INTERFACE = 1000
+LT_HL_F_VERS_REVISION = 0
+LT_HL_F_VERS_AGE = 0
+LT_JAVA_VERS_INTERFACE = 1000
+LT_JAVA_VERS_REVISION = 0
+LT_JAVA_VERS_AGE = 0
+LT_TOOLS_VERS_INTERFACE = 1000
+LT_TOOLS_VERS_REVISION = 0
+LT_TOOLS_VERS_AGE = 0
 
 # Our main target, the HDF5 library
 lib_LTLIBRARIES = libhdf5.la
@@ -833,9 +900,10 @@ libhdf5_la_SOURCES = H5.c H5checksum.c H5dbg.c H5system.c H5timer.c \
 	H5trace.c H5A.c H5Abtree2.c H5Adense.c H5Adeprec.c H5Aint.c \
 	H5Atest.c H5AC.c H5B.c H5Bcache.c H5Bdbg.c H5B2.c H5B2cache.c \
 	H5B2dbg.c H5B2hdr.c H5B2int.c H5B2stat.c H5B2test.c H5C.c \
-	H5Cimage.c H5CS.c H5D.c H5Dbtree.c H5Dchunk.c H5Dcompact.c \
-	H5Dcontig.c H5Ddbg.c H5Ddeprec.c H5Defl.c H5Dfill.c H5Dint.c \
-	H5Dio.c H5Dlayout.c H5Doh.c H5Dscatgath.c H5Dselect.c \
+	H5Cimage.c H5CS.c H5D.c H5Dbtree.c H5Dbtree2.c H5Dchunk.c \
+	H5Dcompact.c H5Dcontig.c H5Ddbg.c H5Ddeprec.c H5Dearray.c \
+	H5Defl.c H5Dfarray.c H5Dfill.c H5Dint.c H5Dio.c H5Dlayout.c \
+	H5Dnone.c H5Doh.c H5Dscatgath.c H5Dselect.c H5Dsingle.c \
 	H5Dtest.c H5Dvirtual.c H5E.c H5Edeprec.c H5Eint.c H5EA.c \
 	H5EAcache.c H5EAdbg.c H5EAdblkpage.c H5EAdblock.c H5EAhdr.c \
 	H5EAiblock.c H5EAint.c H5EAsblock.c H5EAstat.c H5EAtest.c \
@@ -853,24 +921,24 @@ libhdf5_la_SOURCES = H5.c H5checksum.c H5dbg.c H5system.c H5timer.c \
 	H5HFdbg.c H5HFdblock.c H5HFdtable.c H5HFhdr.c H5HFhuge.c \
 	H5HFiblock.c H5HFiter.c H5HFman.c H5HFsection.c H5HFspace.c \
 	H5HFstat.c H5HFtest.c H5HFtiny.c H5HG.c H5HGcache.c H5HGdbg.c \
-	H5HGquery.c H5HL.c H5HLcache.c H5HLdbg.c H5HLint.c H5HP.c \
-	H5I.c H5Itest.c H5L.c H5Lexternal.c H5lib_settings.c H5MF.c \
-	H5MFaggr.c H5MFdbg.c H5MFsection.c H5MM.c H5MP.c H5MPtest.c \
-	H5O.c H5Oainfo.c H5Oalloc.c H5Oattr.c H5Oattribute.c \
-	H5Obogus.c H5Obtreek.c H5Ocache.c H5Ochunk.c H5Ocont.c \
-	H5Ocopy.c H5Odbg.c H5Odrvinfo.c H5Odtype.c H5Oefl.c H5Ofill.c \
-	H5Ofsinfo.c H5Oginfo.c H5Olayout.c H5Olinfo.c H5Olink.c \
-	H5Omdci_msg.c H5Omessage.c H5Omtime.c H5Oname.c H5Onull.c \
-	H5Opline.c H5Orefcount.c H5Osdspace.c H5Oshared.c H5Ostab.c \
-	H5Oshmesg.c H5Otest.c H5Ounknown.c H5P.c H5Pacpl.c H5Pdapl.c \
-	H5Pdcpl.c H5Pdeprec.c H5Pdxpl.c H5Pencdec.c H5Pfapl.c \
-	H5Pfcpl.c H5Pfmpl.c H5Pgcpl.c H5Pint.c H5Plapl.c H5Plcpl.c \
-	H5Pocpl.c H5Pocpypl.c H5Pstrcpl.c H5Ptest.c H5PL.c H5R.c \
-	H5Rdeprec.c H5UC.c H5RS.c H5S.c H5Sall.c H5Sdbg.c H5Shyper.c \
-	H5Snone.c H5Spoint.c H5Sselect.c H5Stest.c H5SL.c H5SM.c \
-	H5SMbtree2.c H5SMcache.c H5SMmessage.c H5SMtest.c H5ST.c H5T.c \
-	H5Tarray.c H5Tbit.c H5Tcommit.c H5Tcompound.c H5Tconv.c \
-	H5Tcset.c H5Tdbg.c H5Tdeprec.c H5Tenum.c H5Tfields.c \
+	H5HGquery.c H5HL.c H5HLcache.c H5HLdbg.c H5HLint.c H5HLprfx.c \
+	H5HLdblk.c H5HP.c H5I.c H5Itest.c H5L.c H5Lexternal.c \
+	H5lib_settings.c H5MF.c H5MFaggr.c H5MFdbg.c H5MFsection.c \
+	H5MM.c H5MP.c H5MPtest.c H5O.c H5Oainfo.c H5Oalloc.c H5Oattr.c \
+	H5Oattribute.c H5Obogus.c H5Obtreek.c H5Ocache.c H5Ochunk.c \
+	H5Ocont.c H5Ocopy.c H5Odbg.c H5Odrvinfo.c H5Odtype.c H5Oefl.c \
+	H5Ofill.c H5Ofsinfo.c H5Oginfo.c H5Olayout.c H5Olinfo.c \
+	H5Olink.c H5Omdci_msg.c H5Omessage.c H5Omtime.c H5Oname.c \
+	H5Onull.c H5Opline.c H5Orefcount.c H5Osdspace.c H5Oshared.c \
+	H5Oshmesg.c H5Ostab.c H5Otest.c H5Ounknown.c H5P.c H5Pacpl.c \
+	H5Pdapl.c H5Pdcpl.c H5Pdeprec.c H5Pdxpl.c H5Pencdec.c \
+	H5Pfapl.c H5Pfcpl.c H5Pfmpl.c H5Pgcpl.c H5Pint.c H5Plapl.c \
+	H5Plcpl.c H5Pocpl.c H5Pocpypl.c H5Pstrcpl.c H5Ptest.c H5PL.c \
+	H5R.c H5Rdeprec.c H5UC.c H5RS.c H5S.c H5Sall.c H5Sdbg.c \
+	H5Shyper.c H5Snone.c H5Spoint.c H5Sselect.c H5Stest.c H5SL.c \
+	H5SM.c H5SMbtree2.c H5SMcache.c H5SMmessage.c H5SMtest.c \
+	H5ST.c H5T.c H5Tarray.c H5Tbit.c H5Tcommit.c H5Tcompound.c \
+	H5Tconv.c H5Tcset.c H5Tdbg.c H5Tdeprec.c H5Tenum.c H5Tfields.c \
 	H5Tfixed.c H5Tfloat.c H5Tinit.c H5Tnative.c H5Toffset.c \
 	H5Toh.c H5Topaque.c H5Torder.c H5Tpad.c H5Tprecis.c \
 	H5Tstrpad.c H5Tvisit.c H5Tvlen.c H5TS.c H5VM.c H5WB.c H5Z.c \
@@ -884,7 +952,7 @@ include_HEADERS = hdf5.h H5api_adpt.h H5overflow.h H5pubconf.h H5public.h H5vers
         H5Cpublic.h H5Dpublic.h \
         H5Epubgen.h H5Epublic.h H5Fpublic.h \
         H5FDpublic.h H5FDcore.h H5FDdirect.h \
-	H5FDfamily.h H5FDlog.h H5FDmpi.h H5FDmpio.h \
+        H5FDfamily.h H5FDlog.h H5FDmpi.h H5FDmpio.h \
         H5FDmulti.h H5FDsec2.h  H5FDstdio.h \
         H5Gpublic.h  H5Ipublic.h H5Lpublic.h \
         H5MMpublic.h H5Opublic.h H5Ppublic.h \
@@ -1055,20 +1123,25 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Cmpio.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5D.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dbtree.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dbtree2.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dchunk.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dcompact.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dcontig.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Ddbg.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Ddeprec.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dearray.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Defl.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dfarray.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dfill.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dint.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dio.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dlayout.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dmpio.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dnone.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Doh.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dscatgath.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dselect.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dsingle.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dtest.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Dvirtual.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5E.Plo@am__quote@
@@ -1170,7 +1243,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5HL.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5HLcache.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5HLdbg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5HLdblk.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5HLint.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5HLprfx.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5HP.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5I.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5Itest.Plo@am__quote@

@@ -152,7 +152,7 @@
 #define H5C__MAX_AR_EPOCH_LENGTH		1000000
 
 /* #defines of flags used in the flags parameters in some of the
- * cache calls.  Note that not all flags are applicable
+ * following function calls.  Note that not all flags are applicable
  * to all function calls.  Flags that don't apply to a particular
  * function are ignored in that function.
  *
@@ -1395,13 +1395,10 @@ typedef int H5C_ring_t;
  *		flushed from the cache until all other entries without
  *              the flush_me_last flag set have been flushed.
  *
- * flush_me_collectively:  Boolean flag indicating that this entry needs
- *              to be flushed collectively when in a parallel situation.
- * 
  *		Note: 
  *		
- *		At this time, the flush_me_last and flush_me_collectively
- *              flags will only be applied to one entry, the superblock,
+ *		At this time, the flush_me_last 
+ *              flag will only be applied to one entry, the superblock,
  *              and the code utilizing these flags is protected with HDasserts
  *              to enforce this. This restraint can certainly be relaxed in
  *              the future if the the need for multiple entries getting flushed
@@ -1743,9 +1740,9 @@ typedef struct H5C_cache_entry_t {
     hbool_t			flush_marker;
     hbool_t                     flush_me_last;
 #ifdef H5_HAVE_PARALLEL
-    hbool_t                     flush_me_collectively;
     hbool_t			clear_on_unprotect;
     hbool_t			flush_immediately;
+    hbool_t			coll_access;
 #endif /* H5_HAVE_PARALLEL */
     hbool_t			flush_in_progress;
     hbool_t			destroy_in_progress;
@@ -1771,6 +1768,10 @@ typedef struct H5C_cache_entry_t {
     struct H5C_cache_entry_t  *	prev;
     struct H5C_cache_entry_t  *	aux_next;
     struct H5C_cache_entry_t  *	aux_prev;
+#ifdef H5_HAVE_PARALLEL
+    struct H5C_cache_entry_t  *	coll_next;
+    struct H5C_cache_entry_t  *	coll_prev;
+#endif /* H5_HAVE_PARALLEL */
 
     /* fields supporting cache image */
     hbool_t			include_in_image;
@@ -2277,8 +2278,7 @@ H5_DLL void * H5C_protect(H5F_t *f, hid_t dxpl_id, const H5C_class_t *type,
     haddr_t addr, void *udata, unsigned flags);
 H5_DLL herr_t H5C_reset_cache_hit_rate_stats(H5C_t *cache_ptr);
 H5_DLL herr_t H5C_resize_entry(void *thing, size_t new_size);
-H5_DLL herr_t H5C_set_cache_auto_resize_config(H5C_t *cache_ptr,
-    H5C_auto_size_ctl_t *config_ptr);
+H5_DLL herr_t H5C_set_cache_auto_resize_config(H5C_t *cache_ptr, H5C_auto_size_ctl_t *config_ptr);
 H5_DLL herr_t H5C_set_cache_image_config(const H5F_t *f, H5C_t *cache_ptr,
     H5C_cache_image_ctl_t *config_ptr);
 H5_DLL herr_t H5C_set_evictions_enabled(H5C_t *cache_ptr, hbool_t evictions_enabled);
@@ -2305,6 +2305,7 @@ H5_DLL herr_t H5C_apply_candidate_list(H5F_t *f, hid_t dxpl_id,
     int mpi_rank, int mpi_size);
 H5_DLL herr_t H5C_construct_candidate_list__clean_cache(H5C_t *cache_ptr);
 H5_DLL herr_t H5C_construct_candidate_list__min_clean(H5C_t *cache_ptr);
+H5_DLL herr_t H5C_clear_coll_entries(H5C_t * cache_ptr, hbool_t partial);
 H5_DLL herr_t H5C_mark_entries_as_clean(H5F_t *f, hid_t dxpl_id, int32_t ce_array_len,
     haddr_t *ce_array_ptr);
 #endif /* H5_HAVE_PARALLEL */

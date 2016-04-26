@@ -49,6 +49,39 @@ typedef herr_t (*H5VM_opvv_func_t)(hsize_t dst_off, hsize_t src_off,
 
 #define H5VM_vector_zero(N,DST) HDmemset(DST,0,(N)*sizeof(*(DST)))
 
+/* Given a coordinate offset array (COORDS) of type TYPE, move the unlimited
+ * dimension (UNLIM_DIM) value to offset 0, sliding any intermediate values down
+ * one position. */
+#define H5VM_swizzle_coords(TYPE,COORDS,UNLIM_DIM) {                            \
+    /* COORDS must be an array of type TYPE */                                 \
+    HDassert(sizeof(COORDS[0]) == sizeof(TYPE));                               \
+                                                                               \
+    /* Nothing to do when unlimited dimension is at position 0 */              \
+    if(0 != (UNLIM_DIM)) {                                                     \
+        TYPE _tmp = (COORDS)[UNLIM_DIM];                                       \
+                                                                               \
+        HDmemmove(&(COORDS)[1], &(COORDS)[0], sizeof(TYPE) * (UNLIM_DIM));     \
+        (COORDS)[0] = _tmp;                                                    \
+    } /* end if */                                                             \
+}
+
+/* Given a coordinate offset array (COORDS) of type TYPE, move the value at
+ * offset 0 to offset of the unlimied dimension (UNLIM_DIM), sliding any
+ * intermediate values up one position.  Undoes the "swizzle_coords" operation.
+ */
+#define H5VM_unswizzle_coords(TYPE,COORDS,UNLIM_DIM) {                          \
+    /* COORDS must be an array of type TYPE */                                 \
+    HDassert(sizeof(COORDS[0]) == sizeof(TYPE));                               \
+                                                                               \
+    /* Nothing to do when unlimited dimension is at position 0 */              \
+    if(0 != (UNLIM_DIM)) {                                                     \
+        TYPE _tmp = (COORDS)[0];                                               \
+                                                                               \
+        HDmemmove(&(COORDS)[0], &(COORDS)[1], sizeof(TYPE) * (UNLIM_DIM));     \
+        (COORDS)[UNLIM_DIM] = _tmp;                                            \
+    } /* end if */                                                             \
+}
+
 /* A null pointer is equivalent to a zero vector */
 #define H5VM_ZERO        NULL
 
@@ -403,7 +436,7 @@ static const unsigned MultiplyDeBruijnBitPosition[32] =
  *
  *-------------------------------------------------------------------------
  */
-static H5_INLINE unsigned H5_ATTR_UNUSED
+static H5_INLINE H5_ATTR_PURE unsigned
 H5VM_log2_of2(uint32_t n)
 {
 #ifndef NDEBUG
@@ -424,7 +457,7 @@ H5VM_log2_of2(uint32_t n)
  *
  *-------------------------------------------------------------------------
  */
-static H5_INLINE hsize_t H5_ATTR_UNUSED
+static H5_INLINE H5_ATTR_CONST hsize_t
 H5VM_power2up(hsize_t n)
 {
     hsize_t     ret_value = 1;  /* Return value */

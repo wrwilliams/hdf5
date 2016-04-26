@@ -15,11 +15,11 @@
 
 /*-------------------------------------------------------------------------
  *
- * Created:		H5FSprivate.h
- *			May  2 2006
- *			Quincey Koziol <koziol@ncsa.uiuc.edu>
+ * Created:     H5FSprivate.h
+ *              May  2 2006
+ *              Quincey Koziol <koziol@hdfgroup.org>
  *
- * Purpose:		Private header for library accessible file free space routines.
+ * Purpose:     Private header for library accessible file free space routines.
  *
  *-------------------------------------------------------------------------
  */
@@ -106,7 +106,7 @@ typedef struct H5FS_section_class_t {
     htri_t (*can_shrink)(const H5FS_section_info_t *, void *);        /* Routine to determine if node can shrink container */
     herr_t (*shrink)(H5FS_section_info_t **, void *);   /* Routine to shrink container */
     herr_t (*free)(H5FS_section_info_t *);              /* Routine to free node */
-    herr_t (*valid)(const struct H5FS_section_class_t *, const H5FS_section_info_t *);   /* Routine to check if a section is valid */
+    herr_t (*valid)(const struct H5FS_section_class_t *, const H5FS_section_info_t *, hid_t dxpl_id);   /* Routine to check if a section is valid */
     H5FS_section_info_t *(*split)(H5FS_section_info_t *, hsize_t);     /* Routine to create the split section */
     herr_t (*debug)(const H5FS_section_info_t *, FILE *, int , int );   /* Routine to dump debugging information about a section */
 } H5FS_section_class_t;
@@ -127,8 +127,8 @@ struct H5FS_section_info_t {
 
 /* Free space client IDs for identifying user of free space */
 typedef enum H5FS_client_t {
-    H5FS_CLIENT_FHEAP_ID = 0,	/* Free space is used by fractal heap */
-    H5FS_CLIENT_FILE_ID,	/* Free space is used by file */
+    H5FS_CLIENT_FHEAP_ID = 0,   /* Free space is used by fractal heap */
+    H5FS_CLIENT_FILE_ID,        /* Free space is used by file */
     H5FS_NUM_CLIENT_ID          /* Number of free space client IDs (must be last)   */
 } H5FS_client_t;
 
@@ -147,11 +147,11 @@ typedef struct H5FS_stat_t {
     hsize_t tot_sect_count;     /* Total # of sections tracked                */
     hsize_t serial_sect_count;  /* # of serializable sections tracked         */
     hsize_t ghost_sect_count;   /* # of un-serializable sections tracked      */
-    haddr_t addr;		/* Address of free space header on disk       */
-    hsize_t hdr_size;		/* Size of the free-space header on disk      */
+    haddr_t addr;               /* Address of free space header on disk       */
+    hsize_t hdr_size;           /* Size of the free-space header on disk      */
     haddr_t sect_addr;          /* Address of the section info in the file    */
     hsize_t alloc_sect_size;    /* Allocated size of the section info in the file */
-    hsize_t sect_size;    	/* Size of the section info in the file       */
+    hsize_t sect_size;          /* Size of the section info in the file       */
 } H5FS_stat_t;
 
 /* Typedef for iteration operations */

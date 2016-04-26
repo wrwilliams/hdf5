@@ -37,13 +37,6 @@
 namespace H5 {
 #endif
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
-
-// This static variable is unused, will be removed in future releases.
-bool H5Library::need_cleanup = false;
-
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-
 //--------------------------------------------------------------------------
 // Function:	H5Library::open (static)
 ///\brief	Initializes the HDF5 library.
@@ -262,10 +255,10 @@ void H5Library::setFreeListLimits(int reg_global_lim, int reg_list_lim,
 }
 
 // Default constructor - private
-H5Library::H5Library(){};
+H5Library::H5Library(){}
 
 // Destructor - private
-H5Library::~H5Library(){};
+H5Library::~H5Library(){}
 
 #ifndef H5_NO_NAMESPACE
 } // end namespace

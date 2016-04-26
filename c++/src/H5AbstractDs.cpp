@@ -49,7 +49,7 @@ AbstractDs::AbstractDs(){}
 // removal does not raise any problems in 1.10, it will be removed from 1.8 in
 // subsequent releases.
 //--------------------------------------------------------------------------
-AbstractDs::AbstractDs(const hid_t ds_id){}
+// Mar 2016 -BMR, AbstractDs::AbstractDs(const hid_t ds_id){}
 
 //--------------------------------------------------------------------------
 // Function:	AbstractDs::getTypeClass
@@ -68,10 +68,10 @@ H5T_class_t AbstractDs::getTypeClass() const
    try {
       datatype_id = p_get_type();  // returned value is already validated
    }
-   catch (DataSetIException E) {
+   catch (DataSetIException& E) {
       throw DataTypeIException("DataSet::getTypeClass", E.getDetailMsg());
    }
-   catch (AttributeIException E) {
+   catch (AttributeIException& E) {
       throw DataTypeIException("Attribute::getTypeClass", E.getDetailMsg());
    }
 
@@ -118,10 +118,10 @@ DataType AbstractDs::getDataType() const
 	f_DataType_setId(&datatype, p_get_type());
 	return(datatype);
    }
-   catch (DataSetIException E) {
+   catch (DataSetIException& E) {
       throw DataTypeIException("DataSet::getDataType", E.getDetailMsg());
    }
-   catch (AttributeIException E) {
+   catch (AttributeIException& E) {
       throw DataTypeIException("Attribute::getDataType", E.getDetailMsg());
    }
 }
@@ -141,14 +141,16 @@ ArrayType AbstractDs::getArrayType() const
    // depending on which object invokes getArrayType.  Then, create and
    // return the ArrayType object
    try {
+	// Create ArrayType and set values this way to work around the
+	// problem described in the JIRA issue HDFFV-7947
 	ArrayType arraytype;
 	f_DataType_setId(&arraytype, p_get_type());
 	return(arraytype);
    }
-   catch (DataSetIException E) {
+   catch (DataSetIException& E) {
       throw DataTypeIException("DataSet::getArrayType", E.getDetailMsg());
    }
-   catch (AttributeIException E) {
+   catch (AttributeIException& E) {
       throw DataTypeIException("Attribute::getArrayType", E.getDetailMsg());
    }
 }
@@ -172,10 +174,10 @@ CompType AbstractDs::getCompType() const
 	f_DataType_setId(&comptype, p_get_type());
 	return(comptype);
    }
-   catch (DataSetIException E) {
+   catch (DataSetIException& E) {
       throw DataTypeIException("DataSet::getCompType", E.getDetailMsg());
    }
-   catch (AttributeIException E) {
+   catch (AttributeIException& E) {
       throw DataTypeIException("Attribute::getCompType", E.getDetailMsg());
    }
 }
@@ -199,10 +201,10 @@ EnumType AbstractDs::getEnumType() const
 	f_DataType_setId(&enumtype, p_get_type());
 	return(enumtype);
    }
-   catch (DataSetIException E) {
+   catch (DataSetIException& E) {
       throw DataTypeIException("DataSet::getEnumType", E.getDetailMsg());
    }
-   catch (AttributeIException E) {
+   catch (AttributeIException& E) {
       throw DataTypeIException("Attribute::getEnumType", E.getDetailMsg());
    }
 }
@@ -226,10 +228,10 @@ IntType AbstractDs::getIntType() const
 	f_DataType_setId(&inttype, p_get_type());
 	return(inttype);
    }
-   catch (DataSetIException E) {
+   catch (DataSetIException& E) {
       throw DataTypeIException("DataSet::getIntType", E.getDetailMsg());
    }
-   catch (AttributeIException E) {
+   catch (AttributeIException& E) {
       throw DataTypeIException("Attribute::getIntType", E.getDetailMsg());
    }
 }
@@ -253,10 +255,10 @@ FloatType AbstractDs::getFloatType() const
 	f_DataType_setId(&floatype, p_get_type());
 	return(floatype);
    }
-   catch (DataSetIException E) {
+   catch (DataSetIException& E) {
       throw DataTypeIException("DataSet::getFloatType", E.getDetailMsg());
    }
-   catch (AttributeIException E) {
+   catch (AttributeIException& E) {
       throw DataTypeIException("Attribute::getFloatType", E.getDetailMsg());
    }
 }
@@ -280,10 +282,10 @@ StrType AbstractDs::getStrType() const
 	f_DataType_setId(&strtype, p_get_type());
 	return(strtype);
    }
-   catch (DataSetIException E) {
+   catch (DataSetIException& E) {
       throw DataTypeIException("DataSet::getStrType", E.getDetailMsg());
    }
-   catch (AttributeIException E) {
+   catch (AttributeIException& E) {
       throw DataTypeIException("Attribute::getStrType", E.getDetailMsg());
    }
 }
@@ -307,10 +309,10 @@ VarLenType AbstractDs::getVarLenType() const
 	f_DataType_setId(&varlentype, p_get_type());
 	return(varlentype);
    }
-   catch (DataSetIException E) {
+   catch (DataSetIException& E) {
       throw DataTypeIException("DataSet::getVarLenType", E.getDetailMsg());
    }
-   catch (AttributeIException E) {
+   catch (AttributeIException& E) {
       throw DataTypeIException("Attribute::getVarLenType", E.getDetailMsg());
    }
 }

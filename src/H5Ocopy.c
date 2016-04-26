@@ -213,10 +213,11 @@ H5Ocopy(hid_t src_loc_id, const char *src_name, hid_t dst_loc_id,
     /* for opening the destination object */
     H5G_name_t  src_path;               /* Opened source object hier. path */
     H5O_loc_t   src_oloc;               /* Opened source object object location */
+    htri_t      dst_exists;             /* Does destination name exist already? */
     hbool_t     loc_found = FALSE;      /* Location at 'name' found */
     hbool_t     obj_open = FALSE;       /* Entry at 'name' found */
-
-    herr_t      ret_value = SUCCEED;        /* Return value */
+    hid_t       dxpl_id = H5AC_ind_read_dxpl_id; /* dxpl used by library */
+    herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE6("e", "i*si*sii", src_loc_id, src_name, dst_loc_id, dst_name,
@@ -233,22 +234,10 @@ H5Ocopy(hid_t src_loc_id, const char *src_name, hid_t dst_loc_id,
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no destination name specified")
 
     /* check if destination name already exists */
-    {
-        H5G_name_t  tmp_path;
-        H5O_loc_t   tmp_oloc;
-        H5G_loc_t   tmp_loc;
-
-        /* Set up group location */
-        tmp_loc.oloc = &tmp_oloc;
-        tmp_loc.path = &tmp_path;
-        H5G_loc_reset(&tmp_loc);
-
-        /* Check if object already exists in destination */
-        if(H5G_loc_find(&dst_loc, dst_name, &tmp_loc, H5P_DEFAULT, H5AC_ind_dxpl_id) >= 0) {
-            H5G_name_free(&tmp_path);
-            HGOTO_ERROR(H5E_SYM, H5E_EXISTS, FAIL, "destination object already exists")
-        } /* end if */
-    }
+    if((dst_exists = H5L_exists_tolerant(&dst_loc, dst_name, H5P_DEFAULT, dxpl_id)) < 0)
+	HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to check if destination name exists")
+    if(TRUE == dst_exists)
+        HGOTO_ERROR(H5E_OHDR, H5E_EXISTS, FAIL, "destination object already exists")
 
     /* Set up opened group location to fill in */
     src_loc.oloc = &src_oloc;
@@ -256,7 +245,7 @@ H5Ocopy(hid_t src_loc_id, const char *src_name, hid_t dst_loc_id,
     H5G_loc_reset(&src_loc);
 
     /* Find the source object to copy */
-    if(H5G_loc_find(&loc, src_name, &src_loc/*out*/, H5P_DEFAULT, H5AC_ind_dxpl_id) < 0)
+    if(H5G_loc_find(&loc, src_name, &src_loc/*out*/, H5P_DEFAULT, dxpl_id) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "source object not found")
     loc_found = TRUE;
 
@@ -282,7 +271,7 @@ H5Ocopy(hid_t src_loc_id, const char *src_name, hid_t dst_loc_id,
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not object copy property list")
 
     /* Do the actual copying of the object */
-    if(H5O_copy_obj(&src_loc, &dst_loc, dst_name, ocpypl_id, lcpl_id, H5AC_dxpl_id) < 0)
+    if(H5O_copy_obj(&src_loc, &dst_loc, dst_name, ocpypl_id, lcpl_id, dxpl_id) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy object")
 
 done:
@@ -337,7 +326,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out*/,
     size_t                 null_msgs;               /* Number of NULL messages found in each loop */
     size_t                 orig_dst_msgs;           /* Original # of messages in dest. object */
     H5O_mesg_t             *mesg_src;               /* Message in source object header */
-    H5O_mesg_t             *mesg_dst;               /* Message in source object header */
+    H5O_mesg_t             *mesg_dst;               /* Message in destination object header */
     const H5O_msg_class_t  *copy_type;              /* Type of message to use for copying */
     const H5O_obj_class_t  *obj_class = NULL;       /* Type of object we are copying */
     void                   *cpy_udata = NULL;       /* User data for passing to message callbacks */
@@ -357,35 +346,46 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out*/,
     HDassert(cpy_info);
 
     /* Get pointer to object class for this object */
-    if((obj_class = H5O_obj_class(oloc_src, dxpl_id)) == NULL)
+    if(NULL == (obj_class = H5O_obj_class(oloc_src, dxpl_id)))
         HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to determine object type")
 
     /* Check if the object at the address is already open in the file */
     if(H5FO_opened(oloc_src->file, oloc_src->addr) != NULL) {
-	
 	H5G_loc_t   tmp_loc; 	/* Location of object */
 	H5O_loc_t   tmp_oloc; 	/* Location of object */
 	H5G_name_t  tmp_path;	/* Object's path */
+	void *obj_ptr = NULL;	/* Object pointer */
+	hid_t tmp_id = -1;	/* Object ID */
 
 	tmp_loc.oloc = &tmp_oloc;
 	tmp_loc.path = &tmp_path;
 	tmp_oloc.file = oloc_src->file;
 	tmp_oloc.addr = oloc_src->addr;
-	tmp_oloc.holding_file = oloc_src->holding_file;
+	tmp_oloc.holding_file = FALSE;
 	H5G_name_reset(tmp_loc.path);
 
-	/* Flush the object of this class */
-        if(obj_class->flush && obj_class->flush(&tmp_loc, dxpl_id) < 0)
+	/* Get a temporary ID */
+	if((tmp_id = obj_class->open(&tmp_loc, H5P_DEFAULT, dxpl_id, FALSE)) < 0)
+            HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to open object")
+
+	/* Get object pointer */
+	obj_ptr = H5I_object(tmp_id);
+
+	/* Flush the object */
+        if(obj_class->flush && obj_class->flush(obj_ptr, dxpl_id) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to flush object")
-    }
+
+	/* Release the temporary ID */
+	if(tmp_id != -1 && H5I_dec_app_ref(tmp_id))
+	    HGOTO_ERROR(H5E_OHDR, H5E_CANTRELEASE, FAIL, "unable to close temporary ID")
+    } /* end if */
 
     /* Get source object header */
     if(NULL == (oh_src = H5O_protect(oloc_src, dxpl_id, H5AC__READ_ONLY_FLAG)))
         HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, FAIL, "unable to load object header")
 
     /* Retrieve user data for particular type of object to copy */
-    if(obj_class->get_copy_file_udata &&
-            (NULL == (cpy_udata = (obj_class->get_copy_file_udata)())))
+    if(obj_class->get_copy_file_udata && (NULL == (cpy_udata = (obj_class->get_copy_file_udata)())))
         HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to retrieve copy user data")
 
     /* If we are merging committed datatypes, check for a match in the destination
@@ -468,7 +468,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out*/,
     oh_dst->alloc_nchunks = oh_dst->nchunks = 0;
 
     /* Allocate memory for the chunk array - always start with 1 chunk */
-    if(NULL == (oh_dst->chunk = H5FL_SEQ_MALLOC(H5O_chunk_t, 1)))
+    if(NULL == (oh_dst->chunk = H5FL_SEQ_MALLOC(H5O_chunk_t, (size_t)1)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
 
     /* Update number of allocated chunks.  There are still no chunks used. */
@@ -477,7 +477,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out*/,
     /* Allocate memory for "deleted" array.  This array marks the message in
      * the source that shouldn't be copied to the destination.
      */
-    if(NULL == (deleted = (hbool_t *)HDmalloc(sizeof(hbool_t) * oh_src->nmesgs)))
+    if(NULL == (deleted = (hbool_t *)H5MM_malloc(sizeof(hbool_t) * oh_src->nmesgs)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
     HDmemset(deleted, FALSE, sizeof(hbool_t) * oh_src->nmesgs);
 
@@ -884,7 +884,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out*/,
 done:
     /* Free deleted array */
     if(deleted)
-        HDfree(deleted);
+        H5MM_free(deleted);
 
     /* Release pointer to source object header and its derived objects */
     if(oh_src && H5O_unprotect(oloc_src, dxpl_id, oh_src, H5AC__NO_FLAGS_SET) < 0)

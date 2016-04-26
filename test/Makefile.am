@@ -37,16 +37,15 @@ check_SCRIPTS = $(TEST_SCRIPT)
 # executed, generally most specific tests to least specific tests.
 # As an exception, long-running tests should occur earlier in the list.
 # This gives them more time to run when tests are executing in parallel.
-# These tests (fheap, btree2) are under development and are not used by
-# the library yet. Move them to the end so that their failure do not block
-# other current library code tests.
-TEST_PROG= testhdf5 lheap ohdr stab gheap cache cache_api cache_image \
-           cache_tagging pool accum hyperslab istore bittests dt_arith \
+TEST_PROG= testhdf5 \
+           cache cache_api cache_image cache_tagging \
+           lheap ohdr stab gheap farray earray btree2 fheap \
+           pool accum hyperslab istore bittests dt_arith \
            dtypes dsets cmpd_dset filter_fail extend external efc objcopy links unlink \
            big mtime fillval mount flush1 flush2 app_ref enum \
            set_extent ttsafe enc_dec_plist enc_dec_plist_cross_platform\
            getname vfd ntypes dangle dtransform reserved cross_read \
-           freespace mf vds farray earray btree2 fheap file_image unregister
+           freespace mf vds file_image unregister
 
 # List programs to be built when testing here. error_test and err_compat are
 # built at the same time as the other tests, but executed by testerror.sh.
@@ -128,10 +127,12 @@ flush2.chkexe_: flush1.chkexe_
 # the temporary file name in ways that the makefile is not aware of.
 CHECK_CLEANFILES+=accum.h5 cmpd_dset.h5 compact_dataset.h5 dataset.h5 dset_offset.h5 \
     max_compact_dataset.h5 simple.h5 set_local.h5 random_chunks.h5 \
-    huge_chunks.h5 chunk_cache.h5 big_chunk.h5 chunk_expand.h5 \
-    copy_dcpl_newfile.h5 extend.h5 istore.h5 extlinks*.h5 frspace.h5 links*.h5 \
+    huge_chunks.h5 chunk_cache.h5 big_chunk.h5 chunk_fast.h5 chunk_expand.h5 \
+    chunk_fixed.h5 copy_dcpl_newfile.h5 partial_chunks.h5 layout_extend.h5 \
+    zero_chunk.h5 chunk_single.h5 storage_size.h5 dls_01_strings.h5 \
+    extend.h5 istore.h5 extlinks*.h5 frspace.h5 links*.h5 \
     sys_file1 tfile[1-7].h5 th5s[1-4].h5 lheap.h5 fheap.h5 ohdr.h5 \
-    stab.h5 extern_[1-3].h5 extern_[1-4][ab].raw gheap[0-4].h5 \
+    stab.h5 extern_[1-5].h5 extern_[1-4][rw].raw gheap[0-4].h5 \
     dt_arith[1-2] links.h5 links[0-6]*.h5 extlinks[0-15].h5 tmp \
     big.data big[0-9][0-9][0-9][0-9][0-9].h5  \
     stdio.h5 sec2.h5 dtypes[0-9].h5 dtypes1[0].h5 dt_arith[1-2].h5 tattr.h5 \
@@ -145,13 +146,13 @@ CHECK_CLEANFILES+=accum.h5 cmpd_dset.h5 compact_dataset.h5 dataset.h5 dset_offse
     multi_file-[rs].h5 core_file plugin.h5 \
     new_move_[ab].h5 ntypes.h5 dangle.h5 error_test.h5 err_compat.h5 \
     dtransform.h5 test_filters.h5 get_file_name.h5 tstint[1-2].h5    \
-    unlink_chunked.h5 btree2.h5 objcopy_src.h5 objcopy_dst.h5        \
-    objcopy_ext.dat trefer1.h5 trefer2.h5 app_ref.h5 farray.h5       \
-    earray.h5 efc[0-5].h5 log_vfd_out.log                            \
+    unlink_chunked.h5 btree2.h5 btree2_tmp.h5 objcopy_src.h5 objcopy_dst.h5 \
+    objcopy_ext.dat trefer1.h5 trefer2.h5 app_ref.h5 farray.h5 farray_tmp.h5 \
+    earray.h5 earray_tmp.h5 efc[0-5].h5 log_vfd_out.log              \
     new_multi_file_v16-r.h5 new_multi_file_v16-s.h5                  \
     split_get_file_image_test-m.h5 split_get_file_image_test-r.h5    \
     file_image_core_test.h5.copy unregister_filter_1.h5 unregister_filter_2.h5 \
-    vds_virt.h5 vds_src_[0-1].h5
+    vds_virt.h5 vds_dapl.h5 vds_src_[0-1].h5
 
 # Sources for testhdf5 executable
 testhdf5_SOURCES=testhdf5.c tarray.c tattr.c tchecksum.c tconfig.c tfile.c \

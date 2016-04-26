@@ -98,7 +98,13 @@ typedef struct H5O_t H5O_t;
 #ifdef H5O_ENABLE_BOGUS
 #define H5O_BOGUS_MSG_FLAGS_NAME        "bogus msg flags"       /* Flags for 'bogus' message */
 #define H5O_BOGUS_MSG_FLAGS_SIZE        sizeof(uint8_t)
+
+/* bogus ID can be either (a) H5O_BOGUS_VALID_ID or (b) H5O_BOGUS_INVALID_ID */
+#define H5O_BOGUS_MSG_ID_NAME        "bogus msg id" 		/* ID for 'bogus' message */
+#define H5O_BOGUS_MSG_ID_SIZE        sizeof(unsigned)
+
 #endif /* H5O_ENABLE_BOGUS */
+
 #ifdef H5O_ENABLE_BAD_MESG_COUNT
 #define H5O_BAD_MESG_COUNT_NAME         "bad message count"       /* Flag setting bad message count */
 #define H5O_BAD_MESG_COUNT_SIZE         sizeof(hbool_t)
@@ -183,7 +189,7 @@ typedef struct H5O_copy_t {
 #define H5O_LINK_ID     0x0006          /* Link Message. */
 #define H5O_EFL_ID	0x0007          /* External File List Message  */
 #define H5O_LAYOUT_ID	0x0008          /* Data Layout Message.  */
-#define H5O_BOGUS_ID	0x0009          /* "Bogus" Message.  */
+#define H5O_BOGUS_VALID_ID	0x0009  /* "Bogus valid" Message.  */
 #define H5O_GINFO_ID	0x000a          /* Group info Message.  */
 #define H5O_PLINE_ID	0x000b          /* Filter pipeline message.  */
 #define H5O_ATTR_ID	0x000c          /* Attribute Message.  */
@@ -203,8 +209,11 @@ typedef struct H5O_copy_t {
                                         /* (this should never exist in a file) */
 /* 
  * Note: Must increment H5O_MSG_TYPES in H5Opkg.h and update H5O_msg_class_g
- *	 H5O.c when creating a new message type.
+ *      in H5O.c when creating a new message type.  Also bump the value of
+ *      H5O_BOGUS_INVALID_ID, below, to be one greater than the value of
+ *      H5O_UNKNOWN_ID.
  */
+#define H5O_BOGUS_INVALID_ID	0x001A  /* "Bogus invalid" Message.  */
 
 /* Shared object message types.
  * Shared objects can be committed, in which case the shared message contains
@@ -365,6 +374,14 @@ typedef struct H5O_efl_t {
  */
 #define H5O_LAYOUT_NDIMS	(H5S_MAX_RANK+1)
 
+/* Flags for chunked layout feature encoding */
+#define H5O_LAYOUT_CHUNK_DONT_FILTER_PARTIAL_BOUND_CHUNKS         0x01
+#define H5O_LAYOUT_CHUNK_SINGLE_INDEX_WITH_FILTER		  0x02
+#define H5O_LAYOUT_ALL_CHUNK_FLAGS                    (                     \
+    H5O_LAYOUT_CHUNK_DONT_FILTER_PARTIAL_BOUND_CHUNKS                       \
+    | H5O_LAYOUT_CHUNK_SINGLE_INDEX_WITH_FILTER                             \
+    )
+
 /* Initial version of the layout information.  Used when space is allocated */
 #define H5O_LAYOUT_VERSION_1	1
 
@@ -387,10 +404,12 @@ typedef struct H5O_efl_t {
  */
 #define H5O_LAYOUT_VERSION_4	4
 
+/* The default version of the format.  (Earlier versions had bugs) */
+#define H5O_LAYOUT_VERSION_DEFAULT H5O_LAYOUT_VERSION_3
+
 /* The latest version of the format.  Look through the 'encode'
  *      and 'size' callbacks for places to change when updating this. */
 #define H5O_LAYOUT_VERSION_LATEST H5O_LAYOUT_VERSION_4
-
 
 /* Forward declaration of structs used below */
 struct H5D_layout_ops_t;                /* Defined in H5Dpkg.h               */
@@ -406,12 +425,46 @@ typedef struct H5O_storage_chunk_btree_t {
     H5UC_t     *shared;			/* Ref-counted shared info for B-tree nodes */
 } H5O_storage_chunk_btree_t;
 
+/* Forward declaration of structs used below */
+struct H5FA_t;                          /* Defined in H5FAprivate.h          */
+
+typedef struct H5O_storage_chunk_farray_t {
+    haddr_t     dset_ohdr_addr;         /* File address dataset's object header */
+    struct H5FA_t *fa;                  /* Pointer to fixed index array struct */
+} H5O_storage_chunk_farray_t;
+
+/* Forward declaration of structs used below */
+struct H5EA_t;                          /* Defined in H5EAprivate.h          */
+
+typedef struct H5O_storage_chunk_earray_t {
+    haddr_t	dset_ohdr_addr;		/* File address dataset's object header */
+    struct H5EA_t *ea;                  /* Pointer to extensible index array struct */
+} H5O_storage_chunk_earray_t;
+
+/* Filtered info for single chunk index */
+typedef struct H5O_storage_chunk_single_filt_t {
+    uint32_t nbytes;            /* Size of chunk (in file) */
+    uint32_t filter_mask;       /* Excluded filters for chunk */
+} H5O_storage_chunk_single_filt_t;
+
+/* Forward declaration of structs used below */
+struct H5B2_t;                          /* Defined in H5B2pkg.h          */
+
+typedef struct H5O_storage_chunk_bt2_t {
+    haddr_t     dset_ohdr_addr;         /* File address dataset's object header */
+    struct H5B2_t *bt2;                 /* Pointer to b-tree 2 struct */
+} H5O_storage_chunk_bt2_t;
+
 typedef struct H5O_storage_chunk_t {
     H5D_chunk_index_t idx_type;		/* Type of chunk index               */
     haddr_t	idx_addr;		/* File address of chunk index       */
     const struct H5D_chunk_ops_t *ops;  /* Pointer to chunked storage operations */
     union {
-        H5O_storage_chunk_btree_t btree; /* Information for v1 B-tree index   */
+        H5O_storage_chunk_btree_t btree;   /* Information for v1 B-tree index   */
+        H5O_storage_chunk_bt2_t btree2;    /* Information for v2 B-tree index */	
+        H5O_storage_chunk_earray_t earray; /* Information for extensible array index   */
+        H5O_storage_chunk_farray_t farray; /* Information for fixed array index   */
+        H5O_storage_chunk_single_filt_t single; /* Information for single chunk w/ filters index */
     } u;
 } H5O_storage_chunk_t;
 
@@ -506,13 +559,57 @@ typedef struct H5O_storage_t {
     } u;
 } H5O_storage_t;
 
+typedef struct H5O_layout_chunk_farray_t {
+    /* Creation parameters for fixed array data structure */
+    struct {
+        uint8_t max_dblk_page_nelmts_bits;  /* Log2(Max. # of elements in a data block page) - 
+                                               i.e. # of bits needed to store max. # of elements 
+                                               in a data block page */
+    } cparam;
+} H5O_layout_chunk_farray_t;
+
+typedef struct H5O_layout_chunk_earray_t {
+    /* Creation parameters for extensible array data structure */
+    struct {
+        uint8_t max_nelmts_bits;            /* Log2(Max. # of elements in array) - i.e. # of bits needed to store max. # of elements */
+        uint8_t idx_blk_elmts;              /* # of elements to store in index block */
+        uint8_t data_blk_min_elmts;         /* Min. # of elements per data block */
+        uint8_t sup_blk_min_data_ptrs;      /* Min. # of data block pointers for a super block */
+        uint8_t max_dblk_page_nelmts_bits;       /* Log2(Max. # of elements in data block page) - i.e. # of bits needed to store max. # of elements in data block page */
+    } cparam;
+
+    unsigned    unlim_dim;              /* Rank of unlimited dimension for dataset */
+    uint32_t    swizzled_dim[H5O_LAYOUT_NDIMS]; /* swizzled chunk dimensions */
+    hsize_t    	swizzled_down_chunks[H5O_LAYOUT_NDIMS];	/* swizzled "down" size of number of chunks in each dimension */
+} H5O_layout_chunk_earray_t;
+
+typedef struct H5O_layout_chunk_bt2_t {
+    /* Creation parameters for v2 B-tree data structure */
+    struct {
+	uint32_t node_size;	/* Size of each node (in bytes) */
+	uint8_t split_percent;	/* % full to split nodes */
+	uint8_t merge_percent; 	/* % full to merge nodes */
+    } cparam;
+} H5O_layout_chunk_bt2_t;
+
 typedef struct H5O_layout_chunk_t {
+    H5D_chunk_index_t idx_type;		/* Type of chunk index               */
+    uint8_t     flags;                  /* Chunk layout flags                */
     unsigned	ndims;			/* Num dimensions in chunk           */
     uint32_t	dim[H5O_LAYOUT_NDIMS];	/* Size of chunk in elements         */
+    unsigned    enc_bytes_per_dim;      /* Encoded # of bytes for storing each chunk dimension */
     uint32_t    size;                   /* Size of chunk in bytes            */
     hsize_t     nchunks;                /* Number of chunks in dataset	     */
+    hsize_t     max_nchunks;                       /* Max. number of chunks in dataset	     */
     hsize_t     chunks[H5O_LAYOUT_NDIMS];          /* # of chunks in each dataset dimension  */
+    hsize_t     max_chunks[H5O_LAYOUT_NDIMS];      /* # of chunks in each dataset's max. dimension */
     hsize_t    	down_chunks[H5O_LAYOUT_NDIMS];     /* "down" size of number of chunks in each dimension */
+    hsize_t    	max_down_chunks[H5O_LAYOUT_NDIMS]; /* "down" size of number of chunks in each max dim */
+    union {
+        H5O_layout_chunk_farray_t farray; /* Information for fixed array index */
+        H5O_layout_chunk_earray_t earray; /* Information for extensible array index */
+        H5O_layout_chunk_bt2_t btree2; /* Information for v2 B-tree index */
+    } u;
 } H5O_layout_chunk_t;
 
 typedef struct H5O_layout_t {
@@ -715,11 +812,6 @@ typedef struct H5O_mdci_msg_t {
 typedef herr_t (*H5O_operator_t)(const void *mesg/*in*/, unsigned idx,
     void *operator_data/*in,out*/);
 
-#ifdef OUT
-/* Typedef for "internal library" iteration operations */
-typedef herr_t (*H5O_lib_operator_t)(H5O_t *oh, H5O_mesg_t *mesg/*in,out*/,
-    unsigned sequence, hbool_t *oh_modified/*out*/, void *operator_data/*in,out*/);
-#endif
 /* Typedef for "internal library" iteration operations */
 typedef herr_t (*H5O_lib_operator_t)(H5O_t *oh, H5O_mesg_t *mesg/*in,out*/,
     unsigned sequence, unsigned *oh_modified/*out*/, void *operator_data/*in,out*/);
@@ -769,7 +861,7 @@ H5_DLL herr_t H5O_touch(const H5O_loc_t *loc, hbool_t force, hid_t dxpl_id);
 H5_DLL herr_t H5O_touch_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh,
     hbool_t force);
 #ifdef H5O_ENABLE_BOGUS
-H5_DLL herr_t H5O_bogus_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned mesg_flags);
+H5_DLL herr_t H5O_bogus_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned mesg_id, unsigned mesg_flags);
 #endif /* H5O_ENABLE_BOGUS */
 H5_DLL herr_t H5O_delete(H5F_t *f, hid_t dxpl_id, haddr_t addr);
 H5_DLL herr_t H5O_get_hdr_info(const H5O_loc_t *oloc, hid_t dxpl_id, H5O_hdr_info_t *hdr);
@@ -777,7 +869,7 @@ H5_DLL herr_t H5O_get_info(const H5O_loc_t *oloc, hid_t dxpl_id, hbool_t want_ih
     H5O_info_t *oinfo);
 H5_DLL herr_t H5O_obj_type(const H5O_loc_t *loc, H5O_type_t *obj_type, hid_t dxpl_id);
 H5_DLL herr_t H5O_get_create_plist(const H5O_loc_t *loc, hid_t dxpl_id, struct H5P_genplist_t *oc_plist);
-H5_DLL hid_t H5O_open_name(H5G_loc_t *loc, const char *name, hid_t lapl_id, hbool_t app_ref);
+H5_DLL hid_t H5O_open_name(H5G_loc_t *loc, const char *name, hid_t lapl_id, hid_t dxpl_id, hbool_t app_ref);
 H5_DLL herr_t H5O_get_nlinks(const H5O_loc_t *loc, hid_t dxpl_id, hsize_t *nlinks);
 H5_DLL void *H5O_obj_create(H5F_t *f, H5O_type_t obj_type, void *crt_info, H5G_loc_t *obj_loc, hid_t dxpl_id);
 H5_DLL haddr_t H5O_get_oh_addr(const H5O_t *oh);

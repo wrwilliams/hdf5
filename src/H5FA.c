@@ -15,12 +15,12 @@
 
 /*-------------------------------------------------------------------------
  *
- * Created:		H5FA.c
- *			April 2009
- *			Vailin Choi <vchoi@hdfgroup.org>
+ * Created:     H5FA.c
+ *              April 2009
+ *              Vailin Choi <vchoi@hdfgroup.org>
  *
- * Purpose:		Implements a Fixed Array for storing elements
- *                      of datasets with fixed dimensions
+ * Purpose:     Implements a Fixed Array for storing elements
+ *              of datasets with fixed dimensions.
  *
  *-------------------------------------------------------------------------
  */
@@ -79,7 +79,9 @@ hbool_t H5_PKG_INIT_VAR = FALSE;
  * client class..
  */
 const H5FA_class_t *const H5FA_client_class_g[] = {
-    H5FA_CLS_TEST,		/* ? - H5FA_CLS_TEST_ID 		*/
+    H5FA_CLS_CHUNK,             /* 0 - H5FA_CLS_CHUNK_ID                */
+    H5FA_CLS_FILT_CHUNK,        /* 1 - H5FA_CLS_FILT_CHUNK_ID           */
+    H5FA_CLS_TEST,              /* ? - H5FA_CLS_TEST_ID                 */
 };
 
 
@@ -96,19 +98,19 @@ const H5FA_class_t *const H5FA_client_class_g[] = {
 H5FL_DEFINE_STATIC(H5FA_t);
 
 /* Declare a PQ free list to manage the element */
-H5FL_BLK_DEFINE(native_elmt);
+H5FL_BLK_DEFINE(fa_native_elmt);
 
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA_create
+ * Function:    H5FA_create
  *
- * Purpose:	Creates a new fixed array (header) in the file.
+ * Purpose:     Creates a new fixed array (header) in the file.
  *
- * Return:	Pointer to fixed array wrapper on success
+ * Return:      Pointer to fixed array wrapper on success
  *              NULL on failure
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -137,24 +139,24 @@ HDfprintf(stderr, "%s: Called\n", FUNC);
 
     /* Create fixed array header */
     if(HADDR_UNDEF == (fa_addr = H5FA__hdr_create(f, dxpl_id, cparam, ctx_udata)))
-	H5E_THROW(H5E_CANTINIT, "can't create fixed array header")
+        H5E_THROW(H5E_CANTINIT, "can't create fixed array header")
 
     /* Allocate fixed array wrapper */
     if(NULL == (fa = H5FL_MALLOC(H5FA_t)))
-	H5E_THROW(H5E_CANTALLOC, "memory allocation failed for fixed array info")
+        H5E_THROW(H5E_CANTALLOC, "memory allocation failed for fixed array info")
 
     /* Lock the array header into memory */
     if(NULL == (hdr = H5FA__hdr_protect(f, dxpl_id, fa_addr, ctx_udata, H5AC__NO_FLAGS_SET)))
-	H5E_THROW(H5E_CANTPROTECT, "unable to load fixed array header")
+        H5E_THROW(H5E_CANTPROTECT, "unable to load fixed array header")
 
     /* Point fixed array wrapper at header and bump it's ref count */
     fa->hdr = hdr;
     if(H5FA__hdr_incr(fa->hdr) < 0)
-	H5E_THROW(H5E_CANTINC, "can't increment reference count on shared array header")
+        H5E_THROW(H5E_CANTINC, "can't increment reference count on shared array header")
 
     /* Increment # of files using this array header */
     if(H5FA__hdr_fuse_incr(fa->hdr) < 0)
-	H5E_THROW(H5E_CANTINC, "can't increment file reference count on shared array header")
+        H5E_THROW(H5E_CANTINC, "can't increment file reference count on shared array header")
 
     /* Set file pointer for this array open context */
     fa->f = f;
@@ -165,7 +167,7 @@ HDfprintf(stderr, "%s: Called\n", FUNC);
 CATCH
 
     if(hdr && H5FA__hdr_unprotect(hdr, dxpl_id, H5AC__NO_FLAGS_SET) < 0)
-	H5E_THROW(H5E_CANTUNPROTECT, "unable to release fixed array header")
+        H5E_THROW(H5E_CANTUNPROTECT, "unable to release fixed array header")
     if(!ret_value)
         if(fa && H5FA_close(fa, dxpl_id) < 0)
             H5E_THROW(H5E_CLOSEERROR, "unable to close fixed array")
@@ -174,14 +176,14 @@ END_FUNC(PRIV)  /* end H5FA_create() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA_open
+ * Function:    H5FA_open
  *
- * Purpose:	Opens an existing fixed array in the file.
+ * Purpose:     Opens an existing fixed array in the file.
  *
- * Return:	Pointer to array wrapper on success
+ * Return:      Pointer to array wrapper on success
  *              NULL on failure
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -242,13 +244,13 @@ END_FUNC(PRIV)  /* end H5FA_open() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA_get_nelmts
+ * Function:    H5FA_get_nelmts
  *
- * Purpose:	Query the current number of elements in array
+ * Purpose:     Query the current number of elements in array
  *
- * Return:	SUCCEED/FAIL
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -276,13 +278,13 @@ END_FUNC(PRIV)  /* end H5FA_get_nelmts() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA_get_addr
+ * Function:    H5FA_get_addr
  *
- * Purpose:	Query the address of the array
+ * Purpose:     Query the address of the array
  *
- * Return:	SUCCEED/FAIL
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -311,13 +313,13 @@ END_FUNC(PRIV)  /* end H5FA_get_addr() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA_set
+ * Function:    H5FA_set
  *
- * Purpose:	Set an element of a fixed array
+ * Purpose:     Set an element of a fixed array
  *
- * Return:	SUCCEED/FAIL
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -363,13 +365,13 @@ HDfprintf(stderr, "%s: fixed array data block address not defined!\n", FUNC, idx
 
     /* Protect data block */
     if(NULL == (dblock = H5FA__dblock_protect(hdr, dxpl_id, hdr->dblk_addr, H5AC__NO_FLAGS_SET)))
-	H5E_THROW(H5E_CANTPROTECT, "unable to protect fixed array data block, address = %llu", (unsigned long long)hdr->dblk_addr)
+        H5E_THROW(H5E_CANTPROTECT, "unable to protect fixed array data block, address = %llu", (unsigned long long)hdr->dblk_addr)
 
     /* Check for paging data block */
     if(!dblock->npages) {
-	/* Set element in data block */
-	HDmemcpy(((uint8_t *)dblock->elmts) + (hdr->cparam.cls->nat_elmt_size * idx), elmt, hdr->cparam.cls->nat_elmt_size);
-	dblock_cache_flags |= H5AC__DIRTIED_FLAG;
+        /* Set element in data block */
+        HDmemcpy(((uint8_t *)dblock->elmts) + (hdr->cparam.cls->nat_elmt_size * idx), elmt, hdr->cparam.cls->nat_elmt_size);
+        dblock_cache_flags |= H5AC__DIRTIED_FLAG;
     } /* end if */
     else { /* paging */
         size_t  page_idx;      		/* Index of page within data block */
@@ -382,20 +384,20 @@ HDfprintf(stderr, "%s: fixed array data block address not defined!\n", FUNC, idx
         elmt_idx = (size_t)(idx % dblock->dblk_page_nelmts);
 
         /* Get the address of the data block page */
-	dblk_page_addr = dblock->addr + H5FA_DBLOCK_PREFIX_SIZE(dblock) +
+        dblk_page_addr = dblock->addr + H5FA_DBLOCK_PREFIX_SIZE(dblock) +
                         ((hsize_t)page_idx * dblock->dblk_page_size);
 
         /* Check for using last page, to set the number of elements on the page */
-	if((page_idx + 1) == dblock->npages)
-	    dblk_page_nelmts = dblock->last_page_nelmts;
-	else
-	    dblk_page_nelmts = dblock->dblk_page_nelmts;
+        if((page_idx + 1) == dblock->npages)
+            dblk_page_nelmts = dblock->last_page_nelmts;
+        else
+            dblk_page_nelmts = dblock->dblk_page_nelmts;
 
         /* Check if the page has been created yet */
         if(!H5VM_bit_get(dblock->dblk_page_init, page_idx)) {
-	    /* Create the data block page */
-	    if(H5FA__dblk_page_create(hdr, dxpl_id, dblk_page_addr, dblk_page_nelmts) < 0)
-		H5E_THROW(H5E_CANTCREATE, "unable to create data block page")
+            /* Create the data block page */
+            if(H5FA__dblk_page_create(hdr, dxpl_id, dblk_page_addr, dblk_page_nelmts) < 0)
+                H5E_THROW(H5E_CANTCREATE, "unable to create data block page")
 
 	    /* Mark data block page as initialized in data block */
 	    H5VM_bit_set(dblock->dblk_page_init, page_idx, TRUE);
@@ -407,8 +409,8 @@ HDfprintf(stderr, "%s: fixed array data block address not defined!\n", FUNC, idx
 	    H5E_THROW(H5E_CANTPROTECT, "unable to protect fixed array data block page, address = %llu", (unsigned long long)dblk_page_addr)
 
         /* Set the element in the data block page */
-	HDmemcpy(((uint8_t *)dblk_page->elmts) + (hdr->cparam.cls->nat_elmt_size * elmt_idx), elmt, hdr->cparam.cls->nat_elmt_size);
-	dblk_page_cache_flags |= H5AC__DIRTIED_FLAG;
+        HDmemcpy(((uint8_t *)dblk_page->elmts) + (hdr->cparam.cls->nat_elmt_size * elmt_idx), elmt, hdr->cparam.cls->nat_elmt_size);
+        dblk_page_cache_flags |= H5AC__DIRTIED_FLAG;
     } /* end else */
 
 CATCH
@@ -427,13 +429,13 @@ END_FUNC(PRIV)  /* end H5FA_set() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA_get
+ * Function:    H5FA_get
  *
- * Purpose:	Get an element of a fixed array
+ * Purpose:     Get an element of a fixed array
  *
- * Return:	SUCCEED/FAIL
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -529,13 +531,13 @@ END_FUNC(PRIV)  /* end H5FA_get() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA_close
+ * Function:    H5FA_close
  *
- * Purpose:	Close a fixed array
+ * Purpose:     Close a fixed array
  *
- * Return:	SUCCEED/FAIL
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -630,13 +632,13 @@ END_FUNC(PRIV)  /* end H5FA_close() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA_delete
+ * Function:    H5FA_delete
  *
- * Purpose:	Delete a fixed array
+ * Purpose:     Delete a fixed array
  *
- * Return:	SUCCEED/FAIL
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -684,16 +686,16 @@ END_FUNC(PRIV)  /* end H5FA_delete() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA_iterate
+ * Function:    H5FA_iterate
  *
- * Purpose:	Iterate over the elements of a fixed array
+ * Purpose:     Iterate over the elements of a fixed array
  *
- * Note:	This is not very efficient, we should be iterating directly
- *		over the fixed array's direct block [pages].
+ * Note:        This is not very efficient, we should be iterating directly
+ *              over the fixed array's direct block [pages].
  *
- * Return:	SUCCEED/FAIL
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -703,8 +705,8 @@ herr_t, SUCCEED, FAIL,
 H5FA_iterate(H5FA_t *fa, hid_t dxpl_id, H5FA_operator_t op, void *udata))
 
     /* Local variables */
-    uint8_t             *elmt = NULL;
-    hsize_t		u;
+    uint8_t     *elmt = NULL;
+    hsize_t     u;
 
     /*
      * Check arguments.
@@ -714,8 +716,8 @@ H5FA_iterate(H5FA_t *fa, hid_t dxpl_id, H5FA_operator_t op, void *udata))
     HDassert(udata);
 
     /* Allocate space for a native array element */
-    if(NULL == (elmt = H5FL_BLK_MALLOC(native_elmt, fa->hdr->cparam.cls->nat_elmt_size)))
-	H5E_THROW(H5E_CANTALLOC, "memory allocation failed for fixed array element")
+    if(NULL == (elmt = H5FL_BLK_MALLOC(fa_native_elmt, fa->hdr->cparam.cls->nat_elmt_size)))
+        H5E_THROW(H5E_CANTALLOC, "memory allocation failed for fixed array element")
 
     /* Iterate over all elements in array */
     for(u = 0; u < fa->hdr->stats.nelmts; u++) {
@@ -735,7 +737,40 @@ H5FA_iterate(H5FA_t *fa, hid_t dxpl_id, H5FA_operator_t op, void *udata))
 CATCH
 
     if(elmt)
-	elmt = H5FL_BLK_FREE(native_elmt, elmt);
+        elmt = H5FL_BLK_FREE(fa_native_elmt, elmt);
 
 END_FUNC(PRIV)  /* end H5FA_iterate() */
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FA_patch_file
+ *
+ * Purpose:     Patch the top-level file pointer contained in fa
+ *              to point to idx_info->f if they are different.
+ *              This is possible because the file pointer in fa can be
+ *              closed out if fa remains open.
+ *
+ * Return:      SUCCEED
+ *
+ *-------------------------------------------------------------------------
+ */
+BEGIN_FUNC(PRIV, NOERR,
+herr_t, SUCCEED, -,
+H5FA_patch_file(H5FA_t *fa, H5F_t *f))
+
+    /* Local variables */
+
+#ifdef H5FA_DEBUG
+HDfprintf(stderr, "%s: Called\n", FUNC);
+#endif /* H5FA_DEBUG */
+
+    /*
+     * Check arguments.
+     */
+    HDassert(fa);
+    HDassert(f);
+
+    if(fa->f != f || fa->hdr->f != f)
+        fa->f = fa->hdr->f = f;
+
+END_FUNC(PRIV)  /* end H5FA_patch_file() */

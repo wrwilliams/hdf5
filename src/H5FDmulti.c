@@ -135,6 +135,8 @@ static herr_t H5FD_multi_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, ha
 			       size_t size, const void *_buf);
 static herr_t H5FD_multi_flush(H5FD_t *_file, hid_t dxpl_id, unsigned closing);
 static herr_t H5FD_multi_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing);
+static herr_t H5FD_multi_lock(H5FD_t *_file, hbool_t rw);
+static herr_t H5FD_multi_unlock(H5FD_t *_file);
 
 /* The class struct */
 static const H5FD_class_t H5FD_multi_g = {
@@ -167,8 +169,8 @@ static const H5FD_class_t H5FD_multi_g = {
     H5FD_multi_write,				/*write			*/
     H5FD_multi_flush,				/*flush			*/
     H5FD_multi_truncate,			/*truncate		*/
-    NULL,                                       /*lock                  */
-    NULL,                                       /*unlock                */
+    H5FD_multi_lock,                            /*lock                  */
+    H5FD_multi_unlock,                          /*unlock                */
     H5FD_FLMAP_DEFAULT 				/*fl_map		*/
 };
 
@@ -897,25 +899,30 @@ H5FD_multi_fapl_copy(const void *_old_fa)
     memcpy(new_fa, old_fa, sizeof(H5FD_multi_fapl_t));
     ALL_MEMBERS(mt) {
 	if (old_fa->memb_fapl[mt]>=0) {
-	    new_fa->memb_fapl[mt] = H5Pcopy(old_fa->memb_fapl[mt]);
-	    if(new_fa->memb_fapl[mt]<0)
+	    if (H5Iinc_ref(old_fa->memb_fapl[mt]) < 0) {
                 nerrors++;
+                break;
+            }
+	    new_fa->memb_fapl[mt] = old_fa->memb_fapl[mt];
 	}
 	if (old_fa->memb_name[mt]) {
 	    new_fa->memb_name[mt] = my_strdup(old_fa->memb_name[mt]);
-	    assert(new_fa->memb_name[mt]);
+            if (NULL == new_fa->memb_name[mt]) {
+                nerrors++;
+                break;
+            }
 	}
     } END_MEMBERS;
 
     if (nerrors) {
         ALL_MEMBERS(mt) {
             if (new_fa->memb_fapl[mt]>=0)
-                (void)H5Pclose(new_fa->memb_fapl[mt]);
+                (void)H5Idec_ref(new_fa->memb_fapl[mt]);
             if (new_fa->memb_name[mt])
                 free(new_fa->memb_name[mt]);
         } END_MEMBERS;
         free(new_fa);
-        H5Epush_ret(func, H5E_ERR_CLS, H5E_INTERNAL, H5E_BADVALUE, "invalid freespace objects", NULL)
+        H5Epush_ret(func, H5E_ERR_CLS, H5E_INTERNAL, H5E_BADVALUE, "can't release object on error", NULL)
     }
     return new_fa;
 }
@@ -946,7 +953,7 @@ H5FD_multi_fapl_free(void *_fa)
 
     ALL_MEMBERS(mt) {
 	if (fa->memb_fapl[mt]>=0)
-            if(H5Pclose(fa->memb_fapl[mt])<0)
+            if(H5Idec_ref(fa->memb_fapl[mt])<0)
                 H5Epush_ret(func, H5E_ERR_CLS, H5E_FILE, H5E_CANTCLOSEOBJ, "can't close property list", -1)
 	if (fa->memb_name[mt])
             free(fa->memb_name[mt]);
@@ -1011,9 +1018,8 @@ H5FD_multi_open(const char *name, unsigned flags, hid_t fapl_id,
 	file->fa.memb_map[mt] = fa->memb_map[mt];
 	file->fa.memb_addr[mt] = fa->memb_addr[mt];
 	if (fa->memb_fapl[mt]>=0)
-	    file->fa.memb_fapl[mt] = H5Pcopy(fa->memb_fapl[mt]);
-	else
-	    file->fa.memb_fapl[mt] = fa->memb_fapl[mt];
+	    H5Iinc_ref(fa->memb_fapl[mt]);
+        file->fa.memb_fapl[mt] = fa->memb_fapl[mt];
 	if (fa->memb_name[mt])
 	    file->fa.memb_name[mt] = my_strdup(fa->memb_name[mt]);
 	else
@@ -1045,7 +1051,7 @@ error:
     if (file) {
 	ALL_MEMBERS(mt) {
 	    if (file->memb[mt]) (void)H5FDclose(file->memb[mt]);
-	    if (file->fa.memb_fapl[mt]>=0) (void)H5Pclose(file->fa.memb_fapl[mt]);
+	    if (file->fa.memb_fapl[mt]>=0) (void)H5Idec_ref(file->fa.memb_fapl[mt]);
 	    if (file->fa.memb_name[mt]) free(file->fa.memb_name[mt]);
 	} END_MEMBERS;
 	if (file->name) free(file->name);
@@ -1096,7 +1102,7 @@ H5FD_multi_close(H5FD_t *_file)
 
     /* Clean up other stuff */
     ALL_MEMBERS(mt) {
-	if (file->fa.memb_fapl[mt]>=0) (void)H5Pclose(file->fa.memb_fapl[mt]);
+	if (file->fa.memb_fapl[mt]>=0) (void)H5Idec_ref(file->fa.memb_fapl[mt]);
 	if (file->fa.memb_name[mt]) free(file->fa.memb_name[mt]);
     } END_MEMBERS;
     free(file->name);
@@ -1590,11 +1596,8 @@ H5FD_multi_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
     size_t size, void *_buf/*out*/)
 {
     H5FD_multi_t	*file = (H5FD_multi_t*)_file;
-    H5FD_multi_dxpl_t	dx;
-    htri_t              prop_exists = FALSE;    /* Whether the multi VFD DXPL property already exists */
     H5FD_mem_t		mt, mmt, hi = H5FD_MEM_DEFAULT;
     haddr_t		start_addr = 0;
-    dxpl_id = dxpl_id; /* Suppress compiler warning */
 
     /* Clear the error stack */
     H5Eclear2(H5E_DEFAULT);
@@ -1616,8 +1619,7 @@ H5FD_multi_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
     assert(hi > 0);
 
     /* Read from that member */
-    return H5FDread(file->memb[hi], type, (prop_exists ? dx.memb_dxpl[hi] : H5P_DEFAULT),
-            addr - start_addr, size, _buf);
+    return H5FDread(file->memb[hi], type, dxpl_id, addr - start_addr, size, _buf);
 } /* end H5FD_multi_read() */
 
 
@@ -1642,11 +1644,8 @@ H5FD_multi_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
     size_t size, const void *_buf)
 {
     H5FD_multi_t	*file = (H5FD_multi_t*)_file;
-    H5FD_multi_dxpl_t	dx;
-    htri_t              prop_exists = FALSE;    /* Whether the multi VFD DXPL property already exists */
     H5FD_mem_t		mt, mmt, hi = H5FD_MEM_DEFAULT;
     haddr_t		start_addr = 0;
-    dxpl_id = dxpl_id; /* Suppress compiler warning */
 
     /* Clear the error stack */
     H5Eclear2(H5E_DEFAULT);
@@ -1668,8 +1667,7 @@ H5FD_multi_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
     assert(hi > 0);
 
     /* Write to that member */
-    return H5FDwrite(file->memb[hi], type, (prop_exists ? dx.memb_dxpl[hi] : H5P_DEFAULT),
-            addr - start_addr, size, _buf);
+    return H5FDwrite(file->memb[hi], type, dxpl_id, addr - start_addr, size, _buf);
 } /* end H5FD_multi_write() */
 
 
@@ -1783,6 +1781,101 @@ H5FD_multi_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing)
 
     return 0;
 } /* end H5FD_multi_truncate() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5FD_multi_lock
+ *
+ * Purpose:	Place a lock on all multi members.
+ *		When there is error in locking a member file, it will not
+ *		proceed further and will try to remove the locks  of those
+ *		member files that are locked before error is encountered.
+ *
+ * Return:	Success:	0
+ *		Failure:	-1
+ *
+ * Programmer:	Vailin Choi; March 2015
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5FD_multi_lock(H5FD_t *_file, hbool_t rw)
+{
+    H5FD_multi_t	*file = (H5FD_multi_t*)_file;
+    int			nerrors = 0;
+    H5FD_mem_t 		out_mt;
+    static const char *func="H5FD_multi_unlock";  /* Function Name for error reporting */
+
+    /* Clear the error stack */
+    H5Eclear2(H5E_DEFAULT);
+
+    /* Lock all member files */
+    ALL_MEMBERS(mt) {
+        out_mt = mt;
+        if(file->memb[mt]) {
+            H5E_BEGIN_TRY {
+                if(H5FDlock(file->memb[mt], rw) < 0) {
+                    nerrors++;
+                    break;
+                } /* end if */
+            } H5E_END_TRY;
+        } /* end if */
+    } END_MEMBERS;
+
+    /* Try to unlock the member files that are locked before error is encountered */
+    if(nerrors) {
+        H5FD_mem_t k;
+
+        for(k = H5FD_MEM_DEFAULT; k < out_mt; k = (H5FD_mem_t)(k + 1)) {
+            H5E_BEGIN_TRY {
+                if(H5FDunlock(file->memb[k]) < 0)
+                    nerrors++;
+            } H5E_END_TRY;
+        } /* end for */
+    } /* end if */
+
+    if(nerrors)
+        H5Epush_ret(func, H5E_ERR_CLS, H5E_INTERNAL, H5E_BADVALUE, "error locking member files", -1)
+    return 0;
+
+} /* H5FD_multi_lock() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5FD_multi_unlock
+ *
+ * Purpose:	Remove the lock on all multi members.
+ *		It will try to unlock all member files but will record error
+ *		encountered.
+ *
+ * Return:	Success:	0
+ *		Failure:	-1
+ *
+ * Programmer:	Vailin Choi; March 2015
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5FD_multi_unlock(H5FD_t *_file)
+{
+    H5FD_multi_t	*file = (H5FD_multi_t*)_file;
+    int			nerrors=0;
+    static const char *func="H5FD_multi_unlock";  /* Function Name for error reporting */
+
+    /* Clear the error stack */
+    H5Eclear2(H5E_DEFAULT);
+
+    ALL_MEMBERS(mt) {
+        if(file->memb[mt])
+            if(H5FDunlock(file->memb[mt]) < 0)
+		nerrors++;
+    } END_MEMBERS;
+
+    if(nerrors)
+        H5Epush_ret(func, H5E_ERR_CLS, H5E_INTERNAL, H5E_BADVALUE, "error unlocking member files", -1)
+
+    return 0;
+} /* H5FD_multi_unlock() */
 
 
 /*-------------------------------------------------------------------------
