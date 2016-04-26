@@ -413,10 +413,10 @@ H5F_read_check_metadata(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type,
     do {
         /* Read header from disk */
         if(H5F_block_read(f, type, addr, read_size, dxpl_id, buf) < 0)
-	    HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "unable to read metadata")
+            HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "unable to read metadata")
 
-	/* Get stored and computed checksums */
-	H5F_get_checksums(buf, chk_size, &stored_chksum, &computed_chksum);
+        /* Get stored and computed checksums */
+        H5F_get_checksums(buf, chk_size, &stored_chksum, &computed_chksum);
 
         /* Verify checksum */
         if(stored_chksum == computed_chksum)
@@ -431,9 +431,10 @@ H5F_read_check_metadata(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type,
     /* Calculate and track the # of retries */
     retries = max_tries - tries;
     if(retries)         /* Does not track 0 retry */
-	if(H5F_track_metadata_read_retries(f, actype, retries) < 0)
+        if(H5F_track_metadata_read_retries(f, actype, retries) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, FAIL, "cannot track read tries = %u ", retries)
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5F_read_check_metadata */
+
