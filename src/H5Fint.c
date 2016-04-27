@@ -821,6 +821,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
     HDassert(f->shared);
 
     if(1 == f->shared->nrefs) {
+        int actype;                         /* metadata cache type (enum value) */
         H5F_io_info_t fio_info;             /* I/O info for operation */
 
         /* Flush at this point since the file will be closed.
@@ -946,6 +947,11 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
         /* Free mount table */
         f->shared->mtab.child = (H5F_mount_t *)H5MM_xfree(f->shared->mtab.child);
         f->shared->mtab.nalloc = 0;
+
+        /* Clean up the metadata retries array */
+        for(actype = 0; actype < (int)H5AC_NTYPES; actype++)
+            if(f->shared->retries[actype])
+                f->shared->retries[actype] = (uint32_t *)H5MM_xfree(f->shared->retries[actype]);
 
         /* Destroy shared file struct */
         f->shared = (H5F_file_t *)H5FL_FREE(H5F_file_t, f->shared);
@@ -2297,7 +2303,7 @@ H5F_track_metadata_read_retries(H5F_t *f, unsigned actype, unsigned retries)
 
     /* Allocate memory for retries */
     if(NULL == f->shared->retries[actype])
-        if(NULL == (f->shared->retries[actype] = (uint32_t *)HDcalloc((size_t)f->shared->retries_nbins, sizeof(uint32_t))))
+        if(NULL == (f->shared->retries[actype] = (uint32_t *)H5MM_calloc((size_t)f->shared->retries_nbins * sizeof(uint32_t))))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
 
     /* Index to retries based on log10 */
