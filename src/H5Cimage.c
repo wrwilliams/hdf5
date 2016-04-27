@@ -702,6 +702,7 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
 #ifdef H5_HAVE_PARALLEL
     ds_entry_ptr->clear_on_unprotect   = FALSE;
     ds_entry_ptr->flush_immediately    = FALSE;
+    ds_entry_ptr->coll_access          = FALSE;
 #endif /* H5_HAVE_PARALLEL */
     ds_entry_ptr->flush_in_progress    = FALSE;
     ds_entry_ptr->destroy_in_progress  = FALSE;
@@ -710,22 +711,25 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
 
     /* Initialize flush dependency height fields */
     ds_entry_ptr->flush_dep_parent     = NULL;
-
     for ( u = 0; u < H5C__NUM_FLUSH_DEP_HEIGHTS; u++ )
-
         ds_entry_ptr->child_flush_dep_height_rc[u] = 0;
-
     ds_entry_ptr->flush_dep_height     = 0;
+
+    /* Initialize fields supporting the hash table: */
     ds_entry_ptr->ht_next              = NULL;
     ds_entry_ptr->ht_prev              = NULL;
     ds_entry_ptr->il_next              = NULL;
     ds_entry_ptr->il_prev              = NULL;
 
+    /* Initialize fields supporting replacement policies: */
     ds_entry_ptr->next                 = NULL;
     ds_entry_ptr->prev                 = NULL;
-
     ds_entry_ptr->aux_next             = NULL;
     ds_entry_ptr->aux_prev             = NULL;
+#ifdef H5_HAVE_PARALLEL
+    pf_entry_ptr->coll_next             = NULL;
+    pf_entry_ptr->coll_prev             = NULL;
+#endif /* H5_HAVE_PARALLEL */
 
     /* initialize cache image related fields */
     ds_entry_ptr->include_in_image     = FALSE;
@@ -3632,6 +3636,7 @@ H5C_reconstruct_cache_entry(H5C_t * cache_ptr, int i)
 #ifdef H5_HAVE_PARALLEL
     pf_entry_ptr->clear_on_unprotect	= FALSE;
     pf_entry_ptr->flush_immediately	= FALSE;
+    pf_entry_ptr->coll_access           = FALSE;
 #endif
     pf_entry_ptr->flush_in_progress	= FALSE;
     pf_entry_ptr->destroy_in_progress	= FALSE;
