@@ -1742,7 +1742,7 @@ done:
 	file->shared->flags &= ~H5F_ACC_SWMR_WRITE;
 
 	/* Unmark the file: not in SWMR writing mode */
-	file->shared->sblock->status_flags &= ~(uint8_t)H5F_SUPER_SWMR_WRITE_ACCESS;
+	file->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_SWMR_WRITE_ACCESS);
 
 	/* Mark superblock as dirty */
 	if(H5F_super_dirty(file) < 0)
