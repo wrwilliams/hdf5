@@ -87,6 +87,7 @@ static herr_t H5B2__shadow_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id,
 static herr_t H5B2__create_internal(H5B2_hdr_t *hdr, hid_t dxpl_id, void *parent,
     H5B2_node_ptr_t *node_ptr, uint16_t depth);
 #ifdef H5B2_DEBUG
+/* Don't label these with H5_ATTR_PURE or you'll get even more warnings... */
 static herr_t H5B2__assert_leaf(const H5B2_hdr_t *hdr, const H5B2_leaf_t *leaf);
 static herr_t H5B2__assert_leaf2(const H5B2_hdr_t *hdr, const H5B2_leaf_t *leaf, const H5B2_leaf_t *leaf2);
 static herr_t H5B2__assert_internal(hsize_t parent_all_nrec, const H5B2_hdr_t *hdr, const H5B2_internal_t *internal);

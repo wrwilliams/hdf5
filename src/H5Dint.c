@@ -2182,7 +2182,7 @@ H5D_mult_refresh_reopen(H5D_t *dataset, hid_t dxpl_id)
 	    HGOTO_ERROR(H5E_DATASET, H5E_CANTCOPY, FAIL, "can't cache dataspace info")
     
 	if(H5O_msg_reset(H5O_LAYOUT_ID, &dataset->shared->layout) < 0)
-	    HGOTO_ERROR(H5E_DATASET, H5E_CANTRESET, NULL, "unable to reset layout info")
+	    HGOTO_ERROR(H5E_DATASET, H5E_CANTRESET, FAIL, "unable to reset layout info")
 
 	/* Re-load layout message info */
 	if(NULL == H5O_msg_read(&(dataset->oloc), H5O_LAYOUT_ID, &(dataset->shared->layout), dxpl_id))
@@ -3183,9 +3183,14 @@ H5D__format_convert(H5D_t *dataset, hid_t dxpl_id)
 	    break;
 
 	case H5D_VIRTUAL:
-	default:
-	    HDassert(0);
-            break;
+	    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "virtual dataset layout not supported")
+
+    case H5D_LAYOUT_ERROR:
+    case H5D_NLAYOUTS:
+	    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid dataset layout type")
+        
+	default: 
+	    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "unknown dataset layout type")
     }
 
 done:
