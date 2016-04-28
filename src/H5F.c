@@ -1453,7 +1453,11 @@ H5Fget_metadata_read_retry_info(hid_t file_id, H5F_retry_info_t *info)
             case H5AC_SUPERBLOCK_ID:
                 HDassert(j < H5F_NUM_METADATA_READ_RETRY_TYPES);
                 if(file->shared->retries[i] != NULL) {
-                    /* Allocate memory for retries[i] */
+                    /* Allocate memory for retries[i]
+                     *
+                     * This memory is returned to the user, so we have to use
+                     * the HD functions instead of the H5MM functions.
+                     */
                     if(NULL == (info->retries[j] = (uint32_t *)HDmalloc(tot_size)))
                         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
 

@@ -284,7 +284,7 @@ print_metadata_retries_info(hid_t fid)
     /* Free memory for each non-NULL retries[i] */
     for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++)
         if(info.retries[i] != NULL)
-            HDfree(info.retries[i]);
+            H5free_memory(info.retries[i]);
 
     return 0;
 } /* print_metadata_retries_info() */

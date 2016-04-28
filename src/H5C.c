@@ -1921,7 +1921,7 @@ H5C_set_up_logging(H5C_t *cache_ptr, const char log_location[],
      * allocation size = <path length> + dot + <rank # length> + \0
      */
     n_chars = HDstrlen(log_location) + 1 + 39 + 1;
-    if(NULL == (file_name = (char *)HDcalloc(n_chars, sizeof(char))))
+    if(NULL == (file_name = (char *)H5MM_calloc(n_chars * sizeof(char))))
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, \
             "can't allocate memory for mdc log file name manipulation")
 
@@ -1956,7 +1956,7 @@ H5C_set_up_logging(H5C_t *cache_ptr, const char log_location[],
 
  done:
     if(file_name)
-        HDfree(file_name);
+        file_name = (char *)H5MM_xfree(file_name);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5C_set_up_logging() */
