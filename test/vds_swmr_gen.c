@@ -17,7 +17,7 @@
 #include "vds_swmr.h"
 
 int
-main(int argc, char *argv[])
+main(void)
 {
     hid_t faplid        = -1;   /* file access property list ID (all files) */
 

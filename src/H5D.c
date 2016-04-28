@@ -1040,6 +1040,9 @@ H5Dformat_convert(hid_t dset_id)
 	    /* Nothing to do even though layout is version 4 */
 	    break;
 
+    case H5D_LAYOUT_ERROR:
+    case H5D_NLAYOUTS:
+	    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid dataset layout type")
 	default: 
 	    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "unknown dataset layout type")
     } /* end switch */

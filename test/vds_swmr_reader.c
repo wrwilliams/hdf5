@@ -17,7 +17,7 @@
 #include "vds_swmr.h"
 
 int
-main(int argc, char *argv[])
+main(void)
 {
     hid_t fid           = -1;   /* HDF5 file ID                     */
     hid_t did           = -1;   /* dataset ID                       */
@@ -35,8 +35,6 @@ main(int argc, char *argv[])
     hsize_t max_dims[RANK];     /* max size of dataset              */
 
     hbool_t has_errors  = FALSE;/* if the read data contains errors */
-
-    int i;                      /* iterator                         */
 
 
     /* Open the VDS file and dataset */

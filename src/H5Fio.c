@@ -425,7 +425,7 @@ H5F_read_check_metadata(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type,
 
     /* Check for too many tries */
     if(tries == 0)
-        HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "incorrect metadatda checksum after all read attempts (%u) for %u bytes:c_chksum=%u, s_chkum=%u", 
+        HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "incorrect metadatda checksum after all read attempts (%u) for %lu bytes:c_chksum=%u, s_chkum=%u", 
 	    max_tries, chk_size, computed_chksum, stored_chksum)
 
     /* Calculate and track the # of retries */

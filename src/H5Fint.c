@@ -735,7 +735,7 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
                 HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get mdc log location")
             if(mdc_log_location != NULL) {
                 size_t len = HDstrlen(mdc_log_location);
-                if(NULL == (f->shared->mdc_log_location = (char *)HDcalloc(len + 1, sizeof(char))))
+                if(NULL == (f->shared->mdc_log_location = (char *)H5MM_calloc((len + 1) * sizeof(char))))
                     HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, NULL, "can't allocate memory for mdc log file name")
                 HDstrncpy(f->shared->mdc_log_location, mdc_log_location, len);
             }
@@ -900,7 +900,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
 
         /* Clean up the metadata cache log location string */
         if(f->shared->mdc_log_location)
-            HDfree(f->shared->mdc_log_location);
+            f->shared->mdc_log_location = (char *)H5MM_xfree(f->shared->mdc_log_location);
 
         /*
          * Do not close the root group since we didn't count it, but free
@@ -1768,7 +1768,7 @@ H5F_build_actual_name(const H5F_t *f, const H5P_genplist_t *fapl, const char *na
             hbool_t want_posix_fd;      /* Flag for retrieving file descriptor from VFD */
 
             /* Allocate realname buffer */
-            if(NULL == (realname = (char *)HDcalloc((size_t)PATH_MAX, sizeof(char))))
+            if(NULL == (realname = (char *)H5MM_calloc((size_t)PATH_MAX * sizeof(char))))
                 HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
 
             /* Perform a sanity check that the file or link wasn't switched
@@ -1831,7 +1831,7 @@ done:
 
 #ifdef H5_HAVE_SYMLINK
     if(realname)
-        HDfree(realname);
+        realname = (char *)H5MM_xfree(realname);
 #endif /* H5_HAVE_SYMLINK */
 
     FUNC_LEAVE_NOAPI(ret_value)

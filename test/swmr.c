@@ -1191,7 +1191,7 @@ test_metadata_read_retry_info(hid_t in_fapl)
     /* Free memory for info.retries */
     for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++)  {
         if(info.retries[i] != NULL)
-            HDfree(info.retries[i]);
+            H5free_memory(info.retries[i]);
     }
 
     /* 
@@ -1276,7 +1276,7 @@ test_metadata_read_retry_info(hid_t in_fapl)
     /* Free memory for info.retries */
     for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++)
         if(info.retries[i] != NULL)
-            HDfree(info.retries[i]);
+            H5free_memory(info.retries[i]);
 
     /* Closing */
     if(H5Dclose(did1) < 0)
@@ -1336,7 +1336,7 @@ test_metadata_read_retry_info(hid_t in_fapl)
     /* Free memory */
     for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++)
         if(info.retries[i] != NULL)
-            HDfree(info.retries[i]);
+            H5free_memory(info.retries[i]);
 
     /* Closing */
     if(H5Pclose(new_fapl) < 0)
@@ -1469,9 +1469,9 @@ test_metadata_read_retry_info(hid_t in_fapl)
     /* Free memory for info.retries and info1.retries */
     for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++) {
         if(info.retries[i] != NULL)
-            HDfree(info.retries[i]);
+            H5free_memory(info.retries[i]);
         if(info1.retries[i] != NULL)
-            HDfree(info1.retries[i]);
+            H5free_memory(info1.retries[i]);
     } /* end for */
 
     /* Closing */
