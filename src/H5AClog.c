@@ -15,7 +15,7 @@
 
 /*-------------------------------------------------------------------------
  *
- * Created:             H5AClog_json.c
+ * Created:             H5AClog.c
  *
  * Purpose:             Functions for metadata cache logging in JSON format
  *
@@ -26,21 +26,22 @@
 /* Module Setup */
 /****************/
 #include "H5ACmodule.h"         /* This source code file is part of the H5AC module */
-#define H5C_FRIEND		        /* Suppress error about including H5Cpkg	        */
 
 /***********/
 /* Headers */
 /***********/
 #include "H5private.h"          /* Generic Functions                    */
 #include "H5ACpkg.h"            /* Metadata cache                       */
-#include "H5Cpkg.h"             /* Cache                                */
+#include "H5Cprivate.h"		/* Cache                                */
 #include "H5Eprivate.h"         /* Error handling                       */
+
 
 /****************/
 /* Local Macros */
 /****************/
 
 #define MSG_SIZE 128
+
 
 /******************/
 /* Local Typedefs */
@@ -71,18 +72,6 @@
 /* Local Variables */
 /*******************/
 
-
-/*-------------------------------------------------------------------------
- * Function:    H5AC__write_create_cache_log_msg
- *
- * Purpose:     Write a log message for cache creation.
- *
- * Return:      Success:        SUCCEED
- *              Failure:        FAIL
- *
- *-------------------------------------------------------------------------
- */
-
 
 
 /*-------------------------------------------------------------------------
@@ -92,6 +81,9 @@
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -99,14 +91,25 @@ herr_t
 H5AC__write_create_cache_log_msg(H5AC_t *cache) 
 {
     char msg[MSG_SIZE];
-    hbool_t orig_state;            /* saved "current logging" flag state */
-    herr_t ret_value = SUCCEED;
+    hbool_t log_enabled;                /* TRUE if logging was set up */
+    hbool_t curr_logging;               /* TRUE if currently logging */
+    herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
+
+    /* Check if log messages are being emitted */
+    if(H5C_get_logging_status(cache, &log_enabled, &curr_logging) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to get logging status")
+
+    /* Since we're about to override the current logging flag,
+     * check the "log enabled" flag to see if we didn't get here
+     * by mistake.
+     */
+    if(!log_enabled)
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "attempt to write opening log message when logging is disabled")
 
     /* Create the log message string */
     HDsnprintf(msg, MSG_SIZE, 
@@ -118,24 +121,21 @@ H5AC__write_create_cache_log_msg(H5AC_t *cache)
 "
     , (long long)HDtime(NULL));
 
-    /* Since we're about to override the current logging flag,
-     * check the "log enabled" flag to see if we didn't get here
-     * by mistake.
-     */
-    if(!(cache->logging_enabled))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "attempt to write opening log message when logging is disabled")
+    /* Have to temporarily enable logging, if it isn't currently  */
+    if(!curr_logging)
+        if(H5C_start_logging(cache) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_LOGFAIL, FAIL, "unable to start mdc logging")
 
-    /* Write the log message to the file
-     * Have to temporarily enable logging for this.
-     */
-    orig_state = cache->currently_logging;
-    cache->currently_logging = TRUE;
+    /* Write the log message to the file */
     if(H5C_write_log_message(cache, msg) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
-    cache->currently_logging = orig_state;
+
+    /* Stop logging, if it wasn't started originally */
+    if(!curr_logging)
+        if(H5C_stop_logging(cache) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_LOGFAIL, FAIL, "unable to stop mdc logging")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_create_cache_log_msg() */
 
@@ -148,20 +148,34 @@ done:
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
  *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5AC__write_destroy_cache_log_msg(H5AC_t *cache)
 {
     char msg[MSG_SIZE];
-    hbool_t orig_state;            /* saved "current logging" flag state */
-    herr_t ret_value = SUCCEED;
+    hbool_t log_enabled;                /* TRUE if logging was set up */
+    hbool_t curr_logging;               /* TRUE if currently logging */
+    herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
+
+    /* Check if log messages are being emitted */
+    if(H5C_get_logging_status(cache, &log_enabled, &curr_logging) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to get logging status")
+
+    /* Since we're about to override the current logging flag,
+     * check the "log enabled" flag to see if we didn't get here
+     * by mistake.
+     */
+    if(!log_enabled)
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "attempt to write closing log message when logging is disabled")
 
     /* Create the log message string */
     HDsnprintf(msg, MSG_SIZE, 
@@ -172,24 +186,21 @@ H5AC__write_destroy_cache_log_msg(H5AC_t *cache)
 "
     , (long long)HDtime(NULL));
 
-    /* Since we're about to override the current logging flag,
-     * check the "log enabled" flag to see if we didn't get here
-     * by mistake.
-     */
-    if(!(cache->logging_enabled))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "attempt to write closing log message when logging is disabled")
+    /* Have to temporarily enable logging, if it isn't currently  */
+    if(!curr_logging)
+        if(H5C_start_logging(cache) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_LOGFAIL, FAIL, "unable to start mdc logging")
 
-    /* Write the log message to the file
-     * Have to temporarily enable logging for this.
-     */
-    orig_state = cache->currently_logging;
-    cache->currently_logging = TRUE;
+    /* Write the log message to the file */
     if(H5C_write_log_message(cache, msg) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
-    cache->currently_logging = orig_state;
+
+    /* Stop logging, if it wasn't started originally */
+    if(!curr_logging)
+        if(H5C_stop_logging(cache) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_LOGFAIL, FAIL, "unable to stop mdc logging")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_destroy_cache_log_msg() */
 
@@ -201,6 +212,9 @@ done:
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -215,7 +229,6 @@ H5AC__write_evict_cache_log_msg(const H5AC_t *cache,
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
 
     /* Create the log message string */
     HDsnprintf(msg, MSG_SIZE, 
@@ -233,7 +246,6 @@ H5AC__write_evict_cache_log_msg(const H5AC_t *cache,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_evict_cache_log_msg() */
 
@@ -245,6 +257,9 @@ done:
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -261,7 +276,6 @@ H5AC__write_expunge_entry_log_msg(const H5AC_t *cache,
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
 
     /* Create the log message string */
     HDsnprintf(msg, MSG_SIZE, 
@@ -282,7 +296,6 @@ H5AC__write_expunge_entry_log_msg(const H5AC_t *cache,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_expunge_entry_log_msg() */
 
@@ -294,6 +307,9 @@ done:
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -308,7 +324,6 @@ H5AC__write_flush_cache_log_msg(const H5AC_t *cache,
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
 
     /* Create the log message string */
     HDsnprintf(msg, MSG_SIZE, 
@@ -326,7 +341,6 @@ H5AC__write_flush_cache_log_msg(const H5AC_t *cache,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_flush_cache_log_msg() */
 
@@ -338,6 +352,9 @@ done:
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -356,7 +373,6 @@ H5AC__write_insert_entry_log_msg(const H5AC_t *cache,
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
 
 
     /* Create the log message string */
@@ -380,7 +396,6 @@ H5AC__write_insert_entry_log_msg(const H5AC_t *cache,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_insert_entry_log_msg() */
 
@@ -392,6 +407,9 @@ done:
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -407,7 +425,6 @@ H5AC__write_mark_dirty_entry_log_msg(const H5AC_t *cache,
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
     HDassert(entry);
 
     /* Create the log message string */
@@ -427,7 +444,6 @@ H5AC__write_mark_dirty_entry_log_msg(const H5AC_t *cache,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_mark_dirty_entry_log_msg() */
 
@@ -439,6 +455,9 @@ done:
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -456,7 +475,6 @@ H5AC__write_move_entry_log_msg(const H5AC_t *cache,
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
 
     /* Create the log message string */
     HDsnprintf(msg, MSG_SIZE, 
@@ -478,7 +496,6 @@ H5AC__write_move_entry_log_msg(const H5AC_t *cache,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_move_entry_log_msg() */
 
@@ -490,6 +507,9 @@ done:
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -505,7 +525,6 @@ H5AC__write_pin_entry_log_msg(const H5AC_t *cache,
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
     HDassert(entry);
 
     /* Create the log message string */
@@ -526,7 +545,6 @@ H5AC__write_pin_entry_log_msg(const H5AC_t *cache,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_pin_entry_log_msg() */
 
@@ -539,6 +557,9 @@ done:
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -555,7 +576,6 @@ H5AC__write_create_fd_log_msg(const H5AC_t *cache,
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
     HDassert(parent);
     HDassert(child);
 
@@ -578,7 +598,6 @@ H5AC__write_create_fd_log_msg(const H5AC_t *cache,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_create_fd_log_msg() */
 
@@ -590,6 +609,9 @@ done:
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -607,7 +629,6 @@ H5AC__write_protect_entry_log_msg(const H5AC_t *cache,
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
     HDassert(entry);
 
     if(H5AC__READ_ONLY_FLAG == flags)
@@ -635,7 +656,6 @@ H5AC__write_protect_entry_log_msg(const H5AC_t *cache,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_protect_entry_log_msg() */
 
@@ -647,6 +667,9 @@ done:
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -663,7 +686,6 @@ H5AC__write_resize_entry_log_msg(const H5AC_t *cache,
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
     HDassert(entry);
 
     /* Create the log message string */
@@ -685,7 +707,6 @@ H5AC__write_resize_entry_log_msg(const H5AC_t *cache,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_resize_entry_log_msg() */
 
@@ -697,6 +718,9 @@ done:
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -712,7 +736,6 @@ H5AC__write_unpin_entry_log_msg(const H5AC_t *cache,
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
     HDassert(entry);
 
     /* Create the log message string */
@@ -733,7 +756,6 @@ H5AC__write_unpin_entry_log_msg(const H5AC_t *cache,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_unpin_entry_log_msg() */
 
@@ -746,6 +768,9 @@ done:
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -762,7 +787,6 @@ H5AC__write_destroy_fd_log_msg(const H5AC_t *cache,
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
     HDassert(parent);
     HDassert(child);
 
@@ -785,7 +809,6 @@ H5AC__write_destroy_fd_log_msg(const H5AC_t *cache,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_destroy_fd_log_msg() */
 
@@ -797,6 +820,9 @@ done:
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -814,7 +840,6 @@ H5AC__write_unprotect_entry_log_msg(const H5AC_t *cache,
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
     HDassert(entry);
 
     /* Create the log message string */
@@ -839,7 +864,6 @@ H5AC__write_unprotect_entry_log_msg(const H5AC_t *cache,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_unprotect_entry_log_msg() */
 
@@ -851,6 +875,9 @@ done:
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
+ *
+ * Programmer:	Dana Robinson
+ *              Sunday, March 16, 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -866,7 +893,6 @@ H5AC__write_set_cache_config_log_msg(const H5AC_t *cache,
 
     /* Sanity checks */
     HDassert(cache);
-    HDassert(cache->magic == H5C__H5C_T_MAGIC);
     HDassert(config);
 
     /* Create the log message string */
@@ -886,7 +912,6 @@ H5AC__write_set_cache_config_log_msg(const H5AC_t *cache,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unable to emit log message")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__write_set_cache_config_log_msg() */
 

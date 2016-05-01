@@ -616,7 +616,6 @@ typedef struct H5F_object_flush_t {
     void *udata;                /* User data */
 } H5F_object_flush_t;
 
-
 /* I/O Info for an operation */
 typedef struct H5F_io_info_t {
     const H5F_t *f;                     /* File object */
@@ -721,7 +720,6 @@ H5_DLL herr_t H5F_flush_tagged_metadata(H5F_t * f, haddr_t tag, hid_t dxpl_id);
 H5_DLL herr_t H5F_evict_tagged_metadata(H5F_t * f, haddr_t tag, hid_t dxpl_id);
 H5_DLL herr_t H5F_evict_cache_entries(H5F_t *f, hid_t dxpl_id);
 
-
 /* Functions that read & verify a piece of metadata with checksum */
 H5_DLL herr_t H5F_read_check_metadata(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type,
     unsigned actype, haddr_t addr, size_t read_size, size_t chk_size,
@@ -734,7 +732,6 @@ H5_DLL herr_t H5F_set_retries(H5F_t *f);
 
 /* Routine to invoke callback function upon object flush */
 H5_DLL herr_t H5F_object_flush_cb(H5F_t *f, hid_t obj_id);
-
 
 /* Address-related functions */
 H5_DLL void H5F_addr_encode(const H5F_t *f, uint8_t **pp, haddr_t addr);
