@@ -1811,7 +1811,6 @@ H5F_build_actual_name(const H5F_t *f, const H5P_genplist_t *fapl, const char *na
             /* Duplicate the resolved path for the file name */
             if(NULL == (*actual_name = (char *)H5MM_strdup(realname)))
                 HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "can't duplicate real path")
-
         } /* end if */
     } /* end if */
 #endif /* H5_HAVE_SYMLINK */
@@ -1828,7 +1827,6 @@ done:
     if(new_fapl_id > 0)
         if(H5I_dec_app_ref(new_fapl_id) < 0)
             HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEOBJ, FAIL, "can't close duplicated FAPL")
-
 #ifdef H5_HAVE_SYMLINK
     if(realname)
         realname = (char *)H5MM_xfree(realname);

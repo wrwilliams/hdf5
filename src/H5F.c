@@ -140,7 +140,7 @@ H5F_term_package(void)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     if(H5_PKG_INIT_VAR) {
-	    if(H5I_nmembers(H5I_FILE) > 0) {
+        if(H5I_nmembers(H5I_FILE) > 0) {
             (void)H5I_clear_type(H5I_FILE, FALSE, FALSE);
             n++; /*H5I*/
 	} /* end if */
