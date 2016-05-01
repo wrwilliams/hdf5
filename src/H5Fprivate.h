@@ -530,7 +530,7 @@
 #define H5_SIZEOF_CHKSUM              	4
 
 /* v1 B-tree node signature */
-#define H5B_MAGIC	                    "TREE"
+#define H5B_MAGIC	                "TREE"
 
 /* v2 B-tree signatures */
 #define H5B2_HDR_MAGIC                  "BTHD"          /* Header */
