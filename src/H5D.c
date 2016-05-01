@@ -916,7 +916,7 @@ H5Dset_extent(hid_t dset_id, const hsize_t size[])
 done:
         FUNC_LEAVE_API(ret_value)
 } /* end H5Dset_extent() */
- 
+
 
 /*-------------------------------------------------------------------------
  * Function:    H5Dflush

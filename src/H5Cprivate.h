@@ -272,18 +272,18 @@
 /* Typedef for the main structure for the cache (defined in H5Cpkg.h) */
 typedef struct H5C_t H5C_t;
 
-/* Cache entry tag structure */
-typedef struct H5C_tag_t {
-    haddr_t value;
-    int globality;
-} H5C_tag_t;
-
 /* Define enum for cache entry tag 'globality' value */
 typedef enum {
     H5C_GLOBALITY_NONE=0, /* Non-global tag */
     H5C_GLOBALITY_MINOR,  /* global, not flushed during single object flush */
     H5C_GLOBALITY_MAJOR   /* global, needs flushed during single obect flush */
 } H5C_tag_globality_t;
+
+/* Cache entry tag structure */
+typedef struct H5C_tag_t {
+    haddr_t value;
+    H5C_tag_globality_t globality;
+} H5C_tag_t;
 
 /*
  *
@@ -1696,7 +1696,7 @@ typedef struct H5C_cache_entry_t {
     hbool_t			image_up_to_date;
     const H5C_class_t	      *	type;
     haddr_t		        tag;
-    int				globality;
+    H5C_tag_globality_t		globality;
     hbool_t			is_corked;
     hbool_t			is_dirty;
     hbool_t			dirtied;
@@ -2054,19 +2054,20 @@ H5_DLL herr_t H5C_stop_logging(H5C_t *cache_ptr);
 H5_DLL herr_t H5C_get_logging_status(const H5C_t *cache_ptr, /*OUT*/ hbool_t *is_enabled,
     /*OUT*/ hbool_t *is_currently_logging);
 H5_DLL herr_t H5C_write_log_message(const H5C_t *cache_ptr, const char message[]);
-
 H5_DLL void H5C_def_auto_resize_rpt_fcn(H5C_t *cache_ptr, int32_t version,
     double hit_rate, enum H5C_resize_status status,
     size_t old_max_cache_size, size_t new_max_cache_size,
     size_t old_min_clean_size, size_t new_min_clean_size);
 H5_DLL herr_t H5C_dest(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5C_evict(H5F_t *f, hid_t dxpl_id);
-H5_DLL herr_t H5C_expunge_entry(H5F_t *f, hid_t dxpl_id, const H5C_class_t *type, haddr_t addr, unsigned flags);
-
-
+H5_DLL herr_t H5C_expunge_entry(H5F_t *f, hid_t dxpl_id,
+    const H5C_class_t *type, haddr_t addr, unsigned flags);
 H5_DLL herr_t H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags);
 H5_DLL herr_t H5C_flush_tagged_entries(H5F_t * f, hid_t dxpl_id, haddr_t tag); 
 H5_DLL herr_t H5C_evict_tagged_entries(H5F_t * f, hid_t dxpl_id, haddr_t tag);
+#if H5C_DO_TAGGING_SANITY_CHECKS
+herr_t H5C_verify_tag(int id, haddr_t tag, H5C_tag_globality_t globality);
+#endif
 H5_DLL herr_t H5C_flush_to_min_clean(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5C_get_cache_auto_resize_config(const H5C_t *cache_ptr,
     H5C_auto_size_ctl_t *config_ptr);
@@ -2108,6 +2109,7 @@ H5_DLL herr_t H5C_unprotect(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *thing,
 H5_DLL herr_t H5C_validate_resize_config(H5C_auto_size_ctl_t *config_ptr,
     unsigned int tests);
 H5_DLL herr_t H5C_ignore_tags(H5C_t *cache_ptr);
+H5_DLL hbool_t H5C_get_ignore_tags(const H5C_t *cache_ptr);
 H5_DLL void H5C_retag_entries(H5C_t * cache_ptr, haddr_t src_tag, haddr_t dest_tag);
 H5_DLL herr_t H5C_cork(H5C_t *cache_ptr, haddr_t obj_addr, unsigned action, hbool_t *corked);
 H5_DLL herr_t H5C_get_entry_ring(const H5F_t *f, haddr_t addr, H5C_ring_t *ring);

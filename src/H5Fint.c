@@ -127,7 +127,6 @@ H5F_get_access_plist(H5F_t *f, hbool_t app_ref)
 {
     H5P_genplist_t *new_plist;              /* New property list */
     H5P_genplist_t *old_plist;              /* Old property list */
-    H5F_object_flush_t  flush_info;         /* Object flush property values */
     H5FD_driver_prop_t driver_prop;         /* Property for driver ID & info */
     hbool_t driver_prop_copied = FALSE;     /* Whether the driver property has been set up */
     unsigned    efc_size = 0;
@@ -174,13 +173,7 @@ H5F_get_access_plist(H5F_t *f, hbool_t app_ref)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'latest format' flag")
     if(H5P_set(new_plist, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, &(f->shared->read_attempts)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'read attempts ' flag")
-
-    /* Obtain object flush property values */
-    flush_info.func = f->shared->object_flush.func;
-    flush_info.udata = f->shared->object_flush.udata;
-
-    /* Set values */
-    if(H5P_set(new_plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &flush_info) < 0)
+    if(H5P_set(new_plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &(f->shared->object_flush)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set object flush callback")
 
     if(f->shared->efc)
@@ -870,7 +863,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                     if(H5F_flush(f, dxpl_id, TRUE) < 0)
                         /* Push error, but keep going*/
                         HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
-		}
+		} /* end if */
             } /* end if */
 
             /* if it exists, unpin the driver information block cache entry,
@@ -1172,7 +1165,7 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
             if(H5FD_close(lf) < 0) /* Closing will remove the lock */
                 HDONE_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
             HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to lock the file or initialize file structure")
-        }
+        } /* end if */
 
 	/* Need to set status_flags in the superblock if the driver has a 'lock' method */
 	if(drvr->lock)

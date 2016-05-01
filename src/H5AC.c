@@ -32,7 +32,6 @@
 /****************/
 
 #include "H5ACmodule.h"         /* This source code file is part of the H5AC module */
-#define H5C_FRIEND		        /* Suppress error about including H5Cpkg            */
 #define H5F_FRIEND		        /* Suppress error about including H5Fpkg            */
 
 
@@ -41,7 +40,7 @@
 /***********/
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5ACpkg.h"		/* Metadata cache			*/
-#include "H5Cpkg.h"		        /* Cache                                */
+#include "H5Cprivate.h"		/* Cache                                */
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5Fpkg.h"		/* Files				*/
 #include "H5FDprivate.h"	/* File drivers				*/
@@ -919,7 +918,7 @@ H5AC_insert_entry(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t add
 #endif /* H5AC__TRACE_FILE_ENABLED */
 
 #if H5AC_DO_TAGGING_SANITY_CHECKS
-    if (!f->shared->cache->ignore_tags && (H5AC__verify_tag(dxpl_id, type) < 0))
+    if(!H5C_get_ignore_tags(f->shared->cache) && (H5AC__verify_tag(dxpl_id, type) < 0))
         HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "Bad tag value")
 #endif /* H5AC_DO_TAGGING_SANITY_CHECKS */
 
@@ -1173,9 +1172,7 @@ H5AC_pin_protected_entry(void *thing)
 
     entry_ptr = (H5AC_info_t *)thing;
     cache_ptr = entry_ptr->cache_ptr;
-
     HDassert(cache_ptr);
-    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
 
     /* Check if log messages are being emitted */
     if(H5C_get_logging_status(cache_ptr, &log_enabled, &curr_logging) < 0)
@@ -1241,9 +1238,7 @@ H5AC_create_flush_dependency(void * parent_thing, void * child_thing)
 
     entry_ptr = (H5AC_info_t *)parent_thing;
     cache_ptr = entry_ptr->cache_ptr;
-
     HDassert(cache_ptr);
-    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
 
     /* Check if log messages are being emitted */
     if(H5C_get_logging_status(cache_ptr, &log_enabled, &curr_logging) < 0)
@@ -1301,10 +1296,10 @@ H5AC_protect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
     size_t		trace_entry_size = 0;
     FILE *              trace_file_ptr = NULL;
 #endif /* H5AC__TRACE_FILE_ENABLED */
-    void *thing = NULL;                 /* Pointer to native data structure for entry */
-    hbool_t log_enabled;                /* TRUE if logging was set up */
-    hbool_t curr_logging;               /* TRUE if currently logging */
-    void *ret_value = NULL;             /* Return value */
+    void *              thing = NULL;           /* Pointer to native data structure for entry */
+    hbool_t             log_enabled;            /* TRUE if logging was set up */
+    hbool_t             curr_logging;           /* TRUE if currently logging */
+    void *              ret_value = NULL;       /* Return value */
 
     FUNC_ENTER_NOAPI(NULL)
 
@@ -1347,7 +1342,7 @@ H5AC_protect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
 #endif /* H5AC__TRACE_FILE_ENABLED */
 
 #if H5AC_DO_TAGGING_SANITY_CHECKS
-    if (!f->shared->cache->ignore_tags && (H5AC__verify_tag(dxpl_id, type) < 0))
+    if(!H5C_get_ignore_tags(f->shared->cache) && (H5AC__verify_tag(dxpl_id, type) < 0))
         HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, NULL, "Bad tag value")
 #endif /* H5AC_DO_TAGGING_SANITY_CHECKS */
 
@@ -1424,9 +1419,7 @@ H5AC_resize_entry(void *thing, size_t new_size)
 
     entry_ptr = (H5AC_info_t *)thing;
     cache_ptr = entry_ptr->cache_ptr;
-
     HDassert(cache_ptr);
-    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
 
     /* Check if log messages are being emitted */
     if(H5C_get_logging_status(cache_ptr, &log_enabled, &curr_logging) < 0)
@@ -1504,9 +1497,7 @@ H5AC_unpin_entry(void *thing)
 
     entry_ptr = (H5AC_info_t *)thing;
     cache_ptr = entry_ptr->cache_ptr;
-
     HDassert(cache_ptr);
-    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
 
     /* Check if log messages are being emitted */
     if(H5C_get_logging_status(cache_ptr, &log_enabled, &curr_logging) < 0)
@@ -1571,9 +1562,7 @@ H5AC_destroy_flush_dependency(void * parent_thing, void * child_thing)
 
     entry_ptr = (H5AC_info_t *)parent_thing;
     cache_ptr = entry_ptr->cache_ptr;
-
     HDassert(cache_ptr);
-    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
 
     /* Check if log messages are being emitted */
     if(H5C_get_logging_status(cache_ptr, &log_enabled, &curr_logging) < 0)
@@ -2033,7 +2022,7 @@ H5AC_set_cache_auto_resize_config(H5AC_t *cache_ptr, H5AC_cache_config_t *config
 
     /* Validate external configuration */
     if(H5AC_validate_config(config_ptr) != SUCCEED)
-        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Bad cache configuration");
+        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Bad cache configuration")
 
     if(config_ptr->open_trace_file) {
 	FILE * file_ptr;
@@ -2801,11 +2790,11 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5AC__verify_tag(hid_t dxpl_id, const H5AC_class_t * type)
+H5AC__verify_tag(hid_t dxpl_id, const H5AC_class_t *type)
 {
-    H5C_tag_t tag;
-    H5P_genplist_t * dxpl;
-    herr_t ret_value = SUCCEED;
+    H5P_genplist_t *dxpl;               /* DXPL for operation */
+    H5C_tag_t tag;                      /* Entry tag to validate */
+    herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_STATIC
 
@@ -2814,66 +2803,12 @@ H5AC__verify_tag(hid_t dxpl_id, const H5AC_class_t * type)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
 
     /* Get the tag from the DXPL */
-    if( (H5P_get(dxpl, "H5C_tag", &tag)) < 0 )
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to query property value");
+    if((H5P_get(dxpl, "H5C_tag", &tag)) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to query property value")
 
-    /* Perform some sanity checks on tag value. Certain entry
-     * types require certain tag values, so check that these
-     * constraints are met. */
-    if(tag.value == H5AC__IGNORE_TAG)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "cannot ignore a tag while doing verification.")
-    else if(tag.value == H5AC__INVALID_TAG)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "no metadata tag provided")
-    else {
-
-        /* Perform some sanity checks on tag value. Certain entry
-         * types require certain tag values, so check that these
-         * constraints are met. */
-
-        /* Superblock */
-        if(type->id == H5AC_SUPERBLOCK_ID || type->id == H5AC_DRVRINFO_ID) {
-            if(tag.value != H5AC__SUPERBLOCK_TAG)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "superblock/driver-info not tagged with H5AC__SUPERBLOCK_TAG")
-            if(tag.globality != H5C_GLOBALITY_MAJOR)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "superblock/driver-info globality not marked with H5C_GLOBALITY_MAJOR")
-        }
-        else {
-            if(tag.value == H5AC__SUPERBLOCK_TAG)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "H5AC__SUPERBLOCK_TAG applied to non-superblock entry")
-        }
-    
-        /* Free Space Manager */
-        if((type->id == H5AC_FSPACE_HDR_ID) || (type->id == H5AC_FSPACE_SINFO_ID)) {
-            if(tag.value != H5AC__FREESPACE_TAG)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "freespace entry not tagged with H5AC__FREESPACE_TAG")
-            if(tag.globality != H5C_GLOBALITY_MINOR)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "freespace entry globality not marked with H5C_GLOBALITY_MINOR")
-        }
-        else {
-            if(tag.value == H5AC__FREESPACE_TAG)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "H5AC__FREESPACE_TAG applied to non-freespace entry")
-        }
-    
-        /* SOHM */
-        if((type->id == H5AC_SOHM_TABLE_ID) || (type->id == H5AC_SOHM_LIST_ID)) { 
-            if(tag.value != H5AC__SOHM_TAG)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "sohm entry not tagged with H5AC__SOHM_TAG")
-            if(tag.globality != H5C_GLOBALITY_MAJOR)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "sohm entry globality not marked with H5C_GLOBALITY_MAJOR")
-        }
-    
-        /* Global Heap */
-        if(type->id == H5AC_GHEAP_ID) {
-            if(tag.value != H5AC__GLOBALHEAP_TAG)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "global heap not tagged with H5AC__GLOBALHEAP_TAG")
-            if(tag.globality != H5C_GLOBALITY_MAJOR)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "global heap entry globality not marked with H5C_GLOBALITY_MAJOR")
-        }
-        else {
-            if(tag.value == H5AC__GLOBALHEAP_TAG)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "H5AC__GLOBALHEAP_TAG applied to non-globalheap entry")
-        }
-    } /* end else */
+    /* Verify legal tag value */
+    if(H5C_verify_tag(type->id, tag.value, tag.globality) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTGET, FAIL, "tag verification failed")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
