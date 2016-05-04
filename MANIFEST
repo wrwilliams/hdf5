@@ -2574,7 +2574,6 @@
 ./hl/tools/testfiles/w-ext-two-width.ddl
 ./hl/tools/testfiles/w-help1.ddl
 
-#
 # hl fortran
 ./hl/fortran/COPYING
 ./hl/fortran/Makefile.am
@@ -3009,7 +3008,10 @@
 ./hl/test/CMakeLists.txt
 ./hl/test/CMakeTests.cmake
 ./hl/tools/CMakeLists.txt
-./hl/tools/CMakeTests.cmake
+./hl/tools/gif2h5/CMakeLists.txt
+./hl/tools/gif2h5/CMakeTests.cmake
+./hl/tools/h5watch/CMakeLists.txt
+./hl/tools/h5watch/CMakeTests.cmake
 ./src/CMakeLists.txt
 ./test/CMakeLists.txt
 ./test/CMakeTests.cmake
@@ -3025,6 +3027,8 @@
 ./tools/h5dump/CMakeTestsPBITS.cmake
 ./tools/h5dump/CMakeTestsXML.cmake
 ./tools/h5dump/CMakeTestsVDS.cmake
+./tools/h5format_convert/CMakeLists.txt
+./tools/h5format_convert/CMakeTests.cmake
 ./tools/h5import/CMakeLists.txt
 ./tools/h5import/CMakeTests.cmake
 ./tools/h5jam/CMakeLists.txt
