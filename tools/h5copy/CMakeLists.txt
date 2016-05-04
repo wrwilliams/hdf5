@@ -4,7 +4,7 @@ PROJECT (HDF5_TOOLS_H5COPY)
 #-----------------------------------------------------------------------------
 # Setup include Directories
 #-----------------------------------------------------------------------------
-INCLUDE_DIRECTORIES (${HDF5_TOOLS_SRC_DIR}/lib)
+INCLUDE_DIRECTORIES (${HDF5_TOOLS_DIR}/lib)
 
 # --------------------------------------------------------------------
 # Add the h5copy and test executables
@@ -42,7 +42,7 @@ endif (BUILD_TESTING)
 #-----------------------------------------------------------------------------
 
 #INSTALL_PROGRAM_PDB (h5copy ${HDF5_INSTALL_BIN_DIR} toolsapplications)
-  
+
 install (
     TARGETS
         h5copy
