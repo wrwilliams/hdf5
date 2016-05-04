@@ -2520,6 +2520,8 @@
 ./java/src/hdf/hdf5lib/callbacks/H5A_iterate_t.java
 ./java/src/hdf/hdf5lib/callbacks/H5D_iterate_cb.java
 ./java/src/hdf/hdf5lib/callbacks/H5D_iterate_t.java
+./java/src/hdf/hdf5lib/callbacks/H5D_append_cb.java
+./java/src/hdf/hdf5lib/callbacks/H5D_append_t.java
 ./java/src/hdf/hdf5lib/callbacks/H5E_walk_cb.java
 ./java/src/hdf/hdf5lib/callbacks/H5E_walk_t.java
 ./java/src/hdf/hdf5lib/callbacks/H5L_iterate_cb.java
@@ -2856,7 +2858,8 @@
 ./hl/test/CMakeLists.txt
 ./hl/test/CMakeTests.cmake
 ./hl/tools/CMakeLists.txt
-./hl/tools/CMakeTests.cmake
+./hl/tools/gif2h5/CMakeLists.txt
+./hl/tools/gif2h5/CMakeTests.cmake
 ./src/CMakeLists.txt
 ./test/CMakeLists.txt
 ./test/CMakeTests.cmake
