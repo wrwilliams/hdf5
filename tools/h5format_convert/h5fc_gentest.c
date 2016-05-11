@@ -106,21 +106,21 @@ gen_non(const char *fname)
 
     /* Create a new file with SWMR_WRITE + non-latest-format */
     if((fid = H5Fcreate(fname, H5F_ACC_TRUNC|H5F_ACC_SWMR_WRITE, fcpl, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /* Create a group */
     if((gid = H5Gcreate2(fid, GROUP, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /* Create data */
     for(i = 0; i < 24; i++)
-	buf[i] = i;
+        buf[i] = i;
 
     /* Set chunk */
     if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
-	goto error;
+        goto error;
     if(H5Pset_chunk(dcpl, 2, c_dims) < 0)
-	goto error;
+        goto error;
 
     /* 
      * Create a chunked dataset with extensible array chunk indexing type (without data)
@@ -130,17 +130,17 @@ gen_non(const char *fname)
     max_dims[0] = 10;
     max_dims[1] = H5S_UNLIMITED;
     if((sid = H5Screate_simple(2, dims2, max_dims)) < 0)
-	goto error;
+        goto error;
 
     /* Create the dataset */
     if((did1  = H5Dcreate2(fid, DSET_NDATA_EA, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /* Closing */
     if(H5Sclose(sid) < 0)
-	goto error;
+        goto error;
     if(H5Dclose(did1) < 0)
-	goto error;
+        goto error;
 
     /* 
      * Create a chunked dataset with version 2 B-tree chunk indexing type (with data)
@@ -151,35 +151,35 @@ gen_non(const char *fname)
     max_dims[0] = H5S_UNLIMITED;
     max_dims[1] = H5S_UNLIMITED;
     if((sid = H5Screate_simple(2, dims2, max_dims)) < 0)
-	goto error;
+        goto error;
 
     /* Create the dataset */
     if((did1  = H5Dcreate2(gid, DSET_BT2, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /* Write to the dataset */
     if(H5Dwrite(did1, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf) < 0)
-	goto error;
+        goto error;
 
     /* Closing */
     if(H5Sclose(sid) < 0)
-	goto error;
+        goto error;
     if(H5Dclose(did1) < 0)
-	goto error;
+        goto error;
     if(H5Pclose(dcpl) < 0)
-	goto error;
+        goto error;
     if(H5Gclose(gid) < 0)
-	goto error;
+        goto error;
     if(H5Fclose(fid) < 0)
-	goto error;
+        goto error;
 
     /* Re-open the file with old format */
     if((fid = H5Fopen(fname, H5F_ACC_RDWR, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /* Open the group */
     if((gid = H5Gopen2(fid, GROUP, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /*
      * Create a dataset with version 2 B-btree chunk indexing type (without data)
@@ -187,23 +187,23 @@ gen_non(const char *fname)
 
     /* Set chunk */
     if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
-	goto error;
+        goto error;
     if(H5Pset_chunk(dcpl, 2, c_dims) < 0)
-	goto error;
+        goto error;
 
     /* Create dataspace */
     max_dims[0] = H5S_UNLIMITED;
     max_dims[1] = H5S_UNLIMITED;
     if((sid = H5Screate_simple(2, dims2, max_dims)) < 0)
-	goto error;
+        goto error;
 
     /* Create the dataset */
     if((did1 = H5Dcreate2(fid, DSET_NDATA_BT2, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /* Close the dataspace */
     if(H5Sclose(sid) < 0)
-	goto error;
+        goto error;
 
     /*
      * Create a dataset with extensible array chunk indexing type (with data) in the group
@@ -213,25 +213,25 @@ gen_non(const char *fname)
     max_dims[0] = 10;
     max_dims[1] = H5S_UNLIMITED;
     if((sid = H5Screate_simple(2, dims2, max_dims)) < 0)
-	goto error;
+        goto error;
 
     /* Create the dataset */
     if((did2 = H5Dcreate2(gid, DSET_EA, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /* Write to the dataset */
     if(H5Dwrite(did2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf) < 0)
-	goto error;
+        goto error;
 
     /* Closing */
     if(H5Sclose(sid) < 0)
-	goto error;
+        goto error;
     if(H5Pclose(dcpl) < 0)
-	goto error;
+        goto error;
     if(H5Dclose(did1) < 0)
-	goto error;
+        goto error;
     if(H5Dclose(did2) < 0)
-	goto error;
+        goto error;
 
     /* 
      * Create a compact dataset in the group
@@ -239,55 +239,55 @@ gen_non(const char *fname)
 
     /* Create dataspace */
     if((sid = H5Screate_simple(1, dims1, NULL)) < 0)
-	goto error;
+        goto error;
 
     if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
-	goto error;
+        goto error;
     if(H5Pset_layout(dcpl, H5D_COMPACT) < 0)
-	goto error;
+        goto error;
 
     /* Create the dataset */
     if((did1  = H5Dcreate2(gid, DSET_COMPACT, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /* Closing */
     if(H5Dclose(did1) < 0)
-	goto error;
+        goto error;
     if(H5Pclose(dcpl) < 0)
-	goto error;
+        goto error;
     if(H5Sclose(sid) < 0)
-	goto error;
+        goto error;
 
     /* 
      * Create a contiguous dataset with (2d with data) in the file
      */
     if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
-	goto error;
+        goto error;
     if(H5Pset_layout(dcpl, H5D_CONTIGUOUS) < 0)
-	goto error;
+        goto error;
 
     if((sid = H5Screate_simple(2, dims2, NULL)) < 0)
-	goto error;
+        goto error;
 
     /* Create the dataset */
     if((did2  = H5Dcreate2(fid, DSET_CONTIGUOUS, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
     /* Write to the dataset */
     if(H5Dwrite(did2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf) < 0)
-	goto error;
+        goto error;
 
     /* Closing */
     if(H5Dclose(did2) < 0)
-	goto error;
+        goto error;
     if(H5Pclose(dcpl) < 0)
-	goto error;
+        goto error;
     if(H5Sclose(sid) < 0)
-	goto error;
+        goto error;
 
     if(H5Gclose(gid) < 0)
-	goto error;
+        goto error;
     if(H5Fclose(fid) < 0)
-	goto error;
+        goto error;
 
 error:
     H5E_BEGIN_TRY {
@@ -323,17 +323,17 @@ gen_edge(const char *fname)
 
     /* Create a new format file */
     if((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0)
-	goto error;
+        goto error;
     if(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
-	goto error;
+        goto error;
     if((fid = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
-	goto error;
+        goto error;
 
     /* Set chunk, filter, no-filter-edge-chunk */
     if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
-	goto error;
+        goto error;
     if(H5Pset_chunk(dcpl, 2, c_dims) < 0)
-	goto error;
+        goto error;
     if(H5Pset_deflate(dcpl, 9) < 0)
         goto error;
     if(H5Pset_chunk_opts(dcpl, H5D_CHUNK_DONT_FILTER_PARTIAL_CHUNKS) < 0)
@@ -354,19 +354,19 @@ gen_edge(const char *fname)
 
     /* Write to the dataset */
     if(H5Dwrite(did, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf) < 0)
-	goto error;
+        goto error;
 
     /* Closing */
     if(H5Pclose(dcpl) < 0)
-	goto error;
+        goto error;
     if(H5Sclose(sid) < 0)
-	goto error;
+        goto error;
     if(H5Dclose(did) < 0)
-	goto error;
+        goto error;
     if(H5Pclose(fapl) < 0)
-	goto error;
+        goto error;
     if(H5Fclose(fid) < 0)
-	goto error;
+        goto error;
 
 error:
     H5E_BEGIN_TRY {
@@ -393,7 +393,7 @@ error:
  * on the parameter "what".
  */
 static void
-gen_ext(const char *fname, unsigned new, unsigned what)
+gen_ext(const char *fname, unsigned new_format, unsigned what)
 {
     hid_t	fid = -1;	 	/* file id */
     hid_t	fapl = -1;	       	/* file access property list */
@@ -410,13 +410,13 @@ gen_ext(const char *fname, unsigned new, unsigned what)
     int     	buf[24];            	/* data buffer */
 
     if((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0)
-	goto error;
+        goto error;
 
-    if(new) {
-	/* Create a new format file */
-	if(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
-	    goto error;
-    }
+    if(new_format) {
+        /* Create a new format file */
+        if(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
+            goto error;
+    } /* end if */
 
     /* Create a file creation property list */
     fcpl = H5Pcreate(H5P_FILE_CREATE);
@@ -455,17 +455,17 @@ gen_ext(const char *fname, unsigned new, unsigned what)
 
     /* Create the file */
     if((fid = H5Fcreate(fname, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
-	goto error;
+        goto error;
 
     /* Create a group */
     if((gid = H5Gcreate2(fid, GROUP, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /* Set chunk */
     if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
-	goto error;
+        goto error;
     if(H5Pset_chunk(dcpl, 2, c_dims) < 0)
-	goto error;
+        goto error;
 
 
     /* 
@@ -474,17 +474,17 @@ gen_ext(const char *fname, unsigned new, unsigned what)
 
     /* Create dataspace */
     if((sid = H5Screate_simple(1, dims1, NULL)) < 0)
-	goto error;
+        goto error;
 
     /* Create the dataset */
     if((did1  = H5Dcreate2(fid, DSET_CONTIGUOUS, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /* Closing */
     if(H5Sclose(sid) < 0)
-	goto error;
+        goto error;
     if(H5Dclose(did1) < 0)
-	goto error;
+        goto error;
 
     /* 
      * Create 2 chunked datasets with extensible array chunk indexing type 
@@ -495,30 +495,30 @@ gen_ext(const char *fname, unsigned new, unsigned what)
     max_dims[0] = 10;
     max_dims[1] = H5S_UNLIMITED;
     if((sid = H5Screate_simple(2, dims2, max_dims)) < 0)
-	goto error;
+        goto error;
 
     /* Create the 2 datasets */
     if((did1  = H5Dcreate2(gid, DSET_NDATA_EA, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     if((did2  = H5Dcreate2(fid, DSET_EA, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /* Create data */
     for(i = 0; i < 24; i++)
-	buf[i] = i;
+        buf[i] = i;
 
     /* Write to one dataset */
     if(H5Dwrite(did2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf) < 0)
-	goto error;
+        goto error;
 
     /* Closing */
     if(H5Sclose(sid) < 0)
-	goto error;
+        goto error;
     if(H5Dclose(did1) < 0)
-	goto error;
+        goto error;
     if(H5Dclose(did2) < 0)
-	goto error;
+        goto error;
 
 
     /* 
@@ -531,26 +531,26 @@ gen_ext(const char *fname, unsigned new, unsigned what)
     max_dims[0] = H5S_UNLIMITED;
     max_dims[1] = H5S_UNLIMITED;
     if((sid = H5Screate_simple(2, dims2, max_dims)) < 0)
-	goto error;
+        goto error;
 
     /* Create the 2 datasets */
     if((did1  = H5Dcreate2(fid, DSET_NDATA_BT2, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     if((did2  = H5Dcreate2(gid, DSET_BT2, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /* Write to one dataset */
     if(H5Dwrite(did2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf) < 0)
-	goto error;
+        goto error;
 
     /* Closing */
     if(H5Sclose(sid) < 0)
-	goto error;
+        goto error;
     if(H5Dclose(did1) < 0)
-	goto error;
+        goto error;
     if(H5Dclose(did2) < 0)
-	goto error;
+        goto error;
 
     /*
      * Create 2 chunked datasets with fixed array chunk indexing type 
@@ -561,26 +561,26 @@ gen_ext(const char *fname, unsigned new, unsigned what)
     max_dims[0] = 20;
     max_dims[1] = 10;
     if((sid = H5Screate_simple(2, dims2, max_dims)) < 0)
-	goto error;
+        goto error;
 
     /* Create the datasets */
     if((did1  = H5Dcreate2(fid, DSET_FA, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     if((did2  = H5Dcreate2(gid, DSET_NDATA_FA, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /* Write to the dataset */
     if(H5Dwrite(did1, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf) < 0)
-	goto error;
+        goto error;
 
     /* Closing */
     if(H5Sclose(sid) < 0)
-	goto error;
+        goto error;
     if(H5Dclose(did1) < 0)
-	goto error;
+        goto error;
     if(H5Dclose(did2) < 0)
-	goto error;
+        goto error;
 
 
     /* 
@@ -590,37 +590,37 @@ gen_ext(const char *fname, unsigned new, unsigned what)
 
     /* Create dataspace */
     if((sid = H5Screate_simple(2, dims2, NULL)) < 0)
-	goto error;
+        goto error;
 
     /* Set early allocation */
     if(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) < 0)
-	goto error;
+        goto error;
 
     /* Create the 2 datasets */
     if((did1  = H5Dcreate2(fid, DSET_NONE, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     if((did2  = H5Dcreate2(gid, DSET_NDATA_NONE, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
+        goto error;
 
     /* Write to one dataset */
     if(H5Dwrite(did1, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf) < 0)
-	goto error;
+        goto error;
 
     /* Closing */
     if(H5Dclose(did1) < 0)
-	goto error;
+        goto error;
     if(H5Dclose(did2) < 0)
-	goto error;
+        goto error;
     if(H5Sclose(sid) < 0)
-	goto error;
+        goto error;
 
     if(H5Pclose(dcpl) < 0)
-	goto error;
+        goto error;
     if(H5Gclose(gid) < 0)
-	goto error;
+        goto error;
     if(H5Fclose(fid) < 0)
-	goto error;
+        goto error;
 
 error:
     H5E_BEGIN_TRY {
@@ -634,11 +634,12 @@ error:
         H5Pclose(fcpl);
     } H5E_END_TRY;
 
-} /* gen_ext() */
+} /* end gen_ext() */
 
-int main(void)
+int
+main(void)
 {
-    unsigned i, new;
+    unsigned i, new_format;
 
     /* Generate a non-latest-format file with v3 superblock */
     gen_non(NON_V3_FILE);
@@ -647,18 +648,19 @@ int main(void)
     gen_edge(EDGE_V3_FILE);
 
     /* Generate old/new format file with/without messages in the superblock extension */
-    for(new = FALSE; new <= TRUE; new++) {
-	for(i = 0; i < 8; i++) {
+    for(new_format = FALSE; new_format <= TRUE; new_format++) {
+        for(i = 0; i < 8; i++) {
             char filename[50];
 
-	    HDmemset(filename, 0, sizeof(filename));
-	    if(!new)
-		HDstrcat(filename, "old_");
-	    HDstrcat(filename, FILENAME[i]);
+            HDmemset(filename, 0, sizeof(filename));
+            if(!new_format)
+                HDstrcat(filename, "old_");
+            HDstrcat(filename, FILENAME[i]);
 
-	    gen_ext(filename, new, i);
-	}
-    } /* end for new */
+            gen_ext(filename, new_format, i);
+        } /* end for */
+    } /* end for */
 
     return 0;
-}
+} /* end main */
+
