@@ -633,7 +633,8 @@ test_core(void)
     VERIFY(ret == 0, "fstat failed");
     size = (size_t)sb.st_size;
     file_image = (unsigned char *)HDmalloc(size);
-    HDread(fd, file_image, size);
+    if(HDread(fd, file_image, size) < 0)
+        TEST_ERROR
     ret = HDclose(fd);
     VERIFY(ret == 0, "close failed");
 

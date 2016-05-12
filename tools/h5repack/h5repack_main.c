@@ -259,14 +259,24 @@ int read_info(const char *filename, pack_opt_t *options) {
 			i = 0;
 			c = '0';
 			while (c != ' ') {
-				fscanf(fp, "%c", &c);
+				if(fscanf(fp, "%c", &c) < 0 && HDferror(fp)) {
+                    error_msg("fscanf error\n");
+                    h5tools_setstatus(EXIT_FAILURE);
+                    ret_value = EXIT_FAILURE;
+                    goto done;
+                } /* end if */
 				if (HDfeof(fp))
 					break;
 			}
 			c = '0';
 			/* go until end */
 			while (c != ' ') {
-				fscanf(fp, "%c", &c);
+				if(fscanf(fp, "%c", &c) < 0 && HDferror(fp)) {
+                    error_msg("fscanf error\n");
+                    h5tools_setstatus(EXIT_FAILURE);
+                    ret_value = EXIT_FAILURE;
+                    goto done;
+                } /* end if */
 				comp_info[i] = c;
 				i++;
 				if (HDfeof(fp))
@@ -293,14 +303,24 @@ int read_info(const char *filename, pack_opt_t *options) {
 			i = 0;
 			c = '0';
 			while (c != ' ') {
-				fscanf(fp, "%c", &c);
+				if(fscanf(fp, "%c", &c) < 0 && HDferror(fp)) {
+                    error_msg("fscanf error\n");
+                    h5tools_setstatus(EXIT_FAILURE);
+                    ret_value = EXIT_FAILURE;
+                    goto done;
+                } /* end if */
 				if (HDfeof(fp))
 					break;
 			}
 			c = '0';
 			/* go until end */
 			while (c != ' ') {
-				fscanf(fp, "%c", &c);
+				if(fscanf(fp, "%c", &c) < 0 && HDferror(fp)) {
+                    error_msg("fscanf error\n");
+                    h5tools_setstatus(EXIT_FAILURE);
+                    ret_value = EXIT_FAILURE;
+                    goto done;
+                } /* end if */
 				comp_info[i] = c;
 				i++;
 				if (HDfeof(fp))
