@@ -16,7 +16,7 @@
 ## ----------------------------------------------------------------------
 ## Initialize configure.
 ##
-AC_REVISION($Id: configure.ac 29899 2016-05-06 21:33:33Z lrknox $)
+AC_REVISION($Id: configure.ac 29808 2016-04-26 13:00:55Z lrknox $)
 AC_PREREQ([2.69])
 
 ## AC_INIT takes the name of the package, the version number, and an
@@ -26,7 +26,7 @@ AC_PREREQ([2.69])
 ## NOTE: Do not forget to change the version number here when we do a
 ## release!!!
 ##
-AC_INIT([HDF5], [1.8.17-pre2], [help@hdfgroup.org])
+AC_INIT([HDF5], [1.8.18-snap0], [help@hdfgroup.org])
 AC_CONFIG_SRCDIR([src/H5.c])
 AC_CONFIG_HEADERS([src/H5config.h])
 
@@ -787,7 +787,7 @@ AC_ARG_ENABLE([production],
                               [Determines how to run the compiler.])])
 
 case "X-$enable_production" in
-  X-|X-yes)
+  X-yes)
     enable_production="yes"
     AC_MSG_RESULT([production])
     CONFIG_MODE=production
@@ -796,7 +796,7 @@ case "X-$enable_production" in
     H5_CXXFLAGS="$H5_CXXFLAGS $PROD_CXXFLAGS"
     H5_FCFLAGS="$H5_FCFLAGS $PROD_FCFLAGS"
     ;;
-  X-no)
+  X-|X-no)
     enable_production="no"
     AC_MSG_RESULT([development])
     CONFIG_MODE=development

@@ -1,25 +1,25 @@
-HDF5 version 1.8.17-pre2 currently under development
+HDF5 version 1.8.18-snap0 currently under development
 ================================================================================
 
 INTRODUCTION
 ============
 
-This document describes the differences between HDF5-1.8.16 and
-HDF5-1.8.17-*, and contains information on the platforms tested and
-known problems in HDF5-1.8.17-*.
+This document describes the differences between HDF5-1.8.15 and
+HDF5-1.8.16-*, and contains information on the platforms tested and
+known problems in HDF5-1.8.16-*.
 For more details, see the files HISTORY-1_0-1_8_0_rc3.txt
 and HISTORY-1_8.txt in the release_docs/ directory of the HDF5 source.
 
-Links to the HDF5 1.8.17 source code, documentation, and additional materials
+Links to the HDF5 1.8.15 source code, documentation, and additional materials
 can be found on the HDF5 web page at:
 
      http://www.hdfgroup.org/products/hdf5/
 
-The HDF5 1.8.17 release can be obtained from:
+The HDF5 1.8.15 release can be obtained from:
 
      http://www.hdfgroup.org/HDF5/release/obtain5.html
 
-User documentation for 1.8.17 can be accessed directly at this location:
+User documentation for 1.8.15 can be accessed directly at this location:
 
      http://www.hdfgroup.org/HDF5/doc/
 
@@ -30,8 +30,8 @@ in 1.8.0?" document:
      http://www.hdfgroup.org/HDF5/doc/ADGuide/WhatsNew180.html
 
 All new and modified APIs are listed in detail in the "HDF5 Software Changes
-from Release to Release" document, in the section "Release 1.8.17 (current
-release) versus Release 1.8.16
+from Release to Release" document, in the section "Release 1.8.16 (current
+release) versus Release 1.8.15
 
      http://www.hdfgroup.org/HDF5/doc/ADGuide/Changes.html
 
@@ -40,18 +40,16 @@ If you have any questions or comments, please send them to the HDF Help Desk:
      help@hdfgroup.org
 
 
-
 CONTENTS
 ========
 
 - New Features
 - Support for New Platforms, Languages, and Compilers
-- Bug Fixes since HDF5-1.8.16
+- Bug Fixes since HDF5-1.8.15
 - Supported Platforms
 - Supported Configuration Features Summary
 - More Tested Platforms
 - Known Problems
-
 
 
 New Features
@@ -59,63 +57,51 @@ New Features
 
     Configuration
     -------------
-    - Cmakehdf5: Added Ability to Run Multiple Make Commands
-    
-      Added option --njobs to specify up to how many jobs to launch during
-      build (cmake) and testing (ctest).
-      
-      (AKC - 2015/12/13, HDFFV-9612)
+    - Cmakehdf5: added ability to run multiple make commands.
+      Added option --njobs to specific up to homw many jobs to launch during
+      build (cmamke) and testing (ctest).
+      (AKC, 2015/12/13, HDFFV-9612)
 
-    - Cmakehdf5: Added Szip Support and Verbose Option
-      
-      Added --with-szlib to support the Szip library; and 
-      --enable/disable-verbose to display all CMake process output.
-      
-      (AKC - 2015/11/16, HDFFV-8932 and DAILYTEST-195)
+    - Cmakehdf5: added --with-szlib to support szip library support; and
+      --enable/disable-verbose to display all cmake process output.
+      (AKC, 2015/11/16, HDFFV-8932 and DAILYTEST-195)
 
-    - CMake minimum is now 3.1.0. (ADB - 2015/11/14)
+    - CMake minimum is now 3.1.0. (ADB 2015/11/14)
 
-    - Large File System (LFS) Support has Changed in the Autotools
+    - Large file system (LFS) support has changed in the autotools
 
-      We assume that fseeko and ftello exist.
+      * We assume that fseeko and ftello exist.
 
-      The *64 I/O functions and types are no longer explicitly used.
-      We now rely on a mapping provided by _FILE_OFFSET_BITS (or its
-      equivalent).
+      * The *64 I/O functions and types are no longer explicitly used.
+        We now rely on a mapping provided by _FILE_OFFSET_BITS (or its
+        equivalent).
 
-      _LARGEFILE(64)_SOURCE is no longer exposed via AM_CPPFLAGS.
+      * _LARGEFILE(64)_SOURCE is no longer exposed via AM_CPPFLAGS.
 
-      (DER - 2016/03/29, HDFFV-9626 and HDFFV-9541)
-
+      (DER, 2016/03/29, HDFFV-9626)
 
 
     Library
     -------
-    - New API Calls for Searching for External Dataset Storage
-      
-      API calls that determine the search path for dataset external
-      storage were added. H5Pset/get_efile_prefix() API calls were added 
-      to the library. These functions give control over the search path 
-      for dataset external storage that has been configured with 
-      H5Pset_external().
-      
+    - New API calls that determine the search path for dataset external
+      storage.
+
+      H5Pset/get_efile_prefix() API calls were added to the library. These
+      functions give control over the search path for dataset external storage
+      that has been configured with H5Pset_external().
+
       Additionally, the HDF5_EXTFILE_PREFIX environment variable can be
       used to control the search path.
 
-      (DER - 2016/04/20, HDFFV-8740)
-
-
+      (DER, 2016/04/20, HDFFV-8740)
 
     Parallel Library
     ----------------
     - None
 
-
-
     Tools
     -----
     - None
-
 
 
     High-Level APIs
@@ -129,11 +115,9 @@ New Features
       can use the deflate compression only. The public function
       H5PTcreate has been added to replace H5PTcreate_fl. H5PTcreate
       takes a property list identifier to provide flexibility on
-      creation properties.  This also removes the following warning:
-      "deprecated conversion from string constant to "char*" 
-      [-Wwrite-strings]".
+      creation properties.
 
-      (BMR - 2016/04/25, HDFFV-9708, HDFFV-8615)
+      (BMR - 2016/04/25, HDFFV-8623)
 
     - New Public Functions: H5PTget_dataset and H5PTget_type
 
@@ -142,7 +126,7 @@ New Features
       and H5PTget_type returns the identifier of the datatype used by
       the packet table.
 
-      (BMR - 2016/04/25, HDFFV-8623 patch 3)
+      (BMR, 2016/04/25, HDFFV-8623)
 
     - Regarding #ifdef VLPT_REMOVED
 
@@ -159,32 +143,31 @@ New Features
 
       An overloaded constructor has been added to FL_PacketTable and
       takes a property list identifier to provide flexibility on
-      creation properties such as compression.
+      creation properties, such as compression.
 
       FL_PacketTable(hid_t fileID, const char* name, hid_t dtypeID,
                        hsize_t chunkSize = 0, hid_t plistID = H5P_DEFAULT)
 
-      (BMR - 2016/04/25, HDFFV-8623 patch 5)
+      (BMR - 2016/04/25, HDFFV-8623)
 
     - New Member Functions in PacketTable
 
-      Two accessor wrappers were added to class PacketTable.
+      Two accessor wrappers are added to class PacketTable.
 
       PacketTable::GetDataset() returns the identifier of the dataset
-      associated with the packet table, and PacketTable::GetDatatype() 
-      returns the identifier of the datatype that the packet table uses.
+                    associated with the packet table
+      PacketTable::GetDatatype() returns the identifier of the datatype
+                that the packet table uses.
 
-      (BMR - 2016/04/25, HDFFV-8623 patch 4)
+      (BMR - 2016/04/25, HDFFV-8623)
 
-    - New Member Functions with "char*" as an Argument
+    - Member Functions with "char*" as an Argument
 
       Overloaded functions were added to provide the "const char*"
       argument; the existing version will be deprecated in future
-      releases. This also removes the following warning:
-      "deprecated conversion from string constant to "char*" 
-      [-Wwrite-strings]".
+      releases.
 
-      (BMR - 2016/04/25, HDFFV-8623 patch 1, HDFFV-8615)
+      (BMR - 2016/04/25, HDFFV-8623)
 
     - Regarding #ifdef VLPT_REMOVED
 
@@ -202,7 +185,6 @@ New Features
     - None
 
 
-
     C++ API
     -------
     - New Member Function in DSetCreatPropList
@@ -210,43 +192,33 @@ New Features
       DSetCreatPropList::setNbit() was added to setup N-bit compression for
       a dataset.
 
-      (BMR - 2016/04/25, HDFFV-8623 patch 7)
+      (BMR, 2016/04/25)
 
     - New Overloaded "const" Member Functions in ArrayType
 
-      The two following functions were added:
-        ArrayType::getArrayNDims() const
-        ArrayType::getArrayDims() const
-      to provide const version, and the non-const version was marked 
-      deprecated. In-memory array information, ArrayType::rank and 
-      ArrayType::dimensions, were removed. This is an implementation 
-      detail and should not affect applications.
+      The two following functions are added:
+    ArrayType::getArrayNDims() const
+    ArrayType::getArrayDims() const
+      to provide const version and the non-const version are marked deprecated.
+      In-memory array information, ArrayType::rank and ArrayType::dimensions,
+      are removed.  This is implementation detail and should not affect
+      applications.
 
       (BMR, 2016/04/25, HDFFV-9725)
-
-     - New member function added
-
-       The assignment operator ArrayType::operator= is added because ArrayType
-       has pointer data members.
-
-       (BMR, 2016/03/07, HDFFV-9562)
 
 
 Support for New Platforms, Languages, and Compilers
 ===================================================
-    - Mac OS X El Capitan 10.11.4 with compilers Apple clang/clang++ 
-      version 7.3.0 from Xcode 7.3, gfortran GNU Fortran (GCC) 5.2.0 
-      and Intel icc/icpc/ifort version 16.0.2
-
-
+    -
+    -
 
 Bug Fixes since HDF5-1.8.16
 ===========================
 
     Configuration
     -------------
-    - Updated Linux Language Level Flags to Match the Autotools. Removed
-      Linux-specific Flags from OS X.
+    - Updated Linux language level flags to match the Autotools. Removed
+      Linux-specific flags from OS X.
 
       An addition to the flags simply being out of sync with the Autotools,
       the Linux flags were used on OS X builds which led to symbols not being
@@ -261,13 +233,13 @@ Bug Fixes since HDF5-1.8.16
       * REMOVED:    _BSD_SOURCE
       * REMOVED:    _DEFAULT_SOURCE
 
-      (DER - 2015/12/08, HDFFV-9627)
+      (DER, 2015/12/08, HDFFV-9627)
 
-    - The --enable-clear-file-buffers configure Option was Non-functional 
-      so the Feature was Always Enabled (its default value).
+    - The --enable-clear-file-buffers configure option was non-functional so
+      the feature was always enabled (its default value).
 
       Regardless of the configure flag, the setting was always enabled when
-      the Autotools were used to configure HDF5. This was due to the "no"
+      the autotools were used to configure HDF5. This was due to the "no"
       option being processed after the "*" option in configure.ac so "*"
       matched first. CMake was unaffected.
 
@@ -279,121 +251,94 @@ Bug Fixes since HDF5-1.8.16
       The performance overhead of the feature (a single memset call per
       allocation) is minimal.
 
-      (DER - 2016/02/03, HDFFV-9676)
-
-    - Added a patch to remove '"'s from arguments for MPI compilers that 
-      were causing errors compiling H5lib_settings.c with SGI MPT.
-
-      (LRK - 2016/04/20, HDFFV-9439)
+      (DER, 2016/02/03, HDFFV-9676)
 
     Library
     -------
-    - Fixed shared file pointer problem which caused a crash when running a
-      program provided by a user.
-
-      (VC - 2016/04/01, HDFFV-9469)
-
     - Fixed some format string warnings that prevent compiling with
       -Werror=format-security on gcc.
 
       These only appeared in error messages and would not cause problems
       under normal operation.
 
-      (DER - 2016/01/13, HDFFV-9640)
+      (DER, 2016/01/13, HDFFV-9640)
 
     - Fixed a library segmentation fault when accessing a corrupted
       file provided by a user.
 
-      (MSC - 2016/02/19, HDFFV-9670)
-
-
+      (MSC, 2016/02/19, HDFFV-9670)
 
     Parallel Library
     ----------------
     - None
 
-
-
     Performance
     -------------
     - None
 
-
-
     Tools
     -----
-    - h5dump: Sub-setting Fixed for Dimensions Greater than Two
+    - h5dump subsetting fixed for dims greater then two.
 
-      When a dataset has more than two dimensions, sub-setting would 
-      incorrectly calculate the data that needed to be displayed. 
-      Added in block and stride calculations that account for dimensions 
-      greater than two. NOTE: lines that have line breaks inserted 
-      because of display length calculations may have index info that 
-      is incorrect until the next dimension break.
+      When a dataset has more then two dimensions, subsetting would incorrectly
+      calculate the data that needed to be displayed.
+      Added in block and stride calculation that account for dimensions greater
+      then two.  NOTE: lines that have line breaks inserted because of display
+      length calculations, may have index info that is incorrect until the next
+      dimension break.
 
-      (ADB - 2016/03/07, HDFFV-9698)
+      (ADB, 2016/03/07, HDFFV-9698)
 
-    - h5dump: Issue with Argument Segmentation Fault
+    - h5dump issue with argument segfault.
 
-      When an argument with an optional value was at the end of the command 
-      line with a value, h5dump would crash. Reworked check for remaining 
-      arguments.
+      When an argument with an optional value was at the end of the command line
+      with a value, h5dump would crash. Reworked check for remaining arguments.
 
-      (ADB - 2016/03/07, HDFFV-9570, HDFFV-9684)
+      (ADB, 2016/03/07, HDFFV-9570, HDFFV-9684)
 
-    - h5dump: Issue with Default Fill Value
+    - h5dump issue with default fill value.
 
-      Added all default cases of fill value to the display of fill value.
+      Added all default cases of fill value to display of fill value.
 
-      (ADB -, 2016/03/07, HDFFV-9241)
+      (ADB, 2016/03/07, HDFFV-9241)
 
-    - h5dump: Clarified Help
-      
-      Clarified usage of -O F option in h5dump utility help.
+    - Clarified usage of -O F option in h5dump utility help.
 
-      (ADB - 2016/03/07, HDFFV-9066)
+      (ADB, 2016/03/07, HDFFV-9066)
 
-    - h5dump: Issue with Double Free Fault
+    - h5dump issue with double free fault.
 
-      Added a check for filename not null before calling free().
+      Added check for filename not null before calling free().
 
-      (ADB - 2016/01/27, HDFFV-9639)
+      (ADB, 2016/01/27, HDFFV-9639)
 
-    - VS2015 Release Changed how Timezone was Handled
+    - VS2015 release changed how timezone was handled.
 
-      Created a function, HDget_timezone, in H5system.c. Replaced 
-      timezone variable usage with function call.
+      Created a function, HDget_timezone, in H5system.c. Replaced timezone variable
+      usage with function call.
 
-      (ADB - 2015/11/02, HDFFV-9550)
-
-
+      (ADB, 2015/11/02, HDFFV-9550)
 
     Fortran API
     -----------
     - None
 
-
-
     C++ API
     -------
     - Removal of Obsolete Methods
 
-      The overloaded methods which had parameters that should be const 
-      but were not have been removed.
+      The overloaded methods which had parameters that should be const but were       not are removed.
 
-      (BMR - 2016/01/13, HDFFV-9789)
-
+      (BMR, 2016/01/13, User's report)
 
 
     High-Level APIs:
     ---------------
     - Fixed Memory Leak in Packet Table API
 
-      Applied user's patch to fix memory leak in the creation of a 
-      packet table.
+      Applied user's patch to fix memory leak in the creation of a packet table.
 
-      (BMR - 2016/04/25, HDFFV-9700)
-
+      (BMR, 2016/04/25, HDFFV-9700)
 
 
     Fortran High-Level APIs:
@@ -401,11 +346,9 @@ Bug Fixes since HDF5-1.8.16
     - None
 
 
-
     Testing
     -------
     - None
-
 
 
 Supported Platforms
@@ -417,10 +360,10 @@ They are built with the configure process unless specified otherwise.
     (NASA G-ADA)                  xlC/xlC_r 10.1.0.5
                                   xlf90/xlf90_r 12.1.0.6
 
-    Linux 2.6.32-573.22.1.el6     GNU C (gcc), Fortran (gfortran), C++ (g++)
+    Linux 2.6.32-573.3.1.el6    GNU C (gcc), Fortran (gfortran), C++ (g++)
     #1 SMP x86_64 GNU/Linux       compilers:
     (platypus)                       Version 4.4.7 20120313
-                                     Version 4.9.3, Version 5.2.0
+                                     Version 4.8.4, Version 5.2.0
                                   PGI C, Fortran, C++ for 64-bit target on
                                   x86-64;
                                       Version 15.7-0
@@ -429,15 +372,15 @@ They are built with the configure process unless specified otherwise.
                                      Version 15.0.3.187 Build 20150407
                                   MPICH 3.1.4 compiled with GCC 4.9.3
 
-    Linux 2.6.32-504.8.1.el6.ppc64 gcc (GCC) 4.4.7 20120313 (Red Hat 4.4.7-16)
-    #1 SMP ppc64 GNU/Linux        g++ (GCC) 4.4.7 20120313 (Red Hat 4.4.7-16)
-    (ostrich)                     GNU Fortran (GCC) 4.4.7 20120313 (Red Hat 4.4.7-16)
+    Linux 2.6.32-504.8.1.el6.ppc64 gcc (GCC) 4.4.7 20120313 (Red Hat 4.4.7-11)
+    #1 SMP ppc64 GNU/Linux        g++ (GCC) 4.4.7 20120313 (Red Hat 4.4.7-11)
+    (ostrich)                     GNU Fortran (GCC) 4.4.7 20120313 (Red Hat 4.4.7-11)
                                   IBM XL C/C++ V13.1
                                   IBM XL Fortran V15.1
 
     Linux 3.10.0-229.14.1.el7   GNU C (gcc), Fortran (gfortran), C++ (g++)
     #1 SMP x86_64 GNU/Linux       compilers:
-    (kituo/moohan)                  Version 4.8.5 20150623 (Red Hat 4.8.5-4)
+    (kituo/moohan)                  Version 4.8.3 20140911 (Red Hat 4.8.3-9)
                                     Version 5.2.0
                                   Intel(R) C (icc), C++ (icpc), Fortran (icc)
                                   compilers:
@@ -468,17 +411,13 @@ They are built with the configure process unless specified otherwise.
     64-bit                        gfortran GNU Fortran (GCC) 4.8.2
     (swallow/kite)                Intel icc/icpc/ifort version 15.0.3
 
-    Mac OS X Mavericks 10.9.5     Apple clang/clang++ version 6.0 from Xcode 6.2
+    Mac OS X Mavericks 10.9.5     Apple clang/clang++ version 6.0 from Xcode 6.2.0
     64-bit                        gfortran GNU Fortran (GCC) 4.9.2
     (wren/quail)                  Intel icc/icpc/ifort version 15.0.3
 
-    Mac OS X Yosemite 10.10.5     Apple clang/clang++ version 6.1 from Xcode 7.0
+    Mac OS X Yosemite 10.10.5     Apple clang/clang++ version 6.0 from Xcode 7.0.0
     64-bit                        gfortran GNU Fortran (GCC) 4.9.2
     (osx1010dev/osx1010test)      Intel icc/icpc/ifort version 15.0.3
-
-    Mac OS X El Capitan 10.11.4   Apple clang/clang++ version 7.3.0 from Xcode 7.3
-    64-bit                        gfortran GNU Fortran (GCC) 5.2.0
-    (osx1011dev/ox1011test)       Intel icc/icpc/ifort version 16.0.2
 
 
 Tested Configuration Features Summary
@@ -545,6 +484,10 @@ The following platforms are not supported but have been tested for this release.
     Linux 2.6.18-431.11.2.el6     g95 (GCC 4.0.3 (g95 0.94!)
     #1 SMP x86_64 GNU/Linux
     (platypus)
+
+    Mac OS X El Capitan 10.11     Apple clang/clang++ version 7.0.0 from Xcode 7.0.1
+    64-bit                        gfortran GNU Fortran (GCC) 5.2.0
+    (VM)
 
     Windows 7                     Visual Studio 2008  (cmake)
 
