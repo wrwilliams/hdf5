@@ -741,12 +741,12 @@ H5ST_dump_internal(H5ST_ptr_t p)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     if(p) {
-        printf("p=%p\n", p);
-        printf("\tp->up=%p\n", p->up);
-        printf("\tp->parent=%p\n", p->parent);
-        printf("\tp->lokid=%p\n", p->lokid);
-        printf("\tp->hikid=%p\n", p->hikid);
-        printf("\tp->eqkid=%p\n", p->eqkid);
+        printf("p=%p\n", (void *)p);
+        printf("\tp->up=%p\n", (void *)p->up);
+        printf("\tp->parent=%p\n", (void *)p->parent);
+        printf("\tp->lokid=%p\n", (void *)p->lokid);
+        printf("\tp->hikid=%p\n", (void *)p->hikid);
+        printf("\tp->eqkid=%p\n", (void *)p->eqkid);
         printf("\tp->splitchar=%c\n", p->splitchar);
 
         H5ST_dump_internal(p->lokid);

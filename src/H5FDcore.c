@@ -296,7 +296,7 @@ if(was_adjusted)
             item->start = start;
             item->end = end;
             if(H5SL_insert(file->dirty_list, item, &item->start) < 0)
-                HGOTO_ERROR(H5E_SLIST, H5E_CANTINSERT, FAIL, "can't insert new dirty region: (%llu, %llu)\n", start, end)
+                HGOTO_ERROR(H5E_SLIST, H5E_CANTINSERT, FAIL, "can't insert new dirty region: (%llu, %llu)\n", (unsigned long long)start, (unsigned long long)end)
         }
         else {
             /* Store the new item endpoint if it's bigger */
@@ -1307,7 +1307,7 @@ H5FD__core_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UN
         haddr_t end = addr + (haddr_t)size - 1;
 
         if(H5FD__core_add_dirty_region(file, start, end) != SUCCEED)
-            HGOTO_ERROR(H5E_VFL, H5E_CANTINSERT, FAIL, "unable to add core VFD dirty region during write call - addresses: start=%llu end=%llu", start, end)
+            HGOTO_ERROR(H5E_VFL, H5E_CANTINSERT, FAIL, "unable to add core VFD dirty region during write call - addresses: start=%llu end=%llu", (unsigned long long)start, (unsigned long long)end)
     }
 
     /* Write from BUF to memory */
