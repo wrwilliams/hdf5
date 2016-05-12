@@ -1060,61 +1060,70 @@ dnl   Try link a simple MPI program.
 dnl   Change to the C language
       AC_LANG_POP(Fortran)
 ])
-m4trace:m4/aclocal_fc.m4:422: -1- AC_DEFUN([PAC_FC_AVAIL_KINDS], [
+m4trace:m4/aclocal_fc.m4:431: -1- AC_DEFUN([PAC_FC_AVAIL_KINDS], [
 AC_LANG_PUSH([Fortran])
 rm -f pac_fconftest.out
 
 AC_RUN_IFELSE([
     AC_LANG_SOURCE([
     PROGRAM main
-        IMPLICIT NONE
-        INTEGER :: ik, k, lastkind, max_decimal_prec
-	INTEGER :: num_rkinds, num_ikinds
-        num_ikinds = 0
-        lastkind=SELECTED_INT_KIND(1)
-        OPEN(8, FILE='pac_fconftest.out', form='formatted')
-        ! Find integer KINDs
-        DO ik=2,36
-             k = SELECTED_INT_KIND(ik)
-             IF (k .NE. lastkind) THEN
-	          num_ikinds = num_ikinds + 1	
-                  WRITE(8,'(I0)',ADVANCE='NO') lastkind
-                  lastkind = k
-             	  IF(k.GT.0) WRITE(8,'(A)',ADVANCE='NO') ','	
-             ENDIF
-             IF (k .LE. 0) EXIT
-        ENDDO
-	IF (lastkind.NE.-1) THEN
-	   num_ikinds = num_ikinds + 1	
-           WRITE(8,'(I0)') lastkind
-	ELSE
-           WRITE(8,'()')
-        ENDIF
-        ! Find real KINDs
-        num_rkinds = 0
-        lastkind=SELECTED_REAL_KIND(1)
-	max_decimal_prec = 1
-        DO ik=2,36
-             k = SELECTED_REAL_KIND(ik)
-             IF (k .NE. lastkind) THEN
-                  num_rkinds = num_rkinds + 1
-                  WRITE(8,'(I0)',ADVANCE='NO') lastkind
-                  lastkind = k
-             	  IF(k.GT.0) WRITE(8,'(A)',ADVANCE='NO') ','
-	          max_decimal_prec = ik
-             ENDIF
-             IF (k .LE. 0) EXIT
-        ENDDO
-        IF (lastkind.NE.-1)THEN
-	    num_rkinds = num_rkinds + 1
-            WRITE(8,'(I0)') lastkind
-	ELSE
-           WRITE(8,'()')
-        ENDIF
-	WRITE(8,'(I0)') max_decimal_prec
-	WRITE(8,'(I0)') num_ikinds
-	WRITE(8,'(I0)') num_rkinds
-    END
+      IMPLICIT NONE
+      INTEGER :: ik, jk, k, max_decimal_prec
+      INTEGER :: num_rkinds = 1, num_ikinds = 1
+      INTEGER, DIMENSION(1:10) :: list_ikinds = -1
+      INTEGER, DIMENSION(1:10) :: list_rkinds = -1
+  
+      OPEN(8, FILE='pac_fconftest.out', FORM='formatted')
+
+      ! Find integer KINDs
+      list_ikinds(num_ikinds)=SELECTED_INT_KIND(1)
+      DO ik = 2, 36
+         k = SELECTED_INT_KIND(ik)
+         IF(k.LT.0) EXIT
+         IF(k.GT.list_ikinds(num_ikinds))THEN
+            num_ikinds = num_ikinds + 1
+            list_ikinds(num_ikinds) = k
+         ENDIF
+      ENDDO
+
+      DO k = 1, num_ikinds
+         WRITE(8,'(I0)', ADVANCE='NO') list_ikinds(k)
+         IF(k.NE.num_ikinds)THEN
+            WRITE(8,'(A)',ADVANCE='NO') ','
+         ELSE
+            WRITE(8,'()')
+         ENDIF
+      ENDDO
+
+      ! Find real KINDs
+      list_rkinds(num_rkinds)=SELECTED_REAL_KIND(1)
+      max_decimal_prec = 1
+
+      prec: DO ik = 2, 36
+         exp: DO jk = 1, 17000
+            k = SELECTED_REAL_KIND(ik,jk)
+            IF(k.LT.0) EXIT exp
+            IF(k.GT.list_rkinds(num_rkinds))THEN
+               num_rkinds = num_rkinds + 1
+               list_rkinds(num_rkinds) = k
+            ENDIF
+            max_decimal_prec = ik
+         ENDDO exp
+      ENDDO prec
+
+      DO k = 1, num_rkinds
+         WRITE(8,'(I0)', ADVANCE='NO') list_rkinds(k)
+         IF(k.NE.num_rkinds)THEN
+            WRITE(8,'(A)',ADVANCE='NO') ','
+         ELSE
+            WRITE(8,'()')
+         ENDIF
+      ENDDO
+
+     WRITE(8,'(I0)') max_decimal_prec
+     WRITE(8,'(I0)') num_ikinds
+     WRITE(8,'(I0)') num_rkinds
+    END PROGRAM main
     ])
 ],[
     if test -s pac_fconftest.out ; then
@@ -1162,7 +1171,7 @@ AC_RUN_IFELSE([
 
 AC_LANG_POP([Fortran])
 ])
-m4trace:m4/aclocal_fc.m4:460: -1- AC_DEFUN([PAC_FC_SIZEOF_INT_KINDS], [
+m4trace:m4/aclocal_fc.m4:469: -1- AC_DEFUN([PAC_FC_SIZEOF_INT_KINDS], [
 AC_REQUIRE([PAC_FC_AVAIL_KINDS])
 AC_MSG_CHECKING([sizeof of available INTEGER KINDs])
 AC_LANG_PUSH([Fortran])
@@ -1200,7 +1209,7 @@ PAC_FC_ALL_INTEGER_KINDS_SIZEOF="{`echo $pack_int_sizeof | sed -e 's/,$//' | sed
 AC_MSG_RESULT([$PAC_FC_ALL_INTEGER_KINDS_SIZEOF])
 AC_LANG_POP([Fortran])
 ])
-m4trace:m4/aclocal_fc.m4:498: -1- AC_DEFUN([PAC_FC_SIZEOF_REAL_KINDS], [
+m4trace:m4/aclocal_fc.m4:507: -1- AC_DEFUN([PAC_FC_SIZEOF_REAL_KINDS], [
 AC_REQUIRE([PAC_FC_AVAIL_KINDS])
 AC_MSG_CHECKING([sizeof of available REAL KINDs])
 AC_LANG_PUSH([Fortran])
@@ -1237,7 +1246,7 @@ PAC_FC_ALL_REAL_KINDS_SIZEOF="{`echo $pack_real_sizeof | sed -e 's/,$//' | sed -
 AC_MSG_RESULT([$PAC_FC_ALL_REAL_KINDS_SIZEOF])
 AC_LANG_POP([Fortran])
 ])
-m4trace:m4/aclocal_fc.m4:544: -1- AC_DEFUN([PAC_FC_NATIVE_INTEGER], [
+m4trace:m4/aclocal_fc.m4:553: -1- AC_DEFUN([PAC_FC_NATIVE_INTEGER], [
 AC_REQUIRE([PAC_FC_AVAIL_KINDS])
 AC_MSG_CHECKING([sizeof of native KINDS])
 AC_LANG_PUSH([Fortran])
@@ -1282,7 +1291,7 @@ rm -f pac_fconftest.out
 AC_MSG_RESULT([$pack_int_sizeof])
 AC_LANG_POP([Fortran])
 ])
-m4trace:m4/aclocal_fc.m4:588: -1- AC_DEFUN([PAC_FC_LDBL_DIG], [
+m4trace:m4/aclocal_fc.m4:597: -1- AC_DEFUN([PAC_FC_LDBL_DIG], [
 AC_MSG_CHECKING([maximum decimal precision for C])
 rm -f pac_Cconftest.out
   AC_LANG_CONFTEST([
@@ -3008,7 +3017,7 @@ m4trace:configure.ac:421: -1- m4_pattern_allow([^SIZEOF__QUAD$])
 m4trace:configure.ac:422: -1- m4_pattern_allow([^HAVE_QUADMATH_H$])
 m4trace:configure.ac:423: -1- PAC_FC_LDBL_DIG
 m4trace:configure.ac:423: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [autoconf/general.m4:2757: AC_RUN_IFELSE is expanded from...
-m4/aclocal_fc.m4:588: PAC_FC_LDBL_DIG is expanded from...
+m4/aclocal_fc.m4:597: PAC_FC_LDBL_DIG is expanded from...
 configure.ac:423: the top level])
 m4trace:configure.ac:425: -1- m4_pattern_allow([^PAC_C_MAX_REAL_PRECISION$])
 m4trace:configure.ac:428: -1- m4_pattern_allow([^HAVE_FLOAT128$])
@@ -3070,8 +3079,8 @@ m4trace:configure.ac:541: -1- PAC_PROG_FC_ISO_FORTRAN_ENV
 m4trace:configure.ac:543: -1- PAC_FC_NATIVE_INTEGER
 m4trace:configure.ac:543: -1- PAC_FC_AVAIL_KINDS
 m4trace:configure.ac:543: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [autoconf/general.m4:2757: AC_RUN_IFELSE is expanded from...
-m4/aclocal_fc.m4:422: PAC_FC_AVAIL_KINDS is expanded from...
-m4/aclocal_fc.m4:544: PAC_FC_NATIVE_INTEGER is expanded from...
+m4/aclocal_fc.m4:431: PAC_FC_AVAIL_KINDS is expanded from...
+m4/aclocal_fc.m4:553: PAC_FC_NATIVE_INTEGER is expanded from...
 configure.ac:543: the top level])
 m4trace:configure.ac:543: -1- m4_pattern_allow([^PAC_FC_MAX_REAL_PRECISION$])
 m4trace:configure.ac:543: -1- m4_pattern_allow([^H5CONFIG_F_NUM_RKIND$])
@@ -3080,7 +3089,7 @@ m4trace:configure.ac:543: -1- m4_pattern_allow([^H5CONFIG_F_RKIND$])
 m4trace:configure.ac:543: -1- m4_pattern_allow([^H5CONFIG_F_IKIND$])
 m4trace:configure.ac:546: -1- PAC_FC_AVAIL_KINDS
 m4trace:configure.ac:546: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [autoconf/general.m4:2757: AC_RUN_IFELSE is expanded from...
-m4/aclocal_fc.m4:422: PAC_FC_AVAIL_KINDS is expanded from...
+m4/aclocal_fc.m4:431: PAC_FC_AVAIL_KINDS is expanded from...
 configure.ac:546: the top level])
 m4trace:configure.ac:546: -1- m4_pattern_allow([^PAC_FC_MAX_REAL_PRECISION$])
 m4trace:configure.ac:546: -1- m4_pattern_allow([^H5CONFIG_F_NUM_RKIND$])
