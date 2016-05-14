@@ -290,6 +290,8 @@ convert(hid_t fid, const char *dname)
 	    goto done;
 
 	default:
+	H5D_NLAYOUTS:
+	H5D_LAYOUT_ERROR:
 	    error_msg("unknown layout type for \"%s\"\n", dname);
 	    h5tools_setstatus(EXIT_FAILURE);
 	    goto error;
@@ -309,7 +311,7 @@ convert(hid_t fid, const char *dname)
 
     /* Downgrade the dataset */
     if(H5Dformat_convert(did) < 0) {
-	error_msg("unable to downgrade dataset for \"%s\"\n", dname);
+	error_msg("unable to downgrade dataset \"%s\"\n", dname);
 	h5tools_setstatus(EXIT_FAILURE);
 	goto error;
     } else if(verbose_g)
