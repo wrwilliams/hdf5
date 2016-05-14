@@ -6400,7 +6400,7 @@ H5D__chunk_format_convert_cb(const H5D_chunk_rec_t *chunk_rec, void *_udata)
 	    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, H5_ITER_ERROR, "memory allocation failed for raw data chunk")
 
 	/* Read the non-filtered edge chunk */
-    if(H5F_block_read(new_idx_info->f, H5FD_MEM_DRAW, chunk_addr, read_size, H5AC_rawdata_dxpl_id, buf) < 0)
+	if(H5F_block_read(new_idx_info->f, H5FD_MEM_DRAW, chunk_addr, read_size, H5AC_rawdata_dxpl_id, buf) < 0)
 	    HGOTO_ERROR(H5E_IO, H5E_READERROR, H5_ITER_ERROR, "unable to read raw data chunk")
 
 	/* Pass the chunk through the pipeline */
@@ -6474,7 +6474,7 @@ H5D__chunk_format_convert(H5D_t *dset, H5D_chk_idx_info_t *idx_info, H5D_chk_idx
     udata.dset_dims = dset->shared->curr_dims;
 
     /*  terate over the chunks in the current index and insert the chunk addresses into version 1 B-tree index */
-    if((dset->shared->layout.storage.u.chunk.ops->iterate)(idx_info, H5D__chunk_format_convert_cb, &udata) < 0)
+    if((idx_info->storage->ops->iterate)(idx_info, H5D__chunk_format_convert_cb, &udata) < 0)
 	HGOTO_ERROR(H5E_DATASET, H5E_BADITER, FAIL, "unable to iterate over chunk index to chunk info")
 
 done:
