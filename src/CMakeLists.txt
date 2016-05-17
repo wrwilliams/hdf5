@@ -83,6 +83,7 @@ IDE_GENERATED_PROPERTIES ("H5B2" "${H5B2_HDRS}" "${H5B2_SRCS}" )
 
 set (H5C_SRCS
     ${HDF5_SRC_DIR}/H5C.c
+    ${HDF5_SRC_DIR}/H5Cimage.c
     ${HDF5_SRC_DIR}/H5Cmpio.c
 )
 set (H5C_HDRS
@@ -438,6 +439,7 @@ set (H5O_SRCS
     ${HDF5_SRC_DIR}/H5Olayout.c
     ${HDF5_SRC_DIR}/H5Olinfo.c
     ${HDF5_SRC_DIR}/H5Olink.c
+    ${HDF5_SRC_DIR}/H5Omdci_msg.c
     ${HDF5_SRC_DIR}/H5Omessage.c
     ${HDF5_SRC_DIR}/H5Omtime.c
     ${HDF5_SRC_DIR}/H5Oname.c
