@@ -54,48 +54,50 @@ main(int argc, char *argv[])
     /* h5fc_chk_idx fname dname */
     if(argc != 3) {
 	usage();
-	exit(EXIT_FAILURE);
-    }
+	HDexit(EXIT_FAILURE);
+    } /* end if */
 
     /* Duplicate the file name  & dataset name */
-    fname = strdup(argv[1]);
-    dname = strdup(argv[2]);
+    fname = HDstrdup(argv[1]);
+    dname = HDstrdup(argv[2]);
 
     /* Try opening the file */
     if((fid = h5tools_fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT, NULL, NULL, (size_t)0)) < 0) {
 	HDfprintf(stderr, "h5fc_chk_idx: unable to open the file\n");
-	return EXIT_FAILURE;
-    }
+	HDexit(EXIT_FAILURE);
+    } /* end if */
 
     /* Open the dataset */
     if((did = H5Dopen2(fid, dname, H5P_DEFAULT)) < 0) {
 	HDfprintf(stderr, "h5fc_chk_idx: unable to open the dataset\n");
-	exit(EXIT_FAILURE);
-    }
+	HDexit(EXIT_FAILURE);
+    } /* end if */
 
     /* Get the dataset's chunk indexing type */
     if(H5Dget_chunk_index_type(did, &idx_type) < 0) {
 	HDfprintf(stderr, "h5fc_chk_idx: unable to get chunk index type for the dataset\n");
-	exit(EXIT_FAILURE);
-    }
+	HDexit(EXIT_FAILURE);
+    } /* end if */
 
     /* Close the dataset */
     if(H5Dclose(did) < 0) {
 	HDfprintf(stderr, "h5fc_chk_idx: unable to close the dataset\n");
-	exit(EXIT_FAILURE);
-    }
+	HDexit(EXIT_FAILURE);
+    } /* end if */
 
     /* Close the file */
     if(H5Fclose(fid) < 0) {
 	HDfprintf(stderr, "h5fc_chk_idx_type: cannot close the file\n");
-	return EXIT_FAILURE;
-    }
+	HDexit(EXIT_FAILURE);
+    } /* end if */
 
     /* Return success when the chunk indexing type is version 1 B-tree */
     if(idx_type == H5D_CHUNK_IDX_BTREE) 
-	return(EXIT_SUCCESS);
+	HDexit(EXIT_SUCCESS);
     else {
 	HDfprintf(stderr, "Error: chunk indexing type is %d\n", idx_type);
-	return(EXIT_FAILURE);
-    }
+	HDexit(EXIT_FAILURE);
+    } /* end if */
+
 } /* main() */
+
