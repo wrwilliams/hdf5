@@ -7913,54 +7913,63 @@ else
 
 
     PROGRAM main
-        IMPLICIT NONE
-        INTEGER :: ik, k, lastkind, max_decimal_prec
-	INTEGER :: num_rkinds, num_ikinds
-        num_ikinds = 0
-        lastkind=SELECTED_INT_KIND(1)
-        OPEN(8, FILE='pac_fconftest.out', form='formatted')
-        ! Find integer KINDs
-        DO ik=2,36
-             k = SELECTED_INT_KIND(ik)
-             IF (k .NE. lastkind) THEN
-	          num_ikinds = num_ikinds + 1
-                  WRITE(8,'(I0)',ADVANCE='NO') lastkind
-                  lastkind = k
-             	  IF(k.GT.0) WRITE(8,'(A)',ADVANCE='NO') ','
-             ENDIF
-             IF (k .LE. 0) EXIT
-        ENDDO
-	IF (lastkind.NE.-1) THEN
-	   num_ikinds = num_ikinds + 1
-           WRITE(8,'(I0)') lastkind
-	ELSE
-           WRITE(8,'()')
-        ENDIF
-        ! Find real KINDs
-        num_rkinds = 0
-        lastkind=SELECTED_REAL_KIND(1)
-	max_decimal_prec = 1
-        DO ik=2,36
-             k = SELECTED_REAL_KIND(ik)
-             IF (k .NE. lastkind) THEN
-                  num_rkinds = num_rkinds + 1
-                  WRITE(8,'(I0)',ADVANCE='NO') lastkind
-                  lastkind = k
-             	  IF(k.GT.0) WRITE(8,'(A)',ADVANCE='NO') ','
-	          max_decimal_prec = ik
-             ENDIF
-             IF (k .LE. 0) EXIT
-        ENDDO
-        IF (lastkind.NE.-1)THEN
-	    num_rkinds = num_rkinds + 1
-            WRITE(8,'(I0)') lastkind
-	ELSE
-           WRITE(8,'()')
-        ENDIF
-	WRITE(8,'(I0)') max_decimal_prec
-	WRITE(8,'(I0)') num_ikinds
-	WRITE(8,'(I0)') num_rkinds
-    END
+      IMPLICIT NONE
+      INTEGER :: ik, jk, k, max_decimal_prec
+      INTEGER :: num_rkinds = 1, num_ikinds = 1
+      INTEGER, DIMENSION(1:10) :: list_ikinds = -1
+      INTEGER, DIMENSION(1:10) :: list_rkinds = -1
+
+      OPEN(8, FILE='pac_fconftest.out', FORM='formatted')
+
+      ! Find integer KINDs
+      list_ikinds(num_ikinds)=SELECTED_INT_KIND(1)
+      DO ik = 2, 36
+         k = SELECTED_INT_KIND(ik)
+         IF(k.LT.0) EXIT
+         IF(k.GT.list_ikinds(num_ikinds))THEN
+            num_ikinds = num_ikinds + 1
+            list_ikinds(num_ikinds) = k
+         ENDIF
+      ENDDO
+
+      DO k = 1, num_ikinds
+         WRITE(8,'(I0)', ADVANCE='NO') list_ikinds(k)
+         IF(k.NE.num_ikinds)THEN
+            WRITE(8,'(A)',ADVANCE='NO') ','
+         ELSE
+            WRITE(8,'()')
+         ENDIF
+      ENDDO
+
+      ! Find real KINDs
+      list_rkinds(num_rkinds)=SELECTED_REAL_KIND(1)
+      max_decimal_prec = 1
+
+      prec: DO ik = 2, 36
+         exp: DO jk = 1, 17000
+            k = SELECTED_REAL_KIND(ik,jk)
+            IF(k.LT.0) EXIT exp
+            IF(k.GT.list_rkinds(num_rkinds))THEN
+               num_rkinds = num_rkinds + 1
+               list_rkinds(num_rkinds) = k
+            ENDIF
+            max_decimal_prec = ik
+         ENDDO exp
+      ENDDO prec
+
+      DO k = 1, num_rkinds
+         WRITE(8,'(I0)', ADVANCE='NO') list_rkinds(k)
+         IF(k.NE.num_rkinds)THEN
+            WRITE(8,'(A)',ADVANCE='NO') ','
+         ELSE
+            WRITE(8,'()')
+         ENDIF
+      ENDDO
+
+     WRITE(8,'(I0)') max_decimal_prec
+     WRITE(8,'(I0)') num_ikinds
+     WRITE(8,'(I0)') num_rkinds
+    END PROGRAM main
 
 
 _ACEOF
@@ -8136,54 +8145,63 @@ else
 
 
     PROGRAM main
-        IMPLICIT NONE
-        INTEGER :: ik, k, lastkind, max_decimal_prec
-	INTEGER :: num_rkinds, num_ikinds
-        num_ikinds = 0
-        lastkind=SELECTED_INT_KIND(1)
-        OPEN(8, FILE='pac_fconftest.out', form='formatted')
-        ! Find integer KINDs
-        DO ik=2,36
-             k = SELECTED_INT_KIND(ik)
-             IF (k .NE. lastkind) THEN
-	          num_ikinds = num_ikinds + 1
-                  WRITE(8,'(I0)',ADVANCE='NO') lastkind
-                  lastkind = k
-             	  IF(k.GT.0) WRITE(8,'(A)',ADVANCE='NO') ','
-             ENDIF
-             IF (k .LE. 0) EXIT
-        ENDDO
-	IF (lastkind.NE.-1) THEN
-	   num_ikinds = num_ikinds + 1
-           WRITE(8,'(I0)') lastkind
-	ELSE
-           WRITE(8,'()')
-        ENDIF
-        ! Find real KINDs
-        num_rkinds = 0
-        lastkind=SELECTED_REAL_KIND(1)
-	max_decimal_prec = 1
-        DO ik=2,36
-             k = SELECTED_REAL_KIND(ik)
-             IF (k .NE. lastkind) THEN
-                  num_rkinds = num_rkinds + 1
-                  WRITE(8,'(I0)',ADVANCE='NO') lastkind
-                  lastkind = k
-             	  IF(k.GT.0) WRITE(8,'(A)',ADVANCE='NO') ','
-	          max_decimal_prec = ik
-             ENDIF
-             IF (k .LE. 0) EXIT
-        ENDDO
-        IF (lastkind.NE.-1)THEN
-	    num_rkinds = num_rkinds + 1
-            WRITE(8,'(I0)') lastkind
-	ELSE
-           WRITE(8,'()')
-        ENDIF
-	WRITE(8,'(I0)') max_decimal_prec
-	WRITE(8,'(I0)') num_ikinds
-	WRITE(8,'(I0)') num_rkinds
-    END
+      IMPLICIT NONE
+      INTEGER :: ik, jk, k, max_decimal_prec
+      INTEGER :: num_rkinds = 1, num_ikinds = 1
+      INTEGER, DIMENSION(1:10) :: list_ikinds = -1
+      INTEGER, DIMENSION(1:10) :: list_rkinds = -1
+
+      OPEN(8, FILE='pac_fconftest.out', FORM='formatted')
+
+      ! Find integer KINDs
+      list_ikinds(num_ikinds)=SELECTED_INT_KIND(1)
+      DO ik = 2, 36
+         k = SELECTED_INT_KIND(ik)
+         IF(k.LT.0) EXIT
+         IF(k.GT.list_ikinds(num_ikinds))THEN
+            num_ikinds = num_ikinds + 1
+            list_ikinds(num_ikinds) = k
+         ENDIF
+      ENDDO
+
+      DO k = 1, num_ikinds
+         WRITE(8,'(I0)', ADVANCE='NO') list_ikinds(k)
+         IF(k.NE.num_ikinds)THEN
+            WRITE(8,'(A)',ADVANCE='NO') ','
+         ELSE
+            WRITE(8,'()')
+         ENDIF
+      ENDDO
+
+      ! Find real KINDs
+      list_rkinds(num_rkinds)=SELECTED_REAL_KIND(1)
+      max_decimal_prec = 1
+
+      prec: DO ik = 2, 36
+         exp: DO jk = 1, 17000
+            k = SELECTED_REAL_KIND(ik,jk)
+            IF(k.LT.0) EXIT exp
+            IF(k.GT.list_rkinds(num_rkinds))THEN
+               num_rkinds = num_rkinds + 1
+               list_rkinds(num_rkinds) = k
+            ENDIF
+            max_decimal_prec = ik
+         ENDDO exp
+      ENDDO prec
+
+      DO k = 1, num_rkinds
+         WRITE(8,'(I0)', ADVANCE='NO') list_rkinds(k)
+         IF(k.NE.num_rkinds)THEN
+            WRITE(8,'(A)',ADVANCE='NO') ','
+         ELSE
+            WRITE(8,'()')
+         ENDIF
+      ENDDO
+
+     WRITE(8,'(I0)') max_decimal_prec
+     WRITE(8,'(I0)') num_ikinds
+     WRITE(8,'(I0)') num_rkinds
+    END PROGRAM main
 
 
 _ACEOF
@@ -8549,9 +8567,8 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-
-    max_real_fortran_sizeof="`echo $PAC_FC_ALL_REAL_KINDS_SIZEOF | sed -ne 's/.*,\([0-9]*\)\}/\1/p'`"
-  max_real_fortran_kind="`echo \"$PAC_FC_ALL_REAL_KINDS\" | sed -ne 's/.*,\([0-9]*\)\}/\1/p'`"
+    max_real_fortran_sizeof="`echo $PAC_FC_ALL_REAL_KINDS_SIZEOF | sed -ne 's/.*,\([0-9]*\)}/\1/p'`"
+  max_real_fortran_kind="`echo $PAC_FC_ALL_REAL_KINDS | sed -ne 's/.*,\([0-9]*\)}/\1/p'`"
 
     if test "$ac_cv_sizeof___float128" != 0;then
     if test "$ac_cv_sizeof___float128" != "$max_real_fortran_sizeof" &&
@@ -8567,6 +8584,7 @@ $as_echo "$as_me: WARNING:
           " >&2;}
       PAC_FC_ALL_REAL_KINDS="`echo $PAC_FC_ALL_REAL_KINDS | sed -e 's/,[0-9]\+}/}/g'`"
       PAC_FC_ALL_REAL_KINDS_SIZEOF="`echo $PAC_FC_ALL_REAL_KINDS_SIZEOF | sed -e 's/,[0-9]\+}/}/g'`"
+
     fi
   fi
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Fortran interoperable KINDS with C" >&5
@@ -9756,7 +9774,7 @@ else
 JAVA_TEST=Test.java
 CLASS_TEST=Test.class
 cat << \EOF > $JAVA_TEST
-/* #line 9759 "configure" */
+/* #line 9777 "configure" */
 public class Test {
 }
 EOF
@@ -9931,7 +9949,7 @@ EOF
 if $UUDECODE Test.uue; then
         ac_cv_prog_uudecode_base64=yes
 else
-        echo "configure: 9934: uudecode had trouble decoding base 64 file 'Test.uue'" >&5
+        echo "configure: 9952: uudecode had trouble decoding base 64 file 'Test.uue'" >&5
         echo "configure: failed file was:" >&5
         cat Test.uue >&5
         ac_cv_prog_uudecode_base64=no
@@ -10048,7 +10066,7 @@ else
 JAVA_TEST=Test.java
 CLASS_TEST=Test.class
 cat << \EOF > $JAVA_TEST
-/* #line 10051 "configure" */
+/* #line 10069 "configure" */
 public class Test {
 }
 EOF
@@ -10083,7 +10101,7 @@ JAVA_TEST=Test.java
 CLASS_TEST=Test.class
 TEST=Test
 cat << \EOF > $JAVA_TEST
-/* [#]line 10086 "configure" */
+/* [#]line 10104 "configure" */
 public class Test {
 public static void main (String args[]) {
         System.exit (0);
@@ -10513,7 +10531,7 @@ EOF
                 if $UUDECODE Test.uue; then
                         :
                 else
-                        echo "configure: 10516: uudecode had trouble decoding base 64 file 'Test.uue'" >&5
+                        echo "configure: 10534: uudecode had trouble decoding base 64 file 'Test.uue'" >&5
                         echo "configure: failed file was:" >&5
                         cat Test.uue >&5
                         ac_cv_prog_uudecode_base64=no
@@ -10533,7 +10551,7 @@ EOF
 else
 
 cat << \EOF > Test.java
-/* #line 10536 "configure" */
+/* #line 10554 "configure" */
 import junit.textui.TestRunner;
 public class Test {
 
