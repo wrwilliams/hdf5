@@ -488,6 +488,7 @@
 ./src/H5B2stat.c
 ./src/H5B2test.c
 ./src/H5C.c
+./src/H5Cimage.c
 ./src/H5Cmodule.h
 ./src/H5Cmpio.c
 ./src/H5Cpkg.h
@@ -727,6 +728,7 @@
 ./src/H5Olayout.c
 ./src/H5Olinfo.c
 ./src/H5Olink.c
+./src/H5Omdci_msg.c
 ./src/H5Omessage.c
 ./src/H5Omodule.h
 ./src/H5Omtime.c
@@ -876,6 +878,7 @@
 ./test/cache_api.c
 ./test/cache_common.c
 ./test/cache_common.h
+./test/cache_image.c
 ./test/cache_tagging.c
 ./test/cmpd_dset.c
 ./test/corrupt_stab_msg.h5
@@ -916,6 +919,8 @@
 ./test/filter_fail.c
 ./test/flush1.c
 ./test/flush2.c
+./test/genall5.c
+./test/genall5.h
 ./test/gen_bad_ohdr.c
 ./test/gen_bad_compound.c
 ./test/gen_bogus.c
@@ -1096,10 +1101,14 @@
 ./test/testfiles/plist_files/dxpl_32le
 ./test/testfiles/plist_files/dxpl_64be
 ./test/testfiles/plist_files/dxpl_64le
+./test/testfiles/plist_files/dxpl_be
+./test/testfiles/plist_files/dxpl_le
 ./test/testfiles/plist_files/fapl_32be
 ./test/testfiles/plist_files/fapl_32le
 ./test/testfiles/plist_files/fapl_64be
 ./test/testfiles/plist_files/fapl_64le
+./test/testfiles/plist_files/fapl_be
+./test/testfiles/plist_files/fapl_le
 ./test/testfiles/plist_files/fcpl_32be
 ./test/testfiles/plist_files/fcpl_32le
 ./test/testfiles/plist_files/fcpl_64be
@@ -1112,6 +1121,8 @@
 ./test/testfiles/plist_files/lapl_32le
 ./test/testfiles/plist_files/lapl_64be
 ./test/testfiles/plist_files/lapl_64le
+./test/testfiles/plist_files/lapl_be
+./test/testfiles/plist_files/lapl_le
 ./test/testfiles/plist_files/lcpl_32be
 ./test/testfiles/plist_files/lcpl_32le
 ./test/testfiles/plist_files/lcpl_64be
