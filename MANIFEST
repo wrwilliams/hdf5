@@ -489,11 +489,13 @@
 ./src/H5B2stat.c
 ./src/H5B2test.c
 ./src/H5C.c
+./src/H5Clog.c
 ./src/H5Cmodule.h
 ./src/H5Cmpio.c
 ./src/H5Cpkg.h
 ./src/H5Cprivate.h
 ./src/H5Cpublic.h
+./src/H5Cquery.c
 ./src/H5CS.c
 ./src/H5CSprivate.h
 ./src/H5D.c
