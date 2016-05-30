@@ -67,7 +67,7 @@ typedef struct H5D_farray_ctx_t {
 } H5D_farray_ctx_t;
 
 /* User data for chunk callbacks */
-typedef struct  H5D_farray_ud_t {
+typedef struct H5D_farray_ud_t {
     H5F_t *f;                   /* File pointer for operation */
     hid_t dxpl_id;              /* DXPL ID for operation */
 } H5D_farray_ud_t;

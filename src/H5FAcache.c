@@ -1269,3 +1269,4 @@ H5FA__cache_dblk_page_free_icr(void *thing))
 CATCH
 
 END_FUNC(STATIC)   /* end H5FA__cache_dblk_page_free_icr() */
+
