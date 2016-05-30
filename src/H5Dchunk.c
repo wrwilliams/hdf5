@@ -6360,7 +6360,8 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Vailin Choi; Feb 2015
+ * Programmer:  Vailin Choi
+ *              Feb 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -6377,6 +6378,7 @@ H5D__chunk_format_convert_cb(const H5D_chunk_rec_t *chunk_rec, void *_udata)
 
     FUNC_ENTER_STATIC
 
+    /* Set up */
     new_idx_info = udata->new_idx_info;
     H5_CHECKED_ASSIGN(nbytes, size_t, chunk_rec->nbytes, uint32_t);
     chunk_addr = chunk_rec->chunk_addr;
@@ -6400,16 +6402,15 @@ H5D__chunk_format_convert_cb(const H5D_chunk_rec_t *chunk_rec, void *_udata)
 	    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, H5_ITER_ERROR, "memory allocation failed for raw data chunk")
 
 	/* Read the non-filtered edge chunk */
-	if(H5F_block_read(new_idx_info->f, H5FD_MEM_DRAW, chunk_addr, read_size, H5AC_rawdata_dxpl_id, buf) < 0)
+        if(H5F_block_read(new_idx_info->f, H5FD_MEM_DRAW, chunk_addr, read_size, H5AC_rawdata_dxpl_id, buf) < 0)
 	    HGOTO_ERROR(H5E_IO, H5E_READERROR, H5_ITER_ERROR, "unable to read raw data chunk")
 
 	/* Pass the chunk through the pipeline */
-	if(H5Z_pipeline(new_idx_info->pline, 0, &filter_mask, H5Z_NO_EDC, cb_struct, &nbytes, 
-			&read_size, &buf) < 0)
+	if(H5Z_pipeline(new_idx_info->pline, 0, &filter_mask, H5Z_NO_EDC, cb_struct, &nbytes, &read_size, &buf) < 0)
 	    HGOTO_ERROR(H5E_PLINE, H5E_CANTFILTER, H5_ITER_ERROR, "output pipeline failed")
 
 #if H5_SIZEOF_SIZE_T > 4
-	    /* Check for the chunk expanding too much to encode in a 32-bit value */
+        /* Check for the chunk expanding too much to encode in a 32-bit value */
 	if(nbytes > ((size_t)0xffffffff))
 	    HGOTO_ERROR(H5E_DATASET, H5E_BADRANGE, H5_ITER_ERROR, "chunk too large for 32-bit length")
 #endif /* H5_SIZEOF_SIZE_T > 4 */
@@ -6420,10 +6421,9 @@ H5D__chunk_format_convert_cb(const H5D_chunk_rec_t *chunk_rec, void *_udata)
 	HDassert(H5F_addr_defined(chunk_addr));
 
 	/* Write the filtered chunk to disk */
-	if(H5F_block_write(new_idx_info->f, H5FD_MEM_DRAW, chunk_addr, nbytes, 
-               H5AC_rawdata_dxpl_id, buf) < 0)
+	if(H5F_block_write(new_idx_info->f, H5FD_MEM_DRAW, chunk_addr, nbytes, H5AC_rawdata_dxpl_id, buf) < 0)
 	    HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, H5_ITER_ERROR, "unable to write raw data to file")
-    }
+    } /* end if */
 
     /* Set up chunk information for insertion to chunk index */
     insert_udata.chunk_block.offset = chunk_addr;
@@ -6453,7 +6453,8 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Vailin Choi; Feb 2015
+ * Programmer:  Vailin Choi
+ *              Feb 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -6478,6 +6479,6 @@ H5D__chunk_format_convert(H5D_t *dset, H5D_chk_idx_info_t *idx_info, H5D_chk_idx
 	HGOTO_ERROR(H5E_DATASET, H5E_BADITER, FAIL, "unable to iterate over chunk index to chunk info")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__chunk_format_convert() */
+
