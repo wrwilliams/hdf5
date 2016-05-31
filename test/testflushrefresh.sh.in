@@ -88,11 +88,15 @@ pid_main=$!
 # =================================================
 # Set up/initialize some variables to be used later 
 # =================================================
+testfile=flushrefresh.h5
 startsignal=flushrefresh_VERIFICATION_START
 endsignal=flushrefresh_VERIFICATION_DONE
 timeout_length=300
 timedout=0
 verification_done=0
+if [ -e $testfile ]; then
+    rm $testfile
+fi
 
 # =======================================
 # Run flush verification on test program.
