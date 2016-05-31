@@ -42,6 +42,7 @@
 #define SIGNAL_BETWEEN_PROCESSES_1 "flushrefresh_VERIFICATION_CHECKPOINT1"
 #define SIGNAL_BETWEEN_PROCESSES_2 "flushrefresh_VERIFICATION_CHECKPOINT2"
 #define SIGNAL_FROM_SCRIPT "flushrefresh_VERIFICATION_DONE"
+#define TMP_FILE "tmp_signal_file"
 
 /* Signal Timeout Length in Secs */
 #define SIGNAL_TIMEOUT 300
@@ -642,42 +643,30 @@ herr_t test_refresh(void)
     /* Flush File to Disk */
     if(H5Fflush(fid, H5F_SCOPE_GLOBAL) < 0) TEST_ERROR;
 
-    /* Create an attribute on each object. These will not immediately hit disk, 
-        and thus be unavailable to another process until this process flushes
-        the object and the other process refreshes from disk. */
-    if((aid = H5Acreate2(did, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
-    if(H5Aclose(aid) < 0) TEST_ERROR;
-    if((aid = H5Acreate2(did2, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
-    if(H5Aclose(aid) < 0) TEST_ERROR;
-    if((aid = H5Acreate2(did3, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
-    if(H5Aclose(aid) < 0) TEST_ERROR;
-    if((aid = H5Acreate2(gid, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
-    if(H5Aclose(aid) < 0) TEST_ERROR;
-    if((aid = H5Acreate2(gid2, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
-    if(H5Aclose(aid) < 0) TEST_ERROR;
-    if((aid = H5Acreate2(gid3, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
-    if(H5Aclose(aid) < 0) TEST_ERROR;
-    if((aid = H5Acreate2(tid1, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
-    if(H5Aclose(aid) < 0) TEST_ERROR;
-    if((aid = H5Acreate2(tid2, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
-    if(H5Aclose(aid) < 0) TEST_ERROR;
-    if((aid = H5Acreate2(tid3, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
-    if(H5Aclose(aid) < 0) TEST_ERROR;
-
     /* ================ */
     /* Refresh Datasets */
     /* ================ */
 
     TESTING("to ensure that H5Drefresh correctly refreshes single datasets");
 
+    /* Create an attribute on each object before flush. */
+
     /* Verify First Dataset can be refreshed with H5Drefresh */
     if(start_refresh_verification_process(D1) != 0) TEST_ERROR;
+
+    if((aid = H5Acreate2(did, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
+    if(H5Aclose(aid) < 0) TEST_ERROR;
     if(H5Oflush(did) < 0) TEST_ERROR;
+
     if(end_refresh_verification_process() != 0) TEST_ERROR;
 
     /* Verify Second Dataset can be refreshed with H5Drefresh */
     if(start_refresh_verification_process(D2) != 0) TEST_ERROR;
+
+    if((aid = H5Acreate2(did2, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
+    if(H5Aclose(aid) < 0) TEST_ERROR;
     if(H5Oflush(did2) < 0) TEST_ERROR;
+
     if(end_refresh_verification_process() != 0) TEST_ERROR;
 
     PASSED();
@@ -690,12 +679,20 @@ herr_t test_refresh(void)
 
     /* Verify First Group can be refreshed with H5Grefresh */
     if(start_refresh_verification_process(G1) != 0) TEST_ERROR;
+
+    if((aid = H5Acreate2(gid, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
+    if(H5Aclose(aid) < 0) TEST_ERROR;
     if(H5Oflush(gid) < 0) TEST_ERROR;
+
     if(end_refresh_verification_process() != 0) TEST_ERROR;
 
     /* Verify Second Group can be refreshed with H5Grefresh */
     if(start_refresh_verification_process(G2) != 0) TEST_ERROR;
+
+    if((aid = H5Acreate2(gid2, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
+    if(H5Aclose(aid) < 0) TEST_ERROR;
     if(H5Oflush(gid2) < 0) TEST_ERROR;
+
     if(end_refresh_verification_process() != 0) TEST_ERROR;
 
     PASSED();
@@ -708,12 +705,20 @@ herr_t test_refresh(void)
 
     /* Verify First Committed Datatype can be refreshed with H5Trefresh */
     if(start_refresh_verification_process(T1) != 0) TEST_ERROR;
+
+    if((aid = H5Acreate2(tid1, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
+    if(H5Aclose(aid) < 0) TEST_ERROR;
     if(H5Oflush(tid1) < 0) TEST_ERROR;
+
     if(end_refresh_verification_process() != 0) TEST_ERROR;
 
     /* Verify Second Committed Datatype can be refreshed with H5Trefresh */
     if(start_refresh_verification_process(T2) != 0) TEST_ERROR;
+
+    if((aid = H5Acreate2(tid2, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
+    if(H5Aclose(aid) < 0) TEST_ERROR;
     if(H5Oflush(tid2) < 0) TEST_ERROR;
+
     if(end_refresh_verification_process() != 0) TEST_ERROR;
 
     PASSED();
@@ -726,17 +731,29 @@ herr_t test_refresh(void)
 
     /* Verify Third Dataset can be refreshed with H5Orefresh */
     if(start_refresh_verification_process(D3) != 0) TEST_ERROR;
+
+    if((aid = H5Acreate2(did3, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
+    if(H5Aclose(aid) < 0) TEST_ERROR;
     if(H5Oflush(did3) < 0) TEST_ERROR;
+
     if(end_refresh_verification_process() != 0) TEST_ERROR;
 
     /* Verify Third Group can be refreshed with H5Orefresh */
     if(start_refresh_verification_process(G3) != 0) TEST_ERROR;
+
+    if((aid = H5Acreate2(gid3, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
+    if(H5Aclose(aid) < 0) TEST_ERROR;
     if(H5Oflush(gid3) < 0) TEST_ERROR;
+
     if(end_refresh_verification_process() != 0) TEST_ERROR;
 
     /* Verify Third Committed Datatype can be refreshed with H5Orefresh */
     if(start_refresh_verification_process(T3) != 0) TEST_ERROR;
+
+    if((aid = H5Acreate2(tid3, "Attribute", tid1, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR;
+    if(H5Aclose(aid) < 0) TEST_ERROR;
     if(H5Oflush(tid3) < 0) TEST_ERROR;
+
     if(end_refresh_verification_process() != 0) TEST_ERROR;
 
     PASSED();
@@ -789,6 +806,8 @@ error:
  */
 herr_t run_flush_verification_process(const char * obj_pathname, const char * expected) 
 {
+    HDremove(SIGNAL_FROM_SCRIPT);
+
     /* Send Signal to SCRIPT indicating that it should kick off a verification process. */
     send_signal(SIGNAL_TO_SCRIPT, obj_pathname, expected);
 
@@ -882,6 +901,8 @@ error:
  */
 herr_t start_refresh_verification_process(const char * obj_pathname) 
 {
+    HDremove(SIGNAL_BETWEEN_PROCESSES_1);
+
     /* Send Signal to SCRIPT indicating that it should kick off a refresh 
        verification process */
     send_signal(SIGNAL_TO_SCRIPT, obj_pathname, NULL);
@@ -917,7 +938,9 @@ error:
  *-------------------------------------------------------------------------
  */
 herr_t end_refresh_verification_process(void) 
-{
+{ 
+    HDremove(SIGNAL_FROM_SCRIPT);
+
     /* Send Signal to REFRESH VERIFICATION PROCESS indicating that the object
         has been modified and it should now attempt to refresh its metadata,
         and verify the results. */
@@ -961,7 +984,11 @@ herr_t refresh_verification(const char * obj_pathname)
     hid_t oid,fid,status = 0;
     H5O_info_t flushed_oinfo;
     H5O_info_t refreshed_oinfo;
+    int tries = 800, sleep_tries = 400;
+    hbool_t ok = FALSE;
     
+    HDremove(SIGNAL_BETWEEN_PROCESSES_2);
+
     /* Open Object */
     if((fid = H5Fopen(FILENAME, H5F_ACC_SWMR_READ, H5P_DEFAULT)) < 0) PROCESS_ERROR;
     if((oid = H5Oopen(fid, obj_pathname, H5P_DEFAULT)) < 0) PROCESS_ERROR;
@@ -972,11 +999,12 @@ herr_t refresh_verification(const char * obj_pathname)
     /* Make sure there are no attributes on the object. This is just a sanity
         check to ensure we didn't erroneously flush the attribute before
         starting the verification. */
-    if(flushed_oinfo.num_attrs != 0) PROCESS_ERROR;
+    if(flushed_oinfo.num_attrs != 0)
+	PROCESS_ERROR;
 
     /* Send Signal to MAIN PROCESS indicating that it can go ahead and modify the 
         object. */
-    send_signal(SIGNAL_BETWEEN_PROCESSES_1, NULL, NULL);
+    send_signal(SIGNAL_BETWEEN_PROCESSES_1, obj_pathname, NULL);
 
     /* Wait for Signal from MAIN PROCESS indicating that it's modified the 
         object and we can run verification now. */
@@ -1002,39 +1030,57 @@ herr_t refresh_verification(const char * obj_pathname)
     /* The H5*refresh function called depends on which object we are trying
      * to refresh. (MIKE: add desired refresh call as parameter so adding new
      * test cases is easy). */
-    if((HDstrcmp(obj_pathname, D1) == 0) || (HDstrcmp(obj_pathname, D2) == 0)) {
-        if(H5Drefresh(oid) < 0) PROCESS_ERROR;
-    } /* end if */
-    else if((HDstrcmp(obj_pathname, G1) == 0) || (HDstrcmp(obj_pathname, G2) == 0)) {
-        if(H5Grefresh(oid) < 0) PROCESS_ERROR;
-    } /* end if */
-    else if((HDstrcmp(obj_pathname, T1) == 0) || (HDstrcmp(obj_pathname, T2) == 0)) {
-        if(H5Trefresh(oid) < 0) PROCESS_ERROR;
-    } /* end if */
-    else if((HDstrcmp(obj_pathname, D3) == 0) || (HDstrcmp(obj_pathname, G3) == 0) ||
-            (HDstrcmp(obj_pathname, T3) == 0)) {
-        if(H5Orefresh(oid) < 0) PROCESS_ERROR;
-    } /* end if */
-    else {
-        HDfprintf(stdout, "Error. %s is an unrecognized object.\n", obj_pathname);
-        PROCESS_ERROR;
-    } /* end else */
+    do {
 
-    /* Get object info. This should now accurately reflect the refreshed object on disk. */
-    if((status = H5Oget_info(oid, &refreshed_oinfo)) < 0) PROCESS_ERROR;
+	if((HDstrcmp(obj_pathname, D1) == 0) || (HDstrcmp(obj_pathname, D2) == 0)) {
+	    if(H5Drefresh(oid) < 0) PROCESS_ERROR;
+	} /* end if */
+	else if((HDstrcmp(obj_pathname, G1) == 0) || (HDstrcmp(obj_pathname, G2) == 0)) {
+	    if(H5Grefresh(oid) < 0) PROCESS_ERROR;
+	} /* end if */
+	else if((HDstrcmp(obj_pathname, T1) == 0) || (HDstrcmp(obj_pathname, T2) == 0)) {
+	    if(H5Trefresh(oid) < 0) PROCESS_ERROR;
+	} /* end if */
+	else if((HDstrcmp(obj_pathname, D3) == 0) || (HDstrcmp(obj_pathname, G3) == 0) ||
+                (HDstrcmp(obj_pathname, T3) == 0)) {
+	    if(H5Orefresh(oid) < 0) PROCESS_ERROR;
+	} /* end if */
+	else {
+	    HDfprintf(stdout, "Error. %s is an unrecognized object.\n", obj_pathname);
+	    PROCESS_ERROR;
+	} /* end else */
+
+	/* Get object info. This should now accurately reflect the refreshed object on disk. */
+	if((status = H5Oget_info(oid, &refreshed_oinfo)) < 0) PROCESS_ERROR;
     
-    /* Confirm following attributes are the same: */
-    if(flushed_oinfo.addr != refreshed_oinfo.addr) PROCESS_ERROR;
-    if(flushed_oinfo.type != refreshed_oinfo.type) PROCESS_ERROR;
-    if(flushed_oinfo.hdr.version != refreshed_oinfo.hdr.version) PROCESS_ERROR;
-    if(flushed_oinfo.hdr.flags != refreshed_oinfo.hdr.flags) PROCESS_ERROR;
+	/* Confirm following (first 4) attributes are the same: */
+	/* Confirm following (last 4) attributes are different */
+	if( (flushed_oinfo.addr == refreshed_oinfo.addr) &&
+	    (flushed_oinfo.type == refreshed_oinfo.type) &&
+	    (flushed_oinfo.hdr.version == refreshed_oinfo.hdr.version) &&
+	    (flushed_oinfo.hdr.flags == refreshed_oinfo.hdr.flags) &&
+	    (flushed_oinfo.num_attrs != refreshed_oinfo.num_attrs) &&
+	    (flushed_oinfo.hdr.nmesgs != refreshed_oinfo.hdr.nmesgs) &&
+	    (flushed_oinfo.hdr.nchunks != refreshed_oinfo.hdr.nchunks) &&
+	    (flushed_oinfo.hdr.space.total != refreshed_oinfo.hdr.space.total) ) {
+		ok = TRUE;
+		break;
+	}
+	if(tries == sleep_tries)
+	    HDsleep(1);
 
-    /* Confirm following attributes are different */
-    if(flushed_oinfo.num_attrs == refreshed_oinfo.num_attrs) PROCESS_ERROR;
-    if(flushed_oinfo.hdr.nmesgs == refreshed_oinfo.hdr.nmesgs) PROCESS_ERROR;
-    if(flushed_oinfo.hdr.nchunks == refreshed_oinfo.hdr.nchunks) PROCESS_ERROR;
-    if(flushed_oinfo.hdr.space.total == refreshed_oinfo.hdr.space.total) PROCESS_ERROR;
-
+    } while(--tries);
+    
+    if(!ok) {
+	printf("FLUSHED: num_attrs=%d, nmesgs=%d, nchunks=%d, total=%d\n",
+	    (int)flushed_oinfo.num_attrs, (int)flushed_oinfo.hdr.nmesgs,
+	    (int)flushed_oinfo.hdr.nchunks, (int)flushed_oinfo.hdr.space.total);
+	printf("REFRESHED: num_attrs=%d, nmesgs=%d, nchunks=%d, total=%d\n",
+	    (int)refreshed_oinfo.num_attrs, (int)refreshed_oinfo.hdr.nmesgs,
+	    (int)refreshed_oinfo.hdr.nchunks, (int)refreshed_oinfo.hdr.space.total);
+	PROCESS_ERROR;
+    }
+    
     /* Close objects */
     if(H5Oclose(oid) < 0) PROCESS_ERROR;
     if(H5Fclose(fid) < 0) PROCESS_ERROR;
@@ -1093,6 +1139,8 @@ herr_t check_for_errors(void)
  */
 herr_t end_verification(void) 
 {
+    HDremove(SIGNAL_FROM_SCRIPT);
+
     /* Send Signal to SCRIPT to indicate that we're done with verification. */
     send_signal(SIGNAL_TO_SCRIPT, "VERIFICATION_DONE", "VERIFICATION_DONE");
     
@@ -1134,8 +1182,10 @@ void send_signal(const char * send, const char * arg1, const char * arg2)
 {
     FILE *signalfile = NULL;
 
+    HDremove(TMP_FILE);
+
     /* Create signal file (which will send signal to some other process) */
-    signalfile = HDfopen(send, "w+");
+    signalfile = HDfopen(TMP_FILE, "w+");
 
     /* Write messages to signal file, if provided */
     if(arg2 != NULL) {
@@ -1151,8 +1201,9 @@ void send_signal(const char * send, const char * arg1, const char * arg2)
         HDassert(arg2 == NULL);
     }/* end else */
 
-    HDfflush(signalfile);
     HDfclose(signalfile);
+
+    HDrename(TMP_FILE, send);
 } /* send_signal */
 
 
