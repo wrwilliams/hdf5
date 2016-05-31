@@ -350,7 +350,7 @@ typedef struct h5tool_format_t {
     const char  *cmpd_pre;
     const char  *cmpd_suf;
     const char  *cmpd_end;
-    const struct H5LD_memb_t **cmpd_listv;
+    const struct H5LD_memb_t * const *cmpd_listv;
 
 
     /*

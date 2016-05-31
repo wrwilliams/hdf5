@@ -140,11 +140,11 @@ doprint(hid_t did, hsize_t *start, hsize_t *block, int rank)
 
     /* Initialize subsetting information */
     for(i = 0; i < rank; i++) {
-	subset.stride.data[i] = 1;
-	subset.count.data[i] = 1;
-	subset.start.data[i] = start[i];
-	subset.block.data[i] = block[i];
-    }
+        subset.stride.data[i] = 1;
+        subset.count.data[i] = 1;
+        subset.start.data[i] = start[i];
+        subset.block.data[i] = block[i];
+    } /* end for */
 
     HDmemset(&ctx, 0, sizeof(ctx));
 
@@ -167,10 +167,11 @@ doprint(hid_t did, hsize_t *start, hsize_t *block, int rank)
         info.cmpd_suf = "";
         info.cmpd_sep = " ";
 
-	/* The "fields" selected by the user */
-	info.cmpd_listv = (const struct H5LD_memb_t **)g_listv;
+        /* The "fields" selected by the user */
+        info.cmpd_listv = (const struct H5LD_memb_t * const *)g_listv;
 
-        if(g_label) info.cmpd_name = "%s=";
+        if(g_label)
+            info.cmpd_name = "%s=";
 
         info.elmt_suf1 = " ";
         info.str_locale = ESCAPE_HTML;
@@ -180,19 +181,20 @@ doprint(hid_t did, hsize_t *start, hsize_t *block, int rank)
         if(!g_display_width) {
             info.line_ncols = 65535;
             info.line_per_line = 1;
-        }
+        } /* end if */
         else
             info.line_ncols = (unsigned)g_display_width;
 
         info.line_multi_new = 1;
 
-	/* The "fields" selected by the user */
-	info.cmpd_listv = (const struct H5LD_memb_t **)g_listv;
-        if(g_label) info.cmpd_name = "%s=";
+        /* The "fields" selected by the user */
+        info.cmpd_listv = (const struct H5LD_memb_t * const *)g_listv;
+        if(g_label)
+            info.cmpd_name = "%s=";
         info.line_pre  = "        %s ";
         info.line_cont = "        %s  ";
         info.str_repeat = 8;
-    }
+    } /* end else */
 
     /* Floating point types should display full precision */
     sprintf(fmt_float, "%%1.%dg", FLT_DIG);
@@ -215,17 +217,17 @@ doprint(hid_t did, hsize_t *start, hsize_t *block, int rank)
         /* Print all data in hexadecimal format if the `-x' or `--hexdump'
          * command line switch was given. */
         info.raw = TRUE;
-    } 
+    } /* end if */
 
     /* Print the values. */
     if((ret_value = h5tools_dump_dset(stdout, &info, &ctx, did, &subset)) < 0)
-	error_msg("unable to print data\n");
+        error_msg("unable to print data\n");
 
     HDfprintf(stdout, "\n");
 
-    return(ret_value);
+    return ret_value;
 
-} /* doprint() */
+} /* end doprint() */
 
 /*-------------------------------------------------------------------------
  * Function: slicendump
@@ -257,17 +259,17 @@ slicendump(hid_t did, hsize_t *prev_dims, hsize_t *cur_dims, hsize_t *start, hsi
     ind = rank - subrank;
 
     if((subrank - 1) > 0) {
-	/* continue onto the next dimension */
-	for (i = 0; i < (hssize_t)MIN(prev_dims[ind], cur_dims[ind]); i++){
-	    start[ind] = (hsize_t)i;
-	    if((ret_value = slicendump(did, prev_dims, cur_dims, start, block, rank, subrank-1)) < 0)
-		goto done;
-	}
-    }
+        /* continue onto the next dimension */
+        for (i = 0; i < (hssize_t)MIN(prev_dims[ind], cur_dims[ind]); i++){
+            start[ind] = (hsize_t)i;
+            if((ret_value = slicendump(did, prev_dims, cur_dims, start, block, rank, subrank-1)) < 0)
+                goto done;
+        } /* end for */
+    } /* end if */
 
     /* this dimension remains the same or shrinking */
     if(cur_dims[ind] <= prev_dims[ind])
-	goto done;
+        goto done;
 
     /* select first the slice for the faster changing dimension */
     /* select later the whole slice for the slower changing dimension */
@@ -277,14 +279,14 @@ slicendump(hid_t did, hsize_t *prev_dims, hsize_t *cur_dims, hsize_t *start, hsi
     for(i = ind + 1; i < rank; i++){
         start[i] = 0;
         block[i] = cur_dims[i];
-    }
+    } /* end for */
 
     /* Print the appended data */
     ret_value = doprint(did, start, block, rank);
 
 done:
-    return(ret_value);
-} /* slicendump() */
+    return ret_value;
+} /* end slicendump() */
 
 
 /*-------------------------------------------------------------------------
@@ -968,3 +970,4 @@ main(int argc, const char *argv[])
     /* exit */
     leave(h5tools_getstatus());
 } /* main() */
+
