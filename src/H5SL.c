@@ -1297,7 +1297,6 @@ H5SL_remove_first(H5SL_t *slist)
 
     /* Check args */
     HDassert(slist);
-    HDassert(slist->curr_level >= 0);
 
     /* Not currently supported */
     HDassert(!slist->safe_iterating);
