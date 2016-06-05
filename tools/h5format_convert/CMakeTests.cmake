@@ -35,6 +35,7 @@
       old_h5fc_ext2_is.ddl
       old_h5fc_ext2_sf.ddl
       old_h5fc_ext3_isf.ddl
+      h5fc_v_err.ddl
   )
   set (HDF5_REFERENCE_TEST_FILES
       h5fc_non_v3.h5
@@ -55,6 +56,7 @@
       old_h5fc_ext2_is.h5
       old_h5fc_ext2_sf.h5
       old_h5fc_ext3_isf.h5
+      h5fc_err_level.h5
   )
 
   file (MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles")
@@ -373,6 +375,14 @@
 # h5format_convert -v -n h5fc_non_v3.h5 (verbose, noop, all datasets)
   ADD_H5_OUTPUT (h5fc_v_n_1d h5fc_v_n_1d.ddl 0 h5fc_ext_none.h5 -d /DSET_EA -v -n)
   ADD_H5_OUTPUT (h5fc_v_n_all h5fc_v_n_all.ddl 0 h5fc_non_v3.h5 -v -n)
+#
+#
+#
+# h5format_convert -v h5fc_err_level.h5 (error encountered in converting the dataset)
+  ADD_H5_OUTPUT (h5fc_v_err h5fc_v_err.ddl 1 h5fc_err_level.h5 -v)
+#
+#
+#
 # No output from tests
 # 1) Use the tool to convert the dataset
 # 2) Verify the chunk indexing type is correct
