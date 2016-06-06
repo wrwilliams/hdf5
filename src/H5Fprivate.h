@@ -319,6 +319,9 @@
 #ifdef H5_HAVE_PARALLEL
 #define H5F_COLL_MD_READ(F)     ((F)->coll_md_read)
 #endif /* H5_HAVE_PARALLEL */
+#define H5F_USE_MDC_LOGGING(F)  ((F)->shared->use_mdc_logging)
+#define H5F_START_MDC_LOG_ON_ACCESS(F)  ((F)->shared->start_mdc_log_on_access)
+#define H5F_MDC_LOG_LOCATION(F) ((F)->shared->mdc_log_location)
 #else /* H5F_MODULE */
 #define H5F_INTENT(F)           (H5F_get_intent(F))
 #define H5F_OPEN_NAME(F)        (H5F_get_open_name(F))
@@ -365,6 +368,9 @@
 #ifdef H5_HAVE_PARALLEL
 #define H5F_COLL_MD_READ(F)     (H5F_coll_md_read(F))
 #endif /* H5_HAVE_PARALLEL */
+#define H5F_USE_MDC_LOGGING(F)  (H5F_use_mdc_logging(F))
+#define H5F_START_MDC_LOG_ON_ACCESS(F)  (H5F_start_mdc_log_on_access(F))
+#define H5F_MDC_LOG_LOCATION(F) (H5F_mdc_log_location(F))
 #endif /* H5F_MODULE */
 
 
@@ -695,6 +701,9 @@ H5_DLL hbool_t H5F_is_tmp_addr(const H5F_t *f, haddr_t addr);
 H5_DLL H5P_coll_md_read_flag_t H5F_coll_md_read(const H5F_t *f);
 H5_DLL void H5F_set_coll_md_read(H5F_t *f, H5P_coll_md_read_flag_t flag);
 #endif /* H5_HAVE_PARALLEL */
+H5_DLL hbool_t H5F_use_mdc_logging(const H5F_t *f);
+H5_DLL hbool_t H5F_start_mdc_log_on_access(const H5F_t *f);
+H5_DLL char *H5F_mdc_log_location(const H5F_t *f);
 
 /* Functions that retrieve values from VFD layer */
 H5_DLL hid_t H5F_get_driver_id(const H5F_t *f);
