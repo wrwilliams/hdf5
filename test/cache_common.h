@@ -537,6 +537,9 @@ struct expected_entry_status
 
 
 /* global variable externs: */
+H5TEST_DLLVAR H5C_t * saved_cache;
+
+H5TEST_DLLVAR const char *FILENAME[];
 
 H5TEST_DLLVAR haddr_t saved_actual_base_addr;
 H5TEST_DLLVAR hbool_t write_permitted;
@@ -629,8 +632,8 @@ H5TEST_DLL void free_entry_arrays(void);
 
 H5TEST_DLL void reset_entries(void);
 
-void cork_entry_type(H5F_t * file_ptr, int32_t type);
-void uncork_entry_type(H5F_t * file_ptr, int32_t type);
+H5TEST_DLL void cork_entry_type(H5F_t * file_ptr, int32_t type);
+H5TEST_DLL void uncork_entry_type(H5F_t * file_ptr, int32_t type);
 
 
 

@@ -556,7 +556,7 @@ int read_uc_file(hbool_t towait)
 	    }
 	    nonewplane++;
 	    /* pause for a second */
-	    sleep(1);
+        HDsleep(1);
 	}
 	for (nplane=nplane_old; nplane < dims[0]; nplane++){
 	    /* read planes between last old nplanes and current extent */
