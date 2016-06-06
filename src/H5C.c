@@ -9652,6 +9652,9 @@ H5C_retag_entries(H5C_t * cache_ptr, haddr_t src_tag, haddr_t dest_tag)
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
+    /* Sanity check */
+    HDassert(cache_ptr);
+
     /* Iterate through entries, retagging those with the src_tag tag */
     for(u = 0; u < H5C__HASH_TABLE_LEN; u++) {
         H5C_cache_entry_t *entry_ptr; /* entry pointer */
