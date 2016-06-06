@@ -61,6 +61,12 @@
 #define H5C__HASH_TABLE_LEN     (64 * 1024) /* must be a power of 2 */
 #define H5C__H5C_T_MAGIC	0x005CAC0E
 
+/* Cache client ID for epoch markers */
+/* Note that H5C__MAX_EPOCH_MARKERS is defined in H5Cprivate.h, not here because
+ * it is needed to dimension arrays in H5C_t.
+ */
+#define H5C__EPOCH_MARKER_TYPE	H5C__MAX_NUM_TYPE_IDS
+
 /****************************************************************************
  *
  * We maintain doubly linked lists of instances of H5C_cache_entry_t for a
@@ -4259,12 +4265,24 @@ typedef struct H5C_collective_write_t {
 /* Package Private Variables */
 /*****************************/
 
+/* Metadata cache epoch class */
+H5_DLLVAR const H5C_class_t H5C__epoch_marker_class;
+
 
 /******************************/
 /* Package Private Prototypes */
 /******************************/
+
+/* General routines */
 H5_DLL herr_t H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id,
     H5C_cache_entry_t *entry_ptr, unsigned flags, int64_t *entry_size_change_ptr, H5SL_t *collective_write_list);
+H5_DLL herr_t H5C__flush_marked_entries(H5F_t * f, hid_t dxpl_id);
+
+/* Routines for operating on entry tags */
+H5_DLL herr_t H5C__tag_entry(H5C_t * cache_ptr, H5C_cache_entry_t * entry_ptr,
+    hid_t dxpl_id);
+H5_DLL herr_t H5C__mark_tagged_entries_cork(H5C_t *cache_ptr, haddr_t obj_addr,
+    hbool_t val);
 
 #endif /* _H5Cpkg_H */
 
