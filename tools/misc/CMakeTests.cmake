@@ -250,7 +250,7 @@
   set_tests_properties (H5CLEAR-clear_open_chk-latest_sec2_v3 PROPERTIES DEPENDS H5CLEAR-h5clear-latest_sec2_v3)
 
   # Initial file open fails
-  add_test (NAME H5CLEAR-clear_open_chk-latest_log_v3_F COMMAND $<TARGET_FILE:clear_open_chk> h5clear_log_v3.h5)
+  add_test (NAME H5CLEAR-clear_open_chk-latest_log_v3_F COMMAND $<TARGET_FILE:clear_open_chk> latest_h5clear_log_v3.h5)
   set_tests_properties (H5CLEAR-clear_open_chk-latest_log_v3_F PROPERTIES WILL_FAIL "true")
   set_tests_properties (H5CLEAR-clear_open_chk-latest_log_v3_F PROPERTIES DEPENDS H5CLEAR-h5clear_gentest)
   # After "h5clear" the file, the subsequent file open succeeds
