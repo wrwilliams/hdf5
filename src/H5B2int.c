@@ -429,15 +429,11 @@ done:
     if(right_child && H5AC_unprotect(hdr->f, dxpl_id, child_class, right_addr, right_child, right_child_flags) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree leaf node")
 
-    /* Release grandchild node if protected (only on error) */
-    if(grandchild && H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, left_node_ptrs[u].addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-        HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-
-    /* Unprotect the grandchild on error */
+    /* Unprotect the grandchild (should only happen on error) */
     if(grandchild) {
         HDassert(ret_value < 0);
         if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, grandchild_addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
+            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -888,11 +884,11 @@ done:
     if(right_child && H5AC_unprotect(hdr->f, dxpl_id, child_class, right_addr, right_child, right_child_flags) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree child node")
 
-    /* Unprotect the grandchild on error */
+    /* Unprotect the grandchild (should only happen on error) */
     if(grandchild) {
         HDassert(ret_value < 0);
         if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, grandchild_addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
+            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1544,11 +1540,11 @@ done:
     if(right_child && H5AC_unprotect(hdr->f, dxpl_id, child_class, right_addr, right_child, right_child_flags) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree child node")
 
-    /* Unprotect the grandchild on error */
+    /* Unprotect the grandchild (should only happen on error) */
     if(grandchild) {
         HDassert(ret_value < 0);
         if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, grandchild_addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
+            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1783,11 +1779,11 @@ done:
     if(right_child && H5AC_unprotect(hdr->f, dxpl_id, child_class, right_addr, right_child, right_child_flags) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree child node")
 
-    /* Unprotect the grandchild on error */
+    /* Unprotect the grandchild (should only happen on error) */
     if(grandchild) {
         HDassert(ret_value < 0);
         if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, grandchild_addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
+            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2161,11 +2157,11 @@ done:
     if(right_child && H5AC_unprotect(hdr->f, dxpl_id, child_class, right_addr, right_child, right_child_flags) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree child node")
 
-    /* Unprotect the grandchild on error */
+    /* Unprotect the grandchild (should only happen on error) */
     if(grandchild) {
         HDassert(ret_value < 0);
         if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, grandchild_addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
+            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
