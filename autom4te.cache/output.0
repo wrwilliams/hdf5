@@ -6385,8 +6385,7 @@ else
 	        LDBL_DIG="`sed -n '1p' pac_Cconftest.out`" 
 	        FLT128_DIG="`sed -n '2p' pac_Cconftest.out`"
             else
-                { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: No output from test program!" >&5
-$as_echo "$as_me: WARNING: No output from test program!" >&2;}
+                as_fn_error $? "No output from Fortran decimal precision program!" "$LINENO" 5
             fi
             rm -f pac_Cconftest.out
         
@@ -8031,8 +8030,7 @@ $as_echo "$PAC_FC_MAX_REAL_PRECISION" >&6; }
     else
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: Error" >&5
 $as_echo "Error" >&6; }
-        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: No output from test program!" >&5
-$as_echo "$as_me: WARNING: No output from test program!" >&2;}
+        as_fn_error $? "No output from Fortran test program!" "$LINENO" 5
     fi
     rm -f pac_fconftest.out
 
@@ -8040,8 +8038,7 @@ else
   
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: Error" >&5
 $as_echo "Error" >&6; }
-    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Failed to run program to determine available KINDs" >&5
-$as_echo "$as_me: WARNING: Failed to run program to determine available KINDs" >&2;}
+    as_fn_error $? "Failed to run Fortran program to determine available KINDs" "$LINENO" 5
 
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
@@ -8102,15 +8099,13 @@ else
                 PAC_FORTRAN_NATIVE_DOUBLE_KIND="`sed -n '5p' pac_fconftest.out`"
                 PAC_FORTRAN_NATIVE_DOUBLE_SIZEOF="`sed -n '6p' pac_fconftest.out`"
             else
-                { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: No output from test program!" >&5
-$as_echo "$as_me: WARNING: No output from test program!" >&2;}
+                as_fn_error $? "No output from Fortran test program!" "$LINENO" 5
             fi
             rm -f pac_fconftest.out
         
 else
   
-            { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Fortran program fails to build or run!" >&5
-$as_echo "$as_me: WARNING: Fortran program fails to build or run!" >&2;}
+            as_fn_error $? "Fortran program fails to build or run!" "$LINENO" 5
         
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
@@ -8263,8 +8258,7 @@ $as_echo "$PAC_FC_MAX_REAL_PRECISION" >&6; }
     else
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: Error" >&5
 $as_echo "Error" >&6; }
-        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: No output from test program!" >&5
-$as_echo "$as_me: WARNING: No output from test program!" >&2;}
+        as_fn_error $? "No output from Fortran test program!" "$LINENO" 5
     fi
     rm -f pac_fconftest.out
 
@@ -8272,8 +8266,7 @@ else
   
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: Error" >&5
 $as_echo "Error" >&6; }
-    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Failed to run program to determine available KINDs" >&5
-$as_echo "$as_me: WARNING: Failed to run program to determine available KINDs" >&2;}
+    as_fn_error $? "Failed to run Fortran program to determine available KINDs" "$LINENO" 5
 
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
@@ -8326,15 +8319,13 @@ else
                 sizes="`cat pac_fconftest.out`"
                 pack_int_sizeof="$pack_int_sizeof $sizes,"
             else
-                { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: No output from test program!" >&5
-$as_echo "$as_me: WARNING: No output from test program!" >&2;}
+                as_fn_error $? "No output from Fortran test program!" "$LINENO" 5
             fi
             rm -f pac_fconftest.out
         
 else
   
-            { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Fortran program fails to build or run!" >&5
-$as_echo "$as_me: WARNING: Fortran program fails to build or run!" >&2;}
+            as_fn_error $? "Fortran program fails to build or run!" "$LINENO" 5
         
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
@@ -8388,15 +8379,13 @@ else
                 sizes="`cat pac_fconftest.out`"
                 pack_real_sizeof="$pack_real_sizeof $sizes,"
             else
-                { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: No output from test program!" >&5
-$as_echo "$as_me: WARNING: No output from test program!" >&2;}
+                as_fn_error $? "No output from Fortran test program!" "$LINENO" 5
             fi
             rm -f pac_fconftest.out
         
 else
   
-            { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Fortran program fails to build or run!" >&5
-$as_echo "$as_me: WARNING: Fortran program fails to build or run!" >&2;}
+            as_fn_error $? "Fortran program fails to build or run!" "$LINENO" 5
         
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
