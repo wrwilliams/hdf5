@@ -1998,7 +1998,7 @@ H5D_close(H5D_t *dataset)
 	/* Uncork cache entries with object address tag */
 	if(H5AC_cork(dataset->oloc.file, dataset->oloc.addr, H5AC__GET_CORKED, &corked) < 0)
 	    HDONE_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to retrieve an object's cork status")
-	else if(corked)
+	if(corked)
 	    if(H5AC_cork(dataset->oloc.file, dataset->oloc.addr, H5AC__UNCORK, NULL) < 0)
 		HDONE_ERROR(H5E_DATASET, H5E_CANTUNCORK, FAIL, "unable to uncork an object")
 
@@ -3097,7 +3097,8 @@ done:
  * Return:	Success:	Non-negative
  *		Failure:	Negative
  *
- * Programmer:  Vailin Choi; Feb 2015
+ * Programmer:  Vailin Choi
+ *              Feb 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -3119,7 +3120,6 @@ H5D__format_convert(H5D_t *dataset, hid_t dxpl_id)
 
     switch(dataset->shared->layout.type) {
         case H5D_CHUNKED:
-	{
 	    HDassert(dataset->shared->layout.u.chunk.idx_type != H5D_CHUNK_IDX_BTREE);
 
 	    /* Set up the current index info */
@@ -3185,7 +3185,6 @@ H5D__format_convert(H5D_t *dataset, hid_t dxpl_id)
 	    HDmemcpy(&dataset->shared->layout, &newlayout, sizeof(H5O_layout_t));
 
 	    break;
-	}
 
 	case H5D_CONTIGUOUS:
         case H5D_COMPACT:
@@ -3198,28 +3197,25 @@ H5D__format_convert(H5D_t *dataset, hid_t dxpl_id)
 	case H5D_VIRTUAL:
 	    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "virtual dataset layout not supported")
 
-    case H5D_LAYOUT_ERROR:
-    case H5D_NLAYOUTS:
+        case H5D_LAYOUT_ERROR:
+        case H5D_NLAYOUTS:
 	    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid dataset layout type")
-        
+
 	default: 
 	    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "unknown dataset layout type")
-    }
+    } /* end switch */
 
 done:
     if(ret_value < 0 && dataset->shared->layout.type == H5D_CHUNKED) {
-
 	/* Remove new layout message */
-	if(add_new_layout) {
+	if(add_new_layout)
 	    if(H5O_msg_remove(&dataset->oloc, H5O_LAYOUT_ID, H5O_ALL, FALSE, dxpl_id) < 0)
-		HGOTO_ERROR(H5E_SYM, H5E_CANTDELETE, FAIL, "unable to delete layout message")
-	}
+		HDONE_ERROR(H5E_SYM, H5E_CANTDELETE, FAIL, "unable to delete layout message")
 
 	/* Add back old layout message */
-	if(delete_old_layout) {
+	if(delete_old_layout)
 	    if(H5O_msg_create(&dataset->oloc, H5O_LAYOUT_ID, 0, H5O_UPDATE_TIME, &dataset->shared->layout, dxpl_id) < 0)
-		HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to add layout header message")
-	}
+		HDONE_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to add layout header message")
 
 	/* Clean up v1 b-tree chunk index */
 	if(init_new_index) {
@@ -3231,13 +3227,13 @@ done:
 		/* Expunge from cache all v1 B-tree type entries associated with tag */
 		if(H5AC_expunge_tag_type_metadata(dataset->oloc.file, dxpl_id, dataset->oloc.addr, H5AC_BT_ID, H5AC__NO_FLAGS_SET))
 		    HDONE_ERROR(H5E_DATASET, H5E_CANTEXPUNGE, FAIL, "unable to expunge index metadata")
-	    }
+	    } /* end if */
 
 	    /* Delete v1 B-tree chunk index */
 	    if(new_idx_info.storage->ops->dest && (new_idx_info.storage->ops->dest)(&new_idx_info) < 0)
 		HDONE_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "unable to release chunk index info")
-	}
-    }
+	} /* end if */
+    } /* end if */
 
     FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
 } /* end H5D__format_convert() */

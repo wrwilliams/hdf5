@@ -3833,8 +3833,8 @@ insert_entry(H5F_t * file_ptr,
         if(entry_ptr->header.is_corked)
             entry_ptr->is_corked = TRUE;
 
-        HDassert( entry_ptr->header.is_dirty );
-        HDassert( ((entry_ptr->header).type)->id == type );
+        HDassert(entry_ptr->header.is_dirty);
+        HDassert(((entry_ptr->header).type)->id == type);
     } /* end if */
 
     return;

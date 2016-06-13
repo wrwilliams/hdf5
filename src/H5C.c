@@ -708,7 +708,6 @@ H5C_free_cork_list_cb(void *_item, void H5_ATTR_UNUSED *key, void H5_ATTR_UNUSED
     FUNC_LEAVE_NOAPI(0)
 }  /* H5C_free_cork_list_cb() */
 
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5C_dest

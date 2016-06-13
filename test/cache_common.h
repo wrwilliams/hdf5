@@ -633,9 +633,8 @@ H5TEST_DLL void free_entry_arrays(void);
 H5TEST_DLL void reset_entries(void);
 
 H5TEST_DLL void cork_entry_type(H5F_t * file_ptr, int32_t type);
+
 H5TEST_DLL void uncork_entry_type(H5F_t * file_ptr, int32_t type);
-
-
 
 H5TEST_DLL void resize_entry(H5F_t * file_ptr,
                   int32_t type,

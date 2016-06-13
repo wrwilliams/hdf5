@@ -506,33 +506,32 @@ main(int argc, char *argv[])
     int ret_value = 0;
 
     /* initialization */
-    if (setup_parameters(argc, argv) < 0){
+    if(setup_parameters(argc, argv) < 0)
 	Hgoto_error(1);
-    }
 
     /* ============*/
     /* Create file */
     /* ============*/
     printf("Creating skeleton data file for testing H5Odisable_mdc_flushes()...\n");
-    if (create_file() < 0){
+    if(create_file() < 0) {
 	fprintf(stderr, "***encounter error\n");
 	Hgoto_error(1);
-    }else
+    } /* end if */
+    else
 	printf("File created.\n");
 
     printf("writing to the file\n");
-    if (write_file() < 0){
+    if(write_file() < 0) {
 	fprintf(stderr, "write_file encountered error\n");
 	Hgoto_error(1);
     }
 
 done:
     /* Print result and exit */
-    if (ret_value != 0){
+    if(ret_value != 0)
 	printf("Error(s) encountered\n");
-    }else{
+    else
 	printf("All passed\n");
-    }
 
     return(ret_value);
 }

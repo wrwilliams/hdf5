@@ -1109,7 +1109,8 @@ done:
  * Return:	Success:	Non-negative
  *		Failure:	Negative
  *
- * Programmer:	Vailin Choi; January 2014
+ * Programmer:	Vailin Choi
+ *		January 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -1123,11 +1124,11 @@ H5Odisable_mdc_flushes(hid_t object_id)
     H5TRACE1("e", "i", object_id);
 
     /* Get the object's oloc */
-    if((oloc = H5O_get_loc(object_id)) == NULL)
-        HGOTO_ERROR(H5E_ATOM, H5E_BADVALUE, FAIL, "unable to get object location from ID")
+    if(NULL == (oloc = H5O_get_loc(object_id)))
+        HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, FAIL, "unable to get object location from ID")
 
     if(H5AC_cork(oloc->file, oloc->addr, H5AC__SET_CORK, NULL) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, FAIL, "unable to cork an object")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTCORK, FAIL, "unable to cork an object")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1144,7 +1145,8 @@ done:
  * Return:	Success:	Non-negative
  *		Failure:	Negative
  *
- * Programmer:	Vailin Choi; January 2014
+ * Programmer:	Vailin Choi
+ *		January 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -1158,12 +1160,12 @@ H5Oenable_mdc_flushes(hid_t object_id)
     H5TRACE1("e", "i", object_id);
 
     /* Get the object's oloc */
-    if((oloc = H5O_get_loc(object_id)) == NULL)
-        HGOTO_ERROR(H5E_ATOM, H5E_BADVALUE, FAIL, "unable to get object location from ID")
+    if(NULL == (oloc = H5O_get_loc(object_id)))
+        HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, FAIL, "unable to get object location from ID")
 
     /* Set the value */
     if(H5AC_cork(oloc->file, oloc->addr, H5AC__UNCORK, NULL) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, FAIL, "unable to uncork an object")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTUNCORK, FAIL, "unable to uncork an object")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1181,7 +1183,8 @@ done:
  * Return:	Success:	Non-negative
  *		Failure:	Negative
  *
- * Programmer:	Vailin Choi; January 2014
+ * Programmer:	Vailin Choi
+ *		January 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -1197,14 +1200,14 @@ H5Oare_mdc_flushes_disabled(hid_t object_id, hbool_t *are_disabled)
     /* Check args */
 
     /* Get the object's oloc */
-    if((oloc = H5O_get_loc(object_id)) == NULL)
-        HGOTO_ERROR(H5E_ATOM, H5E_BADVALUE, FAIL, "unable to get object location from ID")
+    if(NULL == (oloc = H5O_get_loc(object_id)))
+        HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, FAIL, "unable to get object location from ID")
     if(!are_disabled)
-        HGOTO_ERROR(H5E_ATOM, H5E_BADVALUE, FAIL, "unable to get object location from ID")
+        HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, FAIL, "unable to get object location from ID")
 
     /* Get the cork status */
     if(H5AC_cork(oloc->file, oloc->addr, H5AC__GET_CORKED, are_disabled) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_BADVALUE, FAIL, "unable to retrieve an object's cork status")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to retrieve an object's cork status")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -2368,11 +2371,10 @@ H5O_delete(H5F_t *f, hid_t dxpl_id, haddr_t addr)
 
     /* Uncork cache entries with tag: addr */
     if(H5AC_cork(f, addr, H5AC__GET_CORKED, &corked) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_SYSTEM, FAIL, "unable to retrieve an object's cork status")
-    else if(corked) {
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to retrieve an object's cork status")
+    if(corked)
 	if(H5AC_cork(f, addr, H5AC__UNCORK, NULL) < 0)
-	    HGOTO_ERROR(H5E_OHDR, H5E_SYSTEM, FAIL, "unable to uncork an object")
-    } /* end if */
+	    HGOTO_ERROR(H5E_OHDR, H5E_CANTUNCORK, FAIL, "unable to uncork an object")
 
     /* Mark object header as deleted */
     oh_flags = H5AC__DIRTIED_FLAG | H5AC__DELETED_FLAG | H5AC__FREE_FILE_SPACE_FLAG;
