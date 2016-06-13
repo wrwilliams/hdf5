@@ -664,6 +664,16 @@ if((msg = H5E_create_msg(cls, H5E_MINOR, "Unable to notify object about action")
     HGOTO_ERROR(H5E_ERROR, H5E_CANTINIT, FAIL, "error message initialization failed")
 if((H5E_CANTNOTIFY_g = H5I_register(H5I_ERROR_MSG, msg, FALSE))<0)
     HGOTO_ERROR(H5E_ERROR, H5E_CANTREGISTER, FAIL, "can't register error message")
+assert(H5E_CANTCORK_g==(-1));
+if((msg = H5E_create_msg(cls, H5E_MINOR, "Unable to cork an object"))==NULL)
+    HGOTO_ERROR(H5E_ERROR, H5E_CANTINIT, FAIL, "error message initialization failed")
+if((H5E_CANTCORK_g = H5I_register(H5I_ERROR_MSG, msg, FALSE))<0)
+    HGOTO_ERROR(H5E_ERROR, H5E_CANTREGISTER, FAIL, "can't register error message")
+assert(H5E_CANTUNCORK_g==(-1));
+if((msg = H5E_create_msg(cls, H5E_MINOR, "Unable to uncork an object"))==NULL)
+    HGOTO_ERROR(H5E_ERROR, H5E_CANTINIT, FAIL, "error message initialization failed")
+if((H5E_CANTUNCORK_g = H5I_register(H5I_ERROR_MSG, msg, FALSE))<0)
+    HGOTO_ERROR(H5E_ERROR, H5E_CANTREGISTER, FAIL, "can't register error message")
 
 /* Link related errors */
 assert(H5E_TRAVERSE_g==(-1));
