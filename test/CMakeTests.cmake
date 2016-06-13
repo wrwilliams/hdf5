@@ -995,15 +995,19 @@ if (HDF5_TEST_VFD)
 
   set (H5_VFD_TESTS
       testhdf5
-#      accum
+#      cache
+      cache_api
+      cache_tagging
       lheap
       ohdr
       stab
       gheap
-#      cache
-      cache_api
-      cache_tagging
       pool
+#      accum
+      farray
+      earray
+      btree2
+#      fheap
       hyperslab
       istore
       bittests
@@ -1037,10 +1041,6 @@ if (HDF5_TEST_VFD)
       cross_read
       freespace
       mf
-      farray
-      earray
-      btree2
-      #fheap
 #      error_test
 #      err_compat
       #tcheck_version

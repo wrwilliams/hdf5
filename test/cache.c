@@ -9532,7 +9532,7 @@ check_flush_cache__flush_op_eviction_test(H5F_t * file_ptr)
        * worry about maintaining the status of entries that we haven't used yet.
        */
       /* entry			entry				in	at main                                                flush dep flush dep child flush   flush       flush */
-      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order: corked */
+      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order:     corked: */
       { VARIABLE_ENTRY_TYPE,	0,	VARIABLE_ENTRY_SIZE/4,	TRUE,	TRUE,	TRUE,	FALSE,	TRUE,	TRUE,	FALSE,	FALSE,  {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
       { VARIABLE_ENTRY_TYPE,	1,	VARIABLE_ENTRY_SIZE/4,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	{0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
       { VARIABLE_ENTRY_TYPE,	2,	VARIABLE_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	{0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
@@ -17428,15 +17428,6 @@ check_check_evictions_enabled_err(void)
  * Programmer:	John Mainzer
  *              10/29/04
  *
- * Modifications:
- *
- *              John Mainzer 1/8/08
- *              Added a basic set of tests for the flash cache size
- *              increment code.
- *
- *		Vailin Choi; Feb 2014
- *		Add the parameter to indicate "corking" the entry or not.
- *		Suggest to do more thorough testing on this.
  *-------------------------------------------------------------------------
  */
 
@@ -28073,7 +28064,7 @@ check_metadata_blizzard_absence(hbool_t fill_via_insertion)
     struct expected_entry_status expected[150] =
     {
       /* entry		entry			in	at main                                                flush dep flush dep child flush   flush       flush */
-      /* type:		index:	size:		cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order: corked: */
+      /* type:		index:	size:		cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order:     corked: */
       { HUGE_ENTRY_TYPE, 0,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
       { HUGE_ENTRY_TYPE, 1,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
       { HUGE_ENTRY_TYPE, 2,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
@@ -28905,7 +28896,7 @@ check_flush_deps(void)
     struct expected_entry_status expected[5] =
     {
       /* entry			entry		in	at main                                                        flush dep flush dep child flush   flush       flush */
-      /* type:		index:	size:		cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order: corked */
+      /* type:		index:	size:		cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order:    corked: */
       { PICO_ENTRY_TYPE, 0,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
       { PICO_ENTRY_TYPE, 1,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
       { PICO_ENTRY_TYPE, 2,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
@@ -30861,7 +30852,7 @@ check_flush_deps_order(void)
     struct expected_entry_status expected[5] =
     {
       /* entry			entry		in	at main                                                        flush dep flush dep child flush   flush       flush */
-      /* type:		index:	size:		cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order: corked */
+      /* type:		index:	size:		cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order:    corked: */
       { PICO_ENTRY_TYPE, 0,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
       { PICO_ENTRY_TYPE, 1,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
       { PICO_ENTRY_TYPE, 2,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
@@ -33431,7 +33422,7 @@ check_notify_cb(void)
     struct expected_entry_status expected[5] =
     {
       /* entry			entry		   in	 at main                                               flush dep flush dep child flush   flush       flush */
-      /* type:		index:	size:		   cache: addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order: corked: */
+      /* type:		index:	size:		   cache: addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order:    corked: */
       { NOTIFY_ENTRY_TYPE, 0,	NOTIFY_ENTRY_SIZE, FALSE, TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
       { NOTIFY_ENTRY_TYPE, 1,	NOTIFY_ENTRY_SIZE, FALSE, TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
       { NOTIFY_ENTRY_TYPE, 2,	NOTIFY_ENTRY_SIZE, FALSE, TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE},
@@ -34478,7 +34469,7 @@ cedds__expunge_dirty_entry_in_flush_test(H5F_t * file_ptr)
        * worry about maintaining the status of entries that we haven't used yet.
        */
       /* entry			entry				in	at main                                               	flush dep flush dep child flush   flush       flush */
-      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest: 	par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order: corked: */
+      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest: 	par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order:     corked: */
       { HUGE_ENTRY_TYPE, 	0,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  {-1,-1,-1,-1,-1,-1,-1,-1}, {-1,-1,-1,-1,-1,-1,-1,-1},     0, 0, 0, -1, FALSE},
       { HUGE_ENTRY_TYPE, 	1,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  {-1,-1,-1,-1,-1,-1,-1,-1}, {-1,-1,-1,-1,-1,-1,-1,-1},     0, 0, 0, -1, FALSE},
       { HUGE_ENTRY_TYPE, 	2,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  {-1,-1,-1,-1,-1,-1,-1,-1}, {-1,-1,-1,-1,-1,-1,-1,-1},     0, 0, 0, -1, FALSE},
@@ -34716,7 +34707,7 @@ cedds__H5C_make_space_in_cache(H5F_t * file_ptr)
        * worry about maintaining the status of entries that we haven't used yet.
        */
       /* entry			entry				in	at main                                                flush dep flush dep child flush   flush       flush */
-      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order: corked: */
+      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order:     corked: */
       { HUGE_ENTRY_TYPE, 	0,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE, {-1,-1,-1,-1,-1,-1,-1,-1}, {-1,-1,-1,-1,-1,-1,-1,-1},     0, 0, 0, -1, FALSE},
       { HUGE_ENTRY_TYPE, 	1,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE, {-1,-1,-1,-1,-1,-1,-1,-1}, {-1,-1,-1,-1,-1,-1,-1,-1},     0, 0, 0, -1, FALSE},
       { HUGE_ENTRY_TYPE, 	2,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE, {-1,-1,-1,-1,-1,-1,-1,-1}, {-1,-1,-1,-1,-1,-1,-1,-1},     0, 0, 0, -1, FALSE},
@@ -35102,7 +35093,7 @@ cedds__H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * file_ptr)
        * worry about maintaining the status of entries that we haven't used yet.
        */
       /* entry			entry				in	at main                                                flush dep flush dep child flush   flush       flush */
-      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order: corked: */
+      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order:    corked: */
       { MONSTER_ENTRY_TYPE,	0,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE, {-1,-1,-1,-1,-1,-1,-1,-1}, {-1,-1,-1,-1,-1,-1,-1,-1},     0, 0, 0, -1, FALSE},
       { MONSTER_ENTRY_TYPE,	1,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE, {-1,-1,-1,-1,-1,-1,-1,-1}, {-1,-1,-1,-1,-1,-1,-1,-1},     0, 0, 0, -1, FALSE},
       { MONSTER_ENTRY_TYPE,	2,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE, {-1,-1,-1,-1,-1,-1,-1,-1}, {-1,-1,-1,-1,-1,-1,-1,-1},     0, 0, 0, -1, FALSE},	
@@ -35566,7 +35557,7 @@ cedds__H5C_flush_invalidate_cache__bucket_scan(H5F_t * file_ptr)
        * worry about maintaining the status of entries that we haven't used yet.
        */
       /* entry			entry				in	at main                                                  flush dep flush dep child flush   flush       flush */
-      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:     par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order: corked */
+      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:     par type[]: par idx[]: dep npart: dep nchd: dep ndirty chd: order:     corked: */
       { MONSTER_ENTRY_TYPE,	 0,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	TRUE,	TRUE,	FALSE,	FALSE,      {-1,0,0,0,0,0,0,0},                 {-1,0,0,0,0,0,0,0}, 0, 1, 1, -1, FALSE},
       { MONSTER_ENTRY_TYPE,	 8,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,      {-1,0,0,0,0,0,0,0},                 {-1,0,0,0,0,0,0,0}, 0, 0, 0, -1, FALSE},
       { MONSTER_ENTRY_TYPE,     16,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,      {-1,0,0,0,0,0,0,0},                 {-1,0,0,0,0,0,0,0}, 0, 0, 0, -1, FALSE},
@@ -36482,7 +36473,7 @@ main(void)
     nerrs += check_notify_cb();
     nerrs += check_metadata_cork(TRUE);
     nerrs += check_metadata_cork(FALSE);
-    nerrs += check_entry_deletions_during_scans(); /* OK NOW */
+    nerrs += check_entry_deletions_during_scans();
     nerrs += check_stats();
 
     /* can't fail, returns void */

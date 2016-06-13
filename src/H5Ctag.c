@@ -54,9 +54,6 @@
 /* Local Typedefs */
 /******************/
 
-/* Define cache entry iteration callback type */
-typedef int (*H5C_tag_iter_cb_t)(H5C_cache_entry_t *entry, void *ctx);
-
 /* Typedef for tagged entry iterator callback context - evict tagged entries */
 typedef struct {
     H5F_t * f;                          /* File pointer for evicting entry */
@@ -88,8 +85,6 @@ typedef struct {
 /* Local Prototypes */
 /********************/
 static herr_t H5C__mark_tagged_entries(H5C_t *cache_ptr, haddr_t tag);
-static int H5C__iter_tagged_entries(H5C_t *cache, haddr_t tag, hbool_t match_global,
-    H5C_tag_iter_cb_t cb, void *cb_ctx);
 
 
 /*********************/
@@ -257,7 +252,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static int
+int
 H5C__iter_tagged_entries(H5C_t *cache, haddr_t tag, hbool_t match_global,
     H5C_tag_iter_cb_t cb, void *cb_ctx)
 {
@@ -265,7 +260,7 @@ H5C__iter_tagged_entries(H5C_t *cache, haddr_t tag, hbool_t match_global,
     int ret_value = H5_ITER_CONT;       /* Return value */
 
     /* Function enter macro */
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
     HDassert(cache != NULL);
