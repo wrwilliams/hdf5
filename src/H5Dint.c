@@ -2076,7 +2076,8 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; 12/24/15
+ * Programmer:	Vailin Choi
+ *		12/24/15
  *
  *-------------------------------------------------------------------------
  */
@@ -2126,11 +2127,9 @@ H5D_mult_refresh_close(hid_t dset_id, hid_t dxpl_id)
                 break;
 
             case H5D_COMPACT:
+            case H5D_VIRTUAL:
                 /* Nothing special to do (info freed in the layout destroy) */
                 break;
-
-            case H5D_VIRTUAL:
-		break;
 
             case H5D_LAYOUT_ERROR:
             case H5D_NLAYOUTS:
@@ -2143,8 +2142,7 @@ H5D_mult_refresh_close(hid_t dset_id, hid_t dxpl_id)
 
         /* Destroy any cached layout information for the dataset */
         if(dataset->shared->layout.ops->dest && (dataset->shared->layout.ops->dest)(dataset, dxpl_id) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_CANTRELEASE, FAIL, "unable to destroy layout info")
-
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTRELEASE, FAIL, "unable to destroy layout info")
     } /* end if */
 
 done:
@@ -2160,7 +2158,8 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; 12/24/15
+ * Programmer:	Vailin Choi
+ *		12/24/15
  *
  *-------------------------------------------------------------------------
  */
@@ -2176,10 +2175,9 @@ H5D_mult_refresh_reopen(H5D_t *dataset, hid_t dxpl_id)
     HDassert(dataset->shared->fo_count > 0);
 
     if(dataset->shared->fo_count > 1) {
-
 	/* Release dataspace info */
 	if(H5S_close(dataset->shared->space) < 0)
-	    HDONE_ERROR(H5E_DATASET, H5E_CANTRELEASE, FAIL, "unable to release dataspace")
+	    HGOTO_ERROR(H5E_DATASET, H5E_CANTRELEASE, FAIL, "unable to release dataspace")
 
 	/* Re-load dataspace info */
 	if(NULL == (dataset->shared->space = H5S_read(&(dataset->oloc), dxpl_id)))
@@ -2189,17 +2187,17 @@ H5D_mult_refresh_reopen(H5D_t *dataset, hid_t dxpl_id)
 	if(H5D__cache_dataspace_info(dataset) < 0)
 	    HGOTO_ERROR(H5E_DATASET, H5E_CANTCOPY, FAIL, "can't cache dataspace info")
     
+	/* Release layout info */
 	if(H5O_msg_reset(H5O_LAYOUT_ID, &dataset->shared->layout) < 0)
 	    HGOTO_ERROR(H5E_DATASET, H5E_CANTRESET, FAIL, "unable to reset layout info")
 
 	/* Re-load layout message info */
 	if(NULL == H5O_msg_read(&(dataset->oloc), H5O_LAYOUT_ID, &(dataset->shared->layout), dxpl_id))
 	    HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to read data layout message")	
-    }
+    } /* end if */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5D_mult_refresh_reopen() */
 
 

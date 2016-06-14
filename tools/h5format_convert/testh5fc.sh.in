@@ -219,8 +219,8 @@ TOOLTEST_OUT() {
     $RM $TESTDIR/$TMPOUTFILE
     TFILE=$2
     if [ ! -z "$2" ] && [ -e $TESTDIR/$2 ] ; then
-    $CP $TESTDIR/$2 $TESTDIR/$TMPOUTFILE
-    TFILE=$TMPOUTFILE
+	$CP $TESTDIR/$2 $TESTDIR/$TMPOUTFILE
+	TFILE=$TMPOUTFILE
     fi
 
     # Run test.
@@ -262,7 +262,7 @@ TOOLTEST() {
 	echo "    The tool exits failure"
 	nerrors="`expr $nerrors + 1`"
     else
-    echo " PASSED"
+	echo " PASSED"
     fi
 }
 # Like TOOLTEST but tmpfile is for IDX_CHECK
@@ -273,11 +273,11 @@ TOOLTEST_CHK() {
     $RUNSERIAL $FORMCONV_BIN $2 $3 $4 $TESTDIR/$TMPCHKFILE
     exitcode=$?
     if [ $exitcode -ne 0 ]; then
-    echo "*FAILED*"
-    echo "    The tool exits failure"
-    nerrors="`expr $nerrors + 1`"
+        echo "*FAILED*"
+        echo "    The tool exits failure"
+        nerrors="`expr $nerrors + 1`"
     else
-    echo " PASSED"
+        echo " PASSED"
     fi
 }
 # Like TOOLTEST but tmpfile is for H5DUMP_CHECK
@@ -288,11 +288,11 @@ TOOLTEST_DMP() {
     $RUNSERIAL $FORMCONV_BIN $2 $3 $4 $TESTDIR/$TMPDMPFILE
     exitcode=$?
     if [ $exitcode -ne 0 ]; then
-    echo "*FAILED*"
-    echo "    The tool exits failure"
-    nerrors="`expr $nerrors + 1`"
+        echo "*FAILED*"
+        echo "    The tool exits failure"
+        nerrors="`expr $nerrors + 1`"
     else
-    echo " PASSED"
+        echo " PASSED"
     fi
 }
 
