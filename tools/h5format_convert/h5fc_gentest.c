@@ -66,15 +66,6 @@ const char *FILENAME[] = {
 
 #define NUM 500
 
-/*
- * Function: gen_latest() 
- *
- * Create a file with write+latest-format--this will result in v3 superblock+latest version support:
- *	1) 2 chunked datasets with extensible array chunk indexing type (with/without data)
- *	2) 2 chunked datasets with version 2 B-tree chunk indexing type (with/without data)
- *	3) 2 chunked datasets with fixed array chunk indexing type (with/without data)
- *	4) 2 chunked datasets with implicit array chunk indexing type (with/without data)
- */
 
 /*
  * Function: gen_non() 
@@ -291,7 +282,9 @@ gen_non(const char *fname)
         goto error;
 
     if(H5Gclose(gid) < 0)
-        goto error;
+	goto error;
+    if(H5Pclose(fcpl) < 0)
+	goto error;
     if(H5Fclose(fid) < 0)
         goto error;
 
@@ -302,6 +295,7 @@ error:
         H5Dclose(did1);
         H5Dclose(did2);
         H5Gclose(gid);
+        H5Fclose(fcpl);
         H5Fclose(fid);
     } H5E_END_TRY;
 
@@ -584,7 +578,7 @@ gen_ext(const char *fname, unsigned new_format, unsigned what)
 	    break;
 	case 4:
 	    H5Pset_istore_k(fcpl, ISTORE_IK);
-	    H5Pset_file_space(fcpl, 0, (hsize_t)2);
+	    H5Pset_file_space(fcpl, H5F_FILE_SPACE_DEFAULT, (hsize_t)2);
 	    break;
 	case 5:
 	    H5Pset_shared_mesg_nindexes(fcpl, 4);

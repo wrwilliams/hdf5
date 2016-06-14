@@ -288,9 +288,9 @@ convert(hid_t fid, const char *dname)
 		HDfprintf(stdout, "No further action for virtual dataset\n");
 	    goto done;
 
+        case H5D_NLAYOUTS:
+        case H5D_LAYOUT_ERROR:
 	default:
-	H5D_NLAYOUTS:
-	H5D_LAYOUT_ERROR:
 	    error_msg("unknown layout type for \"%s\"\n", dname);
 	    h5tools_setstatus(EXIT_FAILURE);
 	    goto error;

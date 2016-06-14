@@ -436,7 +436,7 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
     } /* end if */
     if(!skip_eof_check && initial_read) {
         if(HADDR_UNDEF == (eof = H5FD_get_eof(f->shared->lf, H5FD_MEM_DEFAULT)))
-            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "unable to determine file size")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to determine file size")
 
         /* (Account for the stored EOA being absolute offset -QAK) */
         if((eof + sblock->base_addr) < udata.stored_eof)

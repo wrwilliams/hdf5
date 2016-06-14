@@ -2735,13 +2735,12 @@ H5AC_evict_tagged_metadata(H5F_t * f, haddr_t metadata_tag, hid_t dxpl_id)
     HDassert(f->shared);
 
     /* Call cache level function to evict metadata entries with specified tag */
-    if(H5C_evict_tagged_entries(f, dxpl_id, metadata_tag)<0)
+    if(H5C_evict_tagged_entries(f, dxpl_id, metadata_tag) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Cannot evict metadata")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-
-} /* H5AC_evict_tagged_metadata */
+} /* H5AC_evict_tagged_metadata() */
 
 
 /*------------------------------------------------------------------------------
