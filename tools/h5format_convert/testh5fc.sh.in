@@ -248,14 +248,15 @@ TOOLTEST_OUT() {
 # $1 is the test file name 
 #	--fname exists
 #	--fname is copied to a temporary file for testing
-# $2 to at most $4--options to the tool such as:
+# $2 is the temporary file name 
+# $3 to at most $5--options to the tool such as:
 # 	-d dname
 # 	-n
 TOOLTEST() {
-    TESTING $FORMCONV $2 $3 $4 $1
-    $RM $TESTDIR/$TMPFILE
-    $CP $TESTDIR/$1 $TESTDIR/$TMPFILE
-    $RUNSERIAL $FORMCONV_BIN $2 $3 $4 $TESTDIR/$TMPFILE
+    TESTING $FORMCONV $3 $4 $5 $1
+    $RM $TESTDIR/$2
+    $CP $TESTDIR/$1 $TESTDIR/$2
+    $RUNSERIAL $FORMCONV_BIN $3 $4 $5 $TESTDIR/$2
     exitcode=$?
     if [ $exitcode -ne 0 ]; then
 	echo "*FAILED*"
@@ -263,36 +264,6 @@ TOOLTEST() {
 	nerrors="`expr $nerrors + 1`"
     else
 	echo " PASSED"
-    fi
-}
-# Like TOOLTEST but tmpfile is for IDX_CHECK
-TOOLTEST_CHK() {
-    TESTING $FORMCONV $2 $3 $4 $1
-    $RM $TESTDIR/$TMPCHKFILE
-    $CP $TESTDIR/$1 $TESTDIR/$TMPCHKFILE
-    $RUNSERIAL $FORMCONV_BIN $2 $3 $4 $TESTDIR/$TMPCHKFILE
-    exitcode=$?
-    if [ $exitcode -ne 0 ]; then
-        echo "*FAILED*"
-        echo "    The tool exits failure"
-        nerrors="`expr $nerrors + 1`"
-    else
-        echo " PASSED"
-    fi
-}
-# Like TOOLTEST but tmpfile is for H5DUMP_CHECK
-TOOLTEST_DMP() {
-    TESTING $FORMCONV $2 $3 $4 $1
-    $RM $TESTDIR/$TMPDMPFILE
-    $CP $TESTDIR/$1 $TESTDIR/$TMPDMPFILE
-    $RUNSERIAL $FORMCONV_BIN $2 $3 $4 $TESTDIR/$TMPDMPFILE
-    exitcode=$?
-    if [ $exitcode -ne 0 ]; then
-        echo "*FAILED*"
-        echo "    The tool exits failure"
-        nerrors="`expr $nerrors + 1`"
-    else
-        echo " PASSED"
     fi
 }
 
@@ -420,28 +391,28 @@ TOOLTEST_OUT h5fc_v_err.ddl h5fc_err_level.h5 -v
 # h5format_convert -d /GROUP/DSET_FA h5fc_ext_none.h5
 # h5format_convert -d /DSET_NONE h5fc_ext_none.h5
 # h5format_convert -d /GROUP/DSET_NDATA_NONE h5fc_ext_none.h5
-TOOLTEST_CHK h5fc_ext_none.h5 -d /DSET_EA
+TOOLTEST h5fc_ext_none.h5 $TMPCHKFILE -d /DSET_EA
 IDX_CHECK /DSET_EA
 #
-TOOLTEST_CHK h5fc_ext_none.h5 -d /GROUP/DSET_NDATA_EA
+TOOLTEST h5fc_ext_none.h5 $TMPCHKFILE -d /GROUP/DSET_NDATA_EA
 IDX_CHECK /GROUP/DSET_NDATA_EA
 #
-TOOLTEST_CHK h5fc_ext_none.h5 -d /GROUP/DSET_BT2
+TOOLTEST h5fc_ext_none.h5 $TMPCHKFILE -d /GROUP/DSET_BT2
 IDX_CHECK /GROUP/DSET_BT2
 #
-TOOLTEST_CHK h5fc_ext_none.h5 -d /DSET_NDATA_BT2
+TOOLTEST h5fc_ext_none.h5 $TMPCHKFILE -d /DSET_NDATA_BT2
 IDX_CHECK /DSET_NDATA_BT2
 #
-TOOLTEST_CHK h5fc_ext_none.h5 -d /DSET_FA
+TOOLTEST h5fc_ext_none.h5 $TMPCHKFILE -d /DSET_FA
 IDX_CHECK /DSET_FA
 #
-TOOLTEST_CHK h5fc_ext_none.h5 -d /GROUP/DSET_NDATA_FA
+TOOLTEST h5fc_ext_none.h5 $TMPCHKFILE -d /GROUP/DSET_NDATA_FA
 IDX_CHECK /GROUP/DSET_NDATA_FA
 #
-TOOLTEST_CHK h5fc_ext_none.h5 -d /DSET_NONE
+TOOLTEST h5fc_ext_none.h5 $TMPCHKFILE -d /DSET_NONE
 IDX_CHECK /DSET_NONE
 #
-TOOLTEST_CHK h5fc_ext_none.h5 -d /GROUP/DSET_NDATA_NONE
+TOOLTEST h5fc_ext_none.h5 $TMPCHKFILE -d /GROUP/DSET_NDATA_NONE
 IDX_CHECK /GROUP/DSET_NDATA_NONE
 #
 #
@@ -449,16 +420,16 @@ IDX_CHECK /GROUP/DSET_NDATA_NONE
 # No output from tests: just check exit code
 # h5format_convert -d /DSET_NDATA_BT2 old_h5fc_ext_none.h5 (v1-btree dataset)
 # h5format_convert -d /DSET_CONTIGUOUS h5fc_non_v3.h5 (non-chunked dataset)
-TOOLTEST old_h5fc_ext_none.h5 -d /DSET_NDATA_BT2
-TOOLTEST h5fc_non_v3.h5 -d /DSET_CONTIGUOUS
+TOOLTEST old_h5fc_ext_none.h5 $TMPFILE -d /DSET_NDATA_BT2
+TOOLTEST h5fc_non_v3.h5 $TMPFILE -d /DSET_CONTIGUOUS
 #
 #
 #
 # No output from tests: just check exit code
 # h5format_convert -d /GROUP/DSET_BT2 -n h5fc_non_v3.h5 (noop, one dataset)
 # h5format_convert -n h5fc_non_v3.h5 (noop, all datasets)
-TOOLTEST h5fc_non_v3.h5 -d /GROUP/DSET_BT2 -n
-TOOLTEST h5fc_non_v3.h5 -n
+TOOLTEST h5fc_non_v3.h5 $TMPFILE -d /GROUP/DSET_BT2 -n
+TOOLTEST h5fc_non_v3.h5 $TMPFILE -n
 #
 #
 #
@@ -466,7 +437,7 @@ TOOLTEST h5fc_non_v3.h5 -n
 # h5format_convert h5fc_non_v3.h5
 # 1) convert all datasets 
 # 2) verify indexing types
-TOOLTEST_CHK h5fc_non_v3.h5
+TOOLTEST h5fc_non_v3.h5 $TMPCHKFILE
 IDX_CHECK /DSET_NDATA_EA
 IDX_CHECK /DSET_NDATA_BT2
 IDX_CHECK /GROUP/DSET_BT2
@@ -478,47 +449,47 @@ IDX_CHECK /GROUP/DSET_EA
 # h5format_convert h5fc_edge_v3.h5
 # 1) convert the chunked dataset (filter, no-filter-edge-chunk)
 # 2) verify the indexing type
-TOOLTEST_CHK h5fc_edge_v3.h5
+TOOLTEST h5fc_edge_v3.h5 $TMPCHKFILE
 IDX_CHECK /DSET_EDGE
 #
 #
 
 # The following test files have messages in the superblock extension.
 # Verify h5dump output for correctness after conversion
-TOOLTEST_DMP h5fc_ext1_i.h5
+TOOLTEST h5fc_ext1_i.h5 $TMPDMPFILE
 H5DUMP_CHECK h5fc_ext1_i.h5 h5fc_ext1_i.ddl
-TOOLTEST_DMP h5fc_ext1_s.h5
+TOOLTEST h5fc_ext1_s.h5 $TMPDMPFILE
 H5DUMP_CHECK h5fc_ext1_s.h5 h5fc_ext1_s.ddl
-TOOLTEST_DMP h5fc_ext1_f.h5
+TOOLTEST h5fc_ext1_f.h5 $TMPDMPFILE
 H5DUMP_CHECK h5fc_ext1_f.h5 h5fc_ext1_f.ddl
 #
-TOOLTEST_DMP h5fc_ext2_if.h5
+TOOLTEST h5fc_ext2_if.h5 $TMPDMPFILE
 H5DUMP_CHECK h5fc_ext2_if.h5 h5fc_ext2_if.ddl
-TOOLTEST_DMP h5fc_ext2_is.h5
+TOOLTEST h5fc_ext2_is.h5 $TMPDMPFILE
 H5DUMP_CHECK h5fc_ext2_is.h5 h5fc_ext2_is.ddl
-TOOLTEST_DMP h5fc_ext2_sf.h5
+TOOLTEST h5fc_ext2_sf.h5 $TMPDMPFILE
 H5DUMP_CHECK h5fc_ext2_sf.h5 h5fc_ext2_sf.ddl
 #
-TOOLTEST_DMP h5fc_ext3_isf.h5
+TOOLTEST h5fc_ext3_isf.h5 $TMPDMPFILE
 H5DUMP_CHECK h5fc_ext3_isf.h5 h5fc_ext3_isf.ddl
 #
 #
 #
-TOOLTEST_DMP old_h5fc_ext1_i.h5
+TOOLTEST old_h5fc_ext1_i.h5 $TMPDMPFILE
 H5DUMP_CHECK old_h5fc_ext1_i.h5 old_h5fc_ext1_i.ddl
-TOOLTEST_DMP old_h5fc_ext1_s.h5
+TOOLTEST old_h5fc_ext1_s.h5 $TMPDMPFILE
 H5DUMP_CHECK old_h5fc_ext1_s.h5 old_h5fc_ext1_s.ddl
-TOOLTEST_DMP old_h5fc_ext1_f.h5
+TOOLTEST old_h5fc_ext1_f.h5 $TMPDMPFILE
 H5DUMP_CHECK old_h5fc_ext1_f.h5 old_h5fc_ext1_f.ddl
 #
-TOOLTEST_DMP old_h5fc_ext2_if.h5
+TOOLTEST old_h5fc_ext2_if.h5 $TMPDMPFILE
 H5DUMP_CHECK old_h5fc_ext2_if.h5 old_h5fc_ext2_if.ddl
-TOOLTEST_DMP old_h5fc_ext2_is.h5
+TOOLTEST old_h5fc_ext2_is.h5 $TMPDMPFILE
 H5DUMP_CHECK old_h5fc_ext2_is.h5 old_h5fc_ext2_is.ddl
-TOOLTEST_DMP old_h5fc_ext2_sf.h5
+TOOLTEST old_h5fc_ext2_sf.h5 $TMPDMPFILE
 H5DUMP_CHECK old_h5fc_ext2_sf.h5 old_h5fc_ext2_sf.ddl
 #
-TOOLTEST_DMP old_h5fc_ext3_isf.h5
+TOOLTEST old_h5fc_ext3_isf.h5 $TMPDMPFILE
 H5DUMP_CHECK old_h5fc_ext3_isf.h5 old_h5fc_ext3_isf.ddl
 #
 # Clean up temporary files/directories
