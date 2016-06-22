@@ -431,6 +431,9 @@ H5_DLL herr_t H5F_efc_try_close(H5F_t *f);
 H5_DLL herr_t H5F__set_eoa(const H5F_t *f, H5F_mem_t type, haddr_t addr);
 H5_DLL herr_t H5F__set_base_addr(const H5F_t *f, haddr_t addr);
 
+/* Functions that flush or evict */
+H5_DLL herr_t H5F__evict_cache_entries(H5F_t *f, hid_t dxpl_id);
+
 /* Testing functions */
 #ifdef H5F_TESTING
 H5_DLL herr_t H5F_get_sohm_mesg_count_test(hid_t fid, unsigned type_id,

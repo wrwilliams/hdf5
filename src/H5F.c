@@ -1714,21 +1714,21 @@ H5Fstart_swmr_write(hid_t file_id)
 
     /* Flush the superblock */
     if(H5F_flush_tagged_metadata(file, (haddr_t)0, H5AC_ind_read_dxpl_id) < 0)
-        HDONE_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "unable to flush superblock")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "unable to flush superblock")
 
     /* Evict all flushed entries in the cache except the pinned superblock */
-    if(H5F_evict_cache_entries(file, H5AC_ind_read_dxpl_id) < 0)
+    if(H5F__evict_cache_entries(file, H5AC_ind_read_dxpl_id) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "unable to evict file's cached information")
 
     /* Refresh (reopen) the objects (groups & datasets) in the file */
-    for(u = 0; u < grp_dset_count; u++) {
+    for(u = 0; u < grp_dset_count; u++)
         if(H5O_refresh_metadata_reopen(obj_ids[u], &obj_glocs[u], H5AC_ind_read_dxpl_id, TRUE) < 0)
-	        HGOTO_ERROR(H5E_ATOM, H5E_CLOSEERROR, FAIL, "can't refresh-close object")
-    } /* end for */
+            HGOTO_ERROR(H5E_ATOM, H5E_CLOSEERROR, FAIL, "can't refresh-close object")
 
     /* Unlock the file */
     if(H5FD_unlock(file->shared->lf) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "unable to unlock the file")
+
 done:
     if(ret_value < 0 && setup) {
         HDassert(file);

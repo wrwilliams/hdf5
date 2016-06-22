@@ -727,7 +727,6 @@ H5_DLL herr_t H5F_block_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr,
 /* Functions that flush or evict */
 H5_DLL herr_t H5F_flush_tagged_metadata(H5F_t * f, haddr_t tag, hid_t dxpl_id);
 H5_DLL herr_t H5F_evict_tagged_metadata(H5F_t * f, haddr_t tag, hid_t dxpl_id);
-H5_DLL herr_t H5F_evict_cache_entries(H5F_t *f, hid_t dxpl_id);
 
 /* Functions that read & verify a piece of metadata with checksum */
 H5_DLL herr_t H5F_read_check_metadata(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type,

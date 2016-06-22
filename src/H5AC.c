@@ -606,7 +606,8 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Vailin Choi; Dec 2013
+ * Programmer:  Vailin Choi
+ *		Dec 2013
  *
  *-------------------------------------------------------------------------
  */
