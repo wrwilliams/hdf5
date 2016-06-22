@@ -138,7 +138,7 @@
         ARGS       -E copy_if_different ${tst_xml_h5_file} ${dest}
     )
   endforeach (tst_xml_h5_file ${HDF5_XML_REFERENCE_TEST_FILES})
-  
+
   foreach (tst_xml_other_file ${HDF5_XML_REFERENCE_FILES})
     get_filename_component(fname "${tst_xml_other_file}" NAME)
     set (dest "${PROJECT_BINARY_DIR}/testfiles/xml/${fname}")
@@ -150,7 +150,7 @@
         ARGS       -E copy_if_different ${tst_xml_other_file} ${dest}
     )
   endforeach (tst_xml_other_file ${HDF5_XML_REFERENCE_FILES})
-  
+
 ##############################################################################
 ##############################################################################
 ###           T H E   T E S T S  M A C R O S                               ###
@@ -204,7 +204,7 @@
 
 ##############################################################################
 ##############################################################################
-###           T H E   T E S T S                                          HDF5_ENABLE_USING_MEMCHECKER  ###
+###           T H E   T E S T S                                            ###
 ##############################################################################
 ##############################################################################
 

@@ -284,24 +284,25 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5F_evict_cache_entries
+ * Function:    H5F__evict_cache_entries
  *
- * Purpose:     To revict all cache entries except the pinned superblock entry
+ * Purpose:     To evict all cache entries except the pinned superblock entry
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; Dec 2013
+ * Programmer:  Vailin Choi
+ *		Dec 2013
  *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5F_evict_cache_entries(H5F_t *f, hid_t dxpl_id)
+H5F__evict_cache_entries(H5F_t *f, hid_t dxpl_id)
 {
     unsigned status = 0;
     int32_t    cur_num_entries;
     herr_t ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI(FAIL)
+    FUNC_ENTER_PACKAGE
 
     HDassert(f);
     HDassert(f->shared);
@@ -328,7 +329,7 @@ H5F_evict_cache_entries(H5F_t *f, hid_t dxpl_id)
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
-} /* end H5F_evict_cache_entries() */
+} /* end H5F__evict_cache_entries() */
 
 
 /*-------------------------------------------------------------------------

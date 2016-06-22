@@ -864,49 +864,6 @@ END_FUNC(PRIV)  /* end H5EA_depend() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5EA_undepend
- *
- * Purpose:	Remove a child flush dependency between the extensible array's
- *              header and another piece of metadata in the file.
- *
- * Return:	SUCCEED/FAIL
- *
- * Programmer:	Quincey Koziol
- *		koziol@hdfgroup.org
- *		May 27 2009
- *
- *-------------------------------------------------------------------------
- */
-BEGIN_FUNC(PRIV, ERR,
-herr_t, SUCCEED, FAIL,
-H5EA_undepend(H5AC_info_t *parent_entry, H5EA_t *ea))
-
-    /* Local variables */
-    H5EA_hdr_t *hdr = ea->hdr;          /* Header for EA */
-
-#ifdef QAK
-HDfprintf(stderr, "%s: Called\n", FUNC);
-#endif /* QAK */
-
-    /*
-     * Check arguments.
-     */
-    HDassert(ea);
-    HDassert(hdr);
-
-    /* Set the shared array header's file context for this operation */
-    hdr->f = ea->f;
-
-    /* Remove flush dependency between parent entry and extensible array header */
-    if(H5EA__destroy_flush_depend(parent_entry, (H5AC_info_t *)hdr) < 0)
-        H5E_THROW(H5E_CANTUNDEPEND, "unable to destroy flush dependency on file metadata")
-
-CATCH
-
-END_FUNC(PRIV)  /* end H5EA_undepend() */
-
-
-/*-------------------------------------------------------------------------
  * Function:	H5EA_close
  *
  * Purpose:	Close an extensible array
