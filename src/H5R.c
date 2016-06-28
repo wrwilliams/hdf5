@@ -2205,7 +2205,7 @@ H5Rdecode(const void *buf)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "empty buffer")
 
     /* Create datatype by decoding buffer */
-    if(NULL == (ret_value = H5R_decode((const unsigned char *)buf)))
+    if(NULL == (ret_value = H5R_decode((const unsigned char *)buf, NULL)))
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTDECODE, NULL, "can't decode reference")
 
 done:
@@ -2223,10 +2223,11 @@ done:
  *-------------------------------------------------------------------------
  */
 href_t
-H5R_decode(const unsigned char *buf)
+H5R_decode(const unsigned char *buf, size_t *_nbytes)
 {
     struct href *ret_value = NULL;
     size_t buf_size;
+    size_t nbytes = 0;
 
     FUNC_ENTER_NOAPI_NOINIT
 
@@ -2236,10 +2237,12 @@ H5R_decode(const unsigned char *buf)
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "Cannot allocate memory for reference")
 
     ret_value->ref_type = (H5R_type_t)*buf++;
+    nbytes++;
     if(ret_value->ref_type <= H5R_BADTYPE || ret_value->ref_type >= H5R_MAXTYPE)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid reference type");
 
     UINT64DECODE(buf, buf_size);
+    nbytes += sizeof(uint64_t);
     if (!buf_size)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid reference size");
     if (ret_value->ref_type == H5R_OBJECT)
@@ -2250,6 +2253,9 @@ H5R_decode(const unsigned char *buf)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "Cannot allocate memory for reference")
         HDmemcpy(ret_value->ref.serial.buf, buf, buf_size);
     }
+    nbytes += buf_size;
+
+    if (_nbytes) *_nbytes = nbytes;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
