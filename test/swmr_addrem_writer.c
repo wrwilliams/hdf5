@@ -171,8 +171,6 @@ addrem_records(hid_t fid, unsigned verbose, unsigned long nops, unsigned long fl
     hsize_t start[2] = {0, 0}, count[2] = {1, 1}; /* Hyperslab selection values */
     hsize_t dim[2] = {1, 0};            /* Dataspace dimensions */
     symbol_t buf[MAX_SIZE_CHANGE];      /* Write buffer */
-    H5AC_cache_config_t mdc_config_orig; /* Original metadata cache configuration */
-    H5AC_cache_config_t mdc_config_cork; /* Corked metadata cache configuration */
     unsigned long op_to_flush;          /* # of operations before flush */
     unsigned long u, v;                 /* Local index variables */
 
@@ -188,17 +186,6 @@ addrem_records(hid_t fid, unsigned verbose, unsigned long nops, unsigned long fl
     /* Create datatype for appending records */
     if((tid = create_symbol_datatype()) < 0)
         return -1;
-
-    /* Get the current metadata cache configuration, and set up the corked
-     * configuration */
-    mdc_config_orig.version = H5AC__CURR_CACHE_CONFIG_VERSION;
-    if(H5Fget_mdc_config(fid, &mdc_config_orig) < 0)
-        return -1;
-    HDmemcpy(&mdc_config_cork, &mdc_config_orig, sizeof(mdc_config_cork));
-    mdc_config_cork.evictions_enabled = FALSE;
-    mdc_config_cork.incr_mode = H5C_incr__off;
-    mdc_config_cork.flash_incr_mode = H5C_flash_incr__off;
-    mdc_config_cork.decr_mode = H5C_decr__off;
 
     /* Add and remove records to random datasets, according to frequency
      * distribution */
@@ -230,8 +217,8 @@ addrem_records(hid_t fid, unsigned verbose, unsigned long nops, unsigned long fl
 
             /* Cork the metadata cache, to prevent the object header from being
              * flushed before the data has been written */
-            /*if(H5Fset_mdc_config(fid, &mdc_config_cork) < 0)
-                return(-1);*/
+            if(H5Odisable_mdc_flushes(symbol->dsid) < 0)
+                return -1;
 
              /* Extend the dataset's dataspace to hold the new record */
             symbol->nrecords+= count[1];
@@ -252,8 +239,8 @@ addrem_records(hid_t fid, unsigned verbose, unsigned long nops, unsigned long fl
                 return -1;
 
             /* Uncork the metadata cache */
-            /*if(H5Fset_mdc_config(fid, &mdc_config_orig) < 0)
-                return -1;*/
+            if(H5Oenable_mdc_flushes(symbol->dsid) < 0)
+                return -1;
 
             /* Close the dataset's dataspace */
             if(H5Sclose(file_sid) < 0)

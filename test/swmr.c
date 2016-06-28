@@ -6287,6 +6287,11 @@ test_refresh_concur(hid_t in_fapl, hbool_t new_format)
 	    FAIL_STACK_ERROR;
     }
 
+    /* Cork the metadata cache, to prevent the object header from being
+     * flushed before the data has been written */
+    if(H5Odisable_mdc_flushes(did) < 0)
+        FAIL_STACK_ERROR;
+
     /* Extend the dataset */
     if(H5Dset_extent(did, new_dims) < 0)
         FAIL_STACK_ERROR;
@@ -6294,6 +6299,10 @@ test_refresh_concur(hid_t in_fapl, hbool_t new_format)
     /* Write to the dataset */
     wbuf[0] = wbuf[1] = 100;
     if(H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf) < 0)
+        FAIL_STACK_ERROR;
+
+    /* Uncork the metadata cache */
+    if(H5Oenable_mdc_flushes(did) < 0)
         FAIL_STACK_ERROR;
 
     /* Flush to disk */

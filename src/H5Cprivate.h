@@ -2126,13 +2126,5 @@ H5_DLL herr_t H5C_mark_entries_as_clean(H5F_t *f, hid_t dxpl_id, int32_t ce_arra
     haddr_t *ce_array_ptr);
 #endif /* H5_HAVE_PARALLEL */
 
-#ifndef NDEBUG	/* debugging functions */
-H5_DLL herr_t H5C_get_entry_ptr_from_addr(const H5F_t *f, haddr_t addr,
-    void **entry_ptr_ptr);
-H5_DLL herr_t H5C_verify_entry_type(const H5F_t *f, haddr_t addr,
-    const H5C_class_t *expected_type, hbool_t *in_cache_ptr,
-    hbool_t *type_ok_ptr);
-#endif /* NDEBUG */
-
 #endif /* !_H5Cprivate_H */
 
