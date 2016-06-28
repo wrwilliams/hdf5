@@ -464,10 +464,6 @@ H5C_create(size_t		      max_cache_size,
 
     cache_ptr->prefix[0]			= '\0';  /* empty string */
 
-#ifndef NDEBUG
-    cache_ptr->get_entry_ptr_from_addr_counter	= 0;  
-#endif /* NDEBUG */
-
     /* Set return value */
     ret_value = cache_ptr;
 
@@ -758,23 +754,6 @@ H5C_dest(H5F_t * f, hid_t dxpl_id)
         H5SL_destroy(cache_ptr->cork_list_ptr, H5C_free_cork_list_cb, NULL);
         cache_ptr->cork_list_ptr = NULL;
     } /* end if */
-
-    /* Only display count of number of calls to H5C_get_entry_ptr_from_add()
-     * if NDEBUG is undefined, and H5C_DO_SANITY_CHECKS is defined.  Need 
-     * this as the print statement will upset windows, and we frequently
-     * run debug builds there.
-     *
-     * Note that the count is still kept whenever NDEBUG is undefined, and
-     * is reasonably accessible via debugger.
-     */
-#ifndef NDEBUG 
-#if H5C_DO_SANITY_CHECKS
-    if ( cache_ptr->get_entry_ptr_from_addr_counter > 0 )
-        HDfprintf(stdout, 
-		  "*** %ld calls to H5C_get_entry_ptr_from_add(). ***\n",
-		  cache_ptr->get_entry_ptr_from_addr_counter);
-#endif /* H5C_DO_SANITY_CHECKS */
-#endif /* NDEBUG */
 
 #ifndef NDEBUG
     cache_ptr->magic = 0;
@@ -1650,7 +1629,7 @@ H5C_mark_entry_dirty(void *thing)
         if(was_clean) {
             H5C__UPDATE_INDEX_FOR_ENTRY_DIRTY(cache_ptr, entry_ptr);
 
-            if((entry_ptr->flush_dep_ndirty_children == 0) && (entry_ptr->flush_dep_nparents > 0))
+            if(entry_ptr->flush_dep_nparents > 0)
                 if(H5C__mark_flush_dep_dirty(entry_ptr) < 0)
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "Can't propagate flush dep dirty flag")
         } /* end if */
@@ -1798,7 +1777,7 @@ H5C_move_entry(H5C_t *	     cache_ptr,
         /* Propagate the dirty flag up the flush dependency chain if
          * appropriate */
         if(!entry_ptr->flush_in_progress) {
-            if(!was_dirty && ((0 == entry_ptr->flush_dep_ndirty_children) && (entry_ptr->flush_dep_nparents > 0)))
+            if(!was_dirty && entry_ptr->flush_dep_nparents > 0)
                 if(H5C__mark_flush_dep_dirty(entry_ptr) < 0)
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "Can't propagate flush dep dirty flag")
         } /* end if */
@@ -1905,10 +1884,9 @@ H5C_resize_entry(void *thing, size_t new_size)
             entry_ptr->image_ptr = H5MM_xfree(entry_ptr->image_ptr);
 
         /* Propagate the dirty flag up the flush dependency chain if appropriate */
-        if(was_clean && ((entry_ptr->flush_dep_ndirty_children == 0) && (entry_ptr->flush_dep_nparents > 0))) {
+        if(was_clean && entry_ptr->flush_dep_nparents > 0)
             if(H5C__mark_flush_dep_dirty(entry_ptr) < 0)
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "Can't propagate flush dep dirty flag")
-        } /* end if */
 
         /* do a flash cache size increase if appropriate */
         if ( cache_ptr->flash_size_increase_possible ) {
@@ -4192,7 +4170,7 @@ H5C_unprotect(H5F_t *		  f,
         if(was_clean && entry_ptr->is_dirty) {
             /* Propagate the flush dep dirty flag up the flush dependency chain
              * if appropriate */
-            if((entry_ptr->flush_dep_ndirty_children == 0) && (entry_ptr->flush_dep_nparents > 0))
+            if(entry_ptr->flush_dep_nparents > 0)
                 if(H5C__mark_flush_dep_dirty(entry_ptr) < 0)
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "Can't propagate flush dep dirty flag")
 
@@ -4203,7 +4181,7 @@ H5C_unprotect(H5F_t *		  f,
         else if(!was_clean && !entry_ptr->is_dirty) {
             /* Propagate the flush dep clean flag up the flush dependency chain
              * if appropriate */
-            if((entry_ptr->flush_dep_ndirty_children == 0) && (entry_ptr->flush_dep_nparents > 0))
+            if(entry_ptr->flush_dep_nparents > 0)
                 if(H5C__mark_flush_dep_clean(entry_ptr) < 0)
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "Can't propagate flush dep dirty flag")
         } /* end else-if */
@@ -4641,16 +4619,11 @@ H5C_create_flush_dependency(void * parent_thing, void * child_thing)
     parent_entry->flush_dep_nchildren++;
 
     /* Adjust the number of dirty children */
-    if(child_entry->is_dirty || child_entry->flush_dep_ndirty_children > 0) {
+    if(child_entry->is_dirty) {
         /* Sanity check */
         HDassert(parent_entry->flush_dep_ndirty_children < parent_entry->flush_dep_nchildren);
 
         parent_entry->flush_dep_ndirty_children++;
-
-        /* Propagate the flush dep dirty flag up the chain if necessary */
-        if(!parent_entry->is_dirty && parent_entry->flush_dep_ndirty_children == 1)
-            if(H5C__mark_flush_dep_dirty(parent_entry) < 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "can't propagate flush dep dirty flag")
     } /* end if */
 
     /* Post-conditions, for successful operation */
@@ -4752,17 +4725,11 @@ H5C_destroy_flush_dependency(void *parent_thing, void * child_thing)
     } /* end if */
 
     /* Adjust parent entry's ndirty_children */
-    if(child_entry->is_dirty || child_entry->flush_dep_ndirty_children > 0) {
+    if(child_entry->is_dirty) {
         /* Sanity check */
         HDassert(parent_entry->flush_dep_ndirty_children > 0);
 
         parent_entry->flush_dep_ndirty_children--;
-
-        /* Propagate the flush dep clean flag up the chain if necessary */
-        if(!parent_entry->is_dirty
-                && parent_entry->flush_dep_ndirty_children == 0)
-            if(H5C__mark_flush_dep_clean(parent_entry) < 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "can't propagate flush dep clean flag")
     } /* end if */
 
     /* Shrink or free the parent array if apporpriate */
@@ -7291,29 +7258,6 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
 
         H5C__UPDATE_RP_FOR_EVICTION(cache_ptr, entry_ptr, FAIL)
 
-#if 0 /* this is useful debugging code -- leave it in for now.  -- JRM */
-	if ( ( entry_ptr->flush_dep_nparents > 0 ) ||
-             ( entry_ptr->flush_dep_nchildren > 0 ) ) {
-
-	    int i;
-
-	    HDfprintf(stdout, 
-                    "\n\nattempting to evict entry of type \"%s\" at 0X%llx:\n",
-                    entry_ptr->type->name, (long long)(entry_ptr->addr));
-
-	    for ( i = 0; i < entry_ptr->flush_dep_nparents; i++ ) {
-
-		HDfprintf(stdout, 
-                          "	with FD parent of type \"%s\" at 0X%llx.\n",
-			  entry_ptr->flush_dep_parent[i]->type->name,
-			  (long long)(entry_ptr->flush_dep_parent[i]->addr));
-	    }
-
-	    HDfprintf(stdout, "	with %d FD children.\n\n", 
-                      entry_ptr->flush_dep_nchildren);
-        }
-#endif /* this is useful debugging code -- leave it in for now.  -- JRM */
-
 	/* verify that the entry is no longer part of any flush dependencies */
         HDassert(entry_ptr->flush_dep_nparents == 0);
 	HDassert(entry_ptr->flush_dep_nchildren == 0);
@@ -8715,188 +8659,6 @@ H5C_entry_in_skip_list(H5C_t * cache_ptr, H5C_cache_entry_t *target_ptr)
 
 /*-------------------------------------------------------------------------
  *
- * Function:    H5C_get_entry_ptr_from_addr()
- *
- * Purpose:     Debugging function that attempts to look up an entry in the 
- *		cache by its file address, and if found, returns a pointer 
- *		to the entry in *entry_ptr_ptr.  If the entry is not in the 
- *		cache, *entry_ptr_ptr is set to NULL.
- *
- *		WARNING: This call should be used only in debugging  
- *			 routines, and it should be avoided when 
- *			 possible.
- *
- *			 Further, if we ever multi-thread the cache, 
- *			 this routine will have to be either discarded 
- *			 or heavily re-worked.
- *
- *			 Finally, keep in mind that the entry whose 
- *			 pointer is obtained in this fashion may not 
- *			 be in a stable state.  
- *
- *		Note that this function is only defined if NDEBUG
- *		is not defined.
- *
- *		As heavy use of this function is almost certainly a 
- *		bad idea, the metadata cache tracks the number of 
- *		successful calls to this function, and (if 
- *              H5C_DO_SANITY_CHECKS is defined) displays any 
- *		non-zero count on cache shutdown.
- *
- * Return:      FAIL if error is detected, SUCCEED otherwise.
- *
- * Programmer:  John Mainzer, 5/30/14
- *
- * Changes:
- *
- *		None.
- *
- *-------------------------------------------------------------------------
- */
-#ifndef NDEBUG
-herr_t
-H5C_get_entry_ptr_from_addr(const H5F_t *f,
-                            haddr_t   addr,
-			    void ** entry_ptr_ptr)
-{
-    H5C_t             * cache_ptr;
-    H5C_cache_entry_t * entry_ptr = NULL;
-    herr_t              ret_value = SUCCEED;      /* Return value */
-
-    FUNC_ENTER_NOAPI(FAIL)
-
-    HDassert( f );
-    HDassert( f->shared );
-
-    cache_ptr = f->shared->cache;
-
-    HDassert( cache_ptr != NULL );
-    HDassert( cache_ptr->magic == H5C__H5C_T_MAGIC );
-    HDassert( H5F_addr_defined(addr) );
-    HDassert( entry_ptr_ptr != NULL );
-
-    /* this test duplicates two of the above asserts, but we need an
-     * invocation of HGOTO_ERROR to keep the compiler happy.
-     */
-    if ( ( cache_ptr == NULL ) || ( cache_ptr->magic != H5C__H5C_T_MAGIC ) ) {
-
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Bad cache_ptr on entry.")
-    }
-
-    H5C__SEARCH_INDEX(cache_ptr, addr, entry_ptr, FAIL)
-
-    if ( entry_ptr == NULL ) {
-
-        /* the entry doesn't exist in the cache -- report this
-         * and quit.
-         */
-        *entry_ptr_ptr = NULL;
-
-    } else {
-
-        *entry_ptr_ptr = entry_ptr;
-
-	/* increment call counter */
-	(cache_ptr->get_entry_ptr_from_addr_counter)++;
-    }
-
-done:
-
-    FUNC_LEAVE_NOAPI(ret_value)
-
-} /* H5C_get_entry_ptr_from_addr() */
-
-#endif /* NDEBUG */
-
-
-/*-------------------------------------------------------------------------
- *
- * Function:    H5C_verify_entry_type()
- *
- * Purpose:     Debugging function that attempts to look up an entry in the 
- *		cache by its file address, and if found, test to see if its
- *		type field contains the expted value.
- *
- *		If the specified entry is in cache, *in_cache_ptr is set
- *		to TRUE, and *type_ok_ptr is set to TRUE or FALSE
- *		depending on whether the entries type field matches the 
- *		expected_type parameter
- *
- *		If the target entry is not in cache, *in_cache_ptr is 
- *		set to FALSE, and *type_ok_ptr is undefined.
- *
- *		Note that this function is only defined if NDEBUG
- *		is not defined.
- *
- * Return:      FAIL if error is detected, SUCCEED otherwise.
- *
- * Programmer:  John Mainzer, 5/30/14
- *
- * Changes:
- *
- *		None.
- *
- *-------------------------------------------------------------------------
- */
-#ifndef NDEBUG
-herr_t
-H5C_verify_entry_type(const H5F_t *f,
-                      haddr_t   addr,
-                      const H5C_class_t * expected_type,
-                      hbool_t * in_cache_ptr,
-                      hbool_t * type_ok_ptr)
-{
-    H5C_t             * cache_ptr;
-    H5C_cache_entry_t * entry_ptr = NULL;
-    herr_t              ret_value = SUCCEED;      /* Return value */
-
-    FUNC_ENTER_NOAPI(FAIL)
-
-    HDassert( f );
-    HDassert( f->shared );
-
-    cache_ptr = f->shared->cache;
-
-    HDassert( cache_ptr != NULL );
-    HDassert( cache_ptr->magic == H5C__H5C_T_MAGIC );
-    HDassert( H5F_addr_defined(addr) );
-    HDassert( in_cache_ptr != NULL );
-    HDassert( type_ok_ptr != NULL );
-
-    /* this test duplicates two of the above asserts, but we need an
-     * invocation of HGOTO_ERROR to keep the compiler happy.
-     */
-    if ( ( cache_ptr == NULL ) || ( cache_ptr->magic != H5C__H5C_T_MAGIC ) ) {
-
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Bad cache_ptr on entry.")
-    }
-
-    H5C__SEARCH_INDEX(cache_ptr, addr, entry_ptr, FAIL)
-
-    if ( entry_ptr == NULL ) {
-
-        /* the entry doesn't exist in the cache -- report this
-         * and quit.
-         */
-        *in_cache_ptr = FALSE;
-
-    } else {
-
-        *in_cache_ptr = TRUE;
-	*type_ok_ptr = (expected_type == entry_ptr->type);
-    }
-
-done:
-
-    FUNC_LEAVE_NOAPI(ret_value)
-
-} /* H5C_verify_entry_type() */
-
-#endif /* NDEBUG */
-
-
-/*-------------------------------------------------------------------------
- *
  * Function:    H5C__flush_marked_entries
  *
  * Purpose:     Flushes all marked entries in the cache.
@@ -9044,14 +8806,11 @@ static herr_t
 H5C__mark_flush_dep_dirty(H5C_cache_entry_t * entry)
 {
     unsigned u;                         /* Local index variable */
-    herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_STATIC_NOERR
 
     /* Sanity checks */
     HDassert(entry);
-    HDassert((entry->is_dirty && entry->flush_dep_ndirty_children == 0)
-	    || (!entry->is_dirty && entry->flush_dep_ndirty_children == 1));
 
     /* Iterate over the parent entries, if any */
     for(u = 0; u < entry->flush_dep_nparents; u++) {
@@ -9060,16 +8819,9 @@ H5C__mark_flush_dep_dirty(H5C_cache_entry_t * entry)
 
 	/* Adjust the parent's number of dirty children */
 	entry->flush_dep_parent[u]->flush_dep_ndirty_children++;
-
-	/* Propagate the flush dep dirty flag up the chain if necessary */
-	if(!entry->flush_dep_parent[u]->is_dirty
-		&& entry->flush_dep_parent[u]->flush_dep_ndirty_children == 1)
-	    if(H5C__mark_flush_dep_dirty(entry->flush_dep_parent[u]) < 0)
-		HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "can't propagate flush dep dirty flag")
     } /* end for */
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5C__mark_flush_dep_dirty() */
 
 
@@ -9092,13 +8844,11 @@ static herr_t
 H5C__mark_flush_dep_clean(H5C_cache_entry_t * entry)
 {
     unsigned u;                         /* Local index variable */
-    herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_STATIC_NOERR
 
     /* Sanity checks */
     HDassert(entry);
-    HDassert(!entry->is_dirty && entry->flush_dep_ndirty_children == 0);
 
     /* Iterate over the parent entries, if any */
     for(u = 0; u < entry->flush_dep_nparents; u++) {
@@ -9107,16 +8857,9 @@ H5C__mark_flush_dep_clean(H5C_cache_entry_t * entry)
 
 	/* Adjust the parent's number of dirty children */
 	entry->flush_dep_parent[u]->flush_dep_ndirty_children--;
-
-	/* Propagate the flush dep clean flag up the chain if necessary */
-	if(!entry->flush_dep_parent[u]->is_dirty
-		&& entry->flush_dep_parent[u]->flush_dep_ndirty_children == 0)
-	    if(H5C__mark_flush_dep_clean(entry->flush_dep_parent[u]) < 0)
-		HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "can't propagate flush dep clean flag")
     } /* end for */
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5C__mark_flush_dep_clean() */
 
 #ifndef NDEBUG

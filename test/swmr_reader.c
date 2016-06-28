@@ -188,6 +188,7 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds,
     hid_t fid;                  /* SWMR test file ID */
     hid_t fapl;                 /* file access property list */
     symbol_t record;            /* The record to read from the dataset */
+    unsigned read_attempts;     /* The number of read attempts for metadata */
     unsigned v;                 /* Local index variable */
 
     HDassert(filename);
@@ -214,7 +215,7 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds,
 
             /* Determine the offset of the symbol, within level 0 symbols */
             /* (level 0 symbols are the most common symbols) */
-            offset = (unsigned)(HDrandom() % symbol_count[0]);
+            offset = (unsigned)((unsigned)HDrandom() % symbol_count[0]);
             sym_com[v] = &symbol_info[0][offset];
 
             /* Emit informational message */
@@ -258,6 +259,13 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds,
 
     /* Create file access property list */
     if((fapl = h5_fileaccess()) < 0)
+        return -1;
+
+    /* Double the number of metadata read attempts */
+    if(H5Pget_metadata_read_attempts(fapl, &read_attempts) < 0)
+        return -1;
+    read_attempts *= 2;
+    if(H5Pset_metadata_read_attempts(fapl, read_attempts) < 0)
         return -1;
 
     /* Loop over reading records until [at least] the correct # of seconds have passed */

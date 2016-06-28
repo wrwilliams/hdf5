@@ -4077,11 +4077,6 @@ if ( ( (entry_ptr) == NULL ) ||                                                \
  *		field is intended to allow marking of output of with
  *		the processes mpi rank.
  *
- * get_entry_ptr_from_addr_counter: Counter used to track the number of 
- *		times the H5C_get_entry_ptr_from_addr() function has been 
- *		called successfully.  This field is only defined when 
- *		NDEBUG is not #defined.
- *
  ****************************************************************************/
 struct H5C_t {
     uint32_t			magic;
@@ -4269,10 +4264,6 @@ struct H5C_t {
 #endif /* H5C_COLLECT_CACHE_STATS */
 
     char			prefix[H5C__PREFIX_LEN];
-
-#ifndef NDEBUG
-    int64_t			get_entry_ptr_from_addr_counter;
-#endif /* NDEBUG */
 };
 
 #ifdef H5_HAVE_PARALLEL
