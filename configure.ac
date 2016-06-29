@@ -16,7 +16,7 @@
 ## ----------------------------------------------------------------------
 ## Initialize configure.
 ##
-AC_REVISION($Id: configure.ac 29808 2016-04-26 13:00:55Z lrknox $)
+AC_REVISION($Id: configure.ac 30098 2016-06-19 19:52:33Z hdftest $)
 AC_PREREQ([2.69])
 
 ## AC_INIT takes the name of the package, the version number, and an
@@ -26,7 +26,7 @@ AC_PREREQ([2.69])
 ## NOTE: Do not forget to change the version number here when we do a
 ## release!!!
 ##
-AC_INIT([HDF5], [1.8.18-snap0], [help@hdfgroup.org])
+AC_INIT([HDF5], [1.8.18-snap1], [help@hdfgroup.org])
 AC_CONFIG_SRCDIR([src/H5.c])
 AC_CONFIG_HEADERS([src/H5config.h])
 
@@ -1536,7 +1536,7 @@ case "`uname`" in
   CYGWIN*)
     ;;
   *)
-    AC_CHECK_FUNCS([GetConsoleScreenBufferInfo])
+    AC_CHECK_FUNCS([GetConsoleScreenBufferInfo getpwuid])
     ;;
 esac
 AC_CHECK_FUNCS([_scrsize ioctl])
@@ -1577,7 +1577,7 @@ AC_TRY_COMPILE([#include <sys/ioctl.h>],[int w=TIOCGETD;],
 ##       so we'll search for it before calling AC_CHECK_FUNCS.
 AC_SEARCH_LIBS([clock_gettime], [rt posix4])
 AC_CHECK_FUNCS([alarm clock_gettime difftime fork frexpf frexpl])
-AC_CHECK_FUNCS([gethostname getpwuid getrusage gettimeofday])
+AC_CHECK_FUNCS([gethostname getrusage gettimeofday])
 AC_CHECK_FUNCS([lstat rand_r random setsysinfo])
 AC_CHECK_FUNCS([signal longjmp setjmp siglongjmp sigsetjmp sigprocmask])
 AC_CHECK_FUNCS([snprintf srandom strdup symlink system])
