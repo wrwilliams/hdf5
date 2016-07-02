@@ -83,7 +83,7 @@ main(int argc, char *argv[])
         unsigned delay;     /* Time interval between plane writes */
 
         /* Cork the dataset's metadata in the cache */
-        if(H5Oenable_mdc_flushes(did) < 0)
+        if(H5Odisable_mdc_flushes(did) < 0)
             TEST_ERROR
 
         /* Set the dataset's extent. This is inefficient but that's ok here. */
