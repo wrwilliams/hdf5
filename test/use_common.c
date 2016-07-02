@@ -363,6 +363,13 @@ int write_uc_file(hbool_t tosend)
 	    for (k=0; k<dims[2]; k++)
 		*bufptr++ = i;
 
+        /* Cork the dataset's metadata in the cache, if SWMR is enabled */
+        if(UC_opts.use_swmr)
+            if(H5Odisable_mdc_flushes(dsid) < 0) {
+                fprintf(stderr, "H5Odisable_mdc_flushes failed\n");
+                return -1;
+            }
+
 	/* extend the dataset by one for new plane */
 	dims[0]=i+1;
         if(H5Dset_extent(dsid, dims) < 0){
@@ -388,12 +395,16 @@ int write_uc_file(hbool_t tosend)
 	    fprintf(stderr, "Failed H5Dwrite\n");
             return -1;
 	}
+
+        /* Uncork the dataset's metadata from the cache, if SWMR is enabled */
+        if(UC_opts.use_swmr)
+            if(H5Oenable_mdc_flushes(dsid) < 0) {
+                fprintf(stderr, "H5Oenable_mdc_flushes failed\n");
+                return -1;
+            }
+
 	/* flush file to make the just written plane available. */
-#if 0
-	if(H5Fflush(fid, H5F_SCOPE_GLOBAL) < 0)
-#else
 	if(H5Dflush(dsid) < 0)
-#endif
 	{
 	    fprintf(stderr, "Failed to H5Fflush file\n");
 	    return -1;

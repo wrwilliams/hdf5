@@ -82,6 +82,10 @@ main(int argc, char *argv[])
 
         unsigned delay;     /* Time interval between plane writes */
 
+        /* Cork the dataset's metadata in the cache */
+        if(H5Oenable_mdc_flushes(did) < 0)
+            TEST_ERROR
+
         /* Set the dataset's extent. This is inefficient but that's ok here. */
         extent[0] = i + 1;
         extent[1] = PLANES[file_number][1];
@@ -107,6 +111,10 @@ main(int argc, char *argv[])
 
         /* Write the plane to the dataset. */
         if(H5Dwrite(did, H5T_NATIVE_INT, msid, fsid, H5P_DEFAULT, buffer) < 0)
+            TEST_ERROR
+
+        /* Uncork the dataset's metadata from the cache */
+        if(H5Oenable_mdc_flushes(did) < 0)
             TEST_ERROR
 
         /* Wait one second between writing planes */
