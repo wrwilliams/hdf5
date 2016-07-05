@@ -888,12 +888,14 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
        (mpio_bypass_pb && H5FD_MEM_DRAW == type))
         HGOTO_DONE(ret_value);
 
+#ifdef H5_HAVE_PARALLEL
     if(mpio_bypass_pb) {
         HDassert(H5FD_MEM_DRAW != type);
         if(H5PB_update_entry(page_buf, addr, size, buf) > 0)
             HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Failed to update PB with metadata cache\n");
         HGOTO_DONE(ret_value);
     }
+#endif
 
     /* calculate the aligned address of the first page */
     first_page_addr = (addr/page_buf->page_size) * page_buf->page_size;
