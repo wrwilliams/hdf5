@@ -174,7 +174,9 @@ add_records(hid_t fid, unsigned verbose, unsigned long nrecords, unsigned long f
     hsize_t count[2] = {1, 1};          /* Hyperslab selection values */
     symbol_t record;                    /* The record to add to the dataset */
     unsigned long rec_to_flush;         /* # of records left to write before flush */
+#ifdef OUT
     volatile int dummy;                 /* Dummy varialbe for busy sleep */
+#endif /* OUT */
     hsize_t dim[2] = {1,0};             /* Dataspace dimensions */
     unsigned long u, v;                 /* Local index variables */
 
@@ -198,20 +200,22 @@ add_records(hid_t fid, unsigned verbose, unsigned long nrecords, unsigned long f
         symbol_info_t *symbol;  /* Symbol to write record to */
         hid_t file_sid;         /* Dataset's space ID */
         hid_t aid;              /* Attribute ID */
+        hbool_t corked;         /* Whether the dataset was corked */
 
         /* Get a random dataset, according to the symbol distribution */
         symbol = choose_dataset();
-
-        /* Cork the metadata cache, to prevent the object header from being
-         * flushed before the data has been written */
-        if(H5Odisable_mdc_flushes(symbol->dsid) < 0)
-            return -1;
 
         /* If this is the first time the dataset has been opened, extend it and
          * add the sequence attribute */
         if(symbol->nrecords == 0) {
             symbol->nrecords = nrecords / 5;
             dim[1] = symbol->nrecords;
+
+            /* Cork the metadata cache, to prevent the object header from being
+             * flushed before the data has been written */
+            if(H5Odisable_mdc_flushes(symbol->dsid) < 0)
+                return -1;
+            corked = TRUE;
 
             if(H5Dset_extent(symbol->dsid, dim) < 0)
                 return -1;
@@ -223,8 +227,11 @@ add_records(hid_t fid, unsigned verbose, unsigned long nrecords, unsigned long f
             if(H5Sclose(file_sid) < 0)
                 return -1;
         } /* end if */
-        else if((aid = H5Aopen(symbol->dsid, "seq", H5P_DEFAULT)) < 0)
-            return -1;
+        else {
+            if((aid = H5Aopen(symbol->dsid, "seq", H5P_DEFAULT)) < 0)
+                return -1;
+            corked = FALSE;
+        } /* end else */
 
         /* Get the coordinate to write */
         start[1] = (hsize_t)HDrandom() % symbol->nrecords;
@@ -257,9 +264,10 @@ add_records(hid_t fid, unsigned verbose, unsigned long nrecords, unsigned long f
         if(H5Aclose(aid) < 0)
             return -1;
 
-        /* Uncork the metadata cache */
-        if(H5Oenable_mdc_flushes(symbol->dsid) < 0)
-            return -1;
+        /* Uncork the metadata cache, if it's been */
+        if(corked)
+            if(H5Oenable_mdc_flushes(symbol->dsid) < 0)
+                return -1;
 
         /* Close the dataset's dataspace */
         if(H5Sclose(file_sid) < 0)

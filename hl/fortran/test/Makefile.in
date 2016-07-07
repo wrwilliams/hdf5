@@ -148,7 +148,8 @@ am__EXEEXT_1 = tstds$(EXEEXT) tstlite$(EXEEXT) tstimage$(EXEEXT) \
 am_tstds_OBJECTS = tstds.$(OBJEXT)
 tstds_OBJECTS = $(am_tstds_OBJECTS)
 tstds_LDADD = $(LDADD)
-tstds_DEPENDENCIES = $(LIBH5F_HL) $(LIBH5F) $(LIBH5_HL) $(LIBHDF5)
+tstds_DEPENDENCIES = $(LIBOBJS) $(LIBH5F_HL) $(LIBH5F) $(LIBH5_HL) \
+	$(LIBHDF5)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -156,15 +157,18 @@ am__v_lt_1 =
 am_tstimage_OBJECTS = tstimage.$(OBJEXT)
 tstimage_OBJECTS = $(am_tstimage_OBJECTS)
 tstimage_LDADD = $(LDADD)
-tstimage_DEPENDENCIES = $(LIBH5F_HL) $(LIBH5F) $(LIBH5_HL) $(LIBHDF5)
+tstimage_DEPENDENCIES = $(LIBOBJS) $(LIBH5F_HL) $(LIBH5F) $(LIBH5_HL) \
+	$(LIBHDF5)
 am_tstlite_OBJECTS = tstlite.$(OBJEXT)
 tstlite_OBJECTS = $(am_tstlite_OBJECTS)
 tstlite_LDADD = $(LDADD)
-tstlite_DEPENDENCIES = $(LIBH5F_HL) $(LIBH5F) $(LIBH5_HL) $(LIBHDF5)
+tstlite_DEPENDENCIES = $(LIBOBJS) $(LIBH5F_HL) $(LIBH5F) $(LIBH5_HL) \
+	$(LIBHDF5)
 am_tsttable_OBJECTS = tsttable.$(OBJEXT)
 tsttable_OBJECTS = $(am_tsttable_OBJECTS)
 tsttable_LDADD = $(LDADD)
-tsttable_DEPENDENCIES = $(LIBH5F_HL) $(LIBH5F) $(LIBH5_HL) $(LIBHDF5)
+tsttable_DEPENDENCIES = $(LIBOBJS) $(LIBH5F_HL) $(LIBH5F) $(LIBH5_HL) \
+	$(LIBHDF5)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -441,7 +445,9 @@ AM_CXXFLAGS = @AM_CXXFLAGS@ @H5_CXXFLAGS@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AM_FCFLAGS = @AM_FCFLAGS@ @H5_FCFLAGS@ -I$(top_builddir)/fortran/src \
 	-I$(top_builddir)/hl/fortran/src \
+	-I$(top_builddir)/fortran/test \
 	$(F9XMODFLAG)$(top_builddir)/fortran/src \
+	$(F9XMODFLAG)$(top_builddir)/fortran/test \
 	$(F9XMODFLAG)$(top_builddir)/hl/fortran/src
 AM_JAVACFLAGS = @AM_JAVACFLAGS@
 AM_JAVAFLAGS = @AM_JAVAFLAGS@
@@ -553,7 +559,7 @@ JNIFLAGS = @JNIFLAGS@
 JUNIT = @JUNIT@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
-LIBOBJS = @LIBOBJS@
+LIBOBJS = $(top_builddir)/fortran/test/tf_gen.o
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
@@ -747,7 +753,7 @@ CHECK_CLEANFILES = *.chkexe *.chklog *.clog *.clog2 dsetf[1-5].h5 \
 
 # Our main target, the test programs
 TEST_PROG = tstds tstlite tstimage tsttable
-LDADD = $(LIBH5F_HL) $(LIBH5F) $(LIBH5_HL)  $(LIBHDF5)
+LDADD = $(LIBOBJS) $(LIBH5F_HL) $(LIBH5F) $(LIBH5_HL)  $(LIBHDF5) 
 
 # Source files for the programs
 tstds_SOURCES = tstds.F90
@@ -1154,13 +1160,13 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-checkPROGRAMS clean-generic clean-libtool \
+clean-am: clean-checkPROGRAMS clean-generic clean-libtool clean-local \
 	mostlyclean-am
 
 distclean: distclean-am
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
-	distclean-tags
+	distclean-local distclean-tags
 
 dvi: dvi-am
 
@@ -1174,7 +1180,7 @@ info: info-am
 
 info-am:
 
-install-data-am:
+install-data-am: install-data-local
 
 install-dvi: install-dvi-am
 
@@ -1204,7 +1210,8 @@ installcheck-am:
 
 maintainer-clean: maintainer-clean-am
 	-rm -f Makefile
-maintainer-clean-am: distclean-am maintainer-clean-generic
+maintainer-clean-am: distclean-am maintainer-clean-generic \
+	maintainer-clean-local
 
 mostlyclean: mostlyclean-am
 
@@ -1219,23 +1226,25 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am:
+uninstall-am: uninstall-local
 
 .MAKE: check-am install-am install-strip
 
 .PHONY: CTAGS GTAGS TAGS all all-am all-local check check-TESTS \
 	check-am clean clean-checkPROGRAMS clean-generic clean-libtool \
-	cscopelist-am ctags ctags-am distclean distclean-compile \
-	distclean-generic distclean-libtool distclean-tags distdir dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-data install-data-am install-dvi install-dvi-am \
-	install-exec install-exec-am install-html install-html-am \
-	install-info install-info-am install-man install-pdf \
-	install-pdf-am install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool mostlyclean-local pdf \
-	pdf-am ps ps-am recheck tags tags-am uninstall uninstall-am
+	clean-local cscopelist-am ctags ctags-am distclean \
+	distclean-compile distclean-generic distclean-libtool \
+	distclean-local distclean-tags distdir dvi dvi-am html html-am \
+	info info-am install install-am install-data install-data-am \
+	install-data-local install-dvi install-dvi-am install-exec \
+	install-exec-am install-html install-html-am install-info \
+	install-info-am install-man install-pdf install-pdf-am \
+	install-ps install-ps-am install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic maintainer-clean-local mostlyclean \
+	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
+	mostlyclean-local pdf pdf-am ps ps-am recheck tags tags-am \
+	uninstall uninstall-am uninstall-local
 
 .PRECIOUS: Makefile
 
@@ -1250,6 +1259,29 @@ uninstall-am:
 
 help:
 	@$(top_srcdir)/bin/makehelp
+
+# Fortran module files can have different extensions and different names
+# (e.g., different capitalizations) on different platforms.  Write rules
+# for them explicitly rather than trying to teach automake about them.
+# They should be installed as headers and removed during clean.
+maintainer-clean-local: clean-local
+distclean-local: clean-local
+clean-local:
+	@if test -n "$(F9XMODEXT)" && test "X$(F9XMODEXT)" != "Xo"; then \
+	  $(RM) *.$(F9XMODEXT); \
+	fi
+
+install-data-local:
+	@if test -n "$(F9XMODEXT)" && test "X$(F9XMODEXT)" != "Xo"; then \
+	  $(CP) $(top_builddir)/$(subdir)/*.$(F9XMODEXT) $(DESTDIR)$(includedir)/. ; \
+	fi
+
+uninstall-local:
+	@if test -n "$(F9XMODEXT)" -a "X$(F9XMODEXT)" != "Xo"; then      \
+	  if test -f "$(includedir)/hdf5.$(F9XMODEXT)" -o -f "$(DESTDIR)$(includedir)/HDF5.$(F9XMODEXT)"; then \
+	    set -x; $(RM) $(includedir)/*.$(F9XMODEXT);                 \
+	  fi;                                                           \
+	fi
 
 # Treat all .f90 and .F90 files as preprocessed Fortran.
 .f90.o:
