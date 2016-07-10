@@ -251,10 +251,9 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
     }
 
     /*
-     * If -S option is not set, the file space handling strategy should be: 
-     *   -- PAGE (the default strategy for latest format) when -L is set
-     *	 -- the same as the input file's strategy when -L is not set
      * If -S option is set, the file space handling strategy should be set as specified.
+     * If -S option is not set, the file space handling strategy should be
+     * the same as the input file's strategy.
      */
     if(options->fs_strategy) {
 	if(out_strategy != (options->fs_strategy == (-1) ? 0 : options->fs_strategy)) {
@@ -262,24 +261,16 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
 	    goto error;
 	}
     } else {
-	if(options->latest) {
-	    if(out_strategy != H5F_FSPACE_STRATEGY_PAGE) {
-		error_msg("file space strategy not set as unexpected\n");
-		goto error;
-	    }
-	} else {
-	    if(out_strategy != in_strategy) {
-		error_msg("file space strategy not set as unexpected\n");
-		goto error;
-	    }
+	if(out_strategy != in_strategy) {
+	    error_msg("file space strategy not set as unexpected\n");
+	    goto error;
 	}
     }
 
     /*
-     * If the -P option is not set, the free-space persist status should be:
-     *   -- TRUE (the default free-space persist status) when -L is set
-     *   -- the same as the input file's free-space persist status when -L is not set
      * If the -P option is set, the free-space persist status should be set as specified.
+     * If the -P option is not set, the free-space persist status should be
+     * the same as the input file's free-space persist status
      */
     if(options->fs_persist) {
 	if(out_persist != (options->fs_persist == (-1) ? FALSE : options->fs_persist)) {
@@ -287,24 +278,16 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
 	    goto error;
 	}
     } else {
-	if(options->latest) {
-	    if(out_persist != TRUE) {
-		error_msg("free-space persist status is not set as unexpected\n");
-		goto error;
-	    }
-	} else {
-	    if(out_persist != in_persist) {
-		error_msg("free-space persist status is not set as unexpected\n");
-		goto error;
-	    }
+	if(out_persist != in_persist) {
+	    error_msg("free-space persist status is not set as unexpected\n");
+	    goto error;
 	}
     }
 
     /*
-     * If the -T option is not set, the threshold should be:
-     *   -- 1 (the default threshold size) when -L is set
-     *   -- the same as the input file's threshold size when -L is not set
      * If the -P option is set, the threshold size should be set as specified.
+     * If the -T option is not set, the threshold should be the same as the
+     * input file's threshold size.
      */
     if(options->fs_threshold) {
 	if(out_threshold != (options->fs_threshold == (-1) ? 0 : options->fs_threshold)) {
@@ -312,24 +295,16 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
 	    goto error;
 	}
     } else {
-	if(options->latest) {
-	    if(out_threshold != 1) {
-		error_msg("threshold is not set as unexpected\n");
-		goto error;
-	    }
-	} else {
-	    if(out_threshold != in_threshold) {
-		error_msg("threshold is not set as unexpected\n");
-		goto error;
-	    }
+	if(out_threshold != in_threshold) {
+	    error_msg("threshold is not set as unexpected\n");
+	    goto error;
 	}
     }
 
     /*
-     * If the -G option is not set, the file space page size should be:
-     *   -- 4096 (the default file space page size) when -L is set
-     *   -- the same as the input file's file space page size when -L is not set
      * If the -G option is set, the file space page size should be set as specified.
+     * If the -G option is not set, the file space page size should be
+     * the same as the input file's file space page size.
      */
     if(options->fs_pagesize) {
 	if(out_pagesize != (options->fs_pagesize == (-1) ? 0 : options->fs_pagesize)) {
@@ -337,16 +312,9 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
 	    goto error;
 	}
     } else { /* "-G" is not set */
-	if(options->latest) {
-	    if(out_pagesize != 4096) {
-		error_msg("file space page size is not set as unexpected\n");
-		goto error;
-	    }
-	} else {
-	    if(out_pagesize != in_pagesize) {
-		error_msg("file space page size is not set as unexpected\n");
-		goto error;
-	    }
+	if(out_pagesize != in_pagesize) {
+	    error_msg("file space page size is not set as unexpected\n");
+	    goto error;
 	}
     }
 

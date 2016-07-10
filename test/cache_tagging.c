@@ -874,9 +874,6 @@ check_multi_group_creation_tags(hid_t fcpl, int type)
         /* determine tag value of root group's object header */
         if ( get_new_object_header_tag(fid, &root_tag) < 0 ) TEST_ERROR;
 
-        /* determine tag value of root group's object header extension */
-        if ( get_new_object_header_tag(fid, &root_tag) < 0 ) TEST_ERROR;
-
     } else if ( type == TEST_SHMESG ) {
         
         /* determine tag value of sblock extension object header */
@@ -1108,9 +1105,6 @@ check_dense_attribute_tags(void)
     /* Create File */
     /* =========== */
     if ( (fid = H5Fcreate(FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0 ) TEST_ERROR;
-
-    /* Get superblock extension tag */
-    if ( get_new_object_header_tag(fid, &fsp_tag) < 0 ) TEST_ERROR;
 
     /* Get root group tag */
     if ( get_new_object_header_tag(fid, &root_tag) < 0 ) TEST_ERROR;
@@ -1776,7 +1770,7 @@ check_attribute_rename_tags(hid_t fcpl, int type)
          */
         if ( verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0 ) TEST_ERROR;
         if ( verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0 ) TEST_ERROR;
-        //if ( verify_tag(fid, H5AC_FSPACE_SINFO_ID, H5AC__FREESPACE_TAG) < 0 ) TEST_ERROR;
+        if ( verify_tag(fid, H5AC_FSPACE_SINFO_ID, H5AC__FREESPACE_TAG) < 0 ) TEST_ERROR;
 
         /* verify btree header and leaf node belonging to group */
         if ( verify_tag(fid, H5AC_BT2_HDR_ID, g_tag) < 0 ) TEST_ERROR;

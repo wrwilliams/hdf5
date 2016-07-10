@@ -118,7 +118,6 @@ static void usage(const char *prog)
     printf("        NONE - No aggregation strategy:\n");
     printf("               The mechanisms used in managing file space are free-space managers and virtual file driver.\n");
     printf("        The default strategy when not set is AGGR with non-persistent free-space.\n");
-    printf("        The default strategy when creating a file with the latest format is PAGE with persistent free-space.\n");
     printf("\n");
     printf("    FS_PERSIST is 1 to persist free-space or 0 to not persist free-space.\n");
     printf("      The default when not set is non-persistent free-space.\n");

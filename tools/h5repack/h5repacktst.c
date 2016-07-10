@@ -317,7 +317,7 @@ int main (void)
     if(h5repack_init(&pack_options, 0) < 0)
 	GOERROR;
     /* -S, -P options set */
-    pack_options.fs_strategy = -1; /* "AGGR" specified via -S AGGR */
+    pack_options.fs_strategy = H5F_FSPACE_STRATEGY_PAGE; /* "PAGE" specified via -S */
     pack_options.fs_persist = TRUE; 
     pack_options.latest = 1; 
     if(h5repack(fname, FSPACE_OUT, &pack_options) < 0)

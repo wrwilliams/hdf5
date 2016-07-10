@@ -3072,7 +3072,7 @@ test_userblock_alignment_paged(void)
 **	      Retrieve and set file space strategy, persisting free-space,  
 **	      and free-space section threshold as specified
 **	  (2) H5Pget/set_file_space_page_size():
-**	      Retrive and set the page size for paged aggregation
+**	      Retrieve and set the page size for paged aggregation
 **
 ****************************************************************/
 static void
@@ -3183,8 +3183,8 @@ test_filespace_info(const char *env_h5_drvr)
      *  Check file space information when creating a file with the
      *  latest library format and default properties.
      *  Values expected:
-     *	  strategy--H5F_FILE_SPACE_PAGE
-     *	  persist--TRUE
+     *	  strategy--H5F_FILE_SPACE_AGGR
+     *	  persist--FALSE
      *	  threshold--1
      *	  file space page size--4096
      */
@@ -3201,8 +3201,8 @@ test_filespace_info(const char *env_h5_drvr)
     CHECK(ret, FAIL, "H5Pget_file_space_strategy");
 
     /* Verify file space information */
-    VERIFY(strategy, H5F_FSPACE_STRATEGY_PAGE, "H5Pget_file_space_strategy");
-    VERIFY(persist, TRUE, "H5Pget_file_space_strategy");
+    VERIFY(strategy, H5F_FSPACE_STRATEGY_AGGR, "H5Pget_file_space_strategy");
+    VERIFY(persist, FALSE, "H5Pget_file_space_strategy");
     VERIFY(threshold, 1, "H5Pget_file_space_strategy");
 
     /* Retrieve file space page size */
@@ -3566,13 +3566,17 @@ test_sects_freespace(const char *env_h5_drvr, hbool_t new_format)
     CHECK(fcpl, FAIL, "H5Pcreate");
 
     if(!new_format || (new_format && !contig_addr_vfd)) {
-	/* Old format or latest format with non-contiguous vfd: Aggregation, persistent free-space */
+	/* Old format or latest format with non-contiguous vfd: set to aggregation and persistent free-space */
 	ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, TRUE, (hsize_t)1);
 	CHECK(ret, FAIL, "H5Pget_file_space_strategy");
     } else {
-	/* Latest format with contiguous vfd (default setting): paged aggregation, persistent free-space */
+	/* Latest format with contiguous vfd (default setting) */
 	ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
 	CHECK(ret, FAIL, "H5Pset_libver_bounds");
+
+	/* Set to paged aggregation and persistent free-space */
+	ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, TRUE, (hsize_t)1);
+	CHECK(ret, FAIL, "H5Pget_file_space_strategy");
     }
 
     /* Create the file */

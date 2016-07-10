@@ -552,14 +552,14 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id)
 
 	    /* Get message flags */
 	    if(H5O_msg_get_flags(&ext_loc, H5O_FSINFO_ID, dxpl_id, &flags) < 0)
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, NULL, "unable to message flags for free-space manager info message")
+                HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to message flags for free-space manager info message")
 
 	    /* If message is NOT marked "unknown"--set up file space info  */
 	    if(!(flags & H5O_MSG_FLAG_WAS_UNKNOWN)) {
 
 		/* Retrieve the 'file space info' structure */
 		if(NULL == H5O_msg_read(&ext_loc, H5O_FSINFO_ID, &fsinfo, dxpl_id))
-		    HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, NULL, "unable to get free-space manager info message")
+		    HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to get free-space manager info message")
 
                 /* Update changed values */
 		if(f->shared->fs.strategy != fsinfo.strategy) {
@@ -567,28 +567,28 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id)
 
 		    /* Set non-default strategy in the property list */
 		    if(H5P_set(c_plist, H5F_CRT_FILE_SPACE_STRATEGY_NAME, &fsinfo.strategy) < 0)
-			HGOTO_ERROR(H5E_FILE, H5E_CANTSET, NULL, "unable to set file space strategy")
+			HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space strategy")
 		} /* end if */
 		if(f->shared->fs.persist != fsinfo.persist) {
 		    f->shared->fs.persist = fsinfo.persist;
 
 		    /* Set non-default strategy in the property list */
 		    if(H5P_set(c_plist, H5F_CRT_FREE_SPACE_PERSIST_NAME, &fsinfo.persist) < 0)
-			HGOTO_ERROR(H5E_FILE, H5E_CANTSET, NULL, "unable to set file space strategy")
+			HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space strategy")
 		} /* end if */
 		if(f->shared->fs.threshold != fsinfo.threshold) {
 		    f->shared->fs.threshold = fsinfo.threshold;
 
 		    /* Set non-default threshold in the property list */
 		    if(H5P_set(c_plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, &fsinfo.threshold) < 0)
-			HGOTO_ERROR(H5E_FILE, H5E_CANTSET, NULL, "unable to set file space strategy")
+			HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space strategy")
 		} /* end if */
 		if(f->shared->fs.page_size != fsinfo.page_size) {
 		    f->shared->fs.page_size = fsinfo.page_size;
 
 		    /* Set file space page size in the property list */
 		    if(H5P_set(c_plist, H5F_CRT_FILE_SPACE_PAGE_SIZE_NAME, &fsinfo.page_size) < 0)
-			HGOTO_ERROR(H5E_FILE, H5E_CANTSET, NULL, "unable to set file space page size")
+			HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space page size")
 		} /* end if */
 		if(f->shared->fs.last_small != fsinfo.last_small)
 		    /* Initialize the tracking of last section at EOF */
@@ -756,8 +756,6 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
     H5O_loc_t       ext_loc;            /* Superblock extension object location */
     hbool_t         need_ext;           /* Whether the superblock extension is needed */
     hbool_t         ext_created = FALSE; /* Whether the extension has been created */
-    H5F_fspace_strategy_t	saved_fs_strategy = f->shared->fs.strategy;	/* The original file space handling strategy */
-    hbool_t	    saved_fs_persist = f->shared->fs.persist;			/* The original file space "persist" status */
     hbool_t         non_default_fs_settings = FALSE;    /* Whether the file has non-default free-space settings */
     herr_t          ret_value = SUCCEED; /* Return Value                              */
 
@@ -784,36 +782,6 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
     /* Initialize btree_k */
     if(H5P_get(plist, H5F_CRT_BTREE_RANK_NAME, &sblock->btree_k[0]) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to get rank for btree internal nodes")
-
-    if(f->shared->fs.strategy == (H5F_fspace_strategy_t)(-1))	/* A default strategy set by user */
-	f->shared->fs.strategy = H5F_FILE_SPACE_STRATEGY_DEF;
-    else if(f->shared->latest_format && f->shared->fs.strategy == H5F_FILE_SPACE_STRATEGY_DEF) /* A library default strategy */
-	f->shared->fs.strategy = H5F_FSPACE_STRATEGY_PAGE;
-
-    /* The file space strategy is changed */
-    if(f->shared->fs.strategy != saved_fs_strategy) {
-        H5P_genplist_t *c_plist;              /* Property list */
-
-        if(NULL == (c_plist = (H5P_genplist_t *)H5I_object(f->shared->fcpl_id)))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not property list")
-        if(H5P_set(c_plist, H5F_CRT_FILE_SPACE_STRATEGY_NAME, &f->shared->fs.strategy) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "unable to set file space strategy")
-    } /* end if */
-
-    if(f->shared->fs.persist == (hbool_t)(-1))	/* A default "persist" set by user */
-	f->shared->fs.persist = H5F_FREE_SPACE_PERSIST_DEF;
-    else if(f->shared->latest_format && f->shared->fs.persist == H5F_FREE_SPACE_PERSIST_DEF) /* A library default "persist" */
-	f->shared->fs.persist = TRUE;
-
-    /* The file space "persist" status is changed */
-    if(f->shared->fs.persist != saved_fs_persist) {
-        H5P_genplist_t *c_plist;              /* Property list */
-
-        if(NULL == (c_plist = (H5P_genplist_t *)H5I_object(f->shared->fcpl_id)))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not property list")
-        if(H5P_set(c_plist, H5F_CRT_FREE_SPACE_PERSIST_NAME, &f->shared->fs.persist) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "unable to set free space persist status")
-    } /* end if */
 
     /* Check for non-default free-space settings */
     if(!(f->shared->fs.strategy == H5F_FILE_SPACE_STRATEGY_DEF &&
@@ -875,9 +843,9 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
 	hsize_t alignment = H5F_PAGED_AGGR(f) ? f->shared->fs.page_size : f->shared->alignment;
 
         if(userblock_size < alignment)
-            HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "userblock size (of %Hu) must be > file object alignment (of %Hu)", userblock_size, alignment)
+            HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "userblock size must be > file object alignment")
         if(0 != (userblock_size % alignment))
-            HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "userblock size (of %Hu) must be an integral multiple of file object alignment (of %Hu)", userblock_size, alignment)
+            HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "userblock size must be an integral multiple of file object alignment")
     } /* end if */
 
     sblock->base_addr = userblock_size;

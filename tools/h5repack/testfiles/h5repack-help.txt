@@ -43,7 +43,6 @@ usage: h5repack [OPTIONS] file1 file2
         NONE - No aggregation strategy:
                The mechanisms used in managing file space are free-space managers and virtual file driver.
         The default strategy when not set is AGGR with non-persistent free-space.
-        The default strategy when creating a file with the latest format is PAGE with persistent free-space.
 
     FS_PERSIST is 1 to persist free-space or 0 to not persist free-space.
       The default when not set is non-persistent free-space.

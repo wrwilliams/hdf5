@@ -6691,12 +6691,15 @@ test_mf_fs_gone(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
     if((fapl2 = H5Pcopy(fapl)) < 0) FAIL_STACK_ERROR
 
     if(!new_format || (new_format && !contig_addr_vfd)) {
-	/* Old format or latest format with non-contiguous vfd: aggregation, persisting free-space */
+	/* Old format or latest format with non-contiguous vfd: set to aggregation and persisting free-space */
 	if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, TRUE, (hsize_t)1) < 0)
 	    FAIL_STACK_ERROR
     } else {
-	/* Latest format with contiguous vfd (default setting): paged aggregation, persisting free-space */
+	/* Latest format with contiguous vfd (default setting) */
 	if(H5Pset_libver_bounds(fapl2, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
+	    FAIL_STACK_ERROR
+	/* Set to paged aggregation and persisting free-space */
+	if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, TRUE, (hsize_t)1) < 0)
 	    FAIL_STACK_ERROR
     }
 
@@ -7221,9 +7224,12 @@ test_mf_fs_persist(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
         if((fapl2 = H5Pcopy(fapl)) < 0) FAIL_STACK_ERROR
 
         if(new_format) {
-            /* Latest format: will enable paged aggregation with persisting free-space */
+            /* Latest format */
             if(H5Pset_libver_bounds(fapl2, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
                 FAIL_STACK_ERROR
+            /* Set to paged aggregation and persisting free-space */
+	    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, TRUE, (hsize_t)1) < 0)
+		TEST_ERROR
         } else {
             /* Setting: aggregation with persisting free-space */
             if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, TRUE, (hsize_t)1) < 0)
@@ -8566,8 +8572,16 @@ test_page_alignment(const char *env_h5_drvr, hid_t fapl)
 	if(H5Pset_alignment(fapl_new, (hsize_t)0, (hsize_t)TEST_ALIGN16) < 0)
 	    TEST_ERROR
 
+	/* File creation property list */
+	if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
+	    FAIL_STACK_ERROR
+
+	/* Set the strategy to paged aggregation and persisting free space */
+	if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, TRUE, (hsize_t)1) < 0)
+	    FAIL_STACK_ERROR
+	
 	/* Create the file to work on */
-	if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_new)) < 0)
+	if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl_new)) < 0)
 	    FAIL_STACK_ERROR
 
         /* Get a pointer to the internal file object */
@@ -8606,10 +8620,6 @@ test_page_alignment(const char *env_h5_drvr, hid_t fapl)
 	 * Case 2: Verify that the alignment in use is the alignment set
 	 *	   via H5Pset_alignment when paged aggregation is disabled.
 	 */
-
-	/* File creation property list */
-	if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
-	    FAIL_STACK_ERROR
 
 	/* Disable paged aggregation */
 	if(H5Pset_file_space_page_size(fcpl, (hsize_t)0) < 0)

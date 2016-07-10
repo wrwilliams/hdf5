@@ -309,18 +309,11 @@ int copy_objects(const char* fnamein, const char* fnameout, pack_opt_t *options)
         }
     }
 
-    /* Latest format: paged aggregation, persisting free-space, default threshold (1), default file space page size (4096) */
-    if(options->latest) {
-        set_strategy = H5F_FSPACE_STRATEGY_PAGE;
-        set_persist = TRUE;
-        set_threshold = FS_THRESHOLD_DEF;
-        set_pagesize = FS_PAGESIZE_DEF;
-    } else { /* Set file space info to those from input file */
-        set_strategy = in_strategy;
-        set_persist = in_persist;
-        set_threshold = in_threshold;
-        set_pagesize = in_pagesize;
-    }
+    /* Set file space info to those from input file */
+    set_strategy = in_strategy;
+    set_persist = in_persist;
+    set_threshold = in_threshold;
+    set_pagesize = in_pagesize;
 
     if(options->fs_strategy == (H5F_fspace_strategy_t)-1) /* A default strategy is specified by user */
         set_strategy = FS_STRATEGY_DEF;

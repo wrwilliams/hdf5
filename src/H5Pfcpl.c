@@ -1311,7 +1311,7 @@ H5Pset_file_space_strategy(hid_t plist_id, H5F_fspace_strategy_t strategy, hbool
     H5TRACE4("e", "iFfbh", plist_id, strategy, persist, threshold);
 
     /* Check arguments */
-    if(strategy < H5F_FSPACE_STRATEGY_AGGR || strategy >= H5F_FSPACE_STRATEGY_NTYPES)
+    if(strategy >= H5F_FSPACE_STRATEGY_NTYPES)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid strategy")
 
     /* Get the plist structure */
@@ -1319,13 +1319,9 @@ H5Pset_file_space_strategy(hid_t plist_id, H5F_fspace_strategy_t strategy, hbool
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
     /* Set value(s), if non-zero */
-    if(strategy == H5F_CRT_FILE_SPACE_STRATEGY_DEF)
-	strategy = (H5F_fspace_strategy_t)(-1);
     if(H5P_set(plist, H5F_CRT_FILE_SPACE_STRATEGY_NAME, &strategy) < 0)
 	HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set file space strategy")
 
-    if(persist == H5F_CRT_FREE_SPACE_PERSIST_DEF) /* A default "persist" set by user */
-	persist = (hbool_t)(-1);
     if(H5P_set(plist, H5F_CRT_FREE_SPACE_PERSIST_NAME, &persist) < 0)
 	HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set free-space persisting status")
 
@@ -1340,9 +1336,8 @@ done:
 /*-------------------------------------------------------------------------
  * Function:	H5Pget_file_space_strategy
  *
- * Purpose:	Retrieves the strategy that the library uses in managing file space.
- *		Retrieves the threshold value that the file's free space
- *			managers use to track free space sections.
+ * Purpose:	Retrieves the strategy, persist, and threshold that the library 
+ *		uses in managing file space.
  *
  * Return:	Non-negative on success/Negative on failure
  *
@@ -1367,15 +1362,11 @@ H5Pget_file_space_strategy(hid_t plist_id, H5F_fspace_strategy_t *strategy, hboo
     if(strategy) {
         if(H5P_get(plist, H5F_CRT_FILE_SPACE_STRATEGY_NAME, strategy) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get file space strategy")
-	if(*strategy == (H5F_fspace_strategy_t)(-1))
-            *strategy = H5F_CRT_FILE_SPACE_STRATEGY_DEF;
     } /* end if */
 
     if(persist) {
         if(H5P_get(plist, H5F_CRT_FREE_SPACE_PERSIST_NAME, persist) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get free-space persisting status")
-	if(*persist == (hbool_t)(-1))
-            *persist = H5F_CRT_FREE_SPACE_PERSIST_DEF;
     } /* end if */
 
     if(threshold)
