@@ -297,8 +297,8 @@ int main (void)
     if(h5repack_init(&pack_options, 0) < 0)
 	GOERROR;
     /* -S, -T options set */
-    pack_options.fs_strategy = -1; 		/* "AGGR" specified via -S AGGR */
-    pack_options.fs_threshold = (hsize_t)-1; 	/* "0" specified via -T 0 */
+    pack_options.fs_strategy = -1; 	/* "AGGR" specified via -S AGGR */
+    pack_options.fs_threshold = -1; 	/* "0" specified via -T 0 */
     if(h5repack(fname, FSPACE_OUT, &pack_options) < 0)
 	GOERROR;
     if(h5diff(fname, FSPACE_OUT, NULL, NULL, &diff_options) > 0)
@@ -337,7 +337,7 @@ int main (void)
     if(h5repack_init(&pack_options, 0) < 0)
 	GOERROR;
     /* -P, -T options set */
-    pack_options.fs_persist = (hbool_t)-1; 	/* "FALSE" is set via -P 0 */
+    pack_options.fs_persist = -1; 	/* "FALSE" is set via -P 0 */
     pack_options.fs_threshold = 2; 
     pack_options.latest = 1; 
     if(h5repack(fname, FSPACE_OUT, &pack_options) < 0)
@@ -358,7 +358,7 @@ int main (void)
 	GOERROR;
     /* -S, -G options set */
     pack_options.fs_strategy = H5F_FSPACE_STRATEGY_NONE;
-    pack_options.fs_pagesize = (hsize_t)-1; 	/* "0" is set via -G 0 */
+    pack_options.fs_pagesize = -1; 	/* "0" is set via -G 0 */
     pack_options.latest = 1; 
     if(h5repack(fname, FSPACE_OUT, &pack_options) < 0)
 	GOERROR;
@@ -377,8 +377,8 @@ int main (void)
     if(h5repack_init(&pack_options, 0) < 0)
 	GOERROR;
     /* -P, -T, -G options set */
-    pack_options.fs_persist = (hbool_t)-1; 	/* "FALSE" is set via -P 0 */
-    pack_options.fs_threshold = (hsize_t)-1; 	/* "0" is set via -T 0 */
+    pack_options.fs_persist = -1; 	/* "FALSE" is set via -P 0 */
+    pack_options.fs_threshold = -1; 	/* "0" is set via -T 0 */
     pack_options.fs_pagesize = 8192;
     if(h5repack(fname, FSPACE_OUT, &pack_options) < 0)
 	GOERROR;

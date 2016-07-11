@@ -320,17 +320,22 @@ int copy_objects(const char* fnamein, const char* fnameout, pack_opt_t *options)
     else if(options->fs_strategy != (H5F_fspace_strategy_t)0) /* Set strategy as specified by user */
         set_strategy = options->fs_strategy;
 
-    if(options->fs_persist == (hbool_t)-1) /* A default "persist" is specified by user */
+    if(options->fs_persist == -1) /* A default "persist" is specified by user */
         set_persist = FS_PERSIST_DEF;
-    else if(options->fs_persist != (hbool_t)0) /* Set "persist" as specified by user */
-        set_persist = options->fs_persist;
+    else if(options->fs_persist != 0) /* Set "persist" as specified by user */
+        set_persist = (hbool_t)options->fs_persist;
     
-    if(options->fs_threshold == (hsize_t)-1) /* A "0" threshold is specified by user */
+    if(options->fs_threshold == -1) /* A "0" threshold is specified by user */
         set_threshold = (hsize_t)0;
-    else if(options->fs_threshold != (hsize_t)0) /* Set threshold as specified by user */
-        set_threshold = options->fs_threshold;
+    else if(options->fs_threshold != 0) /* Set threshold as specified by user */
+        set_threshold = (hsize_t)options->fs_threshold;
 
     /* Set file space information as specified */
+    if(H5Pset_file_space_strategy(fcpl, set_strategy, set_persist, set_threshold) < 0) {
+	error_msg("failed to set file space strategy\n");
+	goto out;
+    }
+#ifdef OUT
     if(options->latest) {
         if(set_strategy != H5F_FSPACE_STRATEGY_PAGE || set_persist != TRUE || set_threshold != FS_THRESHOLD_DEF)
             if(H5Pset_file_space_strategy(fcpl, set_strategy, set_persist, set_threshold) < 0) {
@@ -345,11 +350,12 @@ int copy_objects(const char* fnamein, const char* fnameout, pack_opt_t *options)
                 goto out;
             }
     }
+#endif
 
-    if(options->fs_pagesize == (hsize_t)-1) /* A "0" file space page size is specified by user */
+    if(options->fs_pagesize == -1) /* A "0" file space page size is specified by user */
         set_pagesize = (hsize_t)0;
-    else if(options->fs_pagesize != (hsize_t)0) /* Set file space page size as specified by user */
-        set_pagesize = options->fs_pagesize;
+    else if(options->fs_pagesize != 0) /* Set file space page size as specified by user */
+        set_pagesize = (hsize_t)options->fs_pagesize;
 
     if(set_pagesize != FS_PAGESIZE_DEF) /* Set non-default file space page size as specified */
         if(H5Pset_file_space_page_size(fcpl, set_pagesize) < 0) {

@@ -1169,7 +1169,7 @@ main(void)
 {
     hid_t	fapl, fapl2;    	/* File access property list IDs */
     hid_t	fcpl, fcpl2;    	/* File creation property list ID */
-    hbool_t 	new_format;     	/* Whether to use the new format or not */
+    unsigned 	new_format;     	/* Whether to use the new format or not */
     const char  *env_h5_drvr;      	/* File Driver value from environment */
     hbool_t 	contig_addr_vfd; 	/* Whether VFD used has a contigous address space */
     int		nerrors = 0;

@@ -322,7 +322,7 @@ main(void)
     time_t	time_new, ro;
     int         chunkno;                /* Chunk index for message */
     int		i;                      /* Local index variable */
-    hbool_t     b;                      /* Index for "new format" loop */
+    unsigned    b;                      /* Index for "new format" loop */
     const char  *envval;      		/* File Driver value from environment */
     hbool_t 	contig_addr_vfd;    	/* Whether VFD used has a contigous address space */
     herr_t      ret;                    /* Generic return value */

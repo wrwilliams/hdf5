@@ -273,7 +273,7 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
      * the same as the input file's free-space persist status
      */
     if(options->fs_persist) {
-	if(out_persist != (options->fs_persist == (-1) ? FALSE : options->fs_persist)) {
+	if(out_persist != (hbool_t)(options->fs_persist == (-1) ? FALSE : options->fs_persist)) {
 	    error_msg("free-space persist status is not set as unexpected\n");
 	    goto error;
 	}
@@ -285,12 +285,12 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
     }
 
     /*
-     * If the -P option is set, the threshold size should be set as specified.
+     * If the -T option is set, the threshold size should be set as specified.
      * If the -T option is not set, the threshold should be the same as the
      * input file's threshold size.
      */
     if(options->fs_threshold) {
-	if(out_threshold != (options->fs_threshold == (-1) ? 0 : options->fs_threshold)) {
+	if(out_threshold != (hsize_t)(options->fs_threshold == (-1) ? 0 : options->fs_threshold)) {
 	    error_msg("threshold is not set as unexpectec\n");
 	    goto error;
 	}
@@ -307,7 +307,7 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
      * the same as the input file's file space page size.
      */
     if(options->fs_pagesize) {
-	if(out_pagesize != (options->fs_pagesize == (-1) ? 0 : options->fs_pagesize)) {
+	if(out_pagesize != (hsize_t)(options->fs_pagesize == (-1) ? 0 : options->fs_pagesize)) {
 	    error_msg("file space page size is not set as unexpected\n");
 	    goto error;
 	}

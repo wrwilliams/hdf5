@@ -123,9 +123,9 @@ typedef struct {
  hsize_t         threshold;        	/* alignment threshold for H5Pset_alignment */
  hsize_t         alignment ;       	/* alignment for H5Pset_alignment */
  H5F_fspace_strategy_t fs_strategy;	/* File space handling strategy */
- hbool_t	fs_persist; 		/* Free space section threshold */
- hsize_t	fs_threshold; 		/* Free space section threshold */
- hsize_t 	fs_pagesize;   		/* File space page size */
+ int		fs_persist; 		/* Free space section threshold */
+ long		fs_threshold; 		/* Free space section threshold */
+ long long 	fs_pagesize;   		/* File space page size */
 } pack_opt_t;
 
 

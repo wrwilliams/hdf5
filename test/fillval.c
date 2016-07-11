@@ -2369,7 +2369,7 @@ main(int argc, char *argv[])
     int	nerrors=0, argno, test_contig=1, test_chunk=1, test_compact=1;
     hid_t	fapl = (-1), fapl2 = (-1);    /* File access property lists */
     hid_t	fcpl = (-1), fcpl2 = (-1);    /* File creation property lists */
-    hbool_t new_format;     	/* Whether to use the new format or not */
+    unsigned 	new_format;     	/* Whether to use the new format or not */
     const char  *env_h5_drvr;	/* File Driver value from environment */
     hbool_t contig_addr_vfd;
 

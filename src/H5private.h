@@ -364,10 +364,10 @@
  * HDF Boolean type.
  */
 #ifndef FALSE
-#   define FALSE 0
+  #define FALSE false
 #endif
 #ifndef TRUE
-#   define TRUE 1
+  #define TRUE true
 #endif
 
 /*
@@ -627,6 +627,9 @@ typedef struct {
 #ifndef HDatol
     #define HDatol(S)    atol(S)
 #endif /* HDatol */
+#ifndef HDatoll
+    #define HDatoll(S)    atoll(S)
+#endif /* HDatoll */
 #ifndef HDbsearch
     #define HDbsearch(K,B,N,Z,F)  bsearch(K,B,N,Z,F)
 #endif /* HDbsearch */

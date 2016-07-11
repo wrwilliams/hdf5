@@ -3084,9 +3084,9 @@ test_filespace_info(const char *env_h5_drvr)
     H5F_fspace_strategy_t strategy;		/* File space strategy */
     hbool_t persist;			/* Persist free-space or not */
     hsize_t threshold;			/* Free-space section threshold */
-    hbool_t new_format;			/* New or old format */
+    unsigned new_format;			/* New or old format */
     H5F_fspace_strategy_t fs_strategy;	/* File space strategy--iteration variable */
-    hbool_t fs_persist;			/* Persist free-space or not--iteration variable */
+    unsigned fs_persist;		/* Persist free-space or not--iteration variable */
     hsize_t fs_threshold;		/* Free-space section threshold--iteration variable */
     int pp;				/* Iteration variable for setting file space page size */
     hsize_t fsp_size;			/* File space page size */
@@ -3261,7 +3261,7 @@ test_filespace_info(const char *env_h5_drvr)
 			CHECK(fcpl, FAIL, "H5Pcreate");
 
 			/* Set file space information */
-			ret = H5Pset_file_space_strategy(fcpl, fs_strategy, fs_persist, fs_threshold);
+			ret = H5Pset_file_space_strategy(fcpl, fs_strategy, (hbool_t)fs_persist, fs_threshold);
 			CHECK(ret, FAIL, "H5Pset_file_space_strategy");
 
 			/* Do not set file space page size if pp is negative */
@@ -3276,7 +3276,7 @@ test_filespace_info(const char *env_h5_drvr)
 
 			/* Verify file space information */
 			VERIFY(strategy, fs_strategy, "H5Pget_file_space_strategy");
-			VERIFY(persist, fs_persist, "H5Pget_file_space_strategy");
+			VERIFY(persist, (hbool_t)fs_persist, "H5Pget_file_space_strategy");
 			VERIFY(threshold, fs_threshold, "H5Pget_file_space_strategy");
 
 			/* Retrieve and verify file space page size */
@@ -3390,7 +3390,7 @@ test_file_freespace(const char *env_h5_drvr)
     unsigned u;         /* Local index variable */
     char     filename[FILENAME_LEN]; 	/* Filename to use */
     char     name[32];  		/* Dataset name */
-    hbool_t  new_format;		/* To use old or new format */
+    unsigned new_format;		/* To use old or new format */
     hbool_t  contig_addr_vfd; 		/* Whether VFD used has a contigous address space */
     herr_t   ret;
 

@@ -6850,7 +6850,7 @@ test_mf_strat_thres_gone(const char *env_h5_drvr, hid_t fapl, hbool_t new_format
     H5FD_mem_t 	tt;			/* File allocation type */
     haddr_t	addr1, addr2, addr3, addr4, addr5, addr6; /* File address for H5FD_MEM_SUPER */
     H5F_fspace_strategy_t fs_type;	/* File space handling strategy */
-    hbool_t	fs_persist;		/* To persist free-space or not */
+    unsigned 	fs_persist;		/* To persist free-space or not */
     H5FS_stat_t	fs_state;             	/* Information for free-space manager */
     H5FS_stat_t	fs_state_zero;          /* Information for free-space manager */
     hbool_t	contig_addr_vfd;
@@ -7039,7 +7039,7 @@ test_mf_strat_thres_persist(const char *env_h5_drvr, hid_t fapl, hbool_t new_for
     haddr_t	addr1, addr2, addr3, addr4, addr5, addr6; /* File address for H5FD_MEM_SUPER */
     H5F_fspace_strategy_t fs_type;	/* File space handling strategy */
     hsize_t	fs_threshold;		/* Free-space section threshold */
-    hbool_t	fs_persist;		/* To persist free-space or not */
+    unsigned 	fs_persist;		/* To persist free-space or not */
     hbool_t	contig_addr_vfd;
 
     if(new_format)
@@ -7077,7 +7077,7 @@ test_mf_strat_thres_persist(const char *env_h5_drvr, hid_t fapl, hbool_t new_for
 		    FAIL_STACK_ERROR
 
 		/* Set default file space information */
-		if(H5Pset_file_space_strategy(fcpl, fs_type, TRUE, fs_threshold) < 0)
+		if(H5Pset_file_space_strategy(fcpl, fs_type, (hbool_t)fs_persist, fs_threshold) < 0)
 		    FAIL_STACK_ERROR
 
 		/* Create the file to work on */
@@ -7390,7 +7390,7 @@ test_page_alloc_xfree(const char *env_h5_drvr, hid_t fapl)
     hbool_t contig_addr_vfd;        	/* Whether VFD used has a contigous address space */
     char filename[FILENAME_LEN]; 	/* Filename to use */
     haddr_t found_addr;			/* Address of the found section */
-    hbool_t fs_persist;			/* To persist free-space or not */
+    unsigned fs_persist;		/* To persist free-space or not */
 
     TESTING("Paged aggregation for file space: H5MF_alloc/H5MF_xfree");
 

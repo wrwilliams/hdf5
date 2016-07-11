@@ -525,24 +525,24 @@ static int parse_command_line(int argc, const char **argv, pack_opt_t* options)
                 break;
 
             case 'P':
-                options->fs_persist = (hsize_t)HDatol( opt_arg );
-                if(options->fs_persist == (hbool_t)0)
+                options->fs_persist = HDatoi( opt_arg );
+                if(options->fs_persist == 0)
                     /* To distinguish the "specified" zero value */
-                    options->fs_persist = (hbool_t)-1;
+                    options->fs_persist = -1;
                 break;
 
             case 'T':
-                options->fs_threshold = (hsize_t)HDatol( opt_arg );
-                if(options->fs_threshold == (hsize_t)0)
+                options->fs_threshold = HDatol( opt_arg );
+                if(options->fs_threshold == 0)
                     /* To distinguish the "specified" zero value */
-                    options->fs_threshold = (hbool_t)-1;
+                    options->fs_threshold = -1;
                 break;
 
             case 'G':
-                options->fs_pagesize = (hsize_t)HDatol( opt_arg );
-                if(options->fs_pagesize == (hsize_t)0)
+                options->fs_pagesize = HDatoll( opt_arg );
+                if(options->fs_pagesize == 0)
                     /* To distinguish the "specified" zero value */
-                   options->fs_pagesize = (hsize_t) -1;	
+                   options->fs_pagesize = -1;	
                 break;
 
             default:

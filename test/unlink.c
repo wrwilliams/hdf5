@@ -2445,7 +2445,7 @@ main(void)
     hid_t	fcpl;			/* File creation property list ID */
     int		nerrors = 0;
     char	filename[1024];
-    hbool_t 	new_format;
+    unsigned	new_format;
 
     /* Metadata cache parameters */
     int mdc_nelmts;
