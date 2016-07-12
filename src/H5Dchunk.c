@@ -107,6 +107,25 @@
 /* Local Typedefs */
 /******************/
 
+/* Raw data chunks are cached.  Each entry in the cache is: */
+typedef struct H5D_rdcc_ent_t {
+    hbool_t	locked;		/*entry is locked in cache		*/
+    hbool_t	dirty;		/*needs to be written to disk?		*/
+    hbool_t     deleted;        /*chunk about to be deleted		*/
+    hsize_t 	scaled[H5O_LAYOUT_NDIMS]; /*scaled chunk 'name' (coordinates) */
+    uint32_t	rd_count;	/*bytes remaining to be read		*/
+    uint32_t	wr_count;	/*bytes remaining to be written		*/
+    H5F_block_t chunk_block;    /*offset/length of chunk in file        */
+    hsize_t     chunk_idx;  	/*index of chunk in dataset             */
+    uint8_t	*chunk;		/*the unfiltered chunk data		*/
+    unsigned	idx;		/*index in hash table			*/
+    struct H5D_rdcc_ent_t *next;/*next item in doubly-linked list	*/
+    struct H5D_rdcc_ent_t *prev;/*previous item in doubly-linked list	*/
+    struct H5D_rdcc_ent_t *tmp_next;/*next item in temporary doubly-linked list */
+    struct H5D_rdcc_ent_t *tmp_prev;/*previous item in temporary doubly-linked list */
+} H5D_rdcc_ent_t;
+typedef H5D_rdcc_ent_t *H5D_rdcc_ent_ptr_t; /* For free lists */
+
 /* Callback info for iteration to prune chunks */
 typedef struct H5D_chunk_it_ud1_t {
     H5D_chunk_common_ud_t common;       /* Common info for B-tree user data (must be first) */
@@ -244,6 +263,11 @@ static herr_t H5D__chunk_flush_entry(const H5D_t *dset, hid_t dxpl_id,
     const H5D_dxpl_cache_t *dxpl_cache, H5D_rdcc_ent_t *ent, hbool_t reset);
 static herr_t H5D__chunk_cache_evict(const H5D_t *dset, hid_t dxpl_id,
     const H5D_dxpl_cache_t *dxpl_cache, H5D_rdcc_ent_t *ent, hbool_t flush);
+static void *H5D__chunk_lock(const H5D_io_info_t *io_info,
+    H5D_chunk_ud_t *udata, hbool_t relax);
+static herr_t H5D__chunk_unlock(const H5D_io_info_t *io_info,
+    const H5D_chunk_ud_t *udata, hbool_t dirty, void *chunk,
+    uint32_t naccessed);
 static herr_t H5D__chunk_cache_prune(const H5D_t *dset, hid_t dxpl_id,
     const H5D_dxpl_cache_t *dxpl_cache, size_t size);
 static herr_t H5D__chunk_prune_fill(H5D_chunk_it_ud1_t *udata);
@@ -1034,9 +1058,8 @@ H5D__chunk_mem_alloc(size_t size, const H5O_pline_t *pline)
     FUNC_ENTER_STATIC_NOERR
 
     HDassert(size);
-    HDassert(pline);
 
-    if(pline->nused > 0)
+    if(pline && pline->nused)
         ret_value = H5MM_malloc(size);
     else
         ret_value = H5FL_BLK_MALLOC(chunk, size);
@@ -1064,10 +1087,8 @@ H5D__chunk_mem_xfree(void *chk, const H5O_pline_t *pline)
 {
     FUNC_ENTER_STATIC_NOERR
 
-    HDassert(pline);
-
     if(chk) {
-        if(pline->nused > 0)
+        if(pline && pline->nused)
             H5MM_xfree(chk);
         else
             chk = H5FL_BLK_FREE(chunk, chk);
@@ -1751,6 +1772,7 @@ H5D__chunk_cacheable(const H5D_io_info_t *io_info, haddr_t caddr, hbool_t write_
 
     FUNC_ENTER_PACKAGE
 
+    /* Sanity check */
     HDassert(io_info);
     HDassert(dataset);
 
@@ -2551,13 +2573,14 @@ H5D__chunk_lookup(const H5D_t *dset, hid_t dxpl_id, const hsize_t *scaled,
     H5D_chunk_ud_t *udata)
 {
     H5D_rdcc_ent_t  *ent = NULL;        /* Cache entry */
-    hbool_t         found = FALSE;      /* In cache? */
-    unsigned        u;                  /* Counter */
     H5O_storage_chunk_t *sc = &(dset->shared->layout.storage.u.chunk);
-    herr_t	ret_value = SUCCEED;	/* Return value */
+    unsigned idx;                       /* Index of chunk in cache, if present */
+    hbool_t found = FALSE;              /* In cache? */
+    herr_t ret_value = SUCCEED;	        /* Return value */
 
     FUNC_ENTER_PACKAGE
 
+    /* Sanity checks */
     HDassert(dset);
     HDassert(dset->shared->layout.u.chunk.ndims > 0);
     H5D_CHUNK_STORAGE_INDEX_CHK(sc);
@@ -2567,7 +2590,7 @@ H5D__chunk_lookup(const H5D_t *dset, hid_t dxpl_id, const hsize_t *scaled,
     /* Initialize the query information about the chunk we are looking for */
     udata->common.layout = &(dset->shared->layout.u.chunk);
     udata->common.storage = &(dset->shared->layout.storage.u.chunk);
-    udata->common.scaled =  scaled;
+    udata->common.scaled = scaled;
 
     /* Reset information about the chunk we are looking for */
     udata->chunk_block.offset = HADDR_UNDEF;
@@ -2576,19 +2599,29 @@ H5D__chunk_lookup(const H5D_t *dset, hid_t dxpl_id, const hsize_t *scaled,
 
     /* Check for chunk in cache */
     if(dset->shared->cache.chunk.nslots > 0) {
-	udata->idx_hint = H5D__chunk_hash_val(dset->shared, scaled);
-        ent = dset->shared->cache.chunk.slot[udata->idx_hint];
+        /* Determine the chunk's location in the hash table */
+	idx = H5D__chunk_hash_val(dset->shared, scaled);
 
-        if(ent)
-            for(u = 0, found = TRUE; u < dset->shared->ndims; u++)
+        /* Get the chunk cache entry for that location */
+        ent = dset->shared->cache.chunk.slot[idx];
+        if(ent) {
+            unsigned u;                  /* Counter */
+
+            /* Speculatively set the 'found' flag */
+            found = TRUE;
+
+            /* Verify that the cache entry is the correct chunk */
+            for(u = 0; u < dset->shared->ndims; u++)
                 if(scaled[u] != ent->scaled[u]) {
                     found = FALSE;
                     break;
                 } /* end if */
+        } /* end if */
     } /* end if */
 
-    /* Find chunk addr */
+    /* Retrieve chunk addr */
     if(found) {
+        udata->idx_hint = idx;
         udata->chunk_block.offset = ent->chunk_block.offset;
         udata->chunk_block.length = ent->chunk_block.length;;
 	udata->chunk_idx = ent->chunk_idx;
@@ -2999,7 +3032,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-void *
+static void *
 H5D__chunk_lock(const H5D_io_info_t *io_info, H5D_chunk_ud_t *udata,
     hbool_t relax)
 {
@@ -3015,7 +3048,7 @@ H5D__chunk_lock(const H5D_io_info_t *io_info, H5D_chunk_ud_t *udata,
     void		*chunk = NULL;		/*the file chunk	*/
     void		*ret_value = NULL;	/* Return value         */
 
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_STATIC
 
     HDassert(io_info);
     HDassert(io_info->dxpl_cache);
@@ -3277,7 +3310,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
+static herr_t
 H5D__chunk_unlock(const H5D_io_info_t *io_info, const H5D_chunk_ud_t *udata,
     hbool_t dirty, void *chunk, uint32_t naccessed)
 {
@@ -3285,8 +3318,9 @@ H5D__chunk_unlock(const H5D_io_info_t *io_info, const H5D_chunk_ud_t *udata,
     const H5D_rdcc_t	*rdcc = &(io_info->dset->shared->cache.chunk);
     herr_t              ret_value = SUCCEED;      /* Return value */
 
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_STATIC
 
+    /* Sanity check */
     HDassert(io_info);
     HDassert(udata);
 
@@ -3294,8 +3328,6 @@ H5D__chunk_unlock(const H5D_io_info_t *io_info, const H5D_chunk_ud_t *udata,
         /*
          * It's not in the cache, probably because it's too big.  If it's
          * dirty then flush it to disk.  In any case, free the chunk.
-         * Note: we have to copy the layout and filter messages so we
-         *	 don't discard the `const' qualifier.
          */
         if(dirty) {
             H5D_rdcc_ent_t fake_ent;         /* "fake" chunk cache entry */
@@ -3714,7 +3746,7 @@ H5D__chunk_allocate(const H5D_t *dset, hid_t dxpl_id, hbool_t full_overwrite,
                        write collectively at the end */
                     /* allocate/resize address array if no more space left */
                     if(0 == chunk_info.num_io % 1024)
-                        if(NULL == (chunk_info.addr = (haddr_t *)HDrealloc(chunk_info.addr, (chunk_info.num_io + 1024) * sizeof(haddr_t))))
+                        if(NULL == (chunk_info.addr = (haddr_t *)H5MM_realloc(chunk_info.addr, (chunk_info.num_io + 1024) * sizeof(haddr_t))))
                             HGOTO_ERROR(H5E_DATASET, H5E_CANTALLOC, FAIL, "memory allocation failed for chunk addresses")
 
                     /* Store the chunk's address for later */
@@ -3781,7 +3813,7 @@ done:
 
 #ifdef H5_HAVE_PARALLEL
     if(using_mpi && chunk_info.addr)
-        HDfree(chunk_info.addr);
+        H5MM_free(chunk_info.addr);
 #endif
 
     FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)

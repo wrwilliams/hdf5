@@ -4419,4 +4419,6 @@ cleanup_file(void)
     HDremove(FILE3);
     HDremove(FILE4);
     HDremove(FILE5);
+    HDremove(FILE6);
+    HDremove(FILE7);
 }
