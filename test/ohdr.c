@@ -866,7 +866,7 @@ main(void)
 
     puts("All object header tests passed.");
     h5_cleanup(FILENAME, fapl);
-    return(0);
+    return 0;
 
 error:
     puts("*** TESTS FAILED ***");
@@ -874,6 +874,6 @@ error:
         H5Fclose(file);
     } H5E_END_TRY;
 
-    return(1);
+    return 1;
 } /* end main() */
 

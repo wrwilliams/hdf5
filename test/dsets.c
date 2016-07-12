@@ -388,14 +388,14 @@ test_create(hid_t file)
 static herr_t
 test_simple_io(const char *env_h5_drvr, hid_t fapl)
 {
-    char                filename[FILENAME_BUF_SIZE];
-    hid_t		file = -1, dataset = -1, space = -1, xfer = -1;
-    int			i, j, n;
-    hsize_t		dims[2];
-    void		*tconv_buf = NULL;
-    int                 f = -1;
-    haddr_t             offset;
-    int                 rdata[DSET_DIM1][DSET_DIM2];
+    char        filename[FILENAME_BUF_SIZE];
+    hid_t       file = -1, dataset = -1, space = -1, xfer = -1;
+    int         i, j, n;
+    hsize_t     dims[2];
+    void        *tconv_buf = NULL;
+    int         f = -1;
+    haddr_t     offset;
+    int         rdata[DSET_DIM1][DSET_DIM2];
 
     TESTING("simple I/O");
 
@@ -465,7 +465,8 @@ test_simple_io(const char *env_h5_drvr, hid_t fapl)
 
         f = HDopen(filename, O_RDONLY, 0);
         HDlseek(f, (off_t)offset, SEEK_SET);
-        HDread(f, rdata, sizeof(int)*DSET_DIM1*DSET_DIM2);
+        if(HDread(f, rdata, sizeof(int)*DSET_DIM1*DSET_DIM2) < 0)
+            goto error;
 
         /* Check that the values read are the same as the values written */
         for(i = 0; i < DSET_DIM1; i++) {
@@ -6721,7 +6722,7 @@ test_random_chunks(hid_t fcpl, hid_t fapl)
     if(H5Fclose(file) < 0) TEST_ERROR;
 
 
-    /* Create file for second test */
+    /* Create second file */
     if((file = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR;
 
     /* Create dataspace with unlimited maximum dimensions */
@@ -7493,7 +7494,7 @@ test_big_chunks_bypass_cache(hid_t fcpl, hid_t fapl)
     if(H5Dread(dsid, H5T_NATIVE_INT, H5S_ALL, sid, H5P_DEFAULT, rdata2) < 0)
 
     for(i = 0; i < BYPASS_CHUNK_DIM / 2; i++)
-        if(rdata2[i] != i) {
+	if(rdata2[i] != i) {
             printf("    Read different values than written in the chunk.\n");
             printf("    At line %d and index %d, rdata2 = %d. It should be %d.\n", __LINE__, i, rdata2[i], i);
             TEST_ERROR
@@ -9178,34 +9179,34 @@ main(void)
         nerrors += (test_tconv(file) < 0			? 1 : 0);
         nerrors += (test_filters(file, my_fapl) < 0		? 1 : 0);
         nerrors += (test_onebyte_shuffle(file) < 0 		? 1 : 0);
-        nerrors += (test_nbit_int(file) < 0 			? 1 : 0);
-        nerrors += (test_nbit_float(file) < 0         		? 1 : 0);
-        nerrors += (test_nbit_double(file) < 0         		? 1 : 0);
-        nerrors += (test_nbit_array(file) < 0 			? 1 : 0);
+        nerrors += (test_nbit_int(file) < 0 		        ? 1 : 0);
+        nerrors += (test_nbit_float(file) < 0         	        ? 1 : 0);
+        nerrors += (test_nbit_double(file) < 0         	        ? 1 : 0);
+        nerrors += (test_nbit_array(file) < 0 		        ? 1 : 0);
         nerrors += (test_nbit_compound(file) < 0 		? 1 : 0);
         nerrors += (test_nbit_compound_2(file) < 0 		? 1 : 0);
         nerrors += (test_nbit_compound_3(file) < 0 		? 1 : 0);
         nerrors += (test_nbit_int_size(file) < 0 		? 1 : 0);
         nerrors += (test_nbit_flt_size(file) < 0 		? 1 : 0);
         nerrors += (test_scaleoffset_int(file) < 0 		? 1 : 0);
-        nerrors += (test_scaleoffset_int_2(file) < 0 	? 1 : 0);
-        nerrors += (test_scaleoffset_float(file) < 0 	? 1 : 0);
-        nerrors += (test_scaleoffset_float_2(file) < 0 	? 1 : 0);
-        nerrors += (test_scaleoffset_double(file) < 0 	? 1 : 0);
+        nerrors += (test_scaleoffset_int_2(file) < 0 	        ? 1 : 0);
+        nerrors += (test_scaleoffset_float(file) < 0 	        ? 1 : 0);
+        nerrors += (test_scaleoffset_float_2(file) < 0 	        ? 1 : 0);
+        nerrors += (test_scaleoffset_double(file) < 0 	        ? 1 : 0);
         nerrors += (test_scaleoffset_double_2(file) < 0 	? 1 : 0);
-        nerrors += (test_multiopen (file) < 0		? 1 : 0);
-        nerrors += (test_types(file) < 0       		? 1 : 0);
-        nerrors += (test_userblock_offset(envval, my_fapl, new_format) < 0     	? 1 : 0);
+        nerrors += (test_multiopen (file) < 0		        ? 1 : 0);
+        nerrors += (test_types(file) < 0       		        ? 1 : 0);
+        nerrors += (test_userblock_offset(envval, my_fapl, new_format) < 0  ? 1 : 0);
         nerrors += (test_missing_filter(file) < 0		? 1 : 0);
-        nerrors += (test_can_apply(file) < 0		? 1 : 0);
-        nerrors += (test_can_apply2(file) < 0		? 1 : 0);
-        nerrors += (test_set_local(fcpl, my_fapl) < 0		? 1 : 0);
+        nerrors += (test_can_apply(file) < 0		        ? 1 : 0);
+        nerrors += (test_can_apply2(file) < 0		        ? 1 : 0);
+        nerrors += (test_set_local(fcpl, my_fapl) < 0	        ? 1 : 0);
         nerrors += (test_can_apply_szip(file) < 0		? 1 : 0);
-        nerrors += (test_compare_dcpl(file) < 0		? 1 : 0);
-        nerrors += (test_copy_dcpl(file, my_fapl) < 0	? 1 : 0);
+        nerrors += (test_compare_dcpl(file) < 0		        ? 1 : 0);
+        nerrors += (test_copy_dcpl(file, my_fapl) < 0	        ? 1 : 0);
         nerrors += (test_filter_delete(file) < 0		? 1 : 0);
-        nerrors += (test_filters_endianess() < 0	? 1 : 0);
-        nerrors += (test_zero_dims(file) < 0		? 1 : 0);
+        nerrors += (test_filters_endianess() < 0	        ? 1 : 0);
+        nerrors += (test_zero_dims(file) < 0		        ? 1 : 0);
         nerrors += (test_missing_chunk(file) < 0		? 1 : 0);
         nerrors += (test_random_chunks(fcpl, my_fapl) < 0	? 1 : 0);
 
