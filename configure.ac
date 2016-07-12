@@ -16,7 +16,7 @@
 ## ----------------------------------------------------------------------
 ## Initialize configure.
 ##
-AC_REVISION($Id: configure.ac 30098 2016-06-19 19:52:33Z hdftest $)
+AC_REVISION($Id: configure.ac 30170 2016-07-12 17:11:59Z byrn $)
 AC_PREREQ([2.69])
 
 ## AC_INIT takes the name of the package, the version number, and an
