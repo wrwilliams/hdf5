@@ -7803,10 +7803,10 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
     /* reset the flush_in progress flag */
     entry_ptr->flush_in_progress = FALSE;
 
+    /* capture the cache entry address for the log_flush call at the
+       end before the entry_ptr gets freed */
     entry_addr = entry_ptr->addr;
-    if(cache_ptr->log_flush)
-        if((cache_ptr->log_flush)(cache_ptr, entry_addr, was_dirty, flags) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "log_flush callback failed.")
+
     /* Internal cache data structures should now be up to date, and 
      * consistant with the status of the entry.  
      *
@@ -7916,6 +7916,10 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
             entry_ptr->magic = H5C__H5C_CACHE_ENTRY_T_BAD_MAGIC;
         }
     } /* if (destroy) */
+
+    if(cache_ptr->log_flush)
+        if((cache_ptr->log_flush)(cache_ptr, entry_addr, was_dirty, flags) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "log_flush callback failed.")
 
 done:
     HDassert( ( ret_value != SUCCEED ) || ( destroy_entry ) || 
