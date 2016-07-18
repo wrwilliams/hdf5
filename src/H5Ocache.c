@@ -999,7 +999,7 @@ H5O__cache_chk_deserialize(const void *image, size_t len, void *_udata,
             HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "can't deserialize object header chunk")
 
         /* Set the chunk number for the chunk proxy */
-        chk_proxy->chunkno = udata->oh->nchunks - 1;
+        H5_CHECKED_ASSIGN(chk_proxy->chunkno, unsigned, udata->oh->nchunks - 1, size_t);
     } /* end if */
     else {
         /* Sanity check */
@@ -1667,7 +1667,7 @@ H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len, const uint8_t *image
 
             /* Decode continuation message */
             cont = (H5O_cont_t *)(H5O_MSG_CONT->decode)(udata->f, udata->dxpl_id, NULL, 0, &ioflags, oh->mesg[curmesg].raw);
-            cont->chunkno = udata->cont_msg_info->nmsgs + 1;	/*the next continuation message/chunk */
+            H5_CHECKED_ASSIGN(cont->chunkno, unsigned, udata->cont_msg_info->nmsgs + 1, size_t); /* the next continuation message/chunk */
 
             /* Save 'native' form of continuation message */
             oh->mesg[curmesg].native = cont;
