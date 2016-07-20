@@ -9028,13 +9028,11 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CXX needs old style header files in includes" >&5
 $as_echo_n "checking if $CXX needs old style header files in includes... " >&6; }
+  TEST_SRC="`(echo \"#define OLD_HEADER_FILENAME 1\"; cat $srcdir/config/cmake_ext_mod/HDFCXXTests.cpp)`"
+
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-
-#include <iostream>
-
-int main(void) { return 0; }
-
+$TEST_SRC
 _ACEOF
 if ac_fn_cxx_try_link "$LINENO"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -9053,19 +9051,11 @@ rm -f core conftest.err conftest.$ac_objext \
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CXX can handle namespaces" >&5
 $as_echo_n "checking if $CXX can handle namespaces... " >&6; }
+  TEST_SRC="`(echo \"#define HDF_NO_NAMESPACE 1\"; cat $srcdir/config/cmake_ext_mod/HDFCXXTests.cpp)`"
+
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-
-namespace H5 {
-int fnord;
-}
-
-int main(void) {
-   using namespace H5;
-   fnord = 37;
-   return 0;
-}
-
+$TEST_SRC
 _ACEOF
 if ac_fn_cxx_try_link "$LINENO"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
@@ -9073,49 +9063,47 @@ $as_echo "yes" >&6; }
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-     CXXFLAGS="${CXXFLAGS} -DH5_NO_NAMESPACE"
-     AM_CXXFLAGS="${AM_CXXFLAGS} -DH5_NO_NAMESPACE"
+     CXXFLAGS="${CXXFLAGS} -DHDF_NO_NAMESPACE"
+     AM_CXXFLAGS="${AM_CXXFLAGS} -DHDF_NO_NAMESPACE"
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 
 
-  ## Checking if C++ has offsetof extension
+  ## if C++ can handle static cast
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CXX can handle static cast" >&5
+$as_echo_n "checking if $CXX can handle static cast... " >&6; }
+  TEST_SRC="`(echo \"#define NO_STATIC_CAST 1\"; cat $srcdir/config/cmake_ext_mod/HDFCXXTests.cpp)`"
+
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$TEST_SRC
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    CXXFLAGS="${CXXFLAGS} -DNO_STATIC_CAST"
+    AM_CXXFLAGS="${AM_CXXFLAGS} -DNO_STATIC_CAST"
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+
+  ## Checking if C++ has offsetof extension,
+  ## note: this test has to be the last of the C++ tests because it sets a definition
+  ## which would be used in the other tests, causing them to fail.
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CXX has offsetof extension" >&5
 $as_echo_n "checking if $CXX has offsetof extension... " >&6; }
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+  TEST_SRC="`(echo \"#define CXX_HAVE_OFFSETOF 1\"; cat $srcdir/config/cmake_ext_mod/HDFCXXTests.cpp)`"
+
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-
-  #include <stdio.h>
-  #include <stddef.h>
-
-#ifdef FC_DUMMY_MAIN
-#ifndef FC_DUMMY_MAIN_EQ_F77
-#  ifdef __cplusplus
-     extern "C"
-#  endif
-   int FC_DUMMY_MAIN() { return 1; }
-#endif
-#endif
-int
-main ()
-{
-
-    struct index_st
-    {
-      unsigned char type;
-      unsigned char num;
-      unsigned int len;
-    };
-    typedef struct index_st index_t;
-    int x,y;
-    x = offsetof(struct index_st, len);
-    y = offsetof(index_t, num)
-
-  ;
-  return 0;
-}
+$TEST_SRC
 _ACEOF
 if ac_fn_cxx_try_link "$LINENO"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
@@ -9126,35 +9114,6 @@ $as_echo "#define CXX_HAVE_OFFSETOF 1" >>confdefs.h
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-
-
-  ## if C++ can handle static cast
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CXX can handle static cast" >&5
-$as_echo_n "checking if $CXX can handle static cast... " >&6; }
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int main(void) {
-   float test_float;
-   int test_int;
-   test_float = 37.0;
-   test_int = static_cast <int> (test_float);
-   return 0;
-}
-
-_ACEOF
-if ac_fn_cxx_try_link "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    CXXFLAGS="${CXXFLAGS} -DNO_STATIC_CAST"
-    AM_CXXFLAGS="${AM_CXXFLAGS} -DNO_STATIC_CAST"
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
@@ -9587,7 +9546,7 @@ else
 JAVA_TEST=Test.java
 CLASS_TEST=Test.class
 cat << \EOF > $JAVA_TEST
-/* #line 9590 "configure" */
+/* #line 9549 "configure" */
 public class Test {
 }
 EOF
@@ -9762,7 +9721,7 @@ EOF
 if $UUDECODE Test.uue; then
         ac_cv_prog_uudecode_base64=yes
 else
-        echo "configure: 9765: uudecode had trouble decoding base 64 file 'Test.uue'" >&5
+        echo "configure: 9724: uudecode had trouble decoding base 64 file 'Test.uue'" >&5
         echo "configure: failed file was:" >&5
         cat Test.uue >&5
         ac_cv_prog_uudecode_base64=no
@@ -9879,7 +9838,7 @@ else
 JAVA_TEST=Test.java
 CLASS_TEST=Test.class
 cat << \EOF > $JAVA_TEST
-/* #line 9882 "configure" */
+/* #line 9841 "configure" */
 public class Test {
 }
 EOF
@@ -9914,7 +9873,7 @@ JAVA_TEST=Test.java
 CLASS_TEST=Test.class
 TEST=Test
 cat << \EOF > $JAVA_TEST
-/* [#]line 9917 "configure" */
+/* [#]line 9876 "configure" */
 public class Test {
 public static void main (String args[]) {
         System.exit (0);
@@ -10344,7 +10303,7 @@ EOF
                 if $UUDECODE Test.uue; then
                         :
                 else
-                        echo "configure: 10347: uudecode had trouble decoding base 64 file 'Test.uue'" >&5
+                        echo "configure: 10306: uudecode had trouble decoding base 64 file 'Test.uue'" >&5
                         echo "configure: failed file was:" >&5
                         cat Test.uue >&5
                         ac_cv_prog_uudecode_base64=no
@@ -10364,7 +10323,7 @@ EOF
 else
 
 cat << \EOF > Test.java
-/* #line 10367 "configure" */
+/* #line 10326 "configure" */
 import junit.textui.TestRunner;
 public class Test {
 
