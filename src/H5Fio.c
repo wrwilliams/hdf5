@@ -94,6 +94,8 @@ herr_t
 H5F_block_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
     hid_t dxpl_id, void *buf/*out*/)
 {
+    H5FD_mem_t  map_type;               /* Mapped memory type */
+    hid_t       my_dxpl_id = dxpl_id;   /* transfer property to use for I/O */
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -110,10 +112,18 @@ HDfprintf(stderr, "%s: read from addr = %a, size = %Zu\n", FUNC, addr, size);
     if(H5F_addr_le(f->shared->fs.tmp_addr, (addr + size)))
         HGOTO_ERROR(H5E_IO, H5E_BADRANGE, FAIL, "attempting I/O in temporary file space")
 
-    /* Pass through page buffer layer */
-    if(H5PB_read(f, type, addr, size, dxpl_id, buf) < 0)
-        HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "read through page buffer failed")
+    /* Treat global heap as raw data */
+    map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;
 
+#ifdef H5_DEBUG_BUILD
+    /* GHEAP type is treated as RAW, so update the dxpl type property too */
+    if(H5FD_MEM_GHEAP == type)
+        my_dxpl_id = H5AC_rawdata_dxpl_id;
+#endif /* H5_DEBUG_BUILD */
+
+    /* Pass through page buffer layer */
+    if(H5PB_read(f, map_type, addr, size, my_dxpl_id, buf) < 0)
+        HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "read through page buffer failed")
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F_block_read() */
@@ -138,6 +148,8 @@ herr_t
 H5F_block_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
     hid_t dxpl_id, const void *buf)
 {
+    H5FD_mem_t  map_type;               /* Mapped memory type */
+    hid_t       my_dxpl_id = dxpl_id;   /* transfer property to use for I/O */
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -155,8 +167,17 @@ HDfprintf(stderr, "%s: write to addr = %a, size = %Zu\n", FUNC, addr, size);
     if(H5F_addr_le(f->shared->fs.tmp_addr, (addr + size)))
         HGOTO_ERROR(H5E_IO, H5E_BADRANGE, FAIL, "attempting I/O in temporary file space")
 
+    /* Treat global heap as raw data */
+    map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;
+
+#ifdef H5_DEBUG_BUILD
+    /* GHEAP type is treated as RAW, so update the dxpl type property too */
+    if(H5FD_MEM_GHEAP == type)
+        my_dxpl_id = H5AC_rawdata_dxpl_id;
+#endif /* H5_DEBUG_BUILD */
+
     /* Pass through page buffer layer */
-    if(H5PB_write(f, type, addr, size, dxpl_id, buf) < 0)
+    if(H5PB_write(f, map_type, addr, size, my_dxpl_id, buf) < 0)
         HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "write through page buffer failed")
 
 done:

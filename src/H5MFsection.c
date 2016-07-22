@@ -62,7 +62,7 @@ static H5FS_section_info_t *H5MF_sect_deserialize(const H5FS_section_class_t *cl
     hid_t dxpl_id, const uint8_t *buf, haddr_t sect_addr, hsize_t sect_size,
     unsigned *des_flags);
 static herr_t H5MF_sect_valid(const H5FS_section_class_t *cls,
-    const H5FS_section_info_t *sect);
+    const H5FS_section_info_t *sect, hid_t dxpl_id);
 static H5FS_section_info_t *H5MF_sect_split(H5FS_section_info_t *sect,
     hsize_t frag_size);
 
@@ -343,7 +343,7 @@ H5MF_sect_valid(const H5FS_section_class_t H5_ATTR_UNUSED *cls,
 #ifdef NDEBUG
     H5_ATTR_UNUSED
 #endif /* NDEBUG */
-    *_sect)
+    *_sect, hid_t H5_ATTR_UNUSED dxpl_id)
 {
 #ifndef NDEBUG
     const H5MF_free_section_t *sect = (const H5MF_free_section_t *)_sect;   /* File free section */

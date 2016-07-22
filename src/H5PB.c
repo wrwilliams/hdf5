@@ -1253,6 +1253,7 @@ H5PB__write_entry(const H5F_t *f, H5PB_entry_t *page_entry, H5P_genplist_t *dxpl
 {
     haddr_t eoa;
     H5FD_mem_t type;
+    H5P_genplist_t *my_dxpl = dxpl;
     herr_t ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_STATIC
@@ -1260,6 +1261,15 @@ H5PB__write_entry(const H5F_t *f, H5PB_entry_t *page_entry, H5P_genplist_t *dxpl
     HDassert(page_entry);
 
     type = (H5F_MEM_PAGE_RAW == page_entry->type ? H5FD_MEM_DRAW : H5FD_MEM_SUPER);
+#ifdef H5_DEBUG_BUILD
+    if(H5FD_MEM_DRAW == type) {
+        if(NULL == (my_dxpl = (H5P_genplist_t *)H5I_object(H5AC_rawdata_dxpl_id)))
+            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
+    } else {
+        if(NULL == (my_dxpl = (H5P_genplist_t *)H5I_object(H5AC_dxpl_id)))
+            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
+    }
+#endif /* H5_DEBUG_BUILD */
 
     /* if the starting address of the page is larger than
        the EOA, then the entire page is discarded without writing. */
@@ -1275,7 +1285,7 @@ H5PB__write_entry(const H5F_t *f, H5PB_entry_t *page_entry, H5P_genplist_t *dxpl
         if(page_entry->addr + page_size > eoa)
             page_size = (size_t)(eoa - page_entry->addr);
 
-        if(H5FD_write(f->shared->lf, dxpl, type, page_entry->addr, 
+        if(H5FD_write(f->shared->lf, my_dxpl, type, page_entry->addr, 
                       page_size, page_entry->page_buf_ptr) < 0)
             HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "file write failed");
     }
