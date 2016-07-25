@@ -1266,7 +1266,7 @@ H5PB__write_entry(const H5F_t *f, H5PB_entry_t *page_entry, H5P_genplist_t *dxpl
         if(NULL == (my_dxpl = (H5P_genplist_t *)H5I_object(H5AC_rawdata_dxpl_id)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
     } else {
-        if(NULL == (my_dxpl = (H5P_genplist_t *)H5I_object(H5AC_dxpl_id)))
+        if(NULL == (my_dxpl = (H5P_genplist_t *)H5I_object(H5AC_ind_read_dxpl_id)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
     }
 #endif /* H5_DEBUG_BUILD */

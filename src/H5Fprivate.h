@@ -27,6 +27,9 @@
 #include "H5FDpublic.h"		/* File drivers				*/
 
 /* Private headers needed by this file */
+#ifdef H5_HAVE_PARALLEL
+#include "H5Pprivate.h"		/* Property lists			*/
+#endif /* H5_HAVE_PARALLEL */
 #include "H5VMprivate.h"		/* Vectors and arrays */
 
 
@@ -317,6 +320,9 @@
 #define H5F_PGEND_META_THRES(F) ((F)->shared->fs.pgend_meta_thres)
 #define H5F_POINT_OF_NO_RETURN(F) ((F)->shared->fs.point_of_no_return)
 
+#ifdef H5_HAVE_PARALLEL
+#define H5F_COLL_MD_READ(F)     ((F)->coll_md_read)
+#endif /* H5_HAVE_PARALLEL */
 #else /* H5F_MODULE */
 #define H5F_INTENT(F)           (H5F_get_intent(F))
 #define H5F_OPEN_NAME(F)        (H5F_get_open_name(F))
@@ -363,6 +369,9 @@
 #define H5F_THRESHOLD(F)    	(H5F_get_threshold(F))
 #define H5F_PGEND_META_THRES(F) (H5F_get_pgend_meta_thres(F))
 #define H5F_POINT_OF_NO_RETURN(F) (H5F_get_point_of_no_return(F))
+#ifdef H5_HAVE_PARALLEL
+#define H5F_COLL_MD_READ(F)     (H5F_coll_md_read(F))
+#endif /* H5_HAVE_PARALLEL */
 #endif /* H5F_MODULE */
 
 
@@ -468,6 +477,7 @@
 #define H5F_ACS_PAGE_BUFFER_SIZE_NAME           "page_buffer_size" /* the maximum size for the page buffer cache */
 #define H5F_ACS_PAGE_BUFFER_MIN_META_PERC_NAME  "page_buffer_min_meta_perc" /* the min metadata percentage for the page buffer cache */
 #define H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_NAME   "page_buffer_min_raw_perc" /* the min raw data percentage for the page buffer cache */
+#define H5F_ACS_COLL_MD_WRITE_FLAG_NAME         "collective_metadata_write" /* property indicating whether metadata writes are done collectively or not */
 
 /* ======================== File Mount properties ====================*/
 #define H5F_MNT_SYM_LOCAL_NAME 		"local"                 /* Whether absolute symlinks local to file. */
@@ -698,6 +708,10 @@ H5_DLL hbool_t H5F_use_tmp_space(const H5F_t *f);
 H5_DLL hbool_t H5F_is_tmp_addr(const H5F_t *f, haddr_t addr);
 H5_DLL hsize_t H5F_get_alignment(const H5F_t *f);
 H5_DLL hsize_t H5F_get_threshold(const H5F_t *f);
+#ifdef H5_HAVE_PARALLEL
+H5_DLL H5P_coll_md_read_flag_t H5F_coll_md_read(const H5F_t *f);
+H5_DLL void H5F_set_coll_md_read(H5F_t *f, H5P_coll_md_read_flag_t flag);
+#endif /* H5_HAVE_PARALLEL */
 
 /* Functions that retrieve values from VFD layer */
 H5_DLL hid_t H5F_get_driver_id(const H5F_t *f);
@@ -736,6 +750,7 @@ H5_DLL herr_t H5F_super_dirty(H5F_t *f);
 
 /* Parallel I/O (i.e. MPI) related routines */
 #ifdef H5_HAVE_PARALLEL
+H5_DLL herr_t H5F_get_mpi_handle(const H5F_t *f, MPI_File **f_handle);
 H5_DLL int H5F_mpi_get_rank(const H5F_t *f);
 H5_DLL MPI_Comm H5F_mpi_get_comm(const H5F_t *f);
 H5_DLL int H5F_mpi_get_size(const H5F_t *f);

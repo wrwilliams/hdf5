@@ -356,8 +356,7 @@ test_raw_data_handling(hid_t orig_fapl)
     char filename[FILENAME_LEN]; /* Filename to use */
     hid_t file_id = -1;          /* File ID */
     hid_t fcpl, fapl;
-    hid_t dxpl_id = H5P_DATASET_XFER_DEFAULT;
-    H5P_genplist_t *plist = (H5P_genplist_t *)H5I_object(dxpl_id);
+    H5P_genplist_t *plist = (H5P_genplist_t *)H5I_object(H5AC_rawdata_dxpl_id);
     size_t page_count = 0;
     int i, num_elements = 1000;
     haddr_t addr;
@@ -389,7 +388,7 @@ test_raw_data_handling(hid_t orig_fapl)
         FAIL_STACK_ERROR;
 
     /* allocate space for a 1000 elements */
-    if(HADDR_UNDEF == (addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_dxpl_id, sizeof(int)*(size_t)num_elements)))
+    if(HADDR_UNDEF == (addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
     /* intialize all the elements to have a value of -1 */
@@ -577,7 +576,6 @@ test_lru_processing(hid_t orig_fapl)
     char filename[FILENAME_LEN]; /* Filename to use */
     hid_t file_id = -1;          /* File ID */
     hid_t fcpl, fapl;
-    hid_t dxpl_id = H5P_DATASET_XFER_DEFAULT;
     size_t page_count = 0;
     int i, num_elements = 1000;
     haddr_t addr, search_addr;
@@ -610,7 +608,7 @@ test_lru_processing(hid_t orig_fapl)
         FAIL_STACK_ERROR;
 
     /* allocate space for a 1000 elements */
-    if(HADDR_UNDEF == (addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_dxpl_id, sizeof(int)*(size_t)num_elements)))
+    if(HADDR_UNDEF == (addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
     /* intialize all the elements to have a value of -1 */
@@ -747,7 +745,6 @@ test_min_threshold(hid_t orig_fapl)
     char filename[FILENAME_LEN]; /* Filename to use */
     hid_t file_id = -1;          /* File ID */
     hid_t fcpl, fapl;
-    hid_t dxpl_id = H5P_DATASET_XFER_DEFAULT;
     size_t page_count = 0;
     int i, num_elements = 500;
     H5PB_t *page_buf;
@@ -787,9 +784,9 @@ test_min_threshold(hid_t orig_fapl)
     if(page_buf->min_raw_count != 0)
         FAIL_STACK_ERROR;
 
-    if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_dxpl_id, sizeof(int)*(size_t)num_elements)))
+    if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
-    if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_dxpl_id, sizeof(int)*(size_t)num_elements)))
+    if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
     /* write all raw data, this would end up in page buffer since there is no metadata yet*/
@@ -812,15 +809,15 @@ test_min_threshold(hid_t orig_fapl)
         FAIL_STACK_ERROR;
 
     /* write all meta data, this would end up in page buffer */
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*100), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*100), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*300), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*300), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
@@ -872,23 +869,23 @@ test_min_threshold(hid_t orig_fapl)
     if(page_buf->min_raw_count != 5)
         FAIL_STACK_ERROR;
 
-    if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_dxpl_id, sizeof(int)*(size_t)num_elements)))
+    if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
-    if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_dxpl_id, sizeof(int)*(size_t)num_elements)))
+    if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
     /* write all meta data, this would end up in page buffer since there is no raw data yet*/
     for(i=0 ; i<50 ; i++)
         data[i] = i;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*100), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*100), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*300), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*300), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     page_count += 5;
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
@@ -917,15 +914,15 @@ test_min_threshold(hid_t orig_fapl)
     /* write and read more meta data and make sure that they don't end up in
        page buffer since the minimum metadata is actually the entire
        page buffer */
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*50), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*50), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*175), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*175), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*250), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*250), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*375), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*375), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*450), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*450), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
@@ -957,17 +954,17 @@ test_min_threshold(hid_t orig_fapl)
     if(page_buf->min_raw_count != 2)
         FAIL_STACK_ERROR;
 
-    if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_dxpl_id, sizeof(int)*(size_t)num_elements)))
+    if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
-    if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_dxpl_id, sizeof(int)*(size_t)num_elements)))
+    if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
     /* intialize all the elements to have a value of -1 */
     for(i=0 ; i<num_elements ; i++)
         data[i] = -1;
-    if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr, sizeof(int)*(size_t)num_elements, dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr, sizeof(int)*(size_t)num_elements, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*(size_t)num_elements, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*(size_t)num_elements, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
     /* fill the page buffer with raw data */
@@ -990,11 +987,11 @@ test_min_threshold(hid_t orig_fapl)
         FAIL_STACK_ERROR;
 
     /* add 3 meta entries evicting 3 raw entries */
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*100), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*100), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
@@ -1004,9 +1001,9 @@ test_min_threshold(hid_t orig_fapl)
         FAIL_STACK_ERROR;
 
     /* adding more meta entires should replace meta entries since raw data is at its minimum */
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*300), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*300), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     if(f->shared->page_buf->meta_count != 3)
         FAIL_STACK_ERROR;
@@ -1026,9 +1023,9 @@ test_min_threshold(hid_t orig_fapl)
         FAIL_STACK_ERROR;
 
     /* adding 2 meta entries should replace 2 entires at the bottom of the LRU */
-    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*49), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*49), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*121), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*121), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     if(f->shared->page_buf->meta_count != 2)
         FAIL_STACK_ERROR;
@@ -1056,9 +1053,9 @@ test_min_threshold(hid_t orig_fapl)
     if(page_buf->min_raw_count != 0)
         FAIL_STACK_ERROR;
 
-    if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_dxpl_id, sizeof(int)*(size_t)num_elements)))
+    if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
-    if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_dxpl_id, sizeof(int)*(size_t)num_elements)))
+    if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
     /* intialize all the elements to have a value of -1 */
@@ -1066,7 +1063,7 @@ test_min_threshold(hid_t orig_fapl)
         data[i] = -1;
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr, sizeof(int)*(size_t)num_elements, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*(size_t)num_elements, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*(size_t)num_elements, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
     /* fill the page buffer with raw data */
@@ -1087,9 +1084,9 @@ test_min_threshold(hid_t orig_fapl)
         FAIL_STACK_ERROR;
 
     /* add 2 meta entries evicting 2 raw entries */
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*100), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*100), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
@@ -1127,7 +1124,7 @@ test_min_threshold(hid_t orig_fapl)
         FAIL_STACK_ERROR;
 
     /* write a metadata entry that should replace the metadata entry at the bottom of the LRU */
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*250), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*250), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
@@ -1196,9 +1193,9 @@ test_stats_collection(hid_t orig_fapl)
     if(NULL == (f = (H5F_t *)H5I_object(file_id)))
         FAIL_STACK_ERROR;
 
-    if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_dxpl_id, sizeof(int)*(size_t)num_elements)))
+    if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
-    if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_dxpl_id, sizeof(int)*(size_t)num_elements)))
+    if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
     /* intialize all the elements to have a value of -1 */
@@ -1206,7 +1203,7 @@ test_stats_collection(hid_t orig_fapl)
         data[i] = -1;
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr, sizeof(int)*(size_t)num_elements, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*(size_t)num_elements, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*(size_t)num_elements, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
     for(i=0 ; i<100 ; i++)
@@ -1217,15 +1214,15 @@ test_stats_collection(hid_t orig_fapl)
         FAIL_STACK_ERROR;
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*200), sizeof(int)*50, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*100), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*100), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*300), sizeof(int)*50, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*400), sizeof(int)*50, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*300), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*300), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*250), sizeof(int)*50, H5AC_rawdata_dxpl_id, data) < 0)
@@ -1234,13 +1231,13 @@ test_stats_collection(hid_t orig_fapl)
         FAIL_STACK_ERROR;
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*450), sizeof(int)*50, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*100, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*50), sizeof(int)*50, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*150), sizeof(int)*50, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*91, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*91, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr, sizeof(int)*50, H5AC_rawdata_dxpl_id, data) < 0)
@@ -1249,19 +1246,19 @@ test_stats_collection(hid_t orig_fapl)
         FAIL_STACK_ERROR;
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*200), sizeof(int)*50, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*100), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*100), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*300), sizeof(int)*50, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*400), sizeof(int)*50, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*300), sizeof(int)*100, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*300), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*50, H5AC_dxpl_id, data) < 0)
+    if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
     //H5PB_print_stats(f->shared->page_buf);
