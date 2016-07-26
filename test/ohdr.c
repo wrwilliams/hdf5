@@ -161,7 +161,7 @@ error:
  *      checked as verifying that the object header has remained in the cache.
  */
 static herr_t
-test_ohdr_cache(char *filename, hid_t fcpl, hid_t fapl)
+test_ohdr_cache(char *filename, hid_t fapl)
 {
     hid_t	file = -1;              /* File ID */
     hid_t       my_fapl;                /* FAPL ID */
@@ -196,7 +196,7 @@ test_ohdr_cache(char *filename, hid_t fcpl, hid_t fapl)
         FAIL_STACK_ERROR
 
     /* Create the file to operate on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         FAIL_STACK_ERROR
     if(H5Pclose(my_fapl) < 0)
 	FAIL_STACK_ERROR
@@ -295,6 +295,294 @@ error:
     return -1;
 } /* test_ohdr_cache() */
 
+/*
+ *  To test objects with unknown messages in a file with:
+ *  	a) H5O_BOGUS_VALID_ID:
+ *	   --the bogus_id is within the range of H5O_msg_class_g[]
+ *  	b) H5O_BOGUS_INVALID_ID:
+ *  	   --the bogus_id is outside the range of H5O_msg_class_g[]
+ *
+ *   The test file is FILE_BOGUS: "tbogus.h5" generated with gen_bogus.c
+ *   --objects that have unknown header messages with H5O_BOGUS_VALID_ID in "/"
+ *   --objects that have unknown header messages with H5O_BOGUS_INVALID_ID in "/group"
+ *
+ *   The test also uses the test file FILENAME[0] (ohdr.h5): the parameter "filename"
+ */
+static herr_t
+test_unknown(unsigned bogus_id, char *filename, hid_t fapl)
+{
+    hid_t fid = -1;	/* file ID */
+    hid_t gid = -1;	/* group ID */
+    hid_t did = -1;	/* Dataset ID */
+    hid_t sid = -1;     /* Dataspace ID */
+    hid_t aid = -1;     /* Attribute ID */
+    hid_t loc = -1;	/* location: file or group ID */
+    hid_t fid_bogus = -1;	/* bogus file ID */
+    hid_t gid_bogus = -1;	/* bogus group ID */
+    hid_t loc_bogus = -1;	/* location: bogus file or group ID */
+    const char *testfile = H5_get_srcdir_filename(FILE_BOGUS);
+
+    TESTING("object with unknown header message and no flags set");
+
+    /* Open filename */
+    if((fid = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
+	TEST_ERROR
+
+    /* Open FILE_BOGUS */
+    if((fid_bogus = H5Fopen(testfile, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0)
+	TEST_ERROR
+
+    /* Set up location ID depending on bogus_id */
+    if(bogus_id == H5O_BOGUS_INVALID_ID) {
+	/* Open "group" in FILE_BOGUS */
+	if((gid_bogus = H5Gopen2(fid_bogus, "group", H5P_DEFAULT)) < 0) 
+	    FAIL_STACK_ERROR
+	loc_bogus = gid_bogus;
+
+	/* Create "group" in filename */
+	if((gid = H5Gcreate2(fid, "group", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+	    FAIL_STACK_ERROR
+	loc = gid;
+
+    } else { /* H5O_BOGUS_VALID_ID */
+	loc_bogus = fid_bogus;
+	loc = fid;
+    }
+
+   /* Open the dataset with the unknown header message, but no extra flags */
+    if((did = H5Dopen2(loc_bogus, "Dataset1", H5P_DEFAULT)) < 0)
+	TEST_ERROR
+    if(H5Dclose(did) < 0)
+	TEST_ERROR
+
+    PASSED();
+
+    TESTING("object in r/o file with unknown header message & 'fail if unknown and open for write' flag set");
+
+    /* Open the dataset with the unknown header message, and "fail if unknown and open for write" flag */
+    if((did = H5Dopen2(loc_bogus, "Dataset2", H5P_DEFAULT)) < 0)
+	TEST_ERROR
+    if(H5Dclose(did) < 0)
+	TEST_ERROR
+
+    PASSED();
+
+    TESTING("object in r/o file with unknown header message & 'fail if unknown always' flag set");
+
+    /* Attempt to open the dataset with the unknown header message, and "fail if unknown always" flag */
+    H5E_BEGIN_TRY {
+	did = H5Dopen2(loc_bogus, "Dataset3", H5P_DEFAULT);
+    } H5E_END_TRY;
+    if(did >= 0) {
+	H5Dclose(did);
+	TEST_ERROR
+    } /* end if */
+
+    PASSED();
+
+    TESTING("object with unknown header message & 'mark if unknown' flag set");
+
+    /* Copy object with "mark if unknown" flag on message into file (FILENAME[0]) that can be modified */
+    if(H5Ocopy(loc_bogus, "Dataset4", loc, "Dataset4", H5P_DEFAULT, H5P_DEFAULT) < 0)
+	TEST_ERROR
+
+    /* Closing: filename */
+    if(bogus_id == H5O_BOGUS_INVALID_ID) {
+	if(H5Gclose(gid) < 0)
+	    FAIL_STACK_ERROR
+    }
+    if(H5Fclose(fid) < 0)
+       TEST_ERROR
+
+    /* Re-open filename, with read-only permissions */
+    if((fid = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
+	TEST_ERROR
+
+    /* Set up location ID depending on bogus_id */
+    if(bogus_id == H5O_BOGUS_INVALID_ID) {
+	/* Open "group" in filename */
+	if((gid = H5Gopen2(fid, "group", H5P_DEFAULT)) < 0) 
+	    FAIL_STACK_ERROR
+	loc = gid;
+    } else
+	loc = fid;
+
+    /* Open the dataset with the "mark if unknown" message */
+    if((did = H5Dopen2(loc, "Dataset4", H5P_DEFAULT)) < 0)
+	TEST_ERROR
+
+    /* Check that the "unknown" message was _NOT_ marked */
+    if(H5O_check_msg_marked_test(did, FALSE) < 0)
+	FAIL_STACK_ERROR
+
+    /* Close the dataset */
+    if(H5Dclose(did) < 0)
+	TEST_ERROR
+
+    /* Close "group" in filename depending on bogus_id */
+    if(bogus_id == H5O_BOGUS_INVALID_ID) {
+	if(H5Gclose(gid) < 0)
+	    FAIL_STACK_ERROR
+    }
+
+    /* Close filename (to flush change to object header) */
+    if(H5Fclose(fid) < 0)
+	TEST_ERROR
+
+    /* Re-open filename */
+    if((fid = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
+	TEST_ERROR
+
+    /* Set up location ID depending on bogus_id */
+    if(bogus_id == H5O_BOGUS_INVALID_ID) {
+	/* Open "group" in filename */
+	if((gid = H5Gopen2(fid, "group", H5P_DEFAULT)) < 0) 
+	    FAIL_STACK_ERROR
+	loc = gid;
+    } else
+	loc = fid;
+
+    /* Open the dataset with the "mark if unknown" message */
+    if((did = H5Dopen2(loc, "Dataset4", H5P_DEFAULT)) < 0)
+	TEST_ERROR
+
+    /* Create data space */
+    if((sid = H5Screate(H5S_SCALAR)) < 0)
+	FAIL_STACK_ERROR
+
+    /* Create an attribute, to get the object header into write access */
+    if((aid = H5Acreate2(did, "Attr", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+	FAIL_STACK_ERROR
+
+    /* Close dataspace */
+    if(H5Sclose(sid) < 0)
+	FAIL_STACK_ERROR
+
+    /* Close attribute */
+    if(H5Aclose(aid) < 0)
+	FAIL_STACK_ERROR
+
+    /* Close the dataset */
+    if(H5Dclose(did) < 0)
+	TEST_ERROR
+
+    /* Close "group" in filename depending on bogus_id */
+    if(bogus_id == H5O_BOGUS_INVALID_ID) {
+	if(H5Gclose(gid) < 0)
+	    FAIL_STACK_ERROR
+    }
+
+    /* Close filename (to flush change to object header) */
+    if(H5Fclose(fid) < 0)
+	TEST_ERROR
+
+    /* Re-open filename */
+    if((fid = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
+	TEST_ERROR
+
+    /* Set up location ID depending on bogus_id */
+    if(bogus_id == H5O_BOGUS_INVALID_ID) {
+	/* Open "group" in filename */
+	if((gid = H5Gopen2(fid, "group", H5P_DEFAULT)) < 0) 
+	    FAIL_STACK_ERROR
+	loc = gid;
+    } else
+	loc = fid;
+
+    /* Re-open the dataset with the "mark if unknown" message */
+    if((did = H5Dopen2(loc, "Dataset4", H5P_DEFAULT)) < 0)
+	TEST_ERROR
+
+    /* Check that the "unknown" message was marked */
+    if(H5O_check_msg_marked_test(did, TRUE) < 0)
+	FAIL_STACK_ERROR
+
+    /* Close the dataset */
+    if(H5Dclose(did) < 0)
+	TEST_ERROR
+
+    /* Closing: filename */ 
+    if(bogus_id == H5O_BOGUS_INVALID_ID) {
+	if(H5Gclose(gid) < 0)
+	    TEST_ERROR
+    }
+    if(H5Fclose(fid) < 0)
+	TEST_ERROR
+
+    PASSED();
+
+    /* Closing: FILE_BOGUS */
+    if(bogus_id == H5O_BOGUS_INVALID_ID) {
+	if(H5Gclose(gid_bogus) < 0)
+	    TEST_ERROR
+    }
+    if(H5Fclose(fid_bogus) < 0)
+	TEST_ERROR
+
+    TESTING("object in r/w file with unknown header message & 'fail if unknown and open for write' flag set");
+
+    /* Open FILE_BOGUS with RW intent this time */
+    if((fid_bogus = H5Fopen(testfile, H5F_ACC_RDWR, H5P_DEFAULT)) < 0)
+	TEST_ERROR
+
+    /* Set up location ID */
+    if(bogus_id == H5O_BOGUS_INVALID_ID) {
+	/* Open "group" in FILE_BOGUS */
+	if((gid_bogus = H5Gopen2(fid_bogus, "group", H5P_DEFAULT)) < 0) 
+	    FAIL_STACK_ERROR
+	loc_bogus = gid_bogus;
+    } else
+	loc_bogus = fid_bogus;
+
+    /* Attempt to open the dataset with the unknown header message, and "fail if unknown and open for write" flag */
+    H5E_BEGIN_TRY {
+	did = H5Dopen2(loc_bogus, "Dataset2", H5P_DEFAULT);
+    } H5E_END_TRY;
+    if(did >= 0) {
+	H5Dclose(did);
+	TEST_ERROR
+    } /* end if */
+
+    PASSED();
+
+    TESTING("object in r/w file with unknown header message & 'fail if unknown always' flag set");
+
+    /* Attempt to open the dataset with the unknown header message, and "fail if unknown always" flag */
+    H5E_BEGIN_TRY {
+	did = H5Dopen2(loc_bogus, "Dataset3", H5P_DEFAULT);
+    } H5E_END_TRY;
+    if(did >= 0) {
+	H5Dclose(did);
+        TEST_ERROR
+    } /* end if */
+
+    /* Closing: FILE_BOGUS */
+    if(bogus_id == H5O_BOGUS_INVALID_ID) {
+	if(H5Gclose(gid_bogus) < 0)
+	    TEST_ERROR
+    }
+    if(H5Fclose(fid_bogus) < 0)
+	TEST_ERROR
+
+
+    PASSED();
+
+    return 0;
+
+error:
+    H5E_BEGIN_TRY {
+        H5Fclose(fid);
+	H5Gclose(gid);
+        H5Fclose(fid_bogus);
+	H5Gclose(gid_bogus);
+	H5Dclose(did);
+	H5Sclose(sid);
+	H5Aclose(aid);
+    } H5E_END_TRY;
+
+    return -1;
+} /* test_unknown() */
+
 
 /*-------------------------------------------------------------------------
  * Function:	main
@@ -313,7 +601,6 @@ int
 main(void)
 {
     hid_t	fapl = -1, file = -1;
-    hid_t 	fcpl = -1;		/* File creation property list ID */
     hid_t	dset = -1;
     H5F_t	*f = NULL;
     char	filename[1024];
@@ -353,18 +640,12 @@ main(void)
         if(H5Pset_libver_bounds(fapl, (b ? H5F_LIBVER_LATEST : H5F_LIBVER_EARLIEST), H5F_LIBVER_LATEST) < 0)
             FAIL_STACK_ERROR
 
-	if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0) TEST_ERROR
-
-	if(b && !contig_addr_vfd)
-	    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, FALSE, (hsize_t)1) < 0)
-		FAIL_STACK_ERROR
-
 	/* test on object continuation block */
 	if(test_cont(filename, fapl) < 0)
             FAIL_STACK_ERROR
 
         /* Create the file to operate on */
-        if((file = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
+        if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
             TEST_ERROR
         if(NULL == (f = (H5F_t *)H5I_object(file)))
             FAIL_STACK_ERROR
@@ -682,183 +963,28 @@ main(void)
 
         PASSED();
 
-
-        /* Test reading datasets with undefined object header messages
-         * and the various "fail/mark if unknown" object header message flags
-         */
-        HDputs("Accessing objects with unknown header messages:");
-        {
-            hid_t file2;                    /* File ID for 'bogus' object file */
-            hid_t sid;                      /* Dataspace ID */
-            hid_t aid;                      /* Attribute ID */
-            const char *testfile = H5_get_srcdir_filename(FILE_BOGUS);
-
-            TESTING("object with unknown header message and no flags set");
-
-            /* Open the file with objects that have unknown header messages (generated with gen_bogus.c) */
-            if((file2 = H5Fopen(testfile, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0)
-                TEST_ERROR
-
-            /* Open the dataset with the unknown header message, but no extra flags */
-            if((dset = H5Dopen2(file2, "/Dataset1", H5P_DEFAULT)) < 0)
-                TEST_ERROR
-            if(H5Dclose(dset) < 0)
-                TEST_ERROR
-
-            PASSED();
-
-            TESTING("object in r/o file with unknown header message & 'fail if unknown and open for write' flag set");
-
-            /* Open the dataset with the unknown header message, and "fail if unknown and open for write" flag */
-            if((dset = H5Dopen2(file2, "/Dataset2", H5P_DEFAULT)) < 0)
-                TEST_ERROR
-            if(H5Dclose(dset) < 0)
-                TEST_ERROR
-
-            PASSED();
-
-            TESTING("object in r/o file with unknown header message & 'fail if unknown always' flag set");
-
-            /* Attempt to open the dataset with the unknown header message, and "fail if unknown always" flag */
-            H5E_BEGIN_TRY {
-                dset = H5Dopen2(file2, "/Dataset3", H5P_DEFAULT);
-            } H5E_END_TRY;
-            if(dset >= 0) {
-                H5Dclose(dset);
-                TEST_ERROR
-            } /* end if */
-
-            PASSED();
-
-            TESTING("object with unknown header message & 'mark if unknown' flag set");
-
-            /* Copy object with "mark if unknown" flag on message into file that can be modified */
-            if(H5Ocopy(file2, "/Dataset4", file, "/Dataset4", H5P_DEFAULT, H5P_DEFAULT) < 0)
-                TEST_ERROR
-
-            /* Close the file we created (to flush changes to file) */
-            if(H5Fclose(file) < 0)
-                TEST_ERROR
-
-            /* Re-open the file created, with read-only permissions */
-            if((file = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
-                TEST_ERROR
-
-            /* Open the dataset with the "mark if unknown" message */
-            if((dset = H5Dopen2(file, "/Dataset4", H5P_DEFAULT)) < 0)
-                TEST_ERROR
-
-            /* Check that the "unknown" message was _NOT_ marked */
-            if(H5O_check_msg_marked_test(dset, FALSE) < 0)
-                FAIL_STACK_ERROR
-
-            /* Close the dataset */
-            if(H5Dclose(dset) < 0)
-                TEST_ERROR
-
-            /* Close the file we created (to flush change to object header) */
-            if(H5Fclose(file) < 0)
-                TEST_ERROR
-
-            /* Re-open the file created */
-            if((file = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
-                TEST_ERROR
-
-            /* Open the dataset with the "mark if unknown" message */
-            if((dset = H5Dopen2(file, "/Dataset4", H5P_DEFAULT)) < 0)
-                TEST_ERROR
-
-            /* Create data space */
-            if((sid = H5Screate(H5S_SCALAR)) < 0)
-                FAIL_STACK_ERROR
-
-            /* Create an attribute, to get the object header into write access */
-            if((aid = H5Acreate2(dset, "Attr", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
-                FAIL_STACK_ERROR
-
-            /* Close dataspace */
-            if(H5Sclose(sid) < 0)
-                FAIL_STACK_ERROR
-
-            /* Close attribute */
-            if(H5Aclose(aid) < 0)
-                FAIL_STACK_ERROR
-
-            /* Close the dataset */
-            if(H5Dclose(dset) < 0)
-                TEST_ERROR
-
-            /* Close the file we created (to flush change to object header) */
-            if(H5Fclose(file) < 0)
-                TEST_ERROR
-
-            /* Re-open the file created */
-            if((file = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
-                TEST_ERROR
-
-            /* Re-open the dataset with the "mark if unknown" message */
-            if((dset = H5Dopen2(file, "/Dataset4", H5P_DEFAULT)) < 0)
-                TEST_ERROR
-
-            /* Check that the "unknown" message was marked */
-            if(H5O_check_msg_marked_test(dset, TRUE) < 0)
-                FAIL_STACK_ERROR
-
-            /* Close the dataset */
-            if(H5Dclose(dset) < 0)
-                TEST_ERROR
-
-            /* Close the file with the bogus objects */
-            if(H5Fclose(file2) < 0)
-                TEST_ERROR
-
-            PASSED();
-
-            /* Open the file with objects that have unknown header messages (generated with gen_bogus.c) with RW intent this time */
-            if((file2 = H5Fopen(testfile, H5F_ACC_RDWR, H5P_DEFAULT)) < 0)
-                TEST_ERROR
-
-            TESTING("object in r/w file with unknown header message & 'fail if unknown and open for write' flag set");
-
-            /* Attempt to open the dataset with the unknown header message, and "fail if unknown and open for write" flag */
-            H5E_BEGIN_TRY {
-                dset = H5Dopen2(file2, "/Dataset2", H5P_DEFAULT);
-            } H5E_END_TRY;
-            if(dset >= 0) {
-                H5Dclose(dset);
-                TEST_ERROR
-            } /* end if */
-
-            PASSED();
-
-            TESTING("object in r/w file with unknown header message & 'fail if unknown always' flag set");
-
-            /* Attempt to open the dataset with the unknown header message, and "fail if unknown always" flag */
-            H5E_BEGIN_TRY {
-                dset = H5Dopen2(file2, "/Dataset3", H5P_DEFAULT);
-            } H5E_END_TRY;
-            if(dset >= 0) {
-                H5Dclose(dset);
-                TEST_ERROR
-            } /* end if */
-
-            /* Close the file with the bogus objects */
-            if(H5Fclose(file2) < 0)
-                TEST_ERROR
-
-            PASSED();
-        }
-
         /* Close the file we created */
         if(H5Fclose(file) < 0)
             TEST_ERROR
 
-	/* Test object header creation metadata cache issues */
-	if(test_ohdr_cache(filename, fcpl, fapl) < 0)
-            TEST_ERROR
+        /* Test reading datasets with undefined object header messages
+         * and the various "fail/mark if unknown" object header message flags
+         */
+	HDputs("Accessing objects with unknown header messages: H5O_BOGUS_VALID_ID");
+        {
+            if(test_unknown(H5O_BOGUS_VALID_ID, filename, fapl) < 0)
+                TEST_ERROR
+        }
 
-        if(H5Pclose(fcpl) < 0)
-            TEST_ERROR
+        HDputs("Accessing objects with unknown header messages: H5O_BOGUS_INVALID_ID");
+        {
+            if(test_unknown(H5O_BOGUS_INVALID_ID, filename, fapl) < 0)
+                TEST_ERROR
+        }
+
+	/* Test object header creation metadata cache issues */
+	if(test_ohdr_cache(filename, fapl) < 0)
+	    TEST_ERROR
     } /* end for */
 
     /* Verify symbol table messages are cached */

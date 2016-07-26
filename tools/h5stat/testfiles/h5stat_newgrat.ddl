@@ -30,8 +30,8 @@ File space information for file metadata (in bytes):
 		B-tree/List: 0
 		Heap: 0
 	Free-space managers:
-		Header: 180
-		Amount of free space: 132
+		Header: 0
+		Amount of free space: 0
 Small groups (with 0 to 9 links):
 	# of groups with 0 link(s): 35000
 	Total # of small groups: 35000
@@ -78,20 +78,17 @@ Attribute bins:
 	# of objects with 100 - 999 attributes: 1
 	Total # of objects with attributes: 1
 	Max. # of attributes to objects: 100
-Free-space persist: TRUE
+Free-space persist: FALSE
 Free-space section threshold: 1 bytes
 Small size free-space sections (< 10 bytes):
-	# of sections of size 1: 1
-	Total # of small size sections: 1
+	Total # of small size sections: 0
 Free-space section bins:
-	# of sections of size 1 - 9: 1
-	# of sections of size 10 - 99: 4
-	Total # of sections: 5
+	Total # of sections: 0
 File space management strategy: H5F_FSPACE_STRATEGY_AGGR
 File space page size: 4096 bytes
 Summary of file space information:
-  File metadata: 6362048 bytes
+  File metadata: 6361868 bytes
   Raw data: 0 bytes
-  Amount/Percent of tracked free space: 132 bytes/0.0%
-  Unaccounted space: 0 bytes
+  Amount/Percent of tracked free space: 0 bytes/0.0%
+  Unaccounted space: 312 bytes
 Total space: 6362180 bytes

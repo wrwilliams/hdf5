@@ -1924,7 +1924,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
 
 	/* Write file space info message to superblock extension object header */
 	/* Create the superblock extension object header in advance if needed */
-	if(H5F_super_ext_write_msg(f, dxpl_id, &fsinfo, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE|H5O_MSG_FLAG_MARK_IF_UNKNOWN, TRUE) < 0)
+	if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, TRUE) < 0)
 	    HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, "error in writing message to superblock extension")
 
         /* Re-allocate free-space manager header and/or section info header */
@@ -1937,7 +1937,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
 
 	/* Update the file space info message in superblock extension object header */
 	if(update)
-            if(H5F_super_ext_write_msg(f, dxpl_id, &fsinfo, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE|H5O_MSG_FLAG_MARK_IF_UNKNOWN, FALSE) < 0)
+	    if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, FALSE) < 0)
 	        HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, "error in writing message to superblock extension")
 
 	/* Trying shrinking the EOA for the file */
@@ -2059,7 +2059,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
 
 	/* Write file space info message to superblock extension object header */
 	/* Create the superblock extension object header in advance if needed */
-	if(H5F_super_ext_write_msg(f, dxpl_id, &fsinfo, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE|H5O_MSG_FLAG_MARK_IF_UNKNOWN, TRUE) < 0)
+	if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, TRUE) < 0)
 	    HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, "error in writing message to superblock extension")
 
 	/* Trying shrinking the EOA for the file */
@@ -2082,7 +2082,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
 	/* Update the file space info message in superblock extension object header */
 	if(update) {
 	    fsinfo.last_small = f->shared->fs.track_last_small;
-            if(H5F_super_ext_write_msg(f, dxpl_id, &fsinfo, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE|H5O_MSG_FLAG_MARK_IF_UNKNOWN, FALSE) < 0)
+            if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, FALSE) < 0)
 	        HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, "error in writing message to superblock extension")
 	} /* end if */
 
@@ -2119,7 +2119,7 @@ HDfprintf(stderr, "%s: Check 2.0 - ptype = %u, fs_man = %p, fs_addr = %a\n", FUN
 
 	/* Write file space info message to superblock extension object header */
 	/* Create the superblock extension object header in advance if needed */
-	if(H5F_super_ext_write_msg(f, dxpl_id, &fsinfo, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE|H5O_MSG_FLAG_MARK_IF_UNKNOWN, FALSE) < 0)
+	if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, FALSE) < 0)
 	    HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, "error in writing message to superblock extension")
     } /* end else */
 
