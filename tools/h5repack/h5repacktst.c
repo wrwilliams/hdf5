@@ -517,7 +517,7 @@ int main (void)
     * deflate
     *-------------------------------------------------------------------------
     */
-    TESTING("    adding deflate filter");
+    TESTING("    adding deflate filter (old_format)");
 
 #ifdef H5_HAVE_FILTER_DEFLATE
 
@@ -528,6 +528,34 @@ int main (void)
 
     if (h5repack_init (&pack_options, 0) < 0)
         GOERROR;
+    if (h5repack_addfilter("dset1:GZIP=9",&pack_options) < 0)
+        GOERROR;
+    if (h5repack_addlayout("dset1:CHUNK=20x10",&pack_options) < 0)
+        GOERROR;
+    if (h5repack(FNAME4,FNAME4OUT,&pack_options) < 0)
+        GOERROR;
+    if (h5diff(FNAME4,FNAME4OUT,NULL,NULL,&diff_options) >0)
+        GOERROR;
+    if (h5repack_verify(FNAME4, FNAME4OUT, &pack_options) <= 0)
+        GOERROR;
+    if (h5repack_end (&pack_options) < 0)
+        GOERROR;
+    PASSED();
+#else
+    SKIPPED();
+#endif
+
+    TESTING("    adding deflate filter (new format)");
+#ifdef H5_HAVE_FILTER_DEFLATE
+    /*-------------------------------------------------------------------------
+    * test an individual object option
+    * 	For new format, "dset1" should be using Fixed Array indexing
+    *-------------------------------------------------------------------------
+    */
+
+    if (h5repack_init (&pack_options, 0) < 0)
+        GOERROR;
+    pack_options.latest=1;
     if (h5repack_addfilter("dset1:GZIP=9",&pack_options) < 0)
         GOERROR;
     if (h5repack_addlayout("dset1:CHUNK=20x10",&pack_options) < 0)
@@ -785,7 +813,7 @@ int main (void)
     PASSED();
 
 
-    TESTING("    adding layout chunked");
+    TESTING("    adding layout chunked (old format)");
 
     /*-------------------------------------------------------------------------
     * test an individual object option
@@ -794,6 +822,29 @@ int main (void)
 
     if (h5repack_init (&pack_options, 0) < 0)
         GOERROR;
+    if (h5repack_addlayout("dset1:CHUNK=20x10",&pack_options) < 0)
+        GOERROR;
+    if (h5repack(FNAME4,FNAME4OUT,&pack_options) < 0)
+        GOERROR;
+    if (h5diff(FNAME4,FNAME4OUT,NULL,NULL,&diff_options) >0)
+        GOERROR;
+    if (h5repack_verify(FNAME4, FNAME4OUT, &pack_options )<= 0)
+        GOERROR;
+    if (h5repack_end (&pack_options) < 0)
+        GOERROR;
+    PASSED();
+
+    TESTING("    adding layout chunked (new format)");
+
+    /*-------------------------------------------------------------------------
+    * test an individual object option
+    * 	For new format, "dset1" should be using Fixed Array indexing
+    *-------------------------------------------------------------------------
+    */
+
+    if (h5repack_init (&pack_options, 0) < 0)
+        GOERROR;
+    pack_options.latest = 1;
     if (h5repack_addlayout("dset1:CHUNK=20x10",&pack_options) < 0)
         GOERROR;
     if (h5repack(FNAME4,FNAME4OUT,&pack_options) < 0)

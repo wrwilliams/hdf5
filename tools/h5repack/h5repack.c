@@ -77,7 +77,6 @@ int h5repack(const char* infile, const char* outfile, pack_opt_t *options) {
  *
  *-------------------------------------------------------------------------
  */
-
 int
 h5repack_init(pack_opt_t *options, int verbose)
 {

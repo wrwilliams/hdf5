@@ -1536,6 +1536,13 @@
 ./tools/testfiles/tindicessub3.ddl
 ./tools/testfiles/tindicessub4.ddl
 ./tools/testfiles/tindicessub1.ddl
+./tools/testfiles/tints4dims.ddl
+./tools/testfiles/tints4dimsBlock2.ddl
+./tools/testfiles/tints4dimsBlockEq.ddl
+./tools/testfiles/tints4dimsCount2.ddl
+./tools/testfiles/tints4dimsCountEq.ddl
+./tools/testfiles/tints4dimsStride2.ddl
+./tools/testfiles/tints4dims.h5
 ./tools/testfiles/tintsattrs.ddl
 ./tools/testfiles/tintsattrs.h5
 ./tools/testfiles/tlarge_objname.ddl
@@ -2257,6 +2264,8 @@
 ./tools/h5copy/testfiles/h5copy_extlinks_trg.h5
 ./tools/h5copy/testfiles/h5copy_extlinks_src.out.ls
 ./tools/h5copy/testfiles/h5copy_misc1.out
+./tools/h5copy/testfiles/h5copytst_new.h5
+./tools/h5copy/testfiles/h5copytst_new.out.ls
 
 # test files for h5mkgrp
 ./tools/testfiles/h5mkgrp_nested_p.ls
@@ -2371,6 +2380,7 @@
 ./hl/test/test_image.c
 ./hl/test/test_lite.c
 ./hl/test/test_packet.c
+./hl/test/test_packet_vlen.c
 ./hl/test/test_table.c
 ./hl/test/test_ds_le.h5
 ./hl/test/test_ds_be.h5
@@ -2485,6 +2495,7 @@
 ./java/src/jni/h5zImp.h
 
 ./java/src/hdf/CMakeLists.txt
+./java/src/hdf/overview.html
 ./java/src/hdf/hdf5lib/CMakeLists.txt
 
 ./java/src/hdf/hdf5lib/callbacks/Callbacks.java
@@ -2682,7 +2693,8 @@
 ./java/test/CMakeLists.txt
 ./java/test/junit.sh.in
 ./java/test/JUnit-interface.txt
-./java/test/h5ex_g_iterate.hdf
+./java/test/JUnit-interface.ert
+./java/test/h5ex_g_iterate.orig
 ./java/test/TestH5.java
 ./java/test/TestH5A.java
 ./java/test/TestH5Dparams.java

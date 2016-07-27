@@ -429,19 +429,19 @@ static int parse_command_line(int argc, const char **argv, pack_opt_t* options)
                 break;
 
             case 'L':
-                options->latest = 1;
+                options->latest = TRUE;
                 break;
 
             case 'c':
                 options->grp_compact = HDatoi( opt_arg );
                 if (options->grp_compact > 0)
-                    options->latest = 1; /* must use latest format */
+                    options->latest = TRUE; /* must use latest format */
                 break;
 
             case 'd':
                 options->grp_indexed = HDatoi( opt_arg );
                 if (options->grp_indexed > 0)
-                    options->latest = 1; /* must use latest format */
+                    options->latest = TRUE; /* must use latest format */
                 break;
 
             case 's':

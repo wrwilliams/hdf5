@@ -1734,7 +1734,7 @@ H5MF_try_shrink(H5F_t *f, H5FD_mem_t alloc_type, hid_t dxpl_id, haddr_t addr,
     H5FS_section_class_t *sect_cls;	/* Section class */
     H5P_genplist_t *dxpl = NULL;        /* DXPL for setting ring */
     H5AC_ring_t orig_ring = H5AC_RING_INV;      /* Original ring value */
-    htri_t	ret_value = FAIL;       /* Return value */
+    htri_t ret_value = FAIL;                   /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 #ifdef H5MF_ALLOC_DEBUG
