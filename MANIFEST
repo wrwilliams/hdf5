@@ -512,6 +512,7 @@
 ./src/H5Dlayout.c
 ./src/H5Dmodule.h
 ./src/H5Dmpio.c
+./src/H5Dnone.c
 ./src/H5Doh.c
 ./src/H5Dpkg.h
 ./src/H5Dprivate.h
@@ -722,6 +723,7 @@
 ./src/H5Odtype.c
 ./src/H5Oefl.c
 ./src/H5Ofill.c
+./src/H5Oflush.c
 ./src/H5Ofsinfo.c
 ./src/H5Oginfo.c
 ./src/H5Olayout.c
@@ -1347,6 +1349,8 @@
 ./tools/h5stat/testfiles/h5stat_filters.h5
 ./tools/h5stat/testfiles/h5stat_help1.ddl
 ./tools/h5stat/testfiles/h5stat_help2.ddl
+./tools/h5stat/testfiles/h5stat_idx.h5
+./tools/h5stat/testfiles/h5stat_idx.ddl
 ./tools/h5stat/testfiles/h5stat_links1.ddl
 ./tools/h5stat/testfiles/h5stat_links2.ddl
 ./tools/h5stat/testfiles/h5stat_links3.ddl
@@ -1487,6 +1491,8 @@
 ./tools/testfiles/tdset-3s.ddl
 ./tools/testfiles/tdset.h5
 ./tools/testfiles/tdset2.h5
+./tools/testfiles/tdset_idx.ls
+./tools/testfiles/tdset_idx.h5
 ./tools/testfiles/tempty.ddl
 ./tools/testfiles/tempty.h5
 ./tools/testfiles/tenum.h5
@@ -2347,6 +2353,9 @@
 ./hl/src/H5IM.c
 ./hl/src/H5IMprivate.h
 ./hl/src/H5IMpublic.h
+./hl/src/H5LD.c
+./hl/src/H5LDprivate.h
+./hl/src/H5LDpublic.h
 ./hl/src/H5LT.c
 ./hl/src/H5LTanalyze.c
 ./hl/src/H5LTanalyze.l
@@ -2365,33 +2374,37 @@
 ./hl/test/COPYING
 ./hl/test/H5srcdir_str.h.in
 ./hl/test/Makefile.am
+./hl/test/dectris_hl_perf.c
 ./hl/test/dsdata.txt
 ./hl/test/dslat.txt
 ./hl/test/dslon.txt
 ./hl/test/dtype_file.txt
 ./hl/test/dtype_file_readable.txt
 ./hl/test/earth.pal
+./hl/test/gen_test_ds.c
+./hl/test/gen_test_ld.c
 ./hl/test/h5hltest.h
-./hl/test/image8.txt
 ./hl/test/image24pixel.txt
 ./hl/test/image24plane.txt
+./hl/test/image8.txt
 ./hl/test/pal_rgb.h
 ./hl/test/sepia.pal
-./hl/test/dectris_hl_perf.c
-./hl/test/gen_test_ds.c
 ./hl/test/test_ds.c
+./hl/test/test_ds_be.h5
+./hl/test/test_ds_le.h5
+./hl/test/test_dset_append.c
 ./hl/test/test_dset_opt.c
 ./hl/test/test_file_image.c
 ./hl/test/test_image.c
+./hl/test/test_ld.c
+./hl/test/test_ld.h5
 ./hl/test/test_lite.c
 ./hl/test/test_packet.c
 ./hl/test/test_packet_vlen.c
 ./hl/test/test_table.c
-./hl/test/test_ds_le.h5
-./hl/test/test_ds_be.h5
-./hl/test/test_table_le.h5
 ./hl/test/test_table_be.h5
 ./hl/test/test_table_cray.h5
+./hl/test/test_table_le.h5
 ./hl/test/usa.wri
 
 # tools

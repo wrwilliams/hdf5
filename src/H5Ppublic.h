@@ -234,7 +234,7 @@ H5_DLL herr_t H5Pinsert2(hid_t plist_id, const char *name, size_t size,
     void *value, H5P_prp_set_func_t prp_set, H5P_prp_get_func_t prp_get,
     H5P_prp_delete_func_t prp_delete, H5P_prp_copy_func_t prp_copy,
     H5P_prp_compare_func_t prp_cmp, H5P_prp_close_func_t prp_close);
-H5_DLL herr_t H5Pset(hid_t plist_id, const char *name, void *value);
+H5_DLL herr_t H5Pset(hid_t plist_id, const char *name, const void *value);
 H5_DLL htri_t H5Pexist(hid_t plist_id, const char *name);
 H5_DLL herr_t H5Pencode(hid_t plist_id, void *buf, size_t *nalloc);
 H5_DLL hid_t  H5Pdecode(const void *buf);
@@ -355,6 +355,8 @@ H5_DLL herr_t H5Pset_core_write_tracking(hid_t fapl_id, hbool_t is_enabled, size
 H5_DLL herr_t H5Pget_core_write_tracking(hid_t fapl_id, hbool_t *is_enabled, size_t *page_size);
 H5_DLL herr_t H5Pset_page_buffer_size(hid_t plist_id, size_t buf_size, unsigned min_meta_per, unsigned min_raw_per);
 H5_DLL herr_t H5Pget_page_buffer_size(hid_t plist_id, size_t *buf_size, unsigned *min_meta_per, unsigned *min_raw_per);
+H5_DLL herr_t H5Pset_object_flush_cb(hid_t plist_id, H5F_flush_cb_t func, void *udata);
+H5_DLL herr_t H5Pget_object_flush_cb(hid_t plist_id, H5F_flush_cb_t *func, void **udata);
 #ifdef H5_HAVE_PARALLEL
 H5_DLL herr_t H5Pset_all_coll_metadata_ops(hid_t plist_id, hbool_t is_collective);
 H5_DLL herr_t H5Pget_all_coll_metadata_ops(hid_t plist_id, hbool_t *is_collective);
@@ -412,6 +414,10 @@ H5_DLL herr_t H5Pset_virtual_view(hid_t plist_id, H5D_vds_view_t view);
 H5_DLL herr_t H5Pget_virtual_view(hid_t plist_id, H5D_vds_view_t *view);
 H5_DLL herr_t H5Pset_virtual_printf_gap(hid_t plist_id, hsize_t gap_size);
 H5_DLL herr_t H5Pget_virtual_printf_gap(hid_t plist_id, hsize_t *gap_size);
+H5_DLL herr_t H5Pset_append_flush(hid_t plist_id, unsigned ndims,
+    const hsize_t boundary[], H5D_append_cb_t func, void *udata);
+H5_DLL herr_t H5Pget_append_flush(hid_t plist_id, unsigned dims,
+    hsize_t boundary[], H5D_append_cb_t *func, void **udata);
 H5_DLL herr_t H5Pset_efile_prefix(hid_t dapl_id, const char* prefix);
 H5_DLL ssize_t H5Pget_efile_prefix(hid_t dapl_id, char* prefix /*out*/, size_t size);
 

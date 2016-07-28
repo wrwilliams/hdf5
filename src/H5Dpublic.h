@@ -62,6 +62,7 @@ typedef enum H5D_layout_t {
 typedef enum H5D_chunk_index_t {
     H5D_CHUNK_IDX_BTREE	= 0,    /* v1 B-tree index (default)                */
     H5D_CHUNK_IDX_SINGLE = 1,   /* Single Chunk index (cur dims[]=max dims[]=chunk dims[]; filtered & non-filtered) */
+    H5D_CHUNK_IDX_NONE = 2,     /* Implicit: No Index (H5D_ALLOC_TIME_EARLY, non-filtered, fixed dims) */
     H5D_CHUNK_IDX_FARRAY = 3,   /* Fixed array (for 0 unlimited dims)       */
     H5D_CHUNK_IDX_EARRAY = 4,   /* Extensible array (for 1 unlimited dim)   */
     H5D_CHUNK_IDX_BT2 = 5,      /* v2 B-tree index (for >1 unlimited dims)  */
@@ -107,6 +108,9 @@ typedef enum H5D_vds_view_t {
     H5D_VDS_FIRST_MISSING       = 0,
     H5D_VDS_LAST_AVAILABLE      = 1
 } H5D_vds_view_t;
+
+/* Callback for H5Pset_append_flush() in a dataset access property list */
+typedef herr_t (*H5D_append_cb_t)(hid_t dataset_id, hsize_t *cur_dims, void *op_data);
 
 /********************/
 /* Public Variables */
@@ -156,6 +160,7 @@ H5_DLL herr_t H5Dvlen_get_buf_size(hid_t dataset_id, hid_t type_id, hid_t space_
 H5_DLL herr_t H5Dfill(const void *fill, hid_t fill_type, void *buf,
         hid_t buf_type, hid_t space);
 H5_DLL herr_t H5Dset_extent(hid_t dset_id, const hsize_t size[]);
+H5_DLL herr_t H5Dflush(hid_t dset_id);
 H5_DLL herr_t H5Dscatter(H5D_scatter_func_t op, void *op_data, hid_t type_id,
     hid_t dst_space_id, void *dst_buf);
 H5_DLL herr_t H5Dgather(hid_t src_space_id, const void *src_buf, hid_t type_id,

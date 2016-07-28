@@ -6968,8 +6968,14 @@ test_random_chunks_real(const char *testname, hbool_t early_alloc, hid_t fapl)
 
     /* Verify index type */
     if(low == H5F_LIBVER_LATEST) {
+        if(early_alloc) {
+            if(idx_type != H5D_CHUNK_IDX_NONE)
+                FAIL_PUTS_ERROR("should be using Non-Index as index");
+        } /* end if */
+        else {
             if(idx_type != H5D_CHUNK_IDX_FARRAY)
                 FAIL_PUTS_ERROR("should be using Fixed Array as index");
+        } /* end else */
     } else if(idx_type != H5D_CHUNK_IDX_BTREE) 
 	FAIL_PUTS_ERROR("should be using v1 B-tree as index");
 
@@ -7028,7 +7034,7 @@ test_random_chunks_real(const char *testname, hbool_t early_alloc, hid_t fapl)
     /* Verify index type */
     if(low == H5F_LIBVER_LATEST) {
 	if(early_alloc) {
-	    if(idx_type != H5D_CHUNK_IDX_FARRAY)
+	    if(idx_type != H5D_CHUNK_IDX_NONE)
 		FAIL_PUTS_ERROR("should be using implicit indexing");
 	} else if(idx_type != H5D_CHUNK_IDX_BT2)
 	    FAIL_PUTS_ERROR("should be using v2 B-tree as index");
@@ -7130,8 +7136,14 @@ test_random_chunks_real(const char *testname, hbool_t early_alloc, hid_t fapl)
 
     /* Verify index type */
     if(low == H5F_LIBVER_LATEST) {
+        if(early_alloc) {
+            if(idx_type != H5D_CHUNK_IDX_NONE)
+                FAIL_PUTS_ERROR("should be using Non-Index as index");
+        } /* end if */
+        else {
             if(idx_type != H5D_CHUNK_IDX_FARRAY)
                 FAIL_PUTS_ERROR("should be using Fixed Array as index");
+        } /* end else */
     } else if(idx_type != H5D_CHUNK_IDX_BTREE) 
 	FAIL_PUTS_ERROR("should be using v1 B-tree as index");
 
@@ -9254,6 +9266,8 @@ test_fixed_array(hid_t fapl)
 			&& !compress
 #endif /* H5_HAVE_FILTER_DEFLATE */
 		    ) {
+		    if(idx_type != H5D_CHUNK_IDX_NONE)
+			FAIL_PUTS_ERROR("should be using Non Index as index");
 		} else if (idx_type != H5D_CHUNK_IDX_FARRAY)
 		    FAIL_PUTS_ERROR("should be using Fixed Array as index");
 	    } /* end if */
@@ -9294,6 +9308,8 @@ test_fixed_array(hid_t fapl)
 			&& !compress
 #endif /* H5_HAVE_FILTER_DEFLATE */
 		    ) {
+		    if(idx_type != H5D_CHUNK_IDX_NONE)
+			FAIL_PUTS_ERROR("should be using Non Index as index");
 		} else if(idx_type != H5D_CHUNK_IDX_FARRAY)
 		    FAIL_PUTS_ERROR("should be using Fixed Array as index");
 	    } else {
@@ -9332,6 +9348,8 @@ test_fixed_array(hid_t fapl)
 			&& !compress
 #endif /* H5_HAVE_FILTER_DEFLATE */
 		    ) {
+		    if(idx_type != H5D_CHUNK_IDX_NONE)
+			FAIL_PUTS_ERROR("should be using Non Index as index");
 		} else if(idx_type != H5D_CHUNK_IDX_FARRAY)
 		    FAIL_PUTS_ERROR("should be using Fixed Array as index");
 	    } /* end if */

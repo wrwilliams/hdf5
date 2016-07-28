@@ -465,6 +465,7 @@ typedef struct H5D_shared_t {
         H5D_rdcc_t      chunk;          /* Information about chunked data */
     } cache;
 
+    H5D_append_flush_t  append_flush;   /* Append flush property information */
     char                *extfile_prefix; /* expanded external file prefix */
 } H5D_shared_t;
 
@@ -541,6 +542,7 @@ H5_DLLVAR const H5D_layout_ops_t H5D_LOPS_VIRTUAL[1];
 
 /* Chunked layout operations */
 H5_DLLVAR const H5D_chunk_ops_t H5D_COPS_BTREE[1];
+H5_DLLVAR const H5D_chunk_ops_t H5D_COPS_NONE[1];
 H5_DLLVAR const H5D_chunk_ops_t H5D_COPS_SINGLE[1];
 H5_DLLVAR const H5D_chunk_ops_t H5D_COPS_EARRAY[1];
 H5_DLLVAR const H5D_chunk_ops_t H5D_COPS_FARRAY[1];

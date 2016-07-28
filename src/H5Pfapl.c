@@ -193,6 +193,9 @@
 #define H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_DEF            0
 #define H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_ENC            H5P__encode_unsigned
 #define H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_DEC            H5P__decode_unsigned
+/* Definition for object flush callback */
+#define H5F_ACS_OBJECT_FLUSH_CB_SIZE		sizeof(H5F_object_flush_t)
+#define H5F_ACS_OBJECT_FLUSH_CB_DEF             {NULL, NULL}
 #ifdef H5_HAVE_PARALLEL
 /* Definition of collective metadata read mode flag */
 #define H5F_ACS_COLL_MD_READ_FLAG_SIZE   sizeof(H5P_coll_md_read_flag_t)
@@ -310,6 +313,7 @@ static const size_t H5F_def_core_write_tracking_page_size_g = H5F_ACS_CORE_WRITE
 static const size_t H5F_def_page_buf_size_g = H5F_ACS_PAGE_BUFFER_SIZE_DEF;      /* Default page buffer size */
 static const unsigned H5F_def_page_buf_min_meta_perc_g = H5F_ACS_PAGE_BUFFER_MIN_META_PERC_DEF;      /* Default page buffer minimum metadata size */
 static const unsigned H5F_def_page_buf_min_raw_perc_g = H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_DEF;      /* Default page buffer minumum raw data size */
+static const H5F_object_flush_t H5F_def_object_flush_cb_g = H5F_ACS_OBJECT_FLUSH_CB_DEF;      /* Default setting for object flush callback */
 #ifdef H5_HAVE_PARALLEL
 static const H5P_coll_md_read_flag_t H5F_def_coll_md_read_flag_g = H5F_ACS_COLL_MD_READ_FLAG_DEF;  /* Default setting for the collective metedata read flag */
 static const hbool_t H5F_def_coll_md_write_flag_g = H5F_ACS_COLL_MD_WRITE_FLAG_DEF;  /* Default setting for the collective metedata write flag */
@@ -484,6 +488,12 @@ H5P__facc_reg_prop(H5P_genclass_t *pclass)
     if(H5P_register_real(pclass, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_NAME, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_SIZE, &H5F_def_page_buf_min_raw_perc_g, 
             NULL, NULL, NULL, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_ENC, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_DEC, 
             NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+
+    /* Register object flush callback */
+    /* (Note: this property should not have an encode/decode callback -QAK) */
+    if(H5P_register_real(pclass, H5F_ACS_OBJECT_FLUSH_CB_NAME, H5F_ACS_OBJECT_FLUSH_CB_SIZE, &H5F_def_object_flush_cb_g, 
+            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
 #ifdef H5_HAVE_PARALLEL
@@ -3633,6 +3643,91 @@ H5Pget_page_buffer_size(hid_t plist_id, size_t *buf_size, unsigned *min_meta_per
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Pget_page_buffer_size() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_obj_flush_cb
+ *
+ * Purpose:	Sets the callback function to invoke and the user data when an
+ *		object flush occurs in the file.
+ *	
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Vailin Choi; Dec 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_object_flush_cb(hid_t plist_id, H5F_flush_cb_t func, void *udata)
+{
+    H5P_genplist_t *plist;      /* Property list pointer */
+    H5F_object_flush_t flush_info;
+    herr_t ret_value = SUCCEED;   /* return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE3("e", "ix*x", plist_id, func, udata);
+
+    /* Check if the callback function is NULL and the user data is non-NULL.
+     * This is almost certainly an error as the user data will not be used. */
+    if(!func && udata)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "callback is NULL while user data is not")
+
+    /* Get the plist structure */
+    if(NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
+
+    /* Update property list */
+    flush_info.func = func;
+    flush_info.udata = udata;
+
+    /* Set values */
+    if(H5P_set(plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &flush_info) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set object flush callback")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Pset_obj_flush_cb() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_obj_flush_cb
+ *
+ * Purpose:	Retrieves the callback function and user data set in the
+ *		property list for an object flush.
+ *	
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Vailin Choi; Dec 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_object_flush_cb(hid_t plist_id, H5F_flush_cb_t *func, void **udata)
+{
+    H5P_genplist_t *plist;      /* Property list pointer */
+    H5F_object_flush_t flush_info;
+    herr_t ret_value = SUCCEED;   /* return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE3("e", "i*x**x", plist_id, func, udata);
+
+    /* Get the plist structure */
+    if(NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
+
+    /* Retrieve the callback function and user data */
+    if(H5P_get(plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &flush_info) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get object flush callback")
+
+    /* Assign return value */
+    if(func)
+	*func = flush_info.func;
+    if(udata)
+	*udata = flush_info.udata;
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Pget_obj_flush_cb() */
 
 #ifdef H5_HAVE_PARALLEL
 
