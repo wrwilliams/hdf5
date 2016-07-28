@@ -792,11 +792,8 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
 	    f->shared->fs.page_size == H5F_FILE_SPACE_PAGE_SIZE_DEF))
         non_default_fs_settings = TRUE;
 
-    /* 
-     *	When using the latest version of the format:
-     *	-- Bump superblock version
-     */
-    if(f->shared->latest_format)
+    /* Bump superblock version if latest superblock version support is enabled */
+    if(H5F_USE_LATEST_FLAGS(f, H5F_LATEST_SUPERBLOCK))
         super_vers = HDF5_SUPERBLOCK_VERSION_LATEST;
     /* Bump superblock version to create superblock extension for SOHM info */
     else if(f->shared->sohm_nindexes > 0)

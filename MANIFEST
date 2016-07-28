@@ -28,7 +28,6 @@
 ./Makefile.dist
 ./Makefile.am
 ./README.txt
-./BRANCH.txt
 ./acsite.m4
 ./autogen.sh
 ./configure.ac
@@ -498,12 +497,15 @@
 ./src/H5CSprivate.h
 ./src/H5D.c
 ./src/H5Dbtree.c
+./src/H5Dbtree2.c
 ./src/H5Dchunk.c
 ./src/H5Dcompact.c
 ./src/H5Dcontig.c
 ./src/H5Ddbg.c
 ./src/H5Ddeprec.c
+./src/H5Dearray.c
 ./src/H5Defl.c
+./src/H5Dfarray.c
 ./src/H5Dfill.c
 ./src/H5Dint.c
 ./src/H5Dio.c
@@ -516,6 +518,7 @@
 ./src/H5Dpublic.h
 ./src/H5Dscatgath.c
 ./src/H5Dselect.c
+./src/H5Dsingle.c
 ./src/H5Dtest.c
 ./src/H5Dvirtual.c
 ./src/H5E.c
@@ -866,6 +869,8 @@
 ./test/be_extlink2.h5
 ./test/big.c
 ./test/bittests.c
+./test/btree_idx_1_6.h5
+./test/btree_idx_1_8.h5
 ./test/btree2.c
 ./test/cache.c
 ./test/cache_api.c
