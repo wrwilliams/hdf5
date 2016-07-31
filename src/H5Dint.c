@@ -528,39 +528,47 @@ H5D__get_space_status(H5D_t *dset, H5D_space_status_t *allocation, hid_t dxpl_id
 
     HDassert(dset);
 
-    /* Get the dataset's dataspace */
-    HDassert(dset->shared->space);
+    /* Check for chunked layout */
+    if(dset->shared->layout.type == H5D_CHUNKED) {
+        /* For chunked layout set the space status by the storage size */
+        /* Get the dataset's dataspace */
+        HDassert(dset->shared->space);
 
-    /* Get the total number of elements in dataset's dataspace */
-    if((snelmts = H5S_GET_EXTENT_NPOINTS(dset->shared->space)) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to retrieve number of elements in dataspace")
-    nelmts = (hsize_t)snelmts;
+        /* Get the total number of elements in dataset's dataspace */
+        if((snelmts = H5S_GET_EXTENT_NPOINTS(dset->shared->space)) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to retrieve number of elements in dataspace")
+        nelmts = (hsize_t)snelmts;
 
-    /* Get the size of the dataset's datatype */
-    if(0 == (dt_size = H5T_GET_SIZE(dset->shared->type)))
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to retrieve size of datatype")
+        /* Get the size of the dataset's datatype */
+        if(0 == (dt_size = H5T_GET_SIZE(dset->shared->type)))
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to retrieve size of datatype")
 
-    /* Compute the maximum size of the dataset in bytes */
-    full_size = nelmts * dt_size;
+        /* Compute the maximum size of the dataset in bytes */
+        full_size = nelmts * dt_size;
 
-    /* Check for overflow during multiplication */
-    if(nelmts != (full_size / dt_size))
-        HGOTO_ERROR(H5E_DATASET, H5E_OVERFLOW, FAIL, "size of dataset's storage overflowed")
+        /* Check for overflow during multiplication */
+        if(nelmts != (full_size / dt_size))
+            HGOTO_ERROR(H5E_DATASET, H5E_OVERFLOW, FAIL, "size of dataset's storage overflowed")
 
-    /* Difficult to error check, since the error value is 0 and 0 is a valid value... :-/ */
-    if(H5D__get_storage_size(dset, dxpl_id, &space_allocated) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get size of dataset's storage")
+        /* Difficult to error check, since the error value is 0 and 0 is a valid value... :-/ */
+        if(H5D__get_storage_size(dset, dxpl_id, &space_allocated) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get size of dataset's storage")
 
-    /* Decide on how much of the space is allocated */
-    if(space_allocated == 0)
-        *allocation = H5D_SPACE_STATUS_NOT_ALLOCATED;
-    else if(space_allocated == full_size)
-        *allocation = H5D_SPACE_STATUS_ALLOCATED;
+        /* Decide on how much of the space is allocated */
+        if(space_allocated == 0)
+            *allocation = H5D_SPACE_STATUS_NOT_ALLOCATED;
+        else if(space_allocated == full_size)
+            *allocation = H5D_SPACE_STATUS_ALLOCATED;
+        else 
+            *allocation = H5D_SPACE_STATUS_PART_ALLOCATED;
+    } /* end if */
     else {
-        /* Should only happen for chunked datasets currently */
-        HDassert(dset->shared->layout.type == H5D_CHUNKED);
-
-        *allocation = H5D_SPACE_STATUS_PART_ALLOCATED;
+        /* For non-chunked layouts set space status by result of is_space_alloc
+         * function */
+        if(dset->shared->layout.ops->is_space_alloc(&dset->shared->layout.storage))
+            *allocation = H5D_SPACE_STATUS_ALLOCATED;
+        else
+            *allocation = H5D_SPACE_STATUS_NOT_ALLOCATED;
     } /* end else */
 
 done:
@@ -2821,6 +2829,157 @@ H5D__flush_real(H5D_t *dataset, hid_t dxpl_id)
 done:
     FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
 } /* end H5D__flush_real() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5D__format_convert
+ *
+ * Purpose:     For chunked: downgrade the chunk indexing type to version 1 B-tree
+ *              For compact/contiguous: downgrade layout version to 3
+ *
+ * Return:	Success:	Non-negative
+ *		Failure:	Negative
+ *
+ * Programmer:  Vailin Choi
+ *              Feb 2015
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5D__format_convert(H5D_t *dataset, hid_t dxpl_id)
+{
+    H5D_chk_idx_info_t new_idx_info;    	/* Index info for the new layout */
+    H5D_chk_idx_info_t idx_info;        	/* Index info for the current layout */
+    H5O_layout_t newlayout;			/* The new layout */
+    hbool_t init_new_index = FALSE;		/* Indicate that the new chunk index is initialized */
+    hbool_t delete_old_layout = FALSE;		/* Indicate that the old layout message is deleted */
+    hbool_t add_new_layout = FALSE;		/* Indicate that the new layout message is added */
+    herr_t ret_value = SUCCEED;         	/* Return value */
+
+    FUNC_ENTER_PACKAGE_TAG(dxpl_id, dataset->oloc.addr, FAIL)
+
+    /* Check args */
+    HDassert(dataset);
+
+    switch(dataset->shared->layout.type) {
+        case H5D_CHUNKED:
+	    HDassert(dataset->shared->layout.u.chunk.idx_type != H5D_CHUNK_IDX_BTREE);
+
+	    /* Set up the current index info */
+	    idx_info.f = dataset->oloc.file;
+	    idx_info.dxpl_id = dxpl_id;
+	    idx_info.pline = &dataset->shared->dcpl_cache.pline;
+	    idx_info.layout = &dataset->shared->layout.u.chunk;
+	    idx_info.storage = &dataset->shared->layout.storage.u.chunk;
+
+	    /* Copy the current layout info to the new layout */
+	    HDmemcpy(&newlayout, &dataset->shared->layout, sizeof(H5O_layout_t));
+
+	    /* Set up info for version 1 B-tree in the new layout */
+	    newlayout.version = H5O_LAYOUT_VERSION_3;
+	    newlayout.storage.u.chunk.idx_type = H5D_CHUNK_IDX_BTREE;
+	    newlayout.storage.u.chunk.idx_addr = HADDR_UNDEF;
+	    newlayout.storage.u.chunk.ops = H5D_COPS_BTREE;
+	    newlayout.storage.u.chunk.u.btree.shared = NULL;
+
+	    /* Set up the index info to version 1 B-tree */
+	    new_idx_info.f = dataset->oloc.file;
+	    new_idx_info.dxpl_id = dxpl_id;
+	    new_idx_info.pline = &dataset->shared->dcpl_cache.pline;
+	    new_idx_info.layout = &newlayout.u.chunk;
+	    new_idx_info.storage = &newlayout.storage.u.chunk;
+
+	    /* Initialize version 1 B-tree */
+	    if(new_idx_info.storage->ops->init && 
+              (new_idx_info.storage->ops->init)(&new_idx_info, dataset->shared->space, dataset->oloc.addr) < 0)
+		HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't initialize indexing information")
+	    init_new_index = TRUE;
+
+	    /* If the current chunk index exists */
+	    if(H5F_addr_defined(idx_info.storage->idx_addr)) {
+
+		/* Create v1 B-tree chunk index */
+		if((new_idx_info.storage->ops->create)(&new_idx_info) < 0)
+		    HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't create chunk index")
+
+		/* Iterate over the chunks in the current index and insert the chunk addresses 
+		 * into the version 1 B-tree chunk index */
+		if(H5D__chunk_format_convert(dataset, &idx_info, &new_idx_info) < 0)
+		    HGOTO_ERROR(H5E_DATASET, H5E_BADITER, FAIL, "unable to iterate/convert chunk index")
+	    } /* end if */
+
+	    /* Delete the old "current" layout message */
+	    if(H5O_msg_remove(&dataset->oloc, H5O_LAYOUT_ID, H5O_ALL, FALSE, dxpl_id) < 0)
+		HGOTO_ERROR(H5E_SYM, H5E_CANTDELETE, FAIL, "unable to delete layout message")
+
+	    delete_old_layout = TRUE;
+
+	    /* Append the new layout message to the object header */
+	    if(H5O_msg_create(&dataset->oloc, H5O_LAYOUT_ID, 0, H5O_UPDATE_TIME, &newlayout, dxpl_id) < 0)
+		HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to update layout header message")
+
+	    add_new_layout = TRUE;
+
+	    /* Release the old (current) chunk index */
+	    if(idx_info.storage->ops->dest && (idx_info.storage->ops->dest)(&idx_info) < 0)
+		HGOTO_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "unable to release chunk index info")
+
+	    /* Copy the new layout to the dataset's layout */
+	    HDmemcpy(&dataset->shared->layout, &newlayout, sizeof(H5O_layout_t));
+
+	    break;
+
+	case H5D_CONTIGUOUS:
+        case H5D_COMPACT:
+	    HDassert(dataset->shared->layout.version > H5O_LAYOUT_VERSION_DEFAULT);
+	    dataset->shared->layout.version = H5O_LAYOUT_VERSION_DEFAULT;
+	    if(H5O_msg_write(&(dataset->oloc), H5O_LAYOUT_ID, 0, H5O_UPDATE_TIME, &(dataset->shared->layout), dxpl_id) < 0)
+		HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to update layout message")
+	    break;
+
+	case H5D_VIRTUAL:
+	    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "virtual dataset layout not supported")
+
+        case H5D_LAYOUT_ERROR:
+        case H5D_NLAYOUTS:
+	    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid dataset layout type")
+
+	default: 
+	    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "unknown dataset layout type")
+    } /* end switch */
+
+done:
+    if(ret_value < 0 && dataset->shared->layout.type == H5D_CHUNKED) {
+	/* Remove new layout message */
+	if(add_new_layout)
+	    if(H5O_msg_remove(&dataset->oloc, H5O_LAYOUT_ID, H5O_ALL, FALSE, dxpl_id) < 0)
+		HDONE_ERROR(H5E_SYM, H5E_CANTDELETE, FAIL, "unable to delete layout message")
+
+	/* Add back old layout message */
+	if(delete_old_layout)
+	    if(H5O_msg_create(&dataset->oloc, H5O_LAYOUT_ID, 0, H5O_UPDATE_TIME, &dataset->shared->layout, dxpl_id) < 0)
+		HDONE_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to add layout header message")
+
+	/* Clean up v1 b-tree chunk index */
+	if(init_new_index) {
+	    if(H5F_addr_defined(new_idx_info.storage->idx_addr)) {
+		/* Check for valid address i.e. tag */
+		if(!H5F_addr_defined(dataset->oloc.addr))
+		    HDONE_ERROR(H5E_DATASET, H5E_BADVALUE, FAIL, "address undefined")
+
+		/* Expunge from cache all v1 B-tree type entries associated with tag */
+		if(H5AC_expunge_tag_type_metadata(dataset->oloc.file, dxpl_id, dataset->oloc.addr, H5AC_BT_ID, H5AC__NO_FLAGS_SET))
+		    HDONE_ERROR(H5E_DATASET, H5E_CANTEXPUNGE, FAIL, "unable to expunge index metadata")
+	    } /* end if */
+
+	    /* Delete v1 B-tree chunk index */
+	    if(new_idx_info.storage->ops->dest && (new_idx_info.storage->ops->dest)(&new_idx_info) < 0)
+		HDONE_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "unable to release chunk index info")
+	} /* end if */
+    } /* end if */
+
+    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+} /* end H5D__format_convert() */
 
 
 /*-------------------------------------------------------------------------

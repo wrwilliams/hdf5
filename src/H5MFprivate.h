@@ -60,6 +60,7 @@ H5_DLL htri_t H5MF_try_shrink(H5F_t *f, H5FD_mem_t alloc_type, hid_t dxpl_id,
     haddr_t addr, hsize_t size);
 
 H5_DLL herr_t H5MF_close(H5F_t *f, hid_t dxpl_id);
+H5_DLL herr_t H5MF_try_close(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5MF_init_merge_flags(H5F_t *f);
 H5_DLL haddr_t H5MF_close_allocate(H5F_t *f, H5FD_mem_t alloc_type, hid_t dxpl_id, hsize_t size);
 H5_DLL ssize_t H5MF_get_free_sections(H5F_t *f, hid_t dxpl_id, H5F_fspace_type_t type,

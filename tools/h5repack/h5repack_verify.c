@@ -54,7 +54,8 @@ static int verify_filters(hid_t pid, hid_t tid, int nfilters, filter_info_t *fil
 int
 h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options)
 {
-    hid_t        fidin      = -1;	/* file ID for input file*/
+    int          ret_value = 0;     /*no need to LEAVE() on ERROR: HERR_INIT(int, SUCCEED) */
+    hid_t        fidin      = -1;   /* file ID for input file*/
     hid_t        fidout     = -1;   /* file ID for output file*/
     hid_t        did        = -1;   /* dataset ID */
     hid_t        pid        = -1;   /* dataset creation property list ID */
@@ -84,13 +85,13 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
         *-------------------------------------------------------------------------
         */
         if((did = H5Dopen2(fidout, name, H5P_DEFAULT)) < 0)
-            goto error;
+            HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dopen2 failed");
         if((sid = H5Dget_space(did)) < 0)
-            goto error;
+            HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dget_space failed");
         if((pid = H5Dget_create_plist(did)) < 0)
-            goto error;
+            HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dget_create_plist failed");
         if((tid = H5Dget_type(did)) < 0)
-            goto error;
+            HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dget_type failed");
 
        /*-------------------------------------------------------------------------
         * filter check
@@ -112,13 +113,13 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
         *-------------------------------------------------------------------------
         */
         if(H5Pclose(pid) < 0)
-            goto error;
+            HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pclose failed");
         if (H5Sclose(sid) < 0)
-            goto error;
+            HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Sclose failed");
         if (H5Dclose(did) < 0)
-            goto error;
+            HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dclose failed");
         if (H5Tclose(tid) < 0)
-            goto error;
+            HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Tclose failed");
 
     }
 
@@ -136,7 +137,7 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
 
         /* get the list of objects in the file */
         if(h5trav_gettable(fidout, travt) < 0)
-            goto error;
+            HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "h5trav_gettable failed");
 
         for(i = 0; i < travt->nobjs; i++)
         {
@@ -150,13 +151,13 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
                 *-------------------------------------------------------------------------
                 */
                 if((did = H5Dopen2(fidout, name, H5P_DEFAULT)) < 0)
-                    goto error;
+                    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dopen2 failed");
                 if((sid = H5Dget_space(did)) < 0)
-                    goto error;
+                    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dget_space failed");
                 if((pid = H5Dget_create_plist(did)) < 0)
-                    goto error;
+                    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dget_create_plist failed");
                 if((tid = H5Dget_type(did)) < 0)
-                    goto error;
+                    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dget_type failed");
 
                /*-------------------------------------------------------------------------
                 * filter check
@@ -189,13 +190,13 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
                 *-------------------------------------------------------------------------
                 */
                 if (H5Pclose(pid) < 0)
-                    goto error;
+                    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pclose failed");
                 if (H5Sclose(sid) < 0)
-                    goto error;
+                    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Sclose failed");
                 if (H5Dclose(did) < 0)
-                    goto error;
+                    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dclose failed");
                 if (H5Tclose(tid) < 0)
-                    goto error;
+                    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Tclose failed");
             } /* if */
 
         } /* i */
@@ -211,43 +212,43 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
 
     /* open the input file */
     if((fidin = H5Fopen(in_fname, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0 )
-	goto error;
+        HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Fopen failed");
 
     /* Get file creation property list for input file */
     if((fcpl_in = H5Fget_create_plist(fidin)) < 0) {
-	error_msg("failed to retrieve file creation property list\n");
-	goto error;
+        error_msg("failed to retrieve file creation property list\n");
+        HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Fget_create_plist failed");
     }
 
     /* Get file space info for input file */
     if(H5Pget_file_space_strategy(fcpl_in, &in_strategy, &in_persist, &in_threshold) < 0) {
-	error_msg("failed to retrieve file space strategy & threshold\n");
-	goto error;
+        error_msg("failed to retrieve file space strategy & threshold\n");
+        HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pget_file_space failed");
     }
 
     /* Get file space page size for input file */
     if(H5Pget_file_space_page_size(fcpl_in, &in_pagesize) < 0) {
 	error_msg("failed to retrieve file space page size\n");
-	goto error;
+        HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Fget_create_plist failed");
     }
 
     /* Output file is already opened */
     /* Get file creation property list for output file */
     if((fcpl_out = H5Fget_create_plist(fidout)) < 0) {
-	error_msg("failed to retrieve file creation property list\n");
-	goto error;
+        error_msg("failed to retrieve file creation property list\n");
+        HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Fget_create_plist failed");
     }
 
     /* Get file space info for output file */
     if(H5Pget_file_space_strategy(fcpl_out, &out_strategy, &out_persist, &out_threshold) < 0) {
-	error_msg("failed to retrieve file space strategy & threshold\n");
-	goto error;
+        error_msg("failed to retrieve file space strategy & threshold\n");
+        HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pget_file_space failed");
     }
 
     /* Get file space page size for output file */
     if(H5Pget_file_space_page_size(fcpl_out, &out_pagesize) < 0) {
 	error_msg("failed to retrieve file space page size\n");
-	goto error;
+        HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Fget_create_plist failed");
     }
 
     /*
@@ -258,12 +259,12 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
     if(options->fs_strategy) {
 	if(out_strategy != (options->fs_strategy == (-1) ? 0 : options->fs_strategy)) {
 	    error_msg("file space strategy not set as unexpected\n");
-	    goto error;
+	    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "file space strategy not set as unexpected");
 	}
     } else {
 	if(out_strategy != in_strategy) {
 	    error_msg("file space strategy not set as unexpected\n");
-	    goto error;
+	    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "file space strategy not set as unexpected");
 	}
     }
 
@@ -275,12 +276,12 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
     if(options->fs_persist) {
 	if(out_persist != (hbool_t)(options->fs_persist == (-1) ? FALSE : options->fs_persist)) {
 	    error_msg("free-space persist status is not set as unexpected\n");
-	    goto error;
+	    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "file space strategy not set as unexpected");
 	}
     } else {
 	if(out_persist != in_persist) {
 	    error_msg("free-space persist status is not set as unexpected\n");
-	    goto error;
+	    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "file space strategy not set as unexpected");
 	}
     }
 
@@ -292,12 +293,12 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
     if(options->fs_threshold) {
 	if(out_threshold != (hsize_t)(options->fs_threshold == (-1) ? 0 : options->fs_threshold)) {
 	    error_msg("threshold is not set as unexpectec\n");
-	    goto error;
+	    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "file space strategy not set as unexpected");
 	}
     } else {
 	if(out_threshold != in_threshold) {
 	    error_msg("threshold is not set as unexpected\n");
-	    goto error;
+	    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "file space strategy not set as unexpected");
 	}
     }
 
@@ -309,29 +310,29 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
     if(options->fs_pagesize) {
 	if(out_pagesize != (hsize_t)(options->fs_pagesize == (-1) ? 0 : options->fs_pagesize)) {
 	    error_msg("file space page size is not set as unexpected\n");
-	    goto error;
+	    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "file space strategy not set as unexpected");
 	}
     } else { /* "-G" is not set */
 	if(out_pagesize != in_pagesize) {
 	    error_msg("file space page size is not set as unexpected\n");
-	    goto error;
+	    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "file space strategy not set as unexpected");
 	}
     }
 
     /* Closing */
     if (H5Pclose(fcpl_in) < 0)
-	goto error;
+        HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pclose failed");
     if (H5Pclose(fcpl_out) < 0)
-	goto error;
+        HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pclose failed");
     if (H5Fclose(fidin) < 0)
-	goto error;
+        HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Fclose failed");
 
     if (H5Fclose(fidout) < 0)
-	goto error;
+        HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Fclose failed");
 
     return ok;
 
-error:
+done:
     H5E_BEGIN_TRY {
         H5Pclose(fcpl_in);
         H5Pclose(fcpl_out);
@@ -421,6 +422,7 @@ int verify_layout(hid_t pid,
 int h5repack_cmp_pl(const char *fname1,
                      const char *fname2)
 {
+    int           ret_value = 0; /*no need to LEAVE() on ERROR: HERR_INIT(int, SUCCEED) */
     hid_t         fid1=-1;         /* file ID */
     hid_t         fid2=-1;         /* file ID */
     hid_t         dset1=-1;        /* dataset ID */
@@ -465,7 +467,7 @@ int h5repack_cmp_pl(const char *fname1,
     */
     trav_table_init(&trav);
     if(h5trav_gettable(fid1, trav) < 0)
-        goto error;
+        HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "h5trav_gettable failed");
 
    /*-------------------------------------------------------------------------
     * traverse the suppplied object list
@@ -478,31 +480,30 @@ int h5repack_cmp_pl(const char *fname1,
         {
 
             if ((gid = H5Gopen2(fid1, trav->objs[i].name, H5P_DEFAULT)) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Gopen2 failed");
             if ((gcplid = H5Gget_create_plist(gid)) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Gget_create_plist failed");
             if (H5Pget_link_creation_order(gcplid, &crt_order_flag1) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pget_link_creation_order failed");
             if (H5Pclose(gcplid) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pclose failed");
             if (H5Gclose(gid) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Gclose failed");
 
             if ((gid = H5Gopen2(fid2, trav->objs[i].name, H5P_DEFAULT)) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Gopen2 failed");
             if ((gcplid = H5Gget_create_plist(gid)) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Gget_create_plist failed");
             if (H5Pget_link_creation_order(gcplid, &crt_order_flag2) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pget_link_creation_order failed");
             if (H5Pclose(gcplid) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pclose failed");
             if (H5Gclose(gid) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Gclose failed");
 
-            if ( crt_order_flag1 != crt_order_flag2 )
-            {
+            if (crt_order_flag1 != crt_order_flag2) {
                 error_msg("property lists for <%s> are different\n",trav->objs[i].name);
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "property lists failed");
             }
 
         }
@@ -512,25 +513,24 @@ int h5repack_cmp_pl(const char *fname1,
         else if(trav->objs[i].type == H5TRAV_TYPE_DATASET)
         {
             if((dset1 = H5Dopen2(fid1, trav->objs[i].name, H5P_DEFAULT)) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dopen2 failed");
             if((dset2 = H5Dopen2(fid2, trav->objs[i].name, H5P_DEFAULT)) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dopen2 failed");
             if((dcpl1 = H5Dget_create_plist(dset1)) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dget_create_plist failed");
             if((dcpl2 = H5Dget_create_plist(dset2)) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dget_create_plist failed");
 
            /*-------------------------------------------------------------------------
             * compare the property lists
             *-------------------------------------------------------------------------
             */
             if((ret = H5Pequal(dcpl1, dcpl2)) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pequal failed");
 
-            if(ret == 0)
-            {
+            if(ret == 0) {
                 error_msg("property lists for <%s> are different\n",trav->objs[i].name);
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "property lists failed");
             }
 
            /*-------------------------------------------------------------------------
@@ -538,13 +538,13 @@ int h5repack_cmp_pl(const char *fname1,
             *-------------------------------------------------------------------------
             */
             if(H5Pclose(dcpl1) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pclose failed");
             if(H5Pclose(dcpl2) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pclose failed");
             if(H5Dclose(dset1) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dclose failed");
             if(H5Dclose(dset2) < 0)
-                goto error;
+                HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Dclose failed");
         } /*if*/
     } /*i*/
 
@@ -569,7 +569,7 @@ int h5repack_cmp_pl(const char *fname1,
     *-------------------------------------------------------------------------
     */
 
-error:
+done:
     H5E_BEGIN_TRY
     {
         H5Pclose(dcpl1);
