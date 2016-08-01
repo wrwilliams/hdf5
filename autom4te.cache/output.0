@@ -28108,12 +28108,13 @@ case "`uname`" in
   CYGWIN*)
     ;;
   *)
-    for ac_func in GetConsoleScreenBufferInfo
+    for ac_func in GetConsoleScreenBufferInfo getpwuid
 do :
-  ac_fn_c_check_func "$LINENO" "GetConsoleScreenBufferInfo" "ac_cv_func_GetConsoleScreenBufferInfo"
-if test "x$ac_cv_func_GetConsoleScreenBufferInfo" = xyes; then :
+  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
+if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
   cat >>confdefs.h <<_ACEOF
-@%:@define HAVE_GETCONSOLESCREENBUFFERINFO 1
+@%:@define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
 _ACEOF
  
 fi
@@ -28352,7 +28353,7 @@ _ACEOF
 fi
 done
 
-for ac_func in frexpl gethostname getpwuid getrusage gettimeofday
+for ac_func in frexpl gethostname getrusage gettimeofday
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
