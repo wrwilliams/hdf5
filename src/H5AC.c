@@ -70,6 +70,8 @@ static herr_t H5AC__ext_config_2_int_config(H5AC_cache_config_t *ext_conf_ptr,
 #if H5AC_DO_TAGGING_SANITY_CHECKS
 static herr_t H5AC__verify_tag(hid_t dxpl_id, const H5AC_class_t * type);
 #endif /* H5AC_DO_TAGGING_SANITY_CHECKS */
+static herr_t H5AC__open_trace_file(H5AC_t *cache_ptr, const char *trace_file_name);
+static herr_t H5AC__close_trace_file(H5AC_t *cache_ptr);
 
 
 /*********************/
@@ -181,13 +183,15 @@ done:
 herr_t
 H5AC__init_package(void)
 {
+#if defined H5_DEBUG_BUILD | defined H5_HAVE_PARALLEL
     H5P_genplist_t  *xfer_plist;    /* Dataset transfer property list object */
-#ifdef H5_HAVE_PARALLEL
-    H5P_coll_md_read_flag_t coll_meta_read;
-#endif /* H5_HAVE_PARALLEL */
+#endif /* defined H5_DEBUG_BUILD | defined H5_HAVE_PARALLEL */
 #ifdef H5_DEBUG_BUILD
     H5FD_dxpl_type_t  dxpl_type;    /* Property indicating the type of the internal dxpl */
 #endif /* H5_DEBUG_BUILD */
+#ifdef H5_HAVE_PARALLEL
+    H5P_coll_md_read_flag_t coll_meta_read;
+#endif /* H5_HAVE_PARALLEL */
     herr_t ret_value = SUCCEED;     /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -199,9 +203,8 @@ H5AC__init_package(void)
         const char *s;  /* String for environment variables */
 
         s = HDgetenv("H5_COLL_API_SANITY_CHECK");
-        if(s && HDisdigit(*s)) {
+        if(s && HDisdigit(*s))
             H5_coll_api_sanity_check_g = (hbool_t)HDstrtol(s, NULL, 0);
-        }
     }
 #endif /* H5_HAVE_PARALLEL */
 
@@ -276,7 +279,9 @@ H5AC__init_package(void)
     H5AC_rawdata_dxpl_id = H5P_DATASET_XFER_DEFAULT;
 #endif /* defined(H5_HAVE_PARALLEL) || defined(H5_DEBUG_BUILD) */
 
+#if defined(H5_DEBUG_BUILD) | defined(H5_HAVE_PARALLEL)
 done:
+#endif /* defined(H5_DEBUG_BUILD) | defined(H5_HAVE_PARALLEL) */
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5AC__init_package() */
 
@@ -540,8 +545,8 @@ H5AC_dest(H5F_t *f, hid_t dxpl_id)
 #endif /* H5AC_DUMP_STATS_ON_CLOSE */
 
 #if H5AC__TRACE_FILE_ENABLED
-    if(H5AC_close_trace_file(f->shared->cache) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5AC_close_trace_file() failed.")
+    if(H5AC__close_trace_file(f->shared->cache) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5AC__close_trace_file() failed.")
 #endif /* H5AC__TRACE_FILE_ENABLED */
 
 #ifdef H5_HAVE_PARALLEL
@@ -739,6 +744,7 @@ H5AC_get_entry_status(const H5F_t *f, haddr_t addr, unsigned *status)
     hbool_t	is_dirty;               /* Entry @ addr is in the cache and dirty */
     hbool_t	is_protected;           /* Entry @ addr is in the cache and protected */
     hbool_t	is_pinned;              /* Entry @ addr is in the cache and pinned */
+    hbool_t	is_corked;
     hbool_t	is_flush_dep_child;     /* Entry @ addr is in the cache and is a flush dependency child */
     hbool_t	is_flush_dep_parent;    /* Entry @ addr is in the cache and is a flush dependency parent */
     herr_t      ret_value = SUCCEED;      /* Return value */
@@ -749,7 +755,7 @@ H5AC_get_entry_status(const H5F_t *f, haddr_t addr, unsigned *status)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Bad param(s) on entry.")
 
     if(H5C_get_entry_status(f, addr, NULL, &in_cache, &is_dirty,
-            &is_protected, &is_pinned, &is_flush_dep_parent, &is_flush_dep_child) < 0)
+            &is_protected, &is_pinned, &is_corked, &is_flush_dep_parent, &is_flush_dep_child) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_get_entry_status() failed.")
 
     if(in_cache) {
@@ -760,6 +766,8 @@ H5AC_get_entry_status(const H5F_t *f, haddr_t addr, unsigned *status)
 	    *status |= H5AC_ES__IS_PROTECTED;
 	if(is_pinned)
 	    *status |= H5AC_ES__IS_PINNED;
+	if(is_corked)
+	    *status |= H5AC_ES__IS_CORKED;
 	if(is_flush_dep_parent)
 	    *status |= H5AC_ES__IS_FLUSH_DEP_PARENT;
 	if(is_flush_dep_child)
@@ -1144,7 +1152,7 @@ H5AC_protect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
     FILE *              trace_file_ptr = NULL;
 #endif /* H5AC__TRACE_FILE_ENABLED */
     void *              thing = NULL;           /* Pointer to native data structure for entry */
-    void *              ret_value;              /* Return value */
+    void *              ret_value = NULL;       /* Return value */
 
     FUNC_ENTER_NOAPI(NULL)
 
@@ -1803,11 +1811,11 @@ H5AC_set_cache_auto_resize_config(H5AC_t *cache_ptr, H5AC_cache_config_t *config
 
     /* Close & reopen trace file, if requested */
     if(config_ptr->close_trace_file)
-	if(H5AC_close_trace_file(cache_ptr) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5AC_close_trace_file() failed.")
+	if(H5AC__close_trace_file(cache_ptr) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5AC__close_trace_file() failed.")
     if(config_ptr->open_trace_file)
-        if(H5AC_open_trace_file(cache_ptr, config_ptr->trace_file_name) < 0)
-	    HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "H5AC_open_trace_file() failed.")
+        if(H5AC__open_trace_file(cache_ptr, config_ptr->trace_file_name) < 0)
+	    HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "H5AC__open_trace_file() failed.")
 
     /* Convert external configuration to internal representation */
     if(H5AC__ext_config_2_int_config(config_ptr, &internal_config) < 0)
@@ -1957,7 +1965,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5AC_close_trace_file()
+ * Function:    H5AC__close_trace_file()
  *
  * Purpose:     If a trace file is open, stop logging calls to the cache,
  *              and close the file.
@@ -1972,13 +1980,13 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
-H5AC_close_trace_file(H5AC_t *cache_ptr)
+static herr_t
+H5AC__close_trace_file(H5AC_t *cache_ptr)
 {
     FILE *   trace_file_ptr = NULL;
     herr_t   ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_NOAPI(FAIL)
+    FUNC_ENTER_STATIC
 
     if(cache_ptr == NULL)
         HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "NULL cache_ptr on entry.")
@@ -1996,11 +2004,11 @@ H5AC_close_trace_file(H5AC_t *cache_ptr)
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5AC_close_trace_file() */
+} /* H5AC__close_trace_file() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5AC_open_trace_file()
+ * Function:    H5AC__open_trace_file()
  *
  * Purpose:     Open a trace file, and start logging calls to the cache.
  *
@@ -2015,14 +2023,14 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
-H5AC_open_trace_file(H5AC_t *cache_ptr, const char *trace_file_name)
+static herr_t
+H5AC__open_trace_file(H5AC_t *cache_ptr, const char *trace_file_name)
 {
     char     file_name[H5AC__MAX_TRACE_FILE_NAME_LEN + H5C__PREFIX_LEN + 2];
     FILE *   file_ptr = NULL;
     herr_t   ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_NOAPI(FAIL)
+    FUNC_ENTER_STATIC
 
     HDassert(cache_ptr);
 
@@ -2068,114 +2076,7 @@ H5AC_open_trace_file(H5AC_t *cache_ptr, const char *trace_file_name)
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5AC_open_trace_file() */
-
-
-/*************************************************************************/
-/*************************** Debugging Functions: ************************/
-/*************************************************************************/
-
-/*-------------------------------------------------------------------------
- *
- * Function:    H5AC_get_entry_ptr_from_addr()
- *
- * Purpose:     Debugging function that attempts to look up an entry in the
- *              cache by its file address, and if found, returns a pointer
- *              to the entry in *entry_ptr_ptr.  If the entry is not in the
- *              cache, *entry_ptr_ptr is set to NULL.
- *
- *              WARNING: This call should be used only in debugging
- *                       routines, and it should be avoided when
- *                       possible.
- *
- *                       Further, if we ever multi-thread the cache,
- *                       this routine will have to be either discarded
- *                       or heavily re-worked.
- *
- *                       Finally, keep in mind that the entry whose
- *                       pointer is obtained in this fashion may not
- *                       be in a stable state.
- *
- *              Note that this function is only defined if NDEBUG
- *              is not defined.
- *
- *              As heavy use of this function is almost certainly a
- *              bad idea, the metadata cache tracks the number of
- *              successful calls to this function, and (if 
- *              H5C_DO_SANITY_CHECKS is defined) displays any
- *              non-zero count on cache shutdown.
- *
- *		This function is just a wrapper that calls the H5C 
- *		version of the function.
- *
- * Return:      FAIL if error is detected, SUCCEED otherwise.
- *
- * Programmer:  John Mainzer, 5/30/14
- *
- *-------------------------------------------------------------------------
- */
-#ifndef NDEBUG
-herr_t
-H5AC_get_entry_ptr_from_addr(const H5F_t *f, haddr_t addr, void **entry_ptr_ptr)
-{
-    herr_t              ret_value = SUCCEED;      /* Return value */
-
-    FUNC_ENTER_NOAPI(FAIL)
-
-    if(H5C_get_entry_ptr_from_addr(f, addr, entry_ptr_ptr) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_get_entry_ptr_from_addr() failed")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5AC_get_entry_ptr_from_addr() */
-#endif /* NDEBUG */
-
-
-/*-------------------------------------------------------------------------
- *
- * Function:    H5AC_verify_entry_type()
- *
- * Purpose:     Debugging function that attempts to look up an entry in the
- *              cache by its file address, and if found, test to see if its
- *              type field contains the expected value.
- *
- *              If the specified entry is in cache, *in_cache_ptr is set
- *              to TRUE, and *type_ok_ptr is set to TRUE or FALSE
- *              depending on whether the entries type field matches the
- *              expected_type parameter
- *
- *              If the target entry is not in cache, *in_cache_ptr is
- *              set to FALSE, and *type_ok_ptr is undefined.
- *
- *              Note that this function is only defined if NDEBUG
- *              is not defined.
- *
- *		This function is just a wrapper that calls the H5C 
- *		version of the function.
- *
- * Return:      FAIL if error is detected, SUCCEED otherwise.
- *
- * Programmer:  John Mainzer, 5/30/14
- *
- *-------------------------------------------------------------------------
- */
-#ifndef NDEBUG
-herr_t
-H5AC_verify_entry_type(const H5F_t *f, haddr_t addr, const H5AC_class_t *expected_type,
-    hbool_t *in_cache_ptr, hbool_t *type_ok_ptr)
-{
-    herr_t              ret_value = SUCCEED;      /* Return value */
-
-    FUNC_ENTER_NOAPI(FAIL)
-
-    if(H5C_verify_entry_type(f, addr, expected_type, in_cache_ptr, type_ok_ptr) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_verify_entry_type() failed")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5AC_verify_entry_type() */
-#endif /* NDEBUG */
-
+} /* H5AC__open_trace_file() */
 
 
 /*************************************************************************/
@@ -2416,17 +2317,21 @@ done:
 herr_t
 H5AC_retag_copied_metadata(const H5F_t *f, haddr_t metadata_tag) 
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
+    herr_t ret_value = SUCCEED;         /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
     HDassert(f);
     HDassert(f->shared);
      
     /* Call cache-level function to re-tag entries with the COPIED tag */
-    H5C_retag_entries(f->shared->cache, H5AC__COPIED_TAG, metadata_tag);
+    if(H5C_retag_entries(f->shared->cache, H5AC__COPIED_TAG, metadata_tag) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTSET, FAIL, "Can't retag metadata")
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* H5AC_retag_copied_metadata */
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5AC_retag_copied_metadata() */
 
 
 /*------------------------------------------------------------------------------
@@ -2464,6 +2369,40 @@ done:
 } /* H5AC_flush_tagged_metadata */
 
 
+/*------------------------------------------------------------------------------
+ * Function:    H5AC_evict_tagged_metadata()
+ *
+ * Purpose:     Wrapper for cache level function which flushes all metadata
+ *              that contains the specific tag. 
+ * 
+ * Return:      SUCCEED on success, FAIL otherwise.
+ *
+ * Programmer:  Mike McGreevy
+ *              May 19, 2010
+ *
+ *------------------------------------------------------------------------------
+ */
+herr_t
+H5AC_evict_tagged_metadata(H5F_t * f, haddr_t metadata_tag, hid_t dxpl_id)
+{
+    /* Variable Declarations */
+    herr_t ret_value = SUCCEED;
+ 
+    /* Function Enter Macro */   
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Assertions */
+    HDassert(f);
+    HDassert(f->shared);
+
+    /* Call cache level function to evict metadata entries with specified tag */
+    if(H5C_evict_tagged_entries(f, dxpl_id, metadata_tag) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Cannot evict metadata")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5AC_evict_tagged_metadata() */
+
 
 /*------------------------------------------------------------------------------
  * Function:    H5AC_expunge_tag_type_metadata()
@@ -2498,6 +2437,42 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 
 } /* H5AC_expunge_tag_type_metadata*/
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5AC_cork
+ *
+ * Purpose:     To cork/uncork/get cork status for an object
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Vailin Choi; Jan 2014
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5AC_cork(H5F_t *f, haddr_t obj_addr, unsigned action, hbool_t *corked)
+{
+    herr_t ret_value = SUCCEED;      /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity check */
+    HDassert(f);
+    HDassert(f->shared);
+    HDassert(f->shared->cache);
+    HDassert(H5F_addr_defined(obj_addr));
+    HDassert(action == H5AC__SET_CORK || action == H5AC__UNCORK || action == H5AC__GET_CORKED);
+
+    if(action == H5AC__GET_CORKED)
+	HDassert(corked);
+
+    if(H5C_cork(f->shared->cache, obj_addr, action, corked) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Cannot perform the cork action")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5AC_cork() */
 
 #if H5AC_DO_TAGGING_SANITY_CHECKS
 

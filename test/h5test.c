@@ -767,15 +767,15 @@ h5_fixname_real(const char *base_name, hid_t fapl, const char *_suffix,
  *
  *-------------------------------------------------------------------------
  */
-const char *
+H5_ATTR_PURE const char *
 h5_rmprefix(const char *filename)
 {
     const char *ret_ptr;
 
     if ((ret_ptr = HDstrstr(filename, ":")) == NULL)
-  ret_ptr = filename;
+        ret_ptr = filename;
     else
-  ret_ptr++;
+        ret_ptr++;
 
     return(ret_ptr);
 }
@@ -836,7 +836,7 @@ h5_fileaccess(void)
         /* In-memory driver with write tracking and paging on */
         if (H5Pset_fapl_core(fapl, (size_t)1, TRUE)<0) return -1;
         if (H5Pset_core_write_tracking(fapl, TRUE, (size_t)4096)<0) return -1;
-     } else if (!HDstrcmp(name, "split")) {
+    } else if (!HDstrcmp(name, "split")) {
         /* Split meta data and raw data each using default driver */
         if (H5Pset_fapl_split(fapl,
             "-m.h5", H5P_DEFAULT,

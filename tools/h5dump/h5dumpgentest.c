@@ -449,7 +449,7 @@ gent_dataset(void)
 
     for(i = 0; i < 30; i++)
         for(j = 0; j < 20; j++)
-            dset2[i][j] = 0.0001F * j + i;
+            dset2[i][j] = 0.0001F * (float)j + (float)i;
 
     H5Dwrite(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset2);
 
@@ -544,7 +544,7 @@ gent_attribute(void)
     space = H5Screate_simple(1, dims, NULL);
     attr = H5Acreate2(root, "attr3", H5T_IEEE_F64BE, space, H5P_DEFAULT, H5P_DEFAULT);
 
-    for(i = 0; i < 10; i++) d[i] = 0.1F * i;
+    for(i = 0; i < 10; i++) d[i] = 0.1F * (float)i;
 
     H5Awrite(attr, H5T_NATIVE_DOUBLE, d);
     H5Sclose(space);
@@ -972,16 +972,16 @@ static void gent_compound_dt(void) {       /* test compound data type */
     for(i = 0; i < (int)sdim; i++) {
         dset1[i].a = i;
         dset1[i].b = (float)(i*i);
-        dset1[i].c = (float)(1.0F/(i+1));
+        dset1[i].c = (float)(1.0F/(float)(i+1));
 
         dset2[i].a = i;
-        dset2[i].b = (float)(i+ i*0.1F);
+        dset2[i].b = (float)((float)i+ (float)i*0.1F);
 
         dset4[i].a = i;
         dset4[i].b = (float)(i+3);
 
         dset5[i].a = i;
-        dset5[i].b = (float)(i*0.1F);
+        dset5[i].b = (float)((float)i*0.1F);
     }
 
 
@@ -1157,16 +1157,16 @@ static void gent_compound_dt2(void) {       /* test compound data type */
     for(i = 0; i < (int)sdim; i++) {
         dset1[i].a = i;
         dset1[i].b = (float)(i*i);
-        dset1[i].c = (float)(1.0F/(i+1));
+        dset1[i].c = (float)(1.0F / (float)(i+ 1));
 
         dset2[i].a = i;
-        dset2[i].b = (float)(i+ i*0.1F);
+        dset2[i].b = (float)((float)i + (float)i * 0.1F);
 
         dset4[i].a = i;
-        dset4[i].b = (float)(i*1.0F);
+        dset4[i].b = (float)((float)i * 1.0F);
 
         dset5[i].a = i;
-        dset5[i].b = (float)(i*1.0F);
+        dset5[i].b = (float)((float)i * 1.0F);
     }
 
     fid = H5Fcreate(FILE9, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -1406,7 +1406,7 @@ static void gent_all(void)
     space = H5Screate_simple(1, dims, NULL);
     dataset = H5Dcreate2(group, "dset2.1", H5T_IEEE_F32BE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     for(i = 0; i < 10; i++)
-        dset2_1[i] = (float)(i * 0.1F + 1);
+        dset2_1[i] = (float)((float)i * 0.1F + 1);
     H5Dwrite(dataset, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset2_1);
     H5Sclose(space);
     H5Dclose(dataset);
@@ -1417,7 +1417,7 @@ static void gent_all(void)
     dataset = H5Dcreate2(group, "dset2.2", H5T_IEEE_F32BE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     for(i = 0; i < 3; i++)
         for(j = 0; j < 5; j++)
-            dset2_2[i][j] = (float)((i + 1) * j * 0.1F);
+            dset2_2[i][j] = (float)((float)(i + 1) * (float)j * 0.1F);
     H5Dwrite(dataset, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset2_2);
     H5Sclose(space);
     H5Dclose(dataset);
@@ -1585,7 +1585,7 @@ gent_many(void)
     space2 = H5Screate_simple(1, dims, NULL);
     attr = H5Acreate2(dataset, "attr3", H5T_IEEE_F64BE, space2, H5P_DEFAULT, H5P_DEFAULT);
     for(i = 0; i < 10; i++)
-        d[i] = 0.1F * i;
+        d[i] = 0.1F * (float)i;
     H5Awrite(attr, H5T_NATIVE_DOUBLE, d);
     H5Sclose(space2);
     H5Aclose(attr);
@@ -1595,9 +1595,9 @@ gent_many(void)
             for(i2 = 0; i2 < 2; i2++) {
                 for(i1 = 0; i1 < 2; i1++) {
                     for(i0 = 0; i0 < 2; i0++) {
-                        dset1[j].a[i3][i2][i1][i0] = i0+j;
-                        dset1[j].b[i3][i2][i1][i0] = (double)(i0+j);
-                        dset1[j].c[i3][i2][i1][i0] = (double)(i0+j+sdim);
+                        dset1[j].a[i3][i2][i1][i0] = i0 + j;
+                        dset1[j].b[i3][i2][i1][i0] = (double)(i0 + j);
+                        dset1[j].c[i3][i2][i1][i0] = (double)((hsize_t)i0 + (hsize_t)j + sdim);
                     }
                 }
             }
@@ -1900,7 +1900,7 @@ static void gent_str2(void)
     block[0]=1;
 
     for(i = 0; (hsize_t)i < sdim; i++) {
-        start[0] = i;
+        start[0] = (hsize_t)i;
         sprintf(buf, "This is row %1d of type H5T_STR_NULLTERM of", i);
         H5Tset_size(memtype, HDstrlen(buf)+1);
         H5Sselect_hyperslab(hyper_space, H5S_SELECT_SET, start, stride, count, block);
@@ -1913,7 +1913,7 @@ static void gent_str2(void)
     dataset = H5Dcreate2(group, "dset2", fxdlenstr, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     for(i = 0; (hsize_t)i < sdim; i++) {
-        start[0] = i;
+        start[0] = (hsize_t)i;
         sprintf(buf, "This is row %1d of type H5T_STR_NULLTERM of string array", i);
         H5Tset_size(memtype, HDstrlen(buf)+1);
         H5Sselect_hyperslab(hyper_space, H5S_SELECT_SET, start, stride, count, block);
@@ -1933,7 +1933,7 @@ static void gent_str2(void)
     dataset = H5Dcreate2(group, "dset3", fxdlenstr, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     for(i = 0;(hsize_t) i < sdim; i++) {
-        start[0] = i;
+        start[0] = (hsize_t)i;
         sprintf(buf, "This is row %1d of type H5T_STR_NULLPAD of", i);
         H5Tset_size(memtype, HDstrlen(buf)+1);
         H5Sselect_hyperslab(hyper_space, H5S_SELECT_SET, start, stride, count, block);
@@ -1947,7 +1947,7 @@ static void gent_str2(void)
     dataset = H5Dcreate2(group, "dset4", fxdlenstr, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     for(i = 0; (hsize_t)i < sdim; i++) {
-        start[0] = i;
+        start[0] = (hsize_t)i;
         sprintf(buf, "This is row %1d of type H5T_STR_NULLPAD of string array", i);
         H5Tset_size(memtype, HDstrlen(buf)+1);
         H5Sselect_hyperslab(hyper_space, H5S_SELECT_SET, start, stride, count, block);
@@ -1966,7 +1966,7 @@ static void gent_str2(void)
     dataset = H5Dcreate2(group, "dset5", fxdlenstr, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     for(i = 0; (hsize_t)i < sdim; i++) {
-        start[0] = i;
+        start[0] = (hsize_t)i;
         sprintf(buf, "This is row %1d of type H5T_STR_SPACEPAD of", i);
         H5Tset_size(memtype, HDstrlen(buf) + 1);
         H5Sselect_hyperslab(hyper_space, H5S_SELECT_SET, start, stride, count, block);
@@ -1980,7 +1980,7 @@ static void gent_str2(void)
     dataset = H5Dcreate2(group, "dset6", fxdlenstr, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     for(i = 0; (hsize_t)i < sdim; i++) {
-        start[0] = i;
+        start[0] = (hsize_t)i;
         sprintf(buf, "This is row %1d of type H5T_STR_SPACEPAD of string array", i);
         H5Tset_size(memtype, HDstrlen(buf) + 1);
         H5Sselect_hyperslab(hyper_space, H5S_SELECT_SET, start, stride, count, block);
@@ -2066,7 +2066,7 @@ static void gent_objref(void)
     dataset = H5Dcreate2(group, "Dataset1", H5T_STD_U32BE, sid1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     for(tu32 = (uint32_t *)((void*)wbuf), i = 0; i < SPACE1_DIM1; i++)
-        *tu32++ = i * 3;
+        *tu32++ = (uint32_t)(i * 3);
 
     /* Write selection to disk */
     H5Dwrite(dataset, H5T_NATIVE_UINT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf);
@@ -2171,7 +2171,7 @@ static void gent_datareg(void)
     dset2 = H5Dcreate2(fid1, "Dataset2", H5T_STD_U8BE, sid2, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     for(tu8 = dwbuf, i = 0; i < SPACE2_DIM1 * SPACE2_DIM2; i++)
-        *tu8++=i*3;
+        *tu8++ = (uint8_t)(i * 3);
 
     /* Write selection to disk */
     H5Dwrite(dset2, H5T_NATIVE_UCHAR, H5S_ALL, H5S_ALL, H5P_DEFAULT, dwbuf);
@@ -2280,7 +2280,7 @@ static void gent_attrreg(void)
     dset2 = H5Dcreate2(fid1, "Dataset2", H5T_STD_U8BE, sid2, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     for(tu8 = dwbuf, i = 0; i < SPACE2_DIM1 * SPACE2_DIM2; i++)
-        *tu8++=i*3;
+        *tu8++ = (uint8_t)(i * 3);
 
     /* Write selection to disk */
     H5Dwrite(dset2, H5T_NATIVE_UCHAR, H5S_ALL, H5S_ALL, H5P_DEFAULT, dwbuf);
@@ -2398,8 +2398,8 @@ static void gent_nestcomp(void)
     for(i = 0; i< 10; i++) {
         s1[i].a = i;
         s1[i].b = (float)(i*i);
-        s1[i].c = 1.0F/(i+1);
-        s1[i].d.a = 65 + i;
+        s1[i].c = 1.0F/(float)(i + 1);
+        s1[i].d.a = (char)(65 + i);
         s1[i].d.b[0] = -100.0F;
         s1[i].d.b[1] =  100.0F;
     }
@@ -2470,8 +2470,8 @@ static void gent_opaque(void)
     hsize_t dim = 2;
 
     for(x = 0; x < 100; x++){
-        test[x][0] = x;
-        test[x][1] = 99 - x;
+        test[x][0] = (char)x;
+        test[x][1] = (char)(99 - x);
     }
 
     /*
@@ -2571,8 +2571,8 @@ static void gent_vldatatypes(void)
     for(i = 0; i < SPACE1_DIM1; i++) {
         int j;
 
-        wdata[i].p = HDmalloc((i + 1) * sizeof(int));
-        wdata[i].len = i + 1;
+        wdata[i].p = HDmalloc((size_t)(i + 1) * sizeof(int));
+        wdata[i].len = (size_t)(i + 1);
 
         for(j = 0; j < i + 1; j++)
             ((int *)wdata[i].p)[j] = i * 10 + j;
@@ -2598,12 +2598,12 @@ static void gent_vldatatypes(void)
     for(i = 0; i < SPACE1_DIM1; i++) {
         int j;
 
-        wdata[i].p = HDmalloc((i + 1) * sizeof(float));
-        wdata[i].len = i + 1;
+        wdata[i].p = HDmalloc((size_t)(i + 1) * sizeof(float));
+        wdata[i].len = (size_t)(i + 1);
 
         for(j = 0; j < i + 1; j++)
-            ((float *)wdata[i].p)[j] = (float)(i * 10 + ((float)j) / 10.0F);
-    }
+            ((float *)wdata[i].p)[j] = (float)((float)(i * 10) + ((float)j) / 10.0F);
+    } /* end for */
 
     /* write out the floats in little-endian format */
     space = H5Screate_simple(SPACE1_RANK, dims, NULL);
@@ -2720,9 +2720,9 @@ gent_vldatatypes2(void)
 static void gent_vldatatypes3(void)
 {
     typedef struct {             /* Struct that the VL sequences are composed of */
-            int i;
-            float f;
-            hvl_t v;
+        int i;
+        float f;
+        hvl_t v;
     } s1;
     s1 wdata[SPACE1_DIM1];   /* Information to write */
     hid_t  fid1;  /* HDF5 File IDs  */
@@ -2735,12 +2735,12 @@ static void gent_vldatatypes3(void)
 
     /* Allocate and initialize VL data to write */
     for(i=0; i<SPACE1_DIM1; i++) {
-        wdata[i].i=i*10;
-        wdata[i].f=(float)((i*20)/3.0F);
-        wdata[i].v.p=HDmalloc((i+1)*sizeof(unsigned int));
-        wdata[i].v.len=i+1;
-        for(j=0; j<(i+1); j++)
-            ((unsigned int *)wdata[i].v.p)[j]=i*10+j;
+        wdata[i].i = (int)(i * 10);
+        wdata[i].f = (float)((float)(i * 20)/3.0F);
+        wdata[i].v.p = HDmalloc((size_t)(i + 1) * sizeof(unsigned int));
+        wdata[i].v.len = (size_t)(i + 1);
+        for(j = 0; j < (i + 1); j++)
+            ((unsigned int *)wdata[i].v.p)[j] = i * 10 + j;
     } /* end for */
 
     /* Create file */
@@ -2790,8 +2790,8 @@ static void gent_vldatatypes3(void)
 static void gent_vldatatypes4(void)
 {
     typedef struct {             /* Struct that the VL sequences are composed of */
-            int i;
-            float f;
+        int i;
+        float f;
     } s1;
     hvl_t wdata[SPACE1_DIM1];   /* Information to write */
     hid_t  fid1;  /* HDF5 File IDs  */
@@ -2804,11 +2804,11 @@ static void gent_vldatatypes4(void)
 
     /* Allocate and initialize VL data to write */
     for(i=0; i<SPACE1_DIM1; i++) {
-        wdata[i].p=HDmalloc((i+1)*sizeof(s1));
-        wdata[i].len=i+1;
-        for(j=0; j<(i+1); j++) {
-            ((s1 *)wdata[i].p)[j].i=i*10+j;
-            ((s1 *)wdata[i].p)[j].f=(float)((i*20+j)/3.0F);
+        wdata[i].p = HDmalloc((i + 1) * sizeof(s1));
+        wdata[i].len = i + 1;
+        for(j = 0; j < (i + 1); j++) {
+            ((s1 *)wdata[i].p)[j].i = (int)(i * 10 + j);
+            ((s1 *)wdata[i].p)[j].f = (float)((float)(i * 20 + j) / 3.0F);
         } /* end for */
     } /* end for */
 
@@ -2873,10 +2873,10 @@ static void gent_vldatatypes5(void)
             wdata[i].p=NULL;
         } /* end if */
         else {
-            wdata[i].len=i+5;
-            wdata[i].p=HDmalloc(sizeof(unsigned)*(i+5));
-            for(j=0; j<i+5; j++)
-                ((unsigned *)wdata[i].p)[j]=j*2;
+            wdata[i].len = (size_t)(i + 5);
+            wdata[i].p = HDmalloc(sizeof(unsigned) * (size_t)(i + 5));
+            for(j = 0; j < i + 5; j++)
+                ((unsigned *)wdata[i].p)[j] = (unsigned)(j * 2);
         } /* end else */
     } /* end for */
 
@@ -3178,8 +3178,8 @@ static void gent_array4(void)
     /* Initialize array data to write */
     for(i=0; i<SPACE1_DIM1; i++)
         for(j=0; j<ARRAY1_DIM1; j++) {
-            wdata[i][j].i=i*10+j;
-            wdata[i][j].f=(float)(i*2.5F+j);
+            wdata[i][j].i = i * 10 + j;
+            wdata[i][j].f = (float)((float)i * 2.5F + (float)j);
         } /* end for */
 
     /* Create file */
@@ -3245,9 +3245,9 @@ static void gent_array5(void)
     /* Initialize array data to write */
     for(i=0; i<SPACE1_DIM1; i++)
         for(j=0; j<ARRAY1_DIM1; j++) {
-            wdata[i][j].i=i*10+j;
+            wdata[i][j].i = i * 10 + j;
             for(k=0; k<ARRAY1_DIM1; k++)
-                wdata[i][j].f[k]=(float)(i*10+j*2.5F+k);
+                wdata[i][j].f[k] = (float)((float)i * 10 + (float)j * 2.5F + (float)k);
         } /* end for */
 
     /* Create file */
@@ -3315,10 +3315,10 @@ static void gent_array6(void)
     /* Initialize array data to write */
     for(i=0; i<SPACE1_DIM1; i++)
         for(j=0; j<ARRAY1_DIM1; j++) {
-            wdata[i][j].p=HDmalloc((i+j+1)*sizeof(unsigned int));
-            wdata[i][j].len=i+j+1;
-            for(k=0; k<(i+j+1); k++)
-                ((unsigned int *)wdata[i][j].p)[k]=i*100+j*10+k;
+            wdata[i][j].p = HDmalloc((size_t)(i + j + 1) * sizeof(unsigned int));
+            wdata[i][j].len = (size_t)(i + j + 1);
+            for(k = 0; k < (i + j + 1); k++)
+                ((unsigned int *)wdata[i][j].p)[k] = (unsigned)(i * 100 + j * 10 + k);
         } /* end for */
 
     /* Create file */
@@ -3376,11 +3376,11 @@ static void gent_array7(void)
     /* Initialize array data to write */
     for(i=0; i<SPACE1_DIM1; i++)
         for(j=0; j<ARRAY1_DIM1; j++) {
-            wdata[i][j].p=HDmalloc((i+j+1)*(sizeof(unsigned int)*ARRAY1_DIM1));
-            wdata[i][j].len=i+j+1;
-            for(k=0; k<(i+j+1); k++)
-                for(l=0; l<ARRAY1_DIM1; l++)
-                    ((unsigned int *)wdata[i][j].p)[k*ARRAY1_DIM1+l]=i*1000+j*100+k*10+l;
+            wdata[i][j].p = HDmalloc((size_t)(i + j + 1) * (sizeof(unsigned int) * ARRAY1_DIM1));
+            wdata[i][j].len = (size_t)(i + j + 1);
+            for(k = 0; k < (i + j + 1); k++)
+                for(l = 0; l<ARRAY1_DIM1; l++)
+                    ((unsigned int *)wdata[i][j].p)[k * ARRAY1_DIM1 + l] = (unsigned)(i * 1000+j * 100+k * 10 + l);
         } /* end for */
 
     /* Create file */
@@ -3438,15 +3438,15 @@ static void gent_array8(void)
     herr_t      status = -1;
     hsize_t sdims[] = {F64_DIM0};
     hsize_t tdims[] = {F64_DIM1};
-    int         wdata[(F64_DIM1) * sizeof(int)];      /* Write buffer */
+    int         wdata[F64_DIM1];      /* Write buffer */
     unsigned int i;
 
     /*
      * Initialize data.  i is the element in the dataspace, j and k the
      * elements within the array datatype.
      */
-    for (i=0; i<F64_DIM1; i++)
-        wdata[i] = i;
+    for (i = 0; i < F64_DIM1; i++)
+        wdata[i] = (int)i;
 
     /*
      * Create a new file using the default properties.
@@ -3720,7 +3720,7 @@ void gent_multi(void)
         sprintf(sv[mt], "%%s-%c.h5", multi_letters[mt]);
         memb_name[mt] = sv[mt];
         /*printf("memb_name[%d]=%s, memb_map[%d]=%d; ", mt, memb_name[mt], mt, memb_map[mt]);*/
-        memb_addr[mt] = MAX(mt - 1,0) * (HADDR_MAX / 10);
+        memb_addr[mt] = (haddr_t)MAX(mt - 1, 0) * (HADDR_MAX / 10);
     }
     memb_map[H5FD_MEM_DEFAULT] = H5FD_MEM_SUPER;
 
@@ -4107,8 +4107,8 @@ static void write_attr_in(hid_t loc_id,
         for(j = 0; j < 2; j++) {
             int l;
 
-            buf52[i][j].p = HDmalloc((i + 1) * sizeof(int));
-            buf52[i][j].len = i + 1;
+            buf52[i][j].p = HDmalloc((size_t)(i + 1) * sizeof(int));
+            buf52[i][j].len = (size_t)(i + 1);
             for(l = 0; l < i + 1; l++)
                 ((int *)buf52[i][j].p)[l] = n++;
         }
@@ -4164,7 +4164,7 @@ static void write_attr_in(hid_t loc_id,
     for(i = 0; i < 4; i++) {
         for(j = 0; j < 3; j++) {
             for(k = 0; k < 2; k++) {
-                buf23[i][j][k]=n++;
+                buf23[i][j][k] = (char)n++;
             }
         }
     }
@@ -4190,7 +4190,7 @@ static void write_attr_in(hid_t loc_id,
     for(i = 0; i < 4; i++) {
         for(j = 0; j < 3; j++) {
             for(k = 0; k < 2; k++) {
-                buf33[i][j][k].a=n++;
+                buf33[i][j][k].a = (char)n++;
                 buf33[i][j][k].b=n++;
             }
         }
@@ -4239,8 +4239,8 @@ static void write_attr_in(hid_t loc_id,
             for(k = 0; k < 2; k++) {
                 int l;
 
-                buf53[i][j][k].p = HDmalloc((i + 1) * sizeof(int));
-                buf53[i][j][k].len = i + 1;
+                buf53[i][j][k].p = HDmalloc((size_t)(i + 1) * sizeof(int));
+                buf53[i][j][k].len = (size_t)(i + 1);
                 for(l = 0; l < i + 1; l++)
                     ((int *)buf53[i][j][k].p)[l] = n++;
             }
@@ -4549,8 +4549,8 @@ static void write_dset_in(hid_t loc_id,
         for(j = 0; j < 2; j++) {
             int l;
 
-            buf52[i][j].p = HDmalloc((i + 1) * sizeof(int));
-            buf52[i][j].len = i + 1;
+            buf52[i][j].p = HDmalloc((size_t)(i + 1) * sizeof(int));
+            buf52[i][j].len = (size_t)(i + 1);
             for(l = 0; l < i + 1; l++)
                 ((int *)buf52[i][j].p)[l] = n++;
         }
@@ -4615,13 +4615,10 @@ static void write_dset_in(hid_t loc_id,
      */
 
     n=1;
-    for(i = 0; i < 4; i++) {
-        for(j = 0; j < 3; j++) {
-            for(k = 0; k < 2; k++) {
-                buf23[i][j][k]=n++;
-            }
-        }
-    }
+    for(i = 0; i < 4; i++)
+        for(j = 0; j < 3; j++)
+            for(k = 0; k < 2; k++)
+                buf23[i][j][k] = (char)n++;
     tid = H5Tcopy(H5T_STD_B8LE);
     write_dset(loc_id,3,dims3,"bitfield3D",tid,buf23);
     status = H5Tclose(tid);
@@ -4641,14 +4638,12 @@ static void write_dset_in(hid_t loc_id,
      */
 
     n=1;
-    for(i = 0; i < 4; i++) {
-        for(j = 0; j < 3; j++) {
+    for(i = 0; i < 4; i++)
+        for(j = 0; j < 3; j++)
             for(k = 0; k < 2; k++) {
-                buf33[i][j][k].a=n++;
-                buf33[i][j][k].b=n++;
+                buf33[i][j][k].a = (char)n++;
+                buf33[i][j][k].b = n++;
             }
-        }
-    }
     tid = H5Tcreate (H5T_COMPOUND, sizeof(s_t));
     H5Tinsert(tid, "a", HOFFSET(s_t, a), H5T_NATIVE_CHAR);
     H5Tinsert(tid, "b", HOFFSET(s_t, b), H5T_NATIVE_DOUBLE);
@@ -4693,8 +4688,8 @@ static void write_dset_in(hid_t loc_id,
             for(k = 0; k < 2; k++) {
                 int l;
 
-                buf53[i][j][k].p = HDmalloc((i + 1) * sizeof(int));
-                buf53[i][j][k].len = i + 1;
+                buf53[i][j][k].p = HDmalloc(((size_t)i + 1) * sizeof(int));
+                buf53[i][j][k].len = (size_t)(i + 1);
                 for(l = 0; l < i + 1; l++)
                     ((int *)buf53[i][j][k].p)[l] = n++;
             }
@@ -4939,25 +4934,20 @@ static void gent_compound_complex(void)
     for(m = 0; m< F41_LENGTH; m++) {
         Array1[m].a = m;
 
-        for(n = 0; n < F41_DIMb; n++) {
+        for(n = 0; n < F41_DIMb; n++)
             Array1[m].b[n] = quote[n];
-        }
 
-        for(n = 0; n < F41_ARRAY_DIMc; n++) {
+        for(n = 0; n < F41_ARRAY_DIMc; n++)
             Array1[m].c[n] = chararray[n];
-        }
 
-        for(n = 0; n < F41_ARRAY_DIMd1; n++) {
-            for(o = 0; o < F41_ARRAY_DIMd2; o++){
-                Array1[m].d[n][o] = m + n + o;
-            }
-        }
+        for(n = 0; n < F41_ARRAY_DIMd1; n++)
+            for(o = 0; o < F41_ARRAY_DIMd2; o++)
+                Array1[m].d[n][o] = (short)(m + n + o);
 
-        Array1[m].e = (float)( m * 0.96F );
+        Array1[m].e = (float)((float)m * 0.96F );
 
-        for(n = 0; n < F41_ARRAY_DIMf; n++) {
-            Array1[m].f[n] = ( m * 1024.9637F );
-        }
+        for(n = 0; n < F41_ARRAY_DIMf; n++)
+            Array1[m].f[n] = ((float)m * 1024.9637F );
 
         Array1[m].g = 'm';
     }
@@ -7157,8 +7147,8 @@ gent_packedbits(void)
     for(i = 0; i < dims[0]; i++){
         dsetu8[i][0] = valu8bits;
         for(j = 1; j < dims[1]; j++)
-            dsetu8[i][j] = dsetu8[i][j-1] << 1;
-        valu8bits <<= 1;
+            dsetu8[i][j] = (uint8_t)(dsetu8[i][j - 1] << 1);
+        valu8bits = (uint8_t)(valu8bits << 1);
     }
 
     H5Dwrite(dataset, H5T_NATIVE_UINT8, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu8);
@@ -7174,8 +7164,8 @@ gent_packedbits(void)
     for(i = 0; i < dims[0]; i++){
         dsetu16[i][0] = valu16bits;
         for(j = 1; j < dims[1]; j++)
-            dsetu16[i][j] = dsetu16[i][j-1] << 1;
-        valu16bits <<= 1;
+            dsetu16[i][j] = (uint16_t)(dsetu16[i][j-1] << 1);
+        valu16bits = (uint16_t)(valu16bits << 1);
     }
 
     H5Dwrite(dataset, H5T_NATIVE_UINT16, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu16);
@@ -7225,8 +7215,8 @@ gent_packedbits(void)
     for(i = 0; i < dims[0]; i++){
         dset8[i][0] = val8bits;
         for(j = 1; j < dims[1]; j++)
-            dset8[i][j] = dset8[i][j-1] << 1;
-        val8bits <<= 1;
+            dset8[i][j] = (int8_t)(dset8[i][j-1] << 1);
+        val8bits = (int8_t)(val8bits << 1);
     }
 
     H5Dwrite(dataset, H5T_NATIVE_INT8, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset8);
@@ -7242,8 +7232,8 @@ gent_packedbits(void)
     for(i = 0; i < dims[0]; i++){
         dset16[i][0] = val16bits;
         for(j = 1; j < dims[1]; j++)
-            dset16[i][j] = dset16[i][j-1] << 1;
-        val16bits <<= 1;
+            dset16[i][j] = (int16_t)(dset16[i][j-1] << 1);
+        val16bits = (int16_t)(val16bits << 1);
     }
 
     H5Dwrite(dataset, H5T_NATIVE_INT16, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset16);
@@ -7291,7 +7281,7 @@ gent_packedbits(void)
 
     for(i = 0; i < dims[0]; i++)
         for(j = 0; j < dims[1]; j++)
-            dsetdbl[i][j] = 0.0001F * j + i;
+            dsetdbl[i][j] = 0.0001F * (float)j + (float)i;
 
     H5Dwrite(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetdbl);
 
@@ -7339,9 +7329,9 @@ gent_attr_intsize(void)
     for(i = 0; i < dims[0]; i++){
         dsetu8[i][0] = valu8bits;
         for(j = 1; j < dims[1]; j++) {
-            dsetu8[i][j] = dsetu8[i][j-1] << 1;
+            dsetu8[i][j] = (uint8_t)(dsetu8[i][j-1] << 1);
         }
-        valu8bits <<= 1;
+        valu8bits = (uint8_t)(valu8bits << 1);
     }
 
     H5Awrite(attr, H5T_NATIVE_UINT8, dsetu8);
@@ -7357,9 +7347,9 @@ gent_attr_intsize(void)
     for(i = 0; i < dims[0]; i++){
         dsetu16[i][0] = valu16bits;
         for(j = 1; j < dims[1]; j++) {
-            dsetu16[i][j] = dsetu16[i][j-1] << 1;
+            dsetu16[i][j] = (uint16_t)(dsetu16[i][j-1] << 1);
         }
-        valu16bits <<= 1;
+        valu16bits = (uint16_t)(valu16bits << 1);
     }
 
     H5Awrite(attr, H5T_NATIVE_UINT16, dsetu16);
@@ -7411,9 +7401,9 @@ gent_attr_intsize(void)
     for(i = 0; i < dims[0]; i++){
         dset8[i][0] = val8bits;
         for(j = 1; j < dims[1]; j++) {
-            dset8[i][j] = dset8[i][j-1] << 1;
+            dset8[i][j] = (int8_t)(dset8[i][j-1] << 1);
         }
-        val8bits <<= 1;
+        val8bits = (int8_t)(val8bits << 1);
     }
 
     H5Awrite(attr, H5T_NATIVE_INT8, dset8);
@@ -7429,9 +7419,9 @@ gent_attr_intsize(void)
     for(i = 0; i < dims[0]; i++){
         dset16[i][0] = val16bits;
         for(j = 1; j < dims[1]; j++) {
-            dset16[i][j] = dset16[i][j-1] << 1;
+            dset16[i][j] = (int16_t)(dset16[i][j-1] << 1);
         }
-        val16bits <<= 1;
+        val16bits = (int16_t)(val16bits << 1);
     }
 
     H5Awrite(attr, H5T_NATIVE_INT16, dset16);
@@ -7481,7 +7471,7 @@ gent_attr_intsize(void)
 
     for(i = 0; i < dims[0]; i++)
         for(j = 0; j < dims[1]; j++)
-            dsetdbl[i][j] = 0.0001F * j + i;
+            dsetdbl[i][j] = 0.0001F * (float)j + (float)i;
 
     H5Awrite(attr, H5T_NATIVE_DOUBLE, dsetdbl);
 
@@ -7592,33 +7582,33 @@ static void gent_compound_intsizes(void) {
         dims[0] = F70_XDIM; dims[1] = F70_YDIM8;
 
         valu8bits = (uint8_t) ~0u;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dsetu8[n][0] = valu8bits;
-            for(o = 1; o < dims[1]; o++) {
-                Array1[m].dsetu8[n][o] = Array1[m].dsetu8[n][o-1] << 1;
+            for(o = 1; o < (int)dims[1]; o++) {
+                Array1[m].dsetu8[n][o] = (uint8_t)(Array1[m].dsetu8[n][o-1] << 1);
             }
-            valu8bits <<= 1;
+            valu8bits = (uint8_t)(valu8bits << 1);
         }
 
         /* Array of 16 bits unsigned int */
         dims[0] = F70_XDIM; dims[1] = F70_YDIM16;
 
         valu16bits = (uint16_t) ~0u;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dsetu16[n][0] = valu16bits;
-            for(o = 1; o < dims[1]; o++) {
-                Array1[m].dsetu16[n][o] = Array1[m].dsetu16[n][o-1] << 1;
+            for(o = 1; o < (int)dims[1]; o++) {
+                Array1[m].dsetu16[n][o] = (uint16_t)(Array1[m].dsetu16[n][o-1] << 1);
             }
-            valu16bits <<= 1;
+            valu16bits = (uint16_t)(valu16bits << 1);
         }
 
         /* Array of 32 bits unsigned int */
         dims[0] = F70_XDIM; dims[1] = F70_YDIM32;
 
         valu32bits = (uint32_t) ~0u;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dsetu32[n][0] = valu32bits;
-            for(o = 1; o < dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++) {
                 Array1[m].dsetu32[n][o] = Array1[m].dsetu32[n][o-1] << 1;
             }
             valu32bits <<= 1;
@@ -7628,9 +7618,9 @@ static void gent_compound_intsizes(void) {
         dims[0] = F70_XDIM; dims[1] = F70_YDIM64;
 
         valu64bits = (uint64_t) ~0Lu;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dsetu64[n][0] = valu64bits;
-            for(o = 1; o < dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++) {
                 Array1[m].dsetu64[n][o] = Array1[m].dsetu64[n][o-1] << 1;
             }
             valu64bits <<= 1;
@@ -7640,33 +7630,33 @@ static void gent_compound_intsizes(void) {
         dims[0] = F70_XDIM; dims[1] = F70_YDIM8;
 
         val8bits = (int8_t) ~0;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dset8[n][0] = val8bits;
-            for(o = 1; o < dims[1]; o++) {
-                Array1[m].dset8[n][o] = Array1[m].dset8[n][o-1] << 1;
+            for(o = 1; o < (int)dims[1]; o++) {
+                Array1[m].dset8[n][o] = (int8_t)(Array1[m].dset8[n][o-1] << 1);
             }
-            val8bits <<= 1;
+            val8bits = (int8_t)(val8bits << 1);
         }
 
         /* Array of 16 bits signed int */
         dims[0] = F70_XDIM; dims[1] = F70_YDIM16;
 
         val16bits = (int16_t) ~0;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dset16[n][0] = val16bits;
-            for(o = 1; o < dims[1]; o++) {
-                Array1[m].dset16[n][o] = Array1[m].dset16[n][o-1] << 1;
+            for(o = 1; o < (int)dims[1]; o++) {
+                Array1[m].dset16[n][o] = (int16_t)(Array1[m].dset16[n][o-1] << 1);
             }
-            val16bits <<= 1;
+            val16bits = (int16_t)(val16bits << 1);
         }
 
         /* Array of 32 bits signed int */
         dims[0] = F70_XDIM; dims[1] = F70_YDIM32;
 
         val32bits = (int32_t) ~0;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dset32[n][0] = val32bits;
-            for(o = 1; o < dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++) {
                 Array1[m].dset32[n][o] = Array1[m].dset32[n][o-1] << 1;
             }
             val32bits <<= 1;
@@ -7676,9 +7666,9 @@ static void gent_compound_intsizes(void) {
         dims[0] = F70_XDIM; dims[1] = F70_YDIM64;
 
         val64bits = (int64_t) ~0L;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dset64[n][0] = val64bits;
-            for(o = 1; o < dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++) {
                 Array1[m].dset64[n][o] = Array1[m].dset64[n][o-1] << 1;
             }
             val64bits <<= 1;
@@ -7687,9 +7677,9 @@ static void gent_compound_intsizes(void) {
         /* Double Dummy set for failure tests */
         dims[0] = F70_XDIM; dims[1] = F70_YDIM8;
 
-        for(n = 0; n < dims[0]; n++)
-            for(o = 0; o < dims[1]; o++)
-                Array1[m].dsetdbl[n][o] = 0.0001F * o + n;
+        for(n = 0; n < (int)dims[0]; n++)
+            for(o = 0; o < (int)dims[1]; o++)
+                Array1[m].dsetdbl[n][o] = 0.0001F * (float)o + (float)n;
     }
 
     /* Create the array data type for the 8 bits signed int array             */
@@ -7867,33 +7857,33 @@ static void gent_compound_attr_intsizes(void) {
         dims[0] = F70_XDIM; dims[1] = F70_YDIM8;
 
         valu8bits = (uint8_t) ~0u;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dsetu8[n][0] = valu8bits;
-            for(o = 1; o < dims[1]; o++) {
-                Array1[m].dsetu8[n][o] = Array1[m].dsetu8[n][o-1] << 1;
+            for(o = 1; o < (int)dims[1]; o++) {
+                Array1[m].dsetu8[n][o] = (uint8_t)(Array1[m].dsetu8[n][o-1] << 1);
             }
-            valu8bits <<= 1;
+            valu8bits = (uint8_t)(valu8bits << 1);
         }
 
         /* Array of 16 bits unsigned int */
         dims[0] = F70_XDIM; dims[1] = F70_YDIM16;
 
         valu16bits = (uint16_t) ~0u;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dsetu16[n][0] = valu16bits;
-            for(o = 1; o < dims[1]; o++) {
-                Array1[m].dsetu16[n][o] = Array1[m].dsetu16[n][o-1] << 1;
+            for(o = 1; o < (int)dims[1]; o++) {
+                Array1[m].dsetu16[n][o] = (uint16_t)(Array1[m].dsetu16[n][o-1] << 1);
             }
-            valu16bits <<= 1;
+            valu16bits = (uint16_t)(valu16bits << 1);
         }
 
         /* Array of 32 bits unsigned int */
         dims[0] = F70_XDIM; dims[1] = F70_YDIM32;
 
         valu32bits = (uint32_t) ~0u;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dsetu32[n][0] = valu32bits;
-            for(o = 1; o < dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++) {
                 Array1[m].dsetu32[n][o] = Array1[m].dsetu32[n][o-1] << 1;
             }
             valu32bits <<= 1;
@@ -7903,9 +7893,9 @@ static void gent_compound_attr_intsizes(void) {
         dims[0] = F70_XDIM; dims[1] = F70_YDIM64;
 
         valu64bits = (uint64_t) ~0Lu;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dsetu64[n][0] = valu64bits;
-            for(o = 1; o < dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++) {
                 Array1[m].dsetu64[n][o] = Array1[m].dsetu64[n][o-1] << 1;
             }
             valu64bits <<= 1;
@@ -7915,33 +7905,33 @@ static void gent_compound_attr_intsizes(void) {
         dims[0] = F70_XDIM; dims[1] = F70_YDIM8;
 
         val8bits = (int8_t) ~0;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dset8[n][0] = val8bits;
-            for(o = 1; o < dims[1]; o++) {
-                Array1[m].dset8[n][o] = Array1[m].dset8[n][o-1] << 1;
+            for(o = 1; o < (int)dims[1]; o++) {
+                Array1[m].dset8[n][o] = (int8_t)(Array1[m].dset8[n][o-1] << 1);
             }
-            val8bits <<= 1;
+            val8bits = (int8_t)(val8bits << 1);
         }
 
         /* Array of 16 bits signed int */
         dims[0] = F70_XDIM; dims[1] = F70_YDIM16;
 
         val16bits = (int16_t) ~0;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dset16[n][0] = val16bits;
-            for(o = 1; o < dims[1]; o++) {
-                Array1[m].dset16[n][o] = Array1[m].dset16[n][o-1] << 1;
+            for(o = 1; o < (int)dims[1]; o++) {
+                Array1[m].dset16[n][o] = (int16_t)(Array1[m].dset16[n][o-1] << 1);
             }
-            val16bits <<= 1;
+            val16bits = (int16_t)(val16bits << 1);
         }
 
         /* Array of 32 bits signed int */
         dims[0] = F70_XDIM; dims[1] = F70_YDIM32;
 
         val32bits = (int32_t) ~0;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dset32[n][0] = val32bits;
-            for(o = 1; o < dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++) {
                 Array1[m].dset32[n][o] = Array1[m].dset32[n][o-1] << 1;
             }
             val32bits <<= 1;
@@ -7951,9 +7941,9 @@ static void gent_compound_attr_intsizes(void) {
         dims[0] = F70_XDIM; dims[1] = F70_YDIM64;
 
         val64bits = (int64_t) ~0L;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dset64[n][0] = val64bits;
-            for(o = 1; o < dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++) {
                 Array1[m].dset64[n][o] = Array1[m].dset64[n][o-1] << 1;
             }
             val64bits <<= 1;
@@ -7962,9 +7952,9 @@ static void gent_compound_attr_intsizes(void) {
         /* Double Dummy set for failure tests */
         dims[0] = F70_XDIM; dims[1] = F70_YDIM8;
 
-        for(n = 0; n < dims[0]; n++)
-            for(o = 0; o < dims[1]; o++)
-                Array1[m].dsetdbl[n][o] = 0.0001F * o + n;
+        for(n = 0; n < (int)dims[0]; n++)
+            for(o = 0; o < (int)dims[1]; o++)
+                Array1[m].dsetdbl[n][o] = 0.0001F * (float)o + (float)n;
     }
 
     /* Create the array data type for the 8 bits signed int array             */
@@ -8132,17 +8122,17 @@ static void gent_nested_compound_dt(void) {       /* test nested data type */
         dset1[i].b = (float)(i*i);
 
         dset2[i].a = i;
-        dset2[i].b = (float)(i+i*0.1F);
+        dset2[i].b = (float)((float)i + (float)i * 0.1F);
         dset2[i].c = GREEN;
 
         for(j = 0; j < 5; j++) {
-            dset3[i].a[j] = i*j;
+            dset3[i].a[j] = i * j;
             for(k = 0; k < 6; k++) {
-                dset3[i].b[j][k] = (float)(i*j*k*1.0F);
+                dset3[i].b[j][k] = (float)((float)i * (float)j * (float)k * 1.0F);
             }
         }
         dset3[i].c.a = i;
-        dset3[i].c.b = (float)(i*1.0F);
+        dset3[i].c.b = (float)((float)i * 1.0F);
     }
 
     fid = H5Fcreate(FILE72, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -8280,9 +8270,9 @@ gent_intscalars(void)
     for(i = 0; i < dims[0]; i++){
         dsetu8[i][0] = valu8bits;
         for(j = 1; j < dims[1]; j++) {
-            dsetu8[i][j] = dsetu8[i][j-1] << 1;
+            dsetu8[i][j] = (uint8_t)(dsetu8[i][j-1] << 1);
         }
-        valu8bits <<= 1;
+        valu8bits = (uint8_t)(valu8bits << 1);
     }
 
     H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu8);
@@ -8299,9 +8289,9 @@ gent_intscalars(void)
     for(i = 0; i < dims[0]; i++){
         dsetu16[i][0] = valu16bits;
         for(j = 1; j < dims[1]; j++) {
-            dsetu16[i][j] = dsetu16[i][j-1] << 1;
+            dsetu16[i][j] = (uint16_t)(dsetu16[i][j-1] << 1);
         }
-        valu16bits <<= 1;
+        valu16bits = (uint16_t)(valu16bits << 1);
     }
 
     H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu16);
@@ -8356,9 +8346,9 @@ gent_intscalars(void)
     for(i = 0; i < dims[0]; i++){
         dset8[i][0] = val8bits;
         for(j = 1; j < dims[1]; j++) {
-            dset8[i][j] = dset8[i][j-1] << 1;
+            dset8[i][j] = (int8_t)(dset8[i][j-1] << 1);
         }
-        val8bits <<= 1;
+        val8bits = (int8_t)(val8bits << 1);
     }
 
     H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset8);
@@ -8375,9 +8365,9 @@ gent_intscalars(void)
     for(i = 0; i < dims[0]; i++){
         dset16[i][0] = val16bits;
         for(j = 1; j < dims[1]; j++) {
-            dset16[i][j] = dset16[i][j-1] << 1;
+            dset16[i][j] = (int16_t)(dset16[i][j-1] << 1);
         }
-        val16bits <<= 1;
+        val16bits = (int16_t)(val16bits << 1);
     }
 
     H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset16);
@@ -8430,7 +8420,7 @@ gent_intscalars(void)
 
     for(i = 0; i < dims[0]; i++)
         for(j = 0; j < dims[1]; j++)
-            dsetdbl[i][j] = 0.0001F * j + i;
+            dsetdbl[i][j] = 0.0001F * (float)j + (float)i;
 
     H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetdbl);
 
@@ -8479,9 +8469,9 @@ gent_attr_intscalars(void)
     for(i = 0; i < dims[0]; i++){
         dsetu8[i][0] = valu8bits;
         for(j = 1; j < dims[1]; j++) {
-            dsetu8[i][j] = dsetu8[i][j-1] << 1;
+            dsetu8[i][j] = (uint8_t)(dsetu8[i][j-1] << 1);
         }
-        valu8bits <<= 1;
+        valu8bits = (uint8_t)(valu8bits << 1);
     }
 
     H5Awrite(attr, tid, dsetu8);
@@ -8498,9 +8488,9 @@ gent_attr_intscalars(void)
     for(i = 0; i < dims[0]; i++){
         dsetu16[i][0] = valu16bits;
         for(j = 1; j < dims[1]; j++) {
-            dsetu16[i][j] = dsetu16[i][j-1] << 1;
+            dsetu16[i][j] = (uint16_t)(dsetu16[i][j-1] << 1);
         }
-        valu16bits <<= 1;
+        valu16bits = (uint16_t)(valu16bits << 1);
     }
 
     H5Awrite(attr, tid, dsetu16);
@@ -8555,9 +8545,9 @@ gent_attr_intscalars(void)
     for(i = 0; i < dims[0]; i++){
         dset8[i][0] = val8bits;
         for(j = 1; j < dims[1]; j++) {
-            dset8[i][j] = dset8[i][j-1] << 1;
+            dset8[i][j] = (int8_t)(dset8[i][j-1] << 1);
         }
-        val8bits <<= 1;
+        val8bits = (int8_t)(val8bits << 1);
     }
 
     H5Awrite(attr, tid, dset8);
@@ -8574,9 +8564,9 @@ gent_attr_intscalars(void)
     for(i = 0; i < dims[0]; i++){
         dset16[i][0] = val16bits;
         for(j = 1; j < dims[1]; j++) {
-            dset16[i][j] = dset16[i][j-1] << 1;
+            dset16[i][j] = (int16_t)(dset16[i][j-1] << 1);
         }
-        val16bits <<= 1;
+        val16bits = (int16_t)(val16bits << 1);
     }
 
     H5Awrite(attr, tid, dset16);
@@ -8629,7 +8619,7 @@ gent_attr_intscalars(void)
 
     for(i = 0; i < dims[0]; i++)
         for(j = 0; j < dims[1]; j++)
-            dsetdbl[i][j] = 0.0001F * j + i;
+            dsetdbl[i][j] = 0.0001F * (float)j + (float)i;
 
     H5Awrite(attr, tid, dsetdbl);
 
@@ -8668,9 +8658,9 @@ gent_string_scalars(void)
 
     memset(string, ' ', F73_XDIM * F73_YDIM8);
     for(i = 0; i < dims[0]; i++) {
-        string[i][0] = 'A' + i;
+        string[i][0] = (char)('A' + i);
         for(j = 1; j < dims[1]; j++) {
-            string[i][j] = string[i][j-1] + 1;
+            string[i][j] = (char)(string[i][j-1] + 1);
         }
     }
     string[dims[0]-1][dims[1]-1] = 0;
@@ -8743,25 +8733,25 @@ static void gent_compound_int_array(void) {
         dims[0] = F76_DIM8;
 
         valu8bits = (uint8_t) ~0u;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Cmpd1[m].dsetu8[n] = valu8bits;
-            valu8bits <<= 1;
+            valu8bits = (uint8_t)(valu8bits << 1);
         }
 
         /* Array of 16 bits unsigned int */
         dims[0] = F76_DIM16;
 
         valu16bits = (uint16_t) ~0u;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Cmpd1[m].dsetu16[n] = valu16bits;
-            valu16bits <<= 1;
+            valu16bits = (uint16_t)(valu16bits << 1);
         }
 
         /* Array of 32 bits unsigned int */
         dims[0] = F76_DIM32;
 
         valu32bits = (uint32_t) ~0u;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Cmpd1[m].dsetu32[n] = valu32bits;
             valu32bits <<= 1;
         }
@@ -8770,7 +8760,7 @@ static void gent_compound_int_array(void) {
         dims[0] = F76_DIM64;
 
         valu64bits = (uint64_t) ~0Lu;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Cmpd1[m].dsetu64[n] = valu64bits;
             valu64bits <<= 1;
         }
@@ -8779,25 +8769,25 @@ static void gent_compound_int_array(void) {
         dims[0] = F76_DIM8;
 
         val8bits = (int8_t) ~0;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Cmpd1[m].dset8[n] = val8bits;
-            val8bits <<= 1;
+            val8bits = (int8_t)(val8bits << 1);
         }
 
         /* Array of 16 bits signed int */
         dims[0] = F76_DIM16;
 
         val16bits = (int16_t) ~0;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Cmpd1[m].dset16[n] = val16bits;
-            val16bits <<= 1;
+            val16bits = (int16_t)(val16bits << 1);
         }
 
         /* Array of 32 bits signed int */
         dims[0] = F76_DIM32;
 
         val32bits = (int32_t) ~0;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Cmpd1[m].dset32[n] = val32bits;
             val32bits <<= 1;
         }
@@ -8806,7 +8796,7 @@ static void gent_compound_int_array(void) {
         dims[0] = F76_DIM64;
 
         val64bits = (int64_t) ~0L;  /* all 1s */
-        for(n = 0; n < dims[0]; n++){
+        for(n = 0; n < (int)dims[0]; n++){
             Cmpd1[m].dset64[n] = val64bits;
             val64bits <<= 1;
         }
@@ -8814,8 +8804,8 @@ static void gent_compound_int_array(void) {
         /* Double Dummy set for failure tests */
         dims[0] = F76_DIM8;
 
-        for(n = 0; n < dims[0]; n++)
-            Cmpd1[m].dsetdbl[n] = 0.0001F + n;
+        for(n = 0; n < (int)dims[0]; n++)
+            Cmpd1[m].dsetdbl[n] = 0.0001F + (float)n;
     }
 
     /* Create the array data type for the 8 bits signed int array             */
@@ -8994,14 +8984,14 @@ static void gent_compound_ints(void) {
             valu8bits = (uint8_t) ~0u;  /* all 1s */
         Cmpd1[m].dsetu8 = valu8bits;
         Cmpd2[m].dsetu8 = valu8bits;
-        valu8bits <<= 1;
+        valu8bits = (uint8_t)(valu8bits << 1);
 
         /* Array of 16 bits unsigned int */
         if((m % F76_DIM16) == 0)
             valu16bits = (uint16_t) ~0u;  /* all 1s */
         Cmpd1[m].dsetu16 = valu16bits;
         Cmpd2[m].dsetu16 = valu16bits;
-        valu16bits <<= 1;
+        valu16bits = (uint16_t)(valu16bits << 1);
 
         /* Array of 32 bits unsigned int */
         if((m % F76_DIM32) == 0)
@@ -9022,14 +9012,14 @@ static void gent_compound_ints(void) {
             val8bits = (int8_t) ~0;  /* all 1s */
         Cmpd1[m].dset8 = val8bits;
         Cmpd2[m].dset8 = val8bits;
-        val8bits <<= 1;
+        val8bits = (int8_t)(val8bits << 1);
 
         /* Array of 16 bits signed int */
         if((m % F76_DIM16) == 0)
             val16bits = (int16_t) ~0;  /* all 1s */
         Cmpd1[m].dset16 = val16bits;
         Cmpd2[m].dset16 = val16bits;
-        val16bits <<= 1;
+        val16bits = (int16_t)(val16bits << 1);
 
         /* Array of 32 bits signed int */
         if((m % F76_DIM32) == 0)
@@ -9046,8 +9036,8 @@ static void gent_compound_ints(void) {
         val64bits <<= 1;
 
         /* Double Dummy set for failure tests */
-        Cmpd1[m].dsetdbl = 0.0001F + m;
-        Cmpd2[m].dsetdbl = 0.0001F + m;
+        Cmpd1[m].dsetdbl = 0.0001F + (float)m;
+        Cmpd2[m].dsetdbl = 0.0001F + (float)m;
     }
 
     /* Create the dataspace                                           */
@@ -9202,9 +9192,9 @@ gent_intattrscalars(void)
     for(i = 0; i < dims[0]; i++){
         dsetu8[i][0] = valu8bits;
         for(j = 1; j < dims[1]; j++) {
-            dsetu8[i][j] = dsetu8[i][j-1] << 1;
+            dsetu8[i][j] = (uint8_t)(dsetu8[i][j-1] << 1);
         }
-        valu8bits <<= 1;
+        valu8bits = (uint8_t)(valu8bits << 1);
     }
 
     H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu8);
@@ -9225,9 +9215,9 @@ gent_intattrscalars(void)
     for(i = 0; i < dims[0]; i++){
         dsetu16[i][0] = valu16bits;
         for(j = 1; j < dims[1]; j++) {
-            dsetu16[i][j] = dsetu16[i][j-1] << 1;
+            dsetu16[i][j] = (uint16_t)(dsetu16[i][j-1] << 1);
         }
-        valu16bits <<= 1;
+        valu16bits = (uint16_t)(valu16bits << 1);
     }
 
     H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu16);
@@ -9294,9 +9284,9 @@ gent_intattrscalars(void)
     for(i = 0; i < dims[0]; i++){
         dset8[i][0] = val8bits;
         for(j = 1; j < dims[1]; j++) {
-            dset8[i][j] = dset8[i][j-1] << 1;
+            dset8[i][j] = (int8_t)(dset8[i][j-1] << 1);
         }
-        val8bits <<= 1;
+        val8bits = (int8_t)(val8bits << 1);
     }
 
     H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset8);
@@ -9317,9 +9307,9 @@ gent_intattrscalars(void)
     for(i = 0; i < dims[0]; i++){
         dset16[i][0] = val16bits;
         for(j = 1; j < dims[1]; j++) {
-            dset16[i][j] = dset16[i][j-1] << 1;
+            dset16[i][j] = (int16_t)(dset16[i][j-1] << 1);
         }
-        val16bits <<= 1;
+        val16bits = (int16_t)(val16bits << 1);
     }
 
     H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset16);
@@ -9384,7 +9374,7 @@ gent_intattrscalars(void)
 
     for(i = 0; i < dims[0]; i++)
         for(j = 0; j < dims[1]; j++)
-            dsetdbl[i][j] = 0.0001F * j + i;
+            dsetdbl[i][j] = 0.0001F * (float)j + (float)i;
 
     H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetdbl);
     /* Attribute of double */
@@ -9436,10 +9426,10 @@ gent_intsattrs(void)
         dsetu8[i][0] = valu8bits;
         asetu8[i*dims[1]] = dsetu8[i][0];
         for(j = 1; j < dims[1]; j++) {
-            dsetu8[i][j] = dsetu8[i][j-1] << 1;
+            dsetu8[i][j] = (uint8_t)(dsetu8[i][j-1] << 1);
             asetu8[i*dims[1]+j] = dsetu8[i][j];
         }
-        valu8bits <<= 1;
+        valu8bits = (uint8_t)(valu8bits << 1);
     }
 
     H5Dwrite(dataset, H5T_NATIVE_UINT8, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu8);
@@ -9463,10 +9453,10 @@ gent_intsattrs(void)
         dsetu16[i][0] = valu16bits;
         asetu16[i*dims[1]] = dsetu16[i][0];
         for(j = 1; j < dims[1]; j++) {
-            dsetu16[i][j] = dsetu16[i][j-1] << 1;
+            dsetu16[i][j] = (uint16_t)(dsetu16[i][j-1] << 1);
             asetu16[i*dims[1]+j] = dsetu16[i][j];
         }
-        valu16bits <<= 1;
+        valu16bits = (uint16_t)(valu16bits << 1);
     }
 
     H5Dwrite(dataset, H5T_NATIVE_UINT16, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu16);
@@ -9544,10 +9534,10 @@ gent_intsattrs(void)
         dset8[i][0] = val8bits;
         aset8[i*dims[1]] = dset8[i][0];
         for(j = 1; j < dims[1]; j++) {
-            dset8[i][j] = dset8[i][j-1] << 1;
+            dset8[i][j] = (int8_t)(dset8[i][j-1] << 1);
             aset8[i*dims[1]+j] = dset8[i][j];
         }
-        val8bits <<= 1;
+        val8bits = (int8_t)(val8bits << 1);
     }
 
     H5Dwrite(dataset, H5T_NATIVE_INT8, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset8);
@@ -9571,10 +9561,10 @@ gent_intsattrs(void)
         dset16[i][0] = val16bits;
         aset16[i*dims[1]] = dset16[i][0];
         for(j = 1; j < dims[1]; j++) {
-            dset16[i][j] = dset16[i][j-1] << 1;
+            dset16[i][j] = (int16_t)(dset16[i][j-1] << 1);
             aset16[i*dims[1]+j] = dset16[i][j];
         }
-        val16bits <<= 1;
+        val16bits = (int16_t)(val16bits << 1);
     }
 
     H5Dwrite(dataset, H5T_NATIVE_INT16, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset16);
@@ -9649,7 +9639,7 @@ gent_intsattrs(void)
 
     for(i = 0; i < dims[0]; i++)
         for(j = 0; j < dims[1]; j++) {
-            dsetdbl[i][j] = 0.0001F * j + i;
+            dsetdbl[i][j] = 0.0001F * (float)j + (float)i;
             asetdbl[i*dims[1]+j] = dsetdbl[i][j];
         }
 
@@ -9826,7 +9816,7 @@ static void gent_bitnopaquefields(void)
 static void
 gent_intsfourdims(void)
 {
-    hid_t fid, dataset, space, tid;
+    hid_t fid, dataset, space;
     hsize_t dims[F81_RANK];
     uint32_t dset1[F81_ZDIM][F81_YDIM][F81_XDIM][F81_WDIM];
     unsigned int i, j, k, l;

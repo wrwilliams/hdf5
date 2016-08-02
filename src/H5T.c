@@ -3036,8 +3036,10 @@ H5T__create(H5T_class_t type, size_t size)
                     subtype = H5T_NATIVE_INT_g;
                 else if(sizeof(long) == size)
                     subtype = H5T_NATIVE_LONG_g;
+#if H5_SIZEOF_LONG != H5_SIZEOF_LONG_LONG
                 else if(sizeof(long long) == size)
                     subtype = H5T_NATIVE_LLONG_g;
+#endif /* H5_SIZEOF_LONG != H5_SIZEOF_LONG_LONG */
                 else
                     HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, NULL, "no applicable native integer type")
                 if(NULL == (dt = H5T__alloc()))
@@ -3612,6 +3614,17 @@ H5T_close(H5T_t *dt)
         dt->shared->fo_count--;
 
     if(dt->shared->state != H5T_STATE_OPEN || dt->shared->fo_count == 0) {
+	/* Uncork cache entries with object address tag for named datatype only */
+	if(dt->shared->state == H5T_STATE_OPEN && dt->shared->fo_count == 0) {
+            hbool_t 	corked;			/* Whether the named datatype is corked or not */
+
+	    if(H5AC_cork(dt->oloc.file, dt->oloc.addr, H5AC__GET_CORKED, &corked) < 0)
+		HGOTO_ERROR(H5E_DATATYPE, H5E_CANTGET, FAIL, "unable to retrieve an object's cork status")
+	    if(corked)
+		if(H5AC_cork(dt->oloc.file, dt->oloc.addr, H5AC__UNCORK, NULL) < 0)
+		    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTUNCORK, FAIL, "unable to uncork an object")
+	} /* end if */
+
         if(H5T__free(dt) < 0)
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTFREE, FAIL, "unable to free datatype");
 

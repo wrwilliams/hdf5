@@ -26,7 +26,7 @@
 #define begin_obj(obj,name,begin)                                           \
     do {                                                                    \
         if ((name)) {                                                       \
-            PRINTSTREAM(rawoutstream, "%s \"%s\" %s", (obj), (name), (begin))   \
+            PRINTSTREAM(rawoutstream, "%s \"%s\" %s", (obj), (name), (begin));   \
         }                                                                   \
         else {                                                              \
             PRINTSTREAM(rawoutstream, "%s %s", (obj), (begin));             \
