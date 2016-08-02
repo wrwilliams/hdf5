@@ -202,6 +202,11 @@ H5A_create(const H5G_loc_t *loc, const char *name, const H5T_t *type,
     if(NULL == (attr->shared->dt = H5T_copy(type, H5T_COPY_ALL)))
         HGOTO_ERROR(H5E_ATTR, H5E_CANTGET, NULL, "can't get shared datatype info")
 
+    /* Convert a datatype (if committed) to a transient type if the committed datatype's file
+       location is different from the file location where the attribute will be created */
+    if(H5T_convert_committed_datatype(attr->shared->dt, loc->oloc->file) < 0)
+        HGOTO_ERROR(H5E_ATTR, H5E_CANTGET, NULL, "can't get shared datatype info")
+
     /* Mark datatype as being on disk now */
     if(H5T_set_loc(attr->shared->dt, loc->oloc->file, H5T_LOC_DISK) < 0)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, NULL, "invalid datatype location")
@@ -1915,15 +1920,16 @@ H5A_t *
 H5A_attr_copy_file(const H5A_t *attr_src, H5F_t *file_dst, hbool_t *recompute_size,
     H5O_copy_t *cpy_info, hid_t dxpl_id)
 {
-    H5A_t        *attr_dst = NULL;
-
-    /* for dataype conversion */
+    H5A_t      *attr_dst = NULL;        /* Destination attribute */
     hid_t       tid_src = -1;           /* Datatype ID for source datatype */
     hid_t       tid_dst = -1;           /* Datatype ID for destination datatype */
     hid_t       tid_mem = -1;           /* Datatype ID for memory datatype */
     void       *buf = NULL;             /* Buffer for copying data */
     void       *reclaim_buf = NULL;     /* Buffer for reclaiming data */
     hid_t       buf_sid = -1;           /* ID for buffer dataspace */
+    hssize_t	sdst_nelmts;	        /* # of elements in destination attribute (signed) */
+    size_t	dst_nelmts;		/* # of elements in destination attribute */
+    size_t	dst_dt_size;		/* Size of destination attribute datatype */
     H5A_t      *ret_value = NULL;       /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -2009,12 +2015,17 @@ H5A_attr_copy_file(const H5A_t *attr_src, H5F_t *file_dst, hbool_t *recompute_si
     if(attr_dst->shared->dt_size != attr_src->shared->dt_size || attr_dst->shared->ds_size != attr_src->shared->ds_size)
         *recompute_size = TRUE;
 
+    /* Get # of elements for destination attribute's dataspace */
+    if((sdst_nelmts = H5S_GET_EXTENT_NPOINTS(attr_dst->shared->ds)) < 0)
+        HGOTO_ERROR(H5E_ATTR, H5E_CANTCOUNT, NULL, "dataspace is invalid")
+    H5_CHECKED_ASSIGN(dst_nelmts, size_t, sdst_nelmts, hssize_t);
+
+    /* Get size of destination attribute's datatype */
+    if(0 == (dst_dt_size = H5T_get_size(attr_dst->shared->dt)))
+        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, NULL, "unable to determine datatype size")
+
     /* Compute the size of the data */
-    /* NOTE: This raises warnings. If we are going to be serious about
-     * expecting overflow here, we should implement testing similar to
-     * that described in CERT bulletins INT30-C and INT32-C.
-     */
-    H5_CHECKED_ASSIGN(attr_dst->shared->data_size, size_t, H5S_GET_EXTENT_NPOINTS(attr_dst->shared->ds) * H5T_get_size(attr_dst->shared->dt), hssize_t);
+    attr_dst->shared->data_size =  dst_nelmts * dst_dt_size;
 
     /* Copy (& convert) the data, if necessary */
     if(attr_src->shared->data) {

@@ -430,15 +430,15 @@ static int parse_command_line(int argc, const char **argv, pack_opt_t* options)
                 }
                 break;
 
-            case 'm':
-                options->min_comp = HDatoi( opt_arg );
-                if ((int) options->min_comp <= 0) {
-                    error_msg("invalid minimum compress size <%s>\n", opt_arg);
-                    h5tools_setstatus(EXIT_FAILURE);
-                    ret_value = -1;
-                    goto done;
-                }
-                break;
+	    case 'm':
+		options->min_comp = HDstrtoull(opt_arg , NULL, 0);
+		if ((int) options->min_comp <= 0) {
+		    error_msg("invalid minimum compress size <%s>\n", opt_arg);
+		    h5tools_setstatus(EXIT_FAILURE);
+		    ret_value = -1;
+		    goto done;
+		}
+		break;
 
             case 'e':
                 ret_value = read_info(opt_arg, options);
@@ -513,15 +513,15 @@ static int parse_command_line(int argc, const char **argv, pack_opt_t* options)
                 options->threshold = (hsize_t) HDatol( opt_arg );
                 break;
 
-            case 'a':
-                options->alignment = HDatol( opt_arg );
-                if (options->alignment < 1) {
-                    error_msg("invalid alignment size\n", opt_arg);
-                    h5tools_setstatus(EXIT_FAILURE);
-                    ret_value = -1;
-                    goto done;
-                }
-                break;
+	    case 'a':
+		options->alignment = HDstrtoull(opt_arg , NULL, 0);
+		if (options->alignment < 1) {
+		    error_msg("invalid alignment size\n", opt_arg);
+		    h5tools_setstatus(EXIT_FAILURE);
+		    ret_value = -1;
+		    goto done;
+		}
+		break;
 
             case 'S':
                 {

@@ -3796,7 +3796,7 @@ make_userblock(void)
 
     /* Initialize userblock data */
     for(u = 0; u < USERBLOCK_SIZE; u++)
-        ub[u] = 'a' + (char)(u % 26);
+        ub[u] = (char)('a' + (char)(u % 26));
 
     /* Re-open HDF5 file, as "plain" file */
     if((fd = HDopen(FNAME16, O_WRONLY, 0644)) < 0)
@@ -3909,7 +3909,7 @@ make_userblock_file(void)
 
     /* initialize userblock data */
     for(u = 0; u < USERBLOCK_SIZE; u++)
-        ub[u] = 'a' + (char)(u % 26);
+        ub[u] = (char)('a' + (char)(u % 26));
 
     /* open file */
     if((fd = HDopen(FNAME_UB,O_WRONLY|O_CREAT|O_TRUNC, 0644 )) < 0)
@@ -3966,7 +3966,8 @@ int write_dset_in(hid_t loc_id,
     hid_t   sid=-1;
     hid_t   tid=-1;
     hid_t   pid=-1;
-    int     val, i, j, k, n;
+    unsigned i, j;
+    int     val, k, n;
     float   f;
 
     /* create 1D attributes with dimension [2], 2 elements */
@@ -4021,13 +4022,10 @@ int write_dset_in(hid_t loc_id,
     */
 
 
-    if (make_diffs)
-    {
-        for (i=0; i<2; i++)
-            for (j=0; j<2; j++)
-            {
-                buf1[i][j]='z';
-            }
+    if(make_diffs) {
+        for(i = 0; i < 2; i++)
+            for(j = 0; j < 2; j++)
+                buf1[i][j] = 'z';
     }
 
 
@@ -4050,10 +4048,9 @@ int write_dset_in(hid_t loc_id,
     *-------------------------------------------------------------------------
     */
 
-    if (make_diffs)
-    {
-        for (i=0; i<2; i++)
-            buf2[i]=buf2[1]=0;
+    if(make_diffs) {
+        for(i = 0; i < 2; i++)
+            buf2[i] = buf2[1] = 0;
     }
 
     if ((tid = H5Tcopy(H5T_STD_B8LE)) < 0)
@@ -4068,11 +4065,10 @@ int write_dset_in(hid_t loc_id,
     *-------------------------------------------------------------------------
     */
 
-    if (make_diffs)
-    {
-        for (i=0; i<2; i++)
-        {
-            buf3[i].a=0; buf3[i].b=0;
+    if(make_diffs) {
+        for(i = 0; i < 2; i++) {
+            buf3[i].a = 0;
+            buf3[i].b = 0;
         }
     }
 
@@ -4091,12 +4087,9 @@ int write_dset_in(hid_t loc_id,
     */
 
 
-    if (make_diffs)
-    {
-        for (i=0; i<2; i++)
-        {
-            buf45[i]=GREEN;
-        }
+    if(make_diffs) {
+        for(i = 0; i < 2; i++)
+            buf45[i] = GREEN;
     }
 
     if ((tid = H5Tcreate (H5T_COMPOUND, sizeof(s_t))) < 0)
@@ -4188,13 +4181,10 @@ int write_dset_in(hid_t loc_id,
     *-------------------------------------------------------------------------
     */
 
-    if (make_diffs)
-    {
-        for (i=0; i<2; i++)
-            for (j=0; j<3; j++)
-            {
-                buf6[i][j]=0;
-            }
+    if(make_diffs) {
+        for(i = 0; i < 2; i++)
+            for(j = 0; j < 3; j++)
+                buf6[i][j] = 0;
     }
 
     if ((tid = H5Tarray_create2(H5T_NATIVE_INT, 1, dimarray)) < 0)
@@ -4255,12 +4245,10 @@ int write_dset_in(hid_t loc_id,
     *-------------------------------------------------------------------------
     */
 
-    if (make_diffs)
-    {
-        for (i=0; i<2; i++)
-        {
-            buf7[i]=0;
-            buf8[i]=0;
+    if(make_diffs) {
+        for(i = 0; i < 2; i++) {
+            buf7[i] = 0;
+            buf8[i] = 0;
         }
     }
 
@@ -4383,16 +4371,13 @@ int write_dset_in(hid_t loc_id,
 
     /* Allocate and initialize VL dataset to write */
     n = 0;
-    for(i = 0; i < 3; i++)
-    {
-        for(j = 0; j < 2; j++)
-        {
-            int l;
+    for(i = 0; i < 3; i++) {
+        for(j = 0; j < 2; j++) {
+            unsigned l;
 
             buf52[i][j].p = HDmalloc((i + 1) * sizeof(int));
             buf52[i][j].len = (size_t)(i + 1);
-            for(l = 0; l < i + 1; l++)
-            {
+            for(l = 0; l < i + 1; l++) {
                 if(make_diffs)
                     ((int *)buf52[i][j].p)[l] = 0;
                 else
@@ -4503,11 +4488,13 @@ int write_dset_in(hid_t loc_id,
 
 
     n=1;
-    for (i = 0; i < 4; i++) {
-        for (j = 0; j < 3; j++) {
-            for (k = 0; k < 2; k++) {
-                if (make_diffs) buf23[i][j][k]=0;
-                else buf23[i][j][k]=n++;
+    for(i = 0; i < 4; i++) {
+        for(j = 0; j < 3; j++) {
+            for(k = 0; k < 2; k++) {
+                if(make_diffs)
+                    buf23[i][j][k] = 0;
+                else 
+                    buf23[i][j][k] = (char)(n++);
             }
         }
     }
@@ -4539,16 +4526,16 @@ int write_dset_in(hid_t loc_id,
     */
 
     n=1;
-    for (i = 0; i < 4; i++) {
-        for (j = 0; j < 3; j++) {
-            for (k = 0; k < 2; k++) {
-                if (make_diffs) {
-                    buf33[i][j][k].a=0;
-                    buf33[i][j][k].b=0;
+    for(i = 0; i < 4; i++) {
+        for(j = 0; j < 3; j++) {
+            for(k = 0; k < 2; k++) {
+                if(make_diffs) {
+                    buf33[i][j][k].a = 0;
+                    buf33[i][j][k].b = 0;
                 }
                 else {
-                    buf33[i][j][k].a=n++;
-                    buf33[i][j][k].b=n++;
+                    buf33[i][j][k].a = (char)(n++);
+                    buf33[i][j][k].b = n++;
                 }
             }
         }
@@ -4602,18 +4589,14 @@ int write_dset_in(hid_t loc_id,
 
     /* Allocate and initialize VL dataset to write */
     n = 0;
-    for(i = 0; i < 4; i++)
-    {
-        for(j = 0; j < 3; j++)
-        {
-            for(k = 0; k < 2; k++)
-            {
-                int l;
+    for(i = 0; i < 4; i++) {
+        for(j = 0; j < 3; j++) {
+            for(k = 0; k < 2; k++) {
+                unsigned l;
 
                 buf53[i][j][k].p = HDmalloc((i + 1) * sizeof(int));
                 buf53[i][j][k].len = (size_t)(i + 1);
-                for(l = 0; l < i + 1; l++)
-                {
+                for(l = 0; l < i + 1; l++) {
                     if(make_diffs)
                         ((int *)buf53[i][j][k].p)[l] = 0;
                     else
@@ -4649,10 +4632,8 @@ int write_dset_in(hid_t loc_id,
 
 
     n = 1;
-    for(i = 0; i < 24; i++)
-    {
-        for(j = 0; j < (int)dimarray[0]; j++)
-        {
+    for(i = 0; i < 24; i++) {
+        for(j = 0; j < dimarray[0]; j++) {
             if(make_diffs)
                 buf63[i][j] = 0;
             else
@@ -4691,13 +4672,10 @@ int write_dset_in(hid_t loc_id,
     if (write_dset(loc_id,3,dims3,"float3D",H5T_NATIVE_FLOAT,buf83) < 0)
         goto out;
 
-
     return 0;
 
-
 out:
-    H5E_BEGIN_TRY
-    {
+    H5E_BEGIN_TRY {
         H5Pclose(pid);
         H5Sclose(sid);
         H5Dclose(did);
@@ -4846,7 +4824,8 @@ int write_attr_in(hid_t loc_id,
     hid_t   aid = -1;
     hid_t   sid = -1;
     hid_t   tid = -1;
-    int     val, i, j, k, n;
+    int     val, j, k, n;
+    unsigned i;
     float   f;
 
     /* create 1D attributes with dimension [2], 2 elements */
@@ -5396,16 +5375,17 @@ int write_attr_in(hid_t loc_id,
 
     /* Allocate and initialize VL dataset to write */
     n=0;
-    for (i = 0; i < 3; i++)
-    {
-        for (j = 0; j < 2; j++)
-        {
-            int l;
+    for(i = 0; i < 3; i++) {
+        for(j = 0; j < 2; j++) {
+            unsigned l;
+
             buf52[i][j].p = HDmalloc((i + 1) * sizeof(int));
             buf52[i][j].len = (size_t)(i + 1);
-            for (l = 0; l < i + 1; l++)
-                if (make_diffs)((int *)buf52[i][j].p)[l] = 0;
-                else ((int *)buf52[i][j].p)[l] = n++;
+            for(l = 0; l < i + 1; l++)
+                if(make_diffs)
+                    ((int *)buf52[i][j].p)[l] = 0;
+                else
+                    ((int *)buf52[i][j].p)[l] = n++;
         }
     }
 
@@ -5614,14 +5594,13 @@ int write_attr_in(hid_t loc_id,
     */
 
     n=1;
-    for (i = 0; i < 4; i++)
-    {
-        for (j = 0; j < 3; j++)
-        {
-            for (k = 0; k < 2; k++)
-            {
-                if (make_diffs) buf23[i][j][k]=0;
-                else buf23[i][j][k]=n++;
+    for(i = 0; i < 4; i++) {
+        for(j = 0; j < 3; j++) {
+            for(k = 0; k < 2; k++) {
+                if(make_diffs)
+                    buf23[i][j][k] = 0;
+                else
+                    buf23[i][j][k] = (char)(n++);
             }
         }
     }
@@ -5683,21 +5662,16 @@ int write_attr_in(hid_t loc_id,
     */
 
     n=1;
-    for (i = 0; i < 4; i++)
-    {
-        for (j = 0; j < 3; j++)
-        {
-            for (k = 0; k < 2; k++)
-            {
-                if (make_diffs)
-                {
-                    buf33[i][j][k].a=0;
-                    buf33[i][j][k].b=0;
+    for(i = 0; i < 4; i++) {
+        for(j = 0; j < 3; j++) {
+            for(k = 0; k < 2; k++) {
+                if(make_diffs) {
+                    buf33[i][j][k].a = 0;
+                    buf33[i][j][k].b = 0;
                 }
-                else
-                {
-                    buf33[i][j][k].a=n++;
-                    buf33[i][j][k].b=n++;
+                else {
+                    buf33[i][j][k].a = (char)(n++);
+                    buf33[i][j][k].b = n++;
                 }
             }
         }
@@ -5866,14 +5840,13 @@ int write_attr_in(hid_t loc_id,
         {
             for (k = 0; k < 2; k++)
             {
-                int l;
+                unsigned l;
+
                 buf53[i][j][k].p = HDmalloc((i + 1) * sizeof(int));
                 buf53[i][j][k].len = (size_t)i + 1;
                 for (l = 0; l < i + 1; l++)
                     if (make_diffs)
-                    {
                         ((int *)buf53[i][j][k].p)[l] = 0;
-                    }
                     else
                         ((int *)buf53[i][j][k].p)[l] = n++;
             }
@@ -5997,8 +5970,7 @@ int write_attr_in(hid_t loc_id,
     return 0;
 
 out:
-    H5E_BEGIN_TRY
-    {
+    H5E_BEGIN_TRY {
         H5Aclose(aid);
         H5Sclose(sid);
         H5Tclose(tid);
