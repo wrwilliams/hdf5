@@ -72,6 +72,9 @@
 /* Clear error - nothing to do */
 #define H5PL_CLR_ERROR
 
+/* maximum size for expanding env vars */
+#define EXPAND_BUFFER_SIZE 32767
+
 typedef const void *(__cdecl *H5PL_get_plugin_info_t)(void);
 
 /* Unix support */
@@ -83,7 +86,7 @@ typedef const void *(__cdecl *H5PL_get_plugin_info_t)(void);
 #define H5PL_HANDLE void *
 
 /* Get a handle to a plugin library.  Windows: TEXT macro handles Unicode strings */
-#define H5PL_OPEN_DLIB(S) dlopen(S, RTLD_LAZY)
+#define H5PL_OPEN_DLIB(S) dlopen(S, RTLD_NOW)
 
 /* Get the address of a symbol in dynamic library */
 #define H5PL_GET_LIB_FUNC(H,N) dlsym(H,N)
@@ -223,7 +226,7 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5PLset_loading_state() */
 
-
+
 /*-------------------------------------------------------------------------
  * Function: H5PLget_loading_state
  *
@@ -323,14 +326,17 @@ H5PL_load(H5PL_type_t type, int id)
 
     FUNC_ENTER_NOAPI(NULL)
 
-    switch (type) {
-    case H5PL_TYPE_FILTER:
-        if((H5PL_plugin_g & H5PL_FILTER_PLUGIN) == 0)
-            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTLOAD, NULL, "required dynamically loaded plugin filter '%d' is not available", id)
-        break;
-    default:
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTLOAD, NULL, "required dynamically loaded plugin '%d' is not valid", id)
-    }
+    switch(type) {
+        case H5PL_TYPE_FILTER:
+            if((H5PL_plugin_g & H5PL_FILTER_PLUGIN) == 0)
+                HGOTO_ERROR(H5E_PLUGIN, H5E_CANTLOAD, NULL, "required dynamically loaded plugin filter '%d' is not available", id)
+            break;
+
+        case H5PL_TYPE_ERROR:
+        case H5PL_TYPE_NONE:
+        default:
+            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTLOAD, NULL, "required dynamically loaded plugin '%d' is not valid", id)
+    } /* end switch */
 
     /* Initialize the location paths for dynamic libraries, if they aren't
      * already set up.
@@ -401,6 +407,19 @@ H5PL__init_path_table(void)
     if(NULL == dl_path)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for path")
 
+#ifdef H5_HAVE_WIN32_API
+    else { /* Expand windows env var*/
+        long bufCharCount;
+        char tempbuf[EXPAND_BUFFER_SIZE];
+        if((bufCharCount = ExpandEnvironmentStrings(dl_path, tempbuf, EXPAND_BUFFER_SIZE)) > EXPAND_BUFFER_SIZE)
+            HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "expanded path is too long")
+        if(bufCharCount == 0)
+            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "failed to expand path")
+        dl_path = (char *)H5MM_xfree(dl_path);
+        dl_path = H5MM_strdup(tempbuf);
+    }
+#endif H5_HAVE_WIN32_API
+
     /* Put paths in the path table.  They are separated by ":" */
     dir = HDstrtok(dl_path, H5PL_PATH_SEPARATOR);
     while(dir) {
@@ -453,7 +472,7 @@ H5PL__find(H5PL_type_t plugin_type, int type_id, char *dir, const void **info)
 
     /* Open the directory */
     if(!(dirp = HDopendir(dir)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_OPENERROR, FAIL, "can't open directory")
+        HGOTO_ERROR(H5E_PLUGIN, H5E_OPENERROR, FAIL, "can't open directory: %s", dir)
 
     /* Iterates through all entries in the directory to find the right plugin library */
     while(NULL != (dp = HDreaddir(dirp))) {
@@ -493,9 +512,10 @@ H5PL__find(H5PL_type_t plugin_type, int type_id, char *dir, const void **info)
                 /* Indicate success */
                 HGOTO_DONE(TRUE)
             } /* end if */
-            else
+            else {
                 HDassert(pathname);
                 pathname = (char *)H5MM_xfree(pathname);
+            }
         } /* end if */
     } /* end while */
 
@@ -549,9 +569,10 @@ H5PL__find(H5PL_type_t plugin_type, int type_id, char *dir, const void **info)
                 /* Indicate success */
                 HGOTO_DONE(TRUE)
             } /* end if */
-            else
+            else {
                 HDassert(pathname);
                 pathname = (char *)H5MM_xfree(pathname);
+            }
         } /* end if */
     } while(FindNextFileA(hFind, &fdFile)); /* Find the next file. */
 
