@@ -407,8 +407,8 @@ done:
  *-------------------------------------------------------------------------
  */
 htri_t
-H5FD_try_extend(H5FD_t *file, H5FD_mem_t type, H5F_t *f, haddr_t blk_end,
-    hsize_t extra_requested)
+H5FD_try_extend(H5FD_t *file, H5FD_mem_t type, H5F_t *f, hid_t dxpl_id,
+    haddr_t blk_end, hsize_t extra_requested)
 {
     haddr_t eoa;                /* End of allocated space in file */
     htri_t ret_value = FALSE;   /* Return value */
@@ -438,8 +438,9 @@ H5FD_try_extend(H5FD_t *file, H5FD_mem_t type, H5F_t *f, haddr_t blk_end,
         /* update the driver information message in the superblock extension
          * if it exists.  If it doesn't exist, this call is a no-op.
          */
-        if (H5F_update_super_ext_driver_msg(f, H5P_DATASET_XFER_DEFAULT) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_CANTUPDATE, HADDR_UNDEF, "error updating driver info superblock extension message")
+
+        if (H5F_update_super_ext_driver_msg(f, dxpl_id) < 0)
+            HGOTO_ERROR(H5E_VFL, H5E_CANTUPDATE, FAIL, "error updating driver info superblock extension message")
 
         /* Mark superblock dirty in cache, so change to EOA will get encoded */
         if(H5F_super_dirty(f) < 0)

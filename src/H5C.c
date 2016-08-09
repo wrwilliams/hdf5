@@ -698,6 +698,11 @@ H5C_create(size_t		      max_cache_size,
     cache_ptr->get_entry_ptr_from_addr_counter	= 0;  
 #endif /* NDEBUG */
 
+#if 1 /* test code -- delete before checkin */ /* JRM */
+    cache_ptr->rdfsm_settled		= FALSE;
+    cache_ptr->mdfsm_settled		= FALSE;
+#endif /* test code -- delete before checkin */ /* JRM */
+
     /* Set return value */
     ret_value = cache_ptr;
 
@@ -1178,6 +1183,10 @@ done:
  *
  *						JRM -- 8/30/15
  *
+ *		Modified function to call the free space manager 
+ *		settling functions.
+ *						JRM -- 6/9/16
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1257,6 +1266,73 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
          */
         ring = H5C_RING_USER;
 	while(ring < H5C_RING_NTYPES) {
+
+	    /* only call the free space manager settle routines when close
+             * warning has been received, and then only when the index is 
+             * non-empty for that ring.
+             *
+             * Observe that the FSM rings should only be populated if 
+             * persistant free space managers are enabled.
+             */
+	    if ( cache_ptr->close_warning_received ) {
+
+		switch(ring) {
+
+		    case H5C_RING_USER:
+			break;
+
+		    case H5C_RING_RDFSM:
+#if 0 
+			if ( cache_ptr->index_ring_len[ring] > 0 ) {
+#else 
+			/* if the cache is clean through the FSM rings,
+                         * then the FSMs are clean and can't change -- 
+                         * no need to run the settle routine.
+                         */
+			if ( ( f->shared->fs_strategy == 
+                               H5F_FILE_SPACE_ALL_PERSIST ) &&
+                             ( ! cache_ptr->rdfsm_settled ) ) {
+#endif
+			    if ( H5MF_settle_raw_data_fsm(f, dxpl_id) < 0 )
+                                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
+                                            "RD FSM settle failed.")
+
+			    cache_ptr->rdfsm_settled = TRUE;
+                        }
+			break;
+
+		    case H5C_RING_MDFSM:
+#if 0 
+			if ( cache_ptr->index_ring_len[ring] > 0 ) {
+#else 
+			/* if the cache is clean through the FSM rings,
+                         * then the FSMs are clean and can't change -- 
+                         * no need to run the settle routine.
+                         */
+			if ( ( f->shared->fs_strategy == 
+                               H5F_FILE_SPACE_ALL_PERSIST ) &&
+			     ( ! cache_ptr->mdfsm_settled ) ) {
+#endif
+			    if ( H5MF_settle_meta_data_fsm(f, dxpl_id) < 0 )
+                                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
+                                            "MD FSM settle failed.")
+
+			    cache_ptr->mdfsm_settled = TRUE;
+                        }
+			break;
+
+		    case H5C_RING_SBE:
+			break;
+
+		    case H5C_RING_SB:
+			break;
+
+		    default:
+                        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+                                    "Unknown ring?!?!")
+			break;
+		}
+            }
 	    if(H5C_flush_ring(f, dxpl_id, ring, flags) < 0)
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "flush ring failed.")
             ring++;
@@ -9783,6 +9859,61 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 
 } /* H5C_get_entry_ptr_from_addr() */
+
+#endif /* NDEBUG */
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Function:    H5C_cache_is_clean()
+ *
+ * Purpose:     Debugging function that verifies that all rings in the 
+ *		metadata cache are clean from the outermost ring, inwards
+ *		to the inner ring specified.
+ *
+ *		Returns TRUE if all specified rings are clean, and FALSE
+ *		if not.  Throws an assertion failure on error.
+ *
+ * Return:      TRUE if the indicated ring(s) are clean, and FALSE otherwise.
+ *
+ * Programmer:  John Mainzer, 6/18/16
+ *
+ * Changes:     None.
+ *
+ *-------------------------------------------------------------------------
+ */
+#ifndef NDEBUG
+hbool_t
+H5C_cache_is_clean(const H5F_t *f, H5C_ring_t inner_ring)
+{
+    H5C_t             * cache_ptr;
+    H5C_ring_t		ring = H5C_RING_USER;
+    hbool_t             ret_value = TRUE;      /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    HDassert( f );
+    HDassert( f->shared );
+
+    cache_ptr = f->shared->cache;
+
+    HDassert( cache_ptr != NULL );
+    HDassert( cache_ptr->magic == H5C__H5C_T_MAGIC );
+
+    HDassert(inner_ring >= H5C_RING_USER);
+    HDassert(inner_ring <= H5C_RING_SB);
+
+    while ( ring <= inner_ring ) {
+
+	if ( cache_ptr->dirty_index_ring_size[ring] > 0 )
+            ret_value = FALSE;
+
+	ring++;
+    }
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5C_cache_is_clean() */
 
 #endif /* NDEBUG */
 

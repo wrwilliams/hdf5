@@ -404,6 +404,7 @@ H5_DLL herr_t H5AC_get_entry_ptr_from_addr(const H5F_t *f, haddr_t addr,
 H5_DLL herr_t H5AC_verify_entry_type(const H5F_t * f, haddr_t addr,
     const H5AC_class_t * expected_type, hbool_t * in_cache_ptr,
     hbool_t * type_ok_ptr);
+H5_DLL hbool_t H5AC_cache_is_clean(const H5F_t *f, H5C_ring_t inner_ring);
 #endif /* NDEBUG */ /* end debugging functions */
 
 #endif /* !_H5ACprivate_H */

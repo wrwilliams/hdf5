@@ -759,6 +759,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
     if(1 == f->shared->nrefs) {
         H5F_io_info_t fio_info;             /* I/O info for operation */
 
+#if 0 /* old location of call to H5AC_prep_for_file_close() */ /* JRM */
         /* notify the metadata cache that the file is about to be closed.
          * This allows the cache to set up for creating a metadata cache 
          * image if this has been requested.
@@ -766,7 +767,9 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
         if(H5AC_prep_for_file_close(f, dxpl_id) < 0)
             /* Push error, but keep going*/
             HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "metadata cache prep for close failed")
+#endif /* old location of call to H5AC_prep_for_file_close() */ /* JRM */
 
+#if 0 /* old code */ /* JRM */
         /* Flush at this point since the file will be closed.
          * Only try to flush the file if it was opened with write access, and if
          * the caller requested a flush.
@@ -775,6 +778,30 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
             if(H5F_flush(f, dxpl_id, TRUE) < 0)
                 /* Push error, but keep going*/
                 HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
+#else /* new code */ /* JRM */
+        /* Flush at this point since the file will be closed.
+         * Only try to flush the file if it was opened with write access, and if
+         * the caller requested a flush.
+         */
+        if((H5F_ACC_RDWR & H5F_INTENT(f)) && flush) {
+            if(H5F_flush(f, dxpl_id, TRUE) < 0)
+                /* Push error, but keep going*/
+                HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
+        } else {
+            /* notify the metadata cache that the file is about to be closed.
+             * This allows the cache to set up for creating a metadata cache 
+             * image if this has been requested.
+             *
+             * must do this here, as this will not be done otherwise in the
+             * read only case.
+             */
+        if(H5AC_prep_for_file_close(f, dxpl_id) < 0)
+            /* Push error, but keep going*/
+            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "metadata cache prep for close failed")
+
+        }
+
+#endif /* new code */ /* JRM */
 
         /* Release the external file cache */
         if(f->shared->efc) {
@@ -783,6 +810,16 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                 HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't destroy external file cache")
             f->shared->efc = NULL;
         } /* end if */
+
+#if 1 /* new code */ /* JRM */
+	/* With the shutdown modifications, the contents of the metadata cache
+         * should be clean at this point, with the possible exception of the 
+         * the superblock and superblock extension.
+         *
+         * Verify this.
+         */
+	HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
+#endif /* new code */ /* JRM */
 
         /* Release objects that depend on the superblock being initialized */
         if(f->shared->sblock) {
@@ -794,10 +831,12 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
              *      'eoa' value)
              */
             if(H5F_ACC_RDWR & H5F_INTENT(f)) {
+
                 if(H5MF_close(f, dxpl_id) < 0)
                     /* Push error, but keep going*/
                     HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file free space info")
 
+#if 0 /* old code -- no longer needed */ /* JRM */
                 /* Flush the file again (if requested), as shutting down the
                  * free space manager may dirty some data structures again.
                  */
@@ -805,6 +844,38 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                     if(H5F_flush(f, dxpl_id, TRUE) < 0)
                         /* Push error, but keep going*/
                         HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
+#else /* new code */ /* JRM */
+		/* at this point, only the superblock and superblock 
+                 * extension should be dirty.
+                 */
+	        HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
+
+		
+		if(flush) {
+
+		    /* Release any space allocated to space aggregators, 
+                     * so that the eoa value corresponds to the end of the 
+                     * space written to in the file.
+                     *
+                     * At most, this should change the superblock or the 
+                     * superblock extension messages.
+                     */
+                    if(H5MF_free_aggrs(f, dxpl_id) < 0)
+                        /* Push error, but keep going*/
+                        HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, \
+                                    "can't release file space")
+
+		    /* Truncate the file to the current allocated size */
+    		    if(H5FD_truncate(f->shared->lf, dxpl_id, TRUE) < 0)
+        		HDONE_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, \
+                                    "low level truncate failed")
+
+		    /* at this point, only the superblock and superblock 
+                     * extension should be dirty.
+                     */
+	            HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
+		}
+#endif /* new code */ /* JRM */
             } /* end if */
 
             /* if it exists, unpin the driver information block cache entry,
@@ -821,6 +892,15 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                 HDONE_ERROR(H5E_FSPACE, H5E_CANTUNPIN, FAIL, "unable to unpin superblock")
             f->shared->sblock = NULL;
         } /* end if */
+
+#if 1 /* new code */ /* JRM */
+	/* with the possible exception of the superblock and superblock 
+         * extension, the metadata cache should be clean at this point.
+         *
+         * Verify this.
+         */
+	HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
+#endif /* new code */ /* JRM */
  
         /* Remove shared file struct from list of open files */
         if(H5F_sfile_remove(f->shared) < 0)
@@ -1181,6 +1261,20 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
     if(H5MF_free_aggrs(f, dxpl_id) < 0)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file space")
+
+#if 1 /* new home for H5AC_prep_for_file_close */ /* JRM */
+    if ( closing ) {
+
+        /* notify the metadata cache that the file is about to be closed.
+         * This allows the cache to set up for creating a metadata cache
+         * image if this has been requested.
+         */
+        if(H5AC_prep_for_file_close(f, dxpl_id) < 0)
+            /* Push error, but keep going*/
+            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "metadata cache prep for close failed")
+
+    }
+#endif /* new home for H5AC_prep_for_file_close */ /* JRM */
 
     /* Flush the entire metadata cache */
     if(H5AC_flush(f, dxpl_id) < 0)

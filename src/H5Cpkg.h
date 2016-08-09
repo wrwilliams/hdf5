@@ -4800,6 +4800,11 @@ struct H5C_t {
 #ifndef NDEBUG
     int64_t			get_entry_ptr_from_addr_counter;
 #endif /* NDEBUG */
+
+#if 1 /* test code -- delete before checkin */ /* JRM */
+    hbool_t 			rdfsm_settled;
+    hbool_t			mdfsm_settled;
+#endif /* test code -- delete before checkin */ /* JRM */
 };
 
 #ifdef H5_HAVE_PARALLEL

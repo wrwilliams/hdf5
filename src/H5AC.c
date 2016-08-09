@@ -2834,3 +2834,35 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5AC_reset_ring() */
 
+
+/*-------------------------------------------------------------------------
+ *
+ * Function:    H5AC_cache_is_clean()
+ *
+ * Purpose:     Debugging function that verifies that all rings in the
+ *              metadata cache are clean from the outermost ring, inwards
+ *              to the inner ring specified.
+ *
+ *              Returns TRUE if all specified rings are clean, and FALSE
+ *              if not.  Throws an assertion failure on error.
+ *
+ * Return:      TRUE if the indicated ring(s) are clean, and FALSE otherwise.
+ *
+ * Programmer:  John Mainzer, 6/18/16
+ *
+ * Changes:     None.
+ *
+ *-------------------------------------------------------------------------
+ */
+#ifndef NDEBUG
+hbool_t
+H5AC_cache_is_clean(const H5F_t *f, H5C_ring_t inner_ring)
+{
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    FUNC_LEAVE_NOAPI(H5C_cache_is_clean(f, inner_ring))
+
+}/* H5AC_cache_is_clean() */
+
+#endif /* NDEBUG */
+

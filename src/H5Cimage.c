@@ -1437,6 +1437,10 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
 
     HDassert(cache_ptr);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+#if 1 /* delete this eventually */ /* JRM */
+    if ( cache_ptr->close_warning_received )
+        HGOTO_DONE(SUCCEED)
+#endif /* delete this eventually */ /* JRM */
     HDassert(!cache_ptr->close_warning_received);
     HDassert(cache_ptr->pl_len == 0);
 
