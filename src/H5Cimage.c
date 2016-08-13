@@ -745,7 +745,7 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
 
 
     /* apply to to the newly deserialized entry */
-    if ( H5C_tag_entry(cache_ptr, ds_entry_ptr, dxpl_id) < 0 )
+    if ( H5C__tag_entry(cache_ptr, ds_entry_ptr, dxpl_id) < 0 )
 
         HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "Cannot tag metadata entry")
 

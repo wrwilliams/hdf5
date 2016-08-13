@@ -621,6 +621,10 @@ H5TEST_DLL void create_pinned_entry_dependency(H5F_t * file_ptr,
                             int pinned_type,
                             int pinned_idx);
 
+H5TEST_DLL herr_t create_entry_arrays(void);
+
+H5TEST_DLL void free_entry_arrays(void);
+
 H5TEST_DLL void reset_entries(void);
 
 H5TEST_DLL void resize_entry(H5F_t * file_ptr,
@@ -735,7 +739,7 @@ H5TEST_DLL void unprotect_entry(H5F_t * file_ptr,
 H5TEST_DLL void verify_clean(void);
 
 H5TEST_DLL void verify_entry_status(H5C_t * cache_ptr,
-                int tag,
+		         int tag,
                          int num_entries,
                          struct expected_entry_status expected[]);
 
