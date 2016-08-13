@@ -15870,8 +15870,6 @@ check_flush_protected_err(void)
  *-------------------------------------------------------------------------
  */
 
-extern H5C_t * saved_cache;
-
 static unsigned
 check_destroy_pinned_err(void)
 {

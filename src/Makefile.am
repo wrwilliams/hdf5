@@ -45,7 +45,7 @@ libhdf5_la_SOURCES= H5.c H5checksum.c H5dbg.c H5system.c H5timer.c H5trace.c \
         H5AC.c \
         H5B.c H5Bcache.c H5Bdbg.c \
         H5B2.c H5B2cache.c H5B2dbg.c H5B2hdr.c H5B2int.c H5B2stat.c H5B2test.c \
-        H5C.c H5Cimage.c \
+        H5C.c H5Cimage.c H5Cquery.c \
         H5CS.c \
         H5D.c H5Dbtree.c H5Dbtree2.c H5Dchunk.c H5Dcompact.c H5Dcontig.c H5Ddbg.c \
         H5Ddeprec.c H5Dearray.c H5Defl.c H5Dfarray.c H5Dfill.c H5Dint.c \
@@ -81,7 +81,7 @@ libhdf5_la_SOURCES= H5.c H5checksum.c H5dbg.c H5system.c H5timer.c H5trace.c \
         H5O.c H5Oainfo.c H5Oalloc.c H5Oattr.c \
         H5Oattribute.c H5Obogus.c H5Obtreek.c H5Ocache.c H5Ochunk.c \
         H5Ocont.c H5Ocopy.c H5Odbg.c H5Odrvinfo.c H5Odtype.c H5Oefl.c \
-        H5Ofill.c H5Ofsinfo.c H5Oginfo.c \
+        H5Ofill.c H5Oflush.c H5Ofsinfo.c H5Oginfo.c \
         H5Olayout.c \
         H5Olinfo.c H5Olink.c H5Omdci_msg.c H5Omessage.c H5Omtime.c \
         H5Oname.c H5Onull.c H5Opline.c H5Orefcount.c \
