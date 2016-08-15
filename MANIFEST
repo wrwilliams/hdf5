@@ -497,6 +497,7 @@
 ./src/H5Cpublic.h
 ./src/H5Cquery.c
 ./src/H5Ctag.c
+./src/H5Ctest.c
 ./src/H5CS.c
 ./src/H5CSprivate.h
 ./src/H5D.c
@@ -885,6 +886,7 @@
 ./test/cache_image.c
 ./test/cache_tagging.c
 ./test/cmpd_dset.c
+./test/cork.c
 ./test/corrupt_stab_msg.h5
 ./test/cross_read.c
 ./test/dangle.c
@@ -2948,6 +2950,8 @@
 ./tools/h5dump/CMakeTestsPBITS.cmake
 ./tools/h5dump/CMakeTestsXML.cmake
 ./tools/h5dump/CMakeTestsVDS.cmake
+./tools/h5format_convert/CMakeLists.txt
+./tools/h5format_convert/CMakeTests.cmake
 ./tools/h5import/CMakeLists.txt
 ./tools/h5import/CMakeTests.cmake
 ./tools/h5jam/CMakeLists.txt

@@ -187,7 +187,7 @@ static unsigned check_resize_entry_errs(void);
 static unsigned check_unprotect_ro_dirty_err(void);
 static unsigned check_protect_ro_rw_err(void);
 static unsigned check_check_evictions_enabled_err(void);
-static unsigned check_auto_cache_resize(void);
+static unsigned check_auto_cache_resize(hbool_t cork_ageout);
 static unsigned check_auto_cache_resize_disable(void);
 static unsigned check_auto_cache_resize_epoch_markers(void);
 static unsigned check_auto_cache_resize_input_errs(void);
@@ -197,6 +197,7 @@ static unsigned check_flush_deps(void);
 static unsigned check_flush_deps_err(void);
 static unsigned check_flush_deps_order(void);
 static unsigned check_notify_cb(void);
+static unsigned check_metadata_cork(hbool_t fill_via_insertion);
 static unsigned check_entry_deletions_during_scans(void);
 static void cedds__expunge_dirty_entry_in_flush_test(H5F_t * file_ptr);
 static void cedds__H5C_make_space_in_cache(H5F_t * file_ptr);
@@ -2885,7 +2886,7 @@ check_insert_entry(void)
 
 	result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
 			              &in_cache, &is_dirty, &is_protected,
-				      &is_pinned, NULL, NULL, NULL);
+				      &is_pinned, NULL, NULL, NULL, NULL);
 
         if ( result < 0 ) {
 
@@ -9531,62 +9532,62 @@ check_flush_cache__flush_op_eviction_test(H5F_t * file_ptr)
        * worry about maintaining the status of entries that we haven't used yet.
        */
       /* entry			entry				in	at main                                               flush dep  flush dep    child flush  flush   flush */
-      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par idx: dep ref.count: dep height: order: */
-      { VARIABLE_ENTRY_TYPE,	0,	VARIABLE_ENTRY_SIZE/4,	TRUE,	TRUE,	TRUE,	FALSE,	TRUE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { VARIABLE_ENTRY_TYPE,	1,	VARIABLE_ENTRY_SIZE/4,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { VARIABLE_ENTRY_TYPE,	2,	VARIABLE_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { VARIABLE_ENTRY_TYPE,	3,	VARIABLE_ENTRY_SIZE/4,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { VARIABLE_ENTRY_TYPE,	4,	VARIABLE_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { VARIABLE_ENTRY_TYPE,	5,	VARIABLE_ENTRY_SIZE/4,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { VARIABLE_ENTRY_TYPE,	6,	VARIABLE_ENTRY_SIZE/2,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { VARIABLE_ENTRY_TYPE,	7,	VARIABLE_ENTRY_SIZE/2,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { VARIABLE_ENTRY_TYPE,	8,	VARIABLE_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { VARIABLE_ENTRY_TYPE,	9,	VARIABLE_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	0,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	1,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	2,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	3,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	4,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	5,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	6,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	7,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	8,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	9,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	10,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	11,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	12,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	13,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	14,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	15,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	16,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	17,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	18,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	19,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	20,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	21,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	22,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	23,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	24,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	25,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	26,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	27,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	28,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	29,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	30,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { LARGE_ENTRY_TYPE,	0,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { LARGE_ENTRY_TYPE,	1,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { LARGE_ENTRY_TYPE,	2,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { LARGE_ENTRY_TYPE,	3,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { LARGE_ENTRY_TYPE,	4,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { LARGE_ENTRY_TYPE,	5,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { LARGE_ENTRY_TYPE,	6,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { LARGE_ENTRY_TYPE,	7,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { LARGE_ENTRY_TYPE,	8,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { LARGE_ENTRY_TYPE,	9,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { LARGE_ENTRY_TYPE,	10,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { LARGE_ENTRY_TYPE,	11,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { LARGE_ENTRY_TYPE,	12,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { LARGE_ENTRY_TYPE,	13,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 }
+      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par idx: dep ref.count: dep height: order:        corked: */
+      { VARIABLE_ENTRY_TYPE,	0,	VARIABLE_ENTRY_SIZE/4,	TRUE,	TRUE,	TRUE,	FALSE,	TRUE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { VARIABLE_ENTRY_TYPE,	1,	VARIABLE_ENTRY_SIZE/4,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { VARIABLE_ENTRY_TYPE,	2,	VARIABLE_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { VARIABLE_ENTRY_TYPE,	3,	VARIABLE_ENTRY_SIZE/4,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { VARIABLE_ENTRY_TYPE,	4,	VARIABLE_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { VARIABLE_ENTRY_TYPE,	5,	VARIABLE_ENTRY_SIZE/4,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { VARIABLE_ENTRY_TYPE,	6,	VARIABLE_ENTRY_SIZE/2,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { VARIABLE_ENTRY_TYPE,	7,	VARIABLE_ENTRY_SIZE/2,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { VARIABLE_ENTRY_TYPE,	8,	VARIABLE_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { VARIABLE_ENTRY_TYPE,	9,	VARIABLE_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	0,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	1,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	2,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	3,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	4,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	5,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	6,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	7,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	8,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	9,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	10,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	11,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	12,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	13,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	14,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	15,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	16,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	17,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	18,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	19,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	20,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	21,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	22,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	23,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	24,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	25,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	26,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	27,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	28,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	29,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	30,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { LARGE_ENTRY_TYPE,	0,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { LARGE_ENTRY_TYPE,	1,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { LARGE_ENTRY_TYPE,	2,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { LARGE_ENTRY_TYPE,	3,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { LARGE_ENTRY_TYPE,	4,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { LARGE_ENTRY_TYPE,	5,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { LARGE_ENTRY_TYPE,	6,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { LARGE_ENTRY_TYPE,	7,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { LARGE_ENTRY_TYPE,	8,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { LARGE_ENTRY_TYPE,	9,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { LARGE_ENTRY_TYPE,	10,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { LARGE_ENTRY_TYPE,	11,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { LARGE_ENTRY_TYPE,	12,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { LARGE_ENTRY_TYPE,	13,	LARGE_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE}
     };
 
     if ( pass ) {
@@ -12780,8 +12781,7 @@ check_get_entry_status(void)
          */
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                 &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL,
-                 NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -12809,8 +12809,7 @@ check_get_entry_status(void)
     if ( pass ) {
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                 &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL,
-                 NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -12836,8 +12835,7 @@ check_get_entry_status(void)
     if ( pass ) {
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                 &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL,
-                 NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -12863,8 +12861,7 @@ check_get_entry_status(void)
     if ( pass ) {
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                 &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL,
-                 NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -12890,8 +12887,7 @@ check_get_entry_status(void)
     if ( pass ) {
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                 &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL,
-                 NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -12917,8 +12913,7 @@ check_get_entry_status(void)
     if ( pass ) {
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                 &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL,
-                 NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -13006,7 +13001,7 @@ check_expunge_entry(void)
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
                                       &in_cache, &is_dirty, &is_protected,
-				      &is_pinned, NULL, NULL, NULL);
+				      &is_pinned, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -13047,8 +13042,7 @@ check_expunge_entry(void)
     if ( pass ) {
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                 &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL,
-                 NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -13091,8 +13085,7 @@ check_expunge_entry(void)
          */
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                 &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL,
-                 NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -13133,7 +13126,7 @@ check_expunge_entry(void)
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
                                       &in_cache, &is_dirty, &is_protected,
-				      &is_pinned, NULL, NULL, NULL);
+				      &is_pinned, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -13175,7 +13168,7 @@ check_expunge_entry(void)
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
                                       &in_cache, &is_dirty, &is_protected,
-				      &is_pinned, NULL, NULL, NULL);
+				      &is_pinned, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -13218,8 +13211,8 @@ check_expunge_entry(void)
          */
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                                       &in_cache, &is_dirty, &is_protected,
-				       &is_pinned, NULL, NULL, NULL);
+                                      &in_cache, &is_dirty, &is_protected,
+				      &is_pinned, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -14182,7 +14175,7 @@ check_resize_entry(void)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -14260,7 +14253,7 @@ check_resize_entry(void)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -14345,7 +14338,7 @@ check_resize_entry(void)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -14413,7 +14406,7 @@ check_resize_entry(void)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -14473,7 +14466,7 @@ check_resize_entry(void)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -14513,7 +14506,7 @@ check_resize_entry(void)
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
                                       &in_cache, &is_dirty, &is_protected,
-				      &is_pinned, NULL, NULL, NULL);
+				      &is_pinned, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -14627,7 +14620,7 @@ check_resize_entry(void)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -14707,7 +14700,7 @@ check_resize_entry(void)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -14792,7 +14785,7 @@ check_resize_entry(void)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -14862,7 +14855,7 @@ check_resize_entry(void)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -14922,7 +14915,7 @@ check_resize_entry(void)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -14962,7 +14955,7 @@ check_resize_entry(void)
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
                                       &in_cache, &is_dirty, &is_protected,
-				      &is_pinned, NULL, NULL, NULL);
+				      &is_pinned, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -15258,7 +15251,7 @@ check_evictions_enabled(void)
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              NULL, &in_cache, NULL, NULL, NULL,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -15324,8 +15317,7 @@ check_evictions_enabled(void)
         entry_ptr = &(base_addr[1]);
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
-			              NULL, &in_cache, NULL, NULL, 
-                                      NULL, NULL, NULL, NULL);
+			              NULL, &in_cache, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -15544,8 +15536,7 @@ check_evictions_enabled(void)
         entry_ptr = &(base_addr[2]);
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
-			              NULL, &in_cache, NULL, NULL, 
-                                      NULL, NULL, NULL, NULL);
+			              NULL, &in_cache, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -15580,8 +15571,7 @@ check_evictions_enabled(void)
         entry_ptr = &(base_addr[3]);
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
-			              NULL, &in_cache, NULL, NULL, 
-                                      NULL, NULL, NULL, NULL);
+			              NULL, &in_cache, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -15715,8 +15705,7 @@ check_evictions_enabled(void)
         entry_ptr = &(base_addr[4]);
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
-			              NULL, &in_cache, NULL, NULL, 
-                                      NULL, NULL, NULL, NULL);
+			              NULL, &in_cache, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -17335,12 +17324,6 @@ check_check_evictions_enabled_err(void)
  * Programmer:	John Mainzer
  *              10/29/04
  *
- * Modifications:
- *
- *              John Mainzer 1/8/08
- *              Added a basic set of tests for the flash cache size
- *              increment code.
- *
  *-------------------------------------------------------------------------
  */
 
@@ -17361,7 +17344,7 @@ static void test_rpt_fcn(H5_ATTR_UNUSED H5C_t * cache_ptr,
 }
 
 static unsigned
-check_auto_cache_resize(void)
+check_auto_cache_resize(hbool_t cork_ageout)
 {
     hbool_t show_progress = FALSE;
     herr_t result;
@@ -18351,6 +18334,8 @@ check_auto_cache_resize(void)
     if ( show_progress ) HDfprintf(stderr, "check point %d\n", checkpoint++);
 
 
+    if(cork_ageout)
+	cork_entry_type(file_ptr, MEDIUM_ENTRY_TYPE);
     /* fill the cache with 1024 byte entries -- nothing should happen
      * for three epochs while the markers are inserted into the cache
      *
@@ -18693,6 +18678,9 @@ check_auto_cache_resize(void)
     }
 
     if ( show_progress ) HDfprintf(stderr, "check point %d\n", checkpoint++);
+
+    if(cork_ageout)
+	uncork_entry_type(file_ptr, MEDIUM_ENTRY_TYPE);
 
 
     /* repeat the above test, but with max_decrement enabled to see
@@ -27971,161 +27959,163 @@ check_metadata_blizzard_absence(hbool_t fill_via_insertion)
      */
     struct expected_entry_status expected[150] =
     {
-      /* entry		entry			in	at main                                                        flush dep flush dep child flush   flush       flush */
-      /* type:		index:	size:		cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type: par idx: dep ref.count: dep height: order: */
-      { HUGE_ENTRY_TYPE, 0,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 1,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 2,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 3,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 4,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 5,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 6,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 7,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 8,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 9,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 10,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 11,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 12,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 13,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 14,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 15,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 16,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 17,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 18,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 19,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 20,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 21,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 22,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 23,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 24,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 25,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 26,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 27,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 28,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 29,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 30,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 31,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 32,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 33,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 34,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 35,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 36,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 37,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 38,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 39,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 40,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 41,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 42,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 43,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 44,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 45,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 46,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 47,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 48,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 49,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 50,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 51,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 52,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 53,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 54,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 55,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 56,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 57,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 58,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 59,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 60,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 61,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 62,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 63,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 64,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 65,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 66,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 67,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 68,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 69,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 70,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 71,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 72,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 73,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 74,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 75,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 76,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 77,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 78,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 79,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 80,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 81,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 82,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 83,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 84,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 85,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 86,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 87,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 88,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 89,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 90,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 91,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 92,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 93,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 94,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 95,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 96,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 97,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 98,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 99,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 100,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 101,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 102,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 103,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 104,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 105,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 106,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 107,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 108,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 109,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 110,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 111,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 112,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 113,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 114,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 115,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 116,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 117,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 118,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 119,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 120,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 121,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 122,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 123,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 124,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 125,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 126,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 127,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 128,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 129,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 130,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 131,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 132,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 133,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 134,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 135,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 136,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 137,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 138,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 139,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 140,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 141,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 142,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 143,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 144,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 145,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 146,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 147,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 148,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 149,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 }
+      /* entry		entry			in	at main                                                        flush dep flush dep child flush   flush   flush */
+      /* type:		index:	size:		cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type: par idx: dep ref.count: dep height: order:  corked: */
+      { HUGE_ENTRY_TYPE, 0,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 1,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 2,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 3,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 4,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 5,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 6,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 7,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 8,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 9,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 10,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 11,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 12,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 13,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 14,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 15,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 16,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 17,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 18,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 19,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 20,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 21,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 22,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 23,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 24,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 25,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 26,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 27,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 28,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 29,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 30,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 31,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 32,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 33,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 34,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 35,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 36,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 37,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 38,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 39,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 40,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 41,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 42,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 43,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 44,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 45,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 46,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 47,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 48,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 49,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 50,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 51,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 52,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 53,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 54,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 55,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 56,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 57,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 58,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 59,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 60,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 61,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 62,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 63,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 64,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 65,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 66,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 67,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 68,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 69,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 70,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 71,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 72,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 73,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 74,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 75,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 76,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 77,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 78,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 79,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 80,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 81,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 82,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 83,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 84,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 85,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 86,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 87,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 88,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 89,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 90,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 91,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 92,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 93,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 94,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 95,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 96,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 97,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 98,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 99,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 100,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 101,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 102,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 103,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 104,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 105,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 106,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 107,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 108,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 109,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 110,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 111,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 112,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 113,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 114,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 115,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 116,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 117,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 118,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 119,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 120,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 121,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 122,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 123,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 124,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 125,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 126,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 127,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 128,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 129,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 130,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 131,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 132,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 133,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 134,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 135,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 136,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 137,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 138,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 139,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 140,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 141,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 142,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 143,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 144,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 145,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 146,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 147,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 148,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 149,	HUGE_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE}
     };
 
     pass = TRUE;
+
+    reset_entries();
 
     if (fill_via_insertion) {
 
@@ -28802,12 +28792,12 @@ check_flush_deps(void)
     struct expected_entry_status expected[5] =
     {
       /* entry			entry		in	at main                                                        flush dep flush dep child flush   flush       flush */
-      /* type:		index:	size:		cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type: par idx: dep ref.count: dep height: order: */
-      { PICO_ENTRY_TYPE, 0,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { PICO_ENTRY_TYPE, 1,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { PICO_ENTRY_TYPE, 2,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { PICO_ENTRY_TYPE, 3,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { PICO_ENTRY_TYPE, 4,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 }
+      /* type:		index:	size:		cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type: par idx: dep ref.count: dep height: order:  corked: */
+      { PICO_ENTRY_TYPE, 0,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { PICO_ENTRY_TYPE, 1,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { PICO_ENTRY_TYPE, 2,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { PICO_ENTRY_TYPE, 3,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { PICO_ENTRY_TYPE, 4,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE}
     };
 
     TESTING("flush dependencies");
@@ -28857,8 +28847,7 @@ check_flush_deps(void)
         /* Check the parent's entry status */
 	entry_ptr = &(base_addr[1]);
 	if(H5C_get_entry_status(file_ptr, entry_ptr->addr, NULL, &in_cache,
-                NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child,
-                NULL) < 0)
+                NULL, NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child, NULL) < 0)
             CACHE_ERROR("H5C_get_entry_status() failed")
         if(!in_cache || is_flush_dep_parent || is_flush_dep_child)
             CACHE_ERROR("invalid entry status")
@@ -28866,8 +28855,7 @@ check_flush_deps(void)
         /* Check the child's entry status */
 	entry_ptr = &(base_addr[0]);
 	if(H5C_get_entry_status(file_ptr, entry_ptr->addr, NULL, &in_cache,
-                NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child,
-                NULL) < 0)
+                NULL, NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child, NULL) < 0)
             CACHE_ERROR("H5C_get_entry_status() failed")
         if(!in_cache || is_flush_dep_parent || is_flush_dep_child)
             CACHE_ERROR("invalid entry status")
@@ -28878,8 +28866,7 @@ check_flush_deps(void)
         /* Check the parent's entry status */
 	entry_ptr = &(base_addr[1]);
 	if(H5C_get_entry_status(file_ptr, entry_ptr->addr, NULL, &in_cache,
-                NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child,
-                NULL) < 0)
+                NULL, NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child, NULL) < 0)
             CACHE_ERROR("H5C_get_entry_status() failed")
         if(!in_cache || !is_flush_dep_parent || is_flush_dep_child)
             CACHE_ERROR("invalid entry status")
@@ -28887,8 +28874,7 @@ check_flush_deps(void)
         /* Check the child's entry status */
 	entry_ptr = &(base_addr[0]);
 	if(H5C_get_entry_status(file_ptr, entry_ptr->addr, NULL, &in_cache,
-                NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child,
-                NULL) < 0)
+                NULL, NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child, NULL) < 0)
             CACHE_ERROR("H5C_get_entry_status() failed")
         if(!in_cache || is_flush_dep_parent || !is_flush_dep_child)
             CACHE_ERROR("invalid entry status")
@@ -30844,13 +30830,13 @@ check_flush_deps_order(void)
     unsigned u;                         /* Local index variable */
     struct expected_entry_status expected[5] =
     {
-      /* entry			entry		in	at main                                                        flush dep flush dep child flush   flush       flush */
-      /* type:		index:	size:		cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type: par idx: dep ref.count: dep height: order: */
-      { PICO_ENTRY_TYPE, 0,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { PICO_ENTRY_TYPE, 1,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { PICO_ENTRY_TYPE, 2,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { PICO_ENTRY_TYPE, 3,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { PICO_ENTRY_TYPE, 4,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 }
+      /* entry			entry		in	at main                                                        flush dep flush dep child flush  flush  flush */
+      /* type:		index:	size:		cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type: par idx: dep ref.count: dep height: order: corked: */
+      { PICO_ENTRY_TYPE, 0,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { PICO_ENTRY_TYPE, 1,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { PICO_ENTRY_TYPE, 2,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { PICO_ENTRY_TYPE, 3,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { PICO_ENTRY_TYPE, 4,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE}
     };
     unsigned flush_order;       /* Index for tracking flush order */
 
@@ -32855,12 +32841,12 @@ check_notify_cb(void)
     struct expected_entry_status expected[5] =
     {
       /* entry			entry		   in	 at main                                               flush dep flush dep child flush   flush       flush  */
-      /* type:		index:	size:		   cache: addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type: par idx: dep ref.count: dep height: order: */
-      { NOTIFY_ENTRY_TYPE, 0,	NOTIFY_ENTRY_SIZE, FALSE, TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { NOTIFY_ENTRY_TYPE, 1,	NOTIFY_ENTRY_SIZE, FALSE, TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { NOTIFY_ENTRY_TYPE, 2,	NOTIFY_ENTRY_SIZE, FALSE, TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { NOTIFY_ENTRY_TYPE, 3,	NOTIFY_ENTRY_SIZE, FALSE, TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { NOTIFY_ENTRY_TYPE, 4,	NOTIFY_ENTRY_SIZE, FALSE, TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1 }
+      /* type:		index:	size:		   cache: addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par type: par idx: dep ref.count: dep height: order: corked:*/
+      { NOTIFY_ENTRY_TYPE, 0,	NOTIFY_ENTRY_SIZE, FALSE, TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { NOTIFY_ENTRY_TYPE, 1,	NOTIFY_ENTRY_SIZE, FALSE, TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { NOTIFY_ENTRY_TYPE, 2,	NOTIFY_ENTRY_SIZE, FALSE, TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { NOTIFY_ENTRY_TYPE, 3,	NOTIFY_ENTRY_SIZE, FALSE, TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { NOTIFY_ENTRY_TYPE, 4,	NOTIFY_ENTRY_SIZE, FALSE, TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE}
     };
 
     TESTING("'notify' callback");
@@ -33060,7 +33046,6 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-
 static unsigned
 check_entry_deletions_during_scans(void)
 {
@@ -33171,11 +33156,11 @@ cedds__expunge_dirty_entry_in_flush_test(H5F_t * file_ptr)
        * worry about maintaining the status of entries that we haven't used yet.
        */
       /* entry			entry				in	at main                                               flush dep  flush dep    child flush  flush   flush */
-      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par idx: dep ref.count: dep height: order: */
-      { HUGE_ENTRY_TYPE, 	0,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 	1,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 	2,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 	3,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1 }
+      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par idx: dep ref.count: dep height: order:        corked: */
+      { HUGE_ENTRY_TYPE, 	0,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 	1,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 	2,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 	3,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE}
     };
 
     if ( pass ) {
@@ -33409,43 +33394,43 @@ cedds__H5C_make_space_in_cache(H5F_t * file_ptr)
        * worry about maintaining the status of entries that we haven't used yet.
        */
       /* entry			entry				in	at main                                               flush dep  flush dep    child flush  flush   flush */
-      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par idx: dep ref.count: dep height: order: */
-      { HUGE_ENTRY_TYPE, 	0,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 	1,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 	2,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { HUGE_ENTRY_TYPE, 	3,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	0,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	1,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	2,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	3,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	4,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	5,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	6,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	7,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	8,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	9,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	10,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	11,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	12,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	13,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	14,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	15,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	16,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	17,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	18,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	19,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	20,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	21,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	22,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	23,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	24,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	25,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	26,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	27,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	28,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	29,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	30,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	31,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 } 
+      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par idx: dep ref.count: dep height: order:        corked: */
+      { HUGE_ENTRY_TYPE, 	0,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 	1,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 	2,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { HUGE_ENTRY_TYPE, 	3,	HUGE_ENTRY_SIZE, 	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	0,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	1,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	2,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	3,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	4,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	5,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	6,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	7,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	8,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	9,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	10,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	11,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	12,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	13,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	14,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	15,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	16,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	17,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	18,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	19,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	20,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	21,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	22,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	23,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	24,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	25,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	26,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	27,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	28,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	29,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	30,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	31,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE} 
     };
 
     if ( pass ) {
@@ -33795,39 +33780,39 @@ cedds__H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * file_ptr)
        * worry about maintaining the status of entries that we haven't used yet.
        */
       /* entry			entry				in	at main                                               flush dep  flush dep    child flush  flush   flush */
-      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par idx: dep ref.count: dep height: order: */
-      { MONSTER_ENTRY_TYPE,	0,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	1,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	2,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	3,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	4,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	5,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	6,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	7,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	8,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	9,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	10,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	11,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	12,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	13,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	14,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	15,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	16,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	17,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	18,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	19,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	20,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	21,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	22,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	23,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	24,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	25,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	26,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	27,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	28,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	29,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	30,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,	31,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1 } 
+      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:  par idx: dep ref.count: dep height: order:        corked: */
+      { MONSTER_ENTRY_TYPE,	0,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,  -1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	1,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	2,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	3,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	4,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	5,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	6,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	7,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	8,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	9,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	10,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	11,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	12,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	13,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	14,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	15,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	16,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	17,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	18,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	19,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	20,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	21,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	22,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	23,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	24,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	25,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	26,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	27,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	28,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	29,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	30,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	31,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,	-1,       -1,      {0,0,0,0,0,0}, 0,          -1, FALSE} 
     };
     H5C_auto_size_ctl_t saved_auto_size_ctl;
     H5C_auto_size_ctl_t test_auto_size_ctl =
@@ -34259,12 +34244,12 @@ cedds__H5C_flush_invalidate_cache__bucket_scan(H5F_t * file_ptr)
        * worry about maintaining the status of entries that we haven't used yet.
        */
       /* entry			entry				in	at main                                                  flush dep         flush dep   child flush  flush       flush */
-      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:     par type:         par idx: dep ref.count: dep height: order: */
-      { MONSTER_ENTRY_TYPE,	 0,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	TRUE,	TRUE,	FALSE,	FALSE,      -1,               -1,      {1,0,0,0,0,0}, 1,          -1 },
-      { MONSTER_ENTRY_TYPE,	 8,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,      -1,               -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,     16,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,      -1,               -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,     24,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,      -1,               -1,      {0,0,0,0,0,0}, 0,          -1 },
-      { MONSTER_ENTRY_TYPE,     31,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE, MONSTER_ENTRY_TYPE,     0,      {0,0,0,0,0,0}, 0,          -1 } 
+      /* type:			index:	size:			cache:	addr:	dirty:	prot:	pinned:	dsrlzd:	srlzd:	dest:     par type:         par idx: dep ref.count: dep height: order: corked: */
+      { MONSTER_ENTRY_TYPE,	 0,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	TRUE,	TRUE,	FALSE,	FALSE,      -1,               -1,      {1,0,0,0,0,0}, 1,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,	 8,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,      -1,               -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,     16,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,      -1,               -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,     24,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	FALSE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE,      -1,               -1,      {0,0,0,0,0,0}, 0,          -1, FALSE},
+      { MONSTER_ENTRY_TYPE,     31,	MONSTER_ENTRY_SIZE,	TRUE,	TRUE,	TRUE,	FALSE,	FALSE,	TRUE,	FALSE,	FALSE, MONSTER_ENTRY_TYPE,     0,      {0,0,0,0,0,0}, 0,          -1, FALSE} 
     };
 
     if ( pass ) {
@@ -35160,7 +35145,8 @@ main(void)
     nerrs += check_unprotect_ro_dirty_err();
     nerrs += check_protect_ro_rw_err();
     nerrs += check_check_evictions_enabled_err();
-    nerrs += check_auto_cache_resize();
+    nerrs += check_auto_cache_resize(FALSE);
+    nerrs += check_auto_cache_resize(TRUE);
     nerrs += check_auto_cache_resize_disable();
     nerrs += check_auto_cache_resize_epoch_markers();
     nerrs += check_auto_cache_resize_input_errs();
