@@ -912,8 +912,18 @@ HDfprintf(stderr, "%s: Check 2.0\n", FUNC);
                     HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, HADDR_UNDEF, "allocation failed from paged aggregation")
             } /* end if */
             else { /* If paged aggregation is disabled, allocate from VFD */
-                 if(HADDR_UNDEF == (ret_value = H5MF_vfd_alloc(f, dxpl_id, alloc_type, size, TRUE)))
+		haddr_t     eoa_frag_addr = HADDR_UNDEF;    /* Address of fragment at EOA */
+		hsize_t     eoa_frag_size = 0;              /* Size of fragment at EOA */
+
+                 if(HADDR_UNDEF == (ret_value = H5F_alloc(f, dxpl_id, alloc_type, size, &eoa_frag_addr, &eoa_frag_size)))
                     HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, HADDR_UNDEF, "allocation failed from vfd")
+
+		/* Check if fragment was generated */
+		if(eoa_frag_size) {
+		    /* Put fragment on the free list */
+		    if(H5MF_xfree(f, alloc_type, dxpl_id, eoa_frag_addr, eoa_frag_size) < 0)
+			HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, HADDR_UNDEF, "can't free eoa fragment")
+		}
             } /* end else */
         } /* end if */
         else { /* For non-paged aggregation, continue further action */
@@ -997,7 +1007,7 @@ HDfprintf(stderr, "%s: alloc_type = %u, size = %Hu\n", FUNC, (unsigned)alloc_typ
                 H5MF_EOA_MISALIGN(f, eoa, f->shared->fs.page_size, frag_size);
 
                 /* Allocate from VFD */
-                if(HADDR_UNDEF == (ret_value = H5F_alloc(f, dxpl_id, alloc_type, size + frag_size)))
+                if(HADDR_UNDEF == (ret_value = H5F_alloc(f, dxpl_id, alloc_type, size + frag_size, NULL, NULL)))
                     HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, HADDR_UNDEF, "can't allocate file space")
 
                 /* Return the aligned address */
@@ -1067,7 +1077,7 @@ HDfprintf(stderr, "%s: alloc_type = %u, size = %Hu\n", FUNC, (unsigned)alloc_typ
                     /* Is the fragment of the right type and big enough? */
                     if(frag_ptype == ptype && frag_size >= size) {
                         /* Allocate from VFD */
-                        if(HADDR_UNDEF == (ret_value = H5F_alloc(f, dxpl_id, alloc_type, size)))
+                        if(HADDR_UNDEF == (ret_value = H5F_alloc(f, dxpl_id, alloc_type, size, NULL, NULL)))
                             HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, HADDR_UNDEF, "can't allocate file space")
 
                         /* If the block used up entire fragment, reset the last_small */
@@ -1213,12 +1223,12 @@ H5MF_close_allocate(H5F_t *f, H5FD_mem_t alloc_type, hid_t dxpl_id, hsize_t size
 	    HDassert((eoa / f->shared->fs.page_size) == (((eoa + size) - 1) / f->shared->fs.page_size));
 
             /* Allocate the request */
-            if(HADDR_UNDEF == (ret_value = H5F_alloc(f, dxpl_id, alloc_type, size)))
+            if(HADDR_UNDEF == (ret_value = H5F_alloc(f, dxpl_id, alloc_type, size, NULL, NULL)))
                 HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, HADDR_UNDEF, "can't allocate file space")
 	} /* end if */
         else {
             /* Allocate the request + misaligned fragment */
-            if(HADDR_UNDEF == (ret_value = H5F_alloc(f, dxpl_id, alloc_type, size + frag_size)))
+            if(HADDR_UNDEF == (ret_value = H5F_alloc(f, dxpl_id, alloc_type, size + frag_size, NULL, NULL)))
                 HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, HADDR_UNDEF, "can't allocate file space")
 
             /* Return the aligned address */
@@ -1242,7 +1252,7 @@ H5MF_close_allocate(H5F_t *f, H5FD_mem_t alloc_type, hid_t dxpl_id, hsize_t size
     else {
 	/* Allocate the request but not freeing the mis-aligned fragment if any */
 	/* The misaligned fragment is dropped to the floor */
-	if(HADDR_UNDEF == (ret_value = H5MF_vfd_alloc(f, dxpl_id, alloc_type, size, FALSE)))
+	if(HADDR_UNDEF == (ret_value = H5F_alloc(f, dxpl_id, alloc_type, size, NULL, NULL)))
 	    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, HADDR_UNDEF, "can't allocate file space")
     } /* end else */
 

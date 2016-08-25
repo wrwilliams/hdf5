@@ -95,7 +95,7 @@
  *-------------------------------------------------------------------------
  */
 haddr_t
-H5F_alloc(H5F_t *f, hid_t dxpl_id, H5F_mem_t type, hsize_t size)
+H5F_alloc(H5F_t *f, hid_t dxpl_id, H5F_mem_t type, hsize_t size, haddr_t *frag_addr, hsize_t *frag_size)
 {
     haddr_t     ret_value;      /* Return value */
 
@@ -122,7 +122,7 @@ H5F_alloc(H5F_t *f, hid_t dxpl_id, H5F_mem_t type, hsize_t size)
     } /* end if */
 
     /* Call the file driver 'alloc' routine */
-    ret_value = H5FD_alloc(f->shared->lf, dxpl_id, type, size);
+    ret_value = H5FD_alloc(f->shared->lf, dxpl_id, type, size, frag_addr, frag_size);
     if(!H5F_addr_defined(ret_value))
         HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, HADDR_UNDEF, "file driver 'alloc' request failed")
 

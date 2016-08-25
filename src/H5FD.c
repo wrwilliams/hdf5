@@ -1181,7 +1181,7 @@ H5FDalloc(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, hsize_t size)
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, HADDR_UNDEF, "not a data transfer property list")
 
     /* Do the real work */
-    if(HADDR_UNDEF == (ret_value = H5FD_alloc(file, dxpl_id, type, size)))
+    if(HADDR_UNDEF == (ret_value = H5FD_alloc(file, dxpl_id, type, size, NULL, NULL)))
 	HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, HADDR_UNDEF, "unable to allocate file memory")
 
     /* (Note compensating for base address subtraction in internal routine) */

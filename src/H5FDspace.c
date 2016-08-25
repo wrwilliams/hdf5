@@ -99,7 +99,7 @@ H5FL_DEFINE(H5FD_free_t);
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_extend(H5FD_t *file, H5FD_mem_t type, hbool_t new_block, hsize_t size)
+H5FD_extend(H5FD_t *file, H5FD_mem_t type, hbool_t new_block, hsize_t size, haddr_t *frag_addr, hsize_t *frag_size)
 {
     hsize_t orig_size = size;   /* Original allocation size */
     haddr_t eoa;                /* Address of end-of-allocated space */
@@ -123,8 +123,13 @@ H5FD_extend(H5FD_t *file, H5FD_mem_t type, hbool_t new_block, hsize_t size)
         hsize_t mis_align;              /* Amount EOA is misaligned */
 
         /* Check for EOA already aligned */
-        if((mis_align = (eoa % file->alignment)) > 0)
+        if((mis_align = (eoa % file->alignment)) > 0) {
             extra = file->alignment - mis_align;
+	if(frag_addr)
+                *frag_addr = eoa - file->base_addr;     /* adjust for file's base address */
+            if(frag_size)
+                *frag_size = extra;
+	}
     } /* end if */
 
     /* Add in extra allocation amount */
@@ -165,7 +170,7 @@ done:
  *-------------------------------------------------------------------------
  */
 haddr_t
-H5FD_alloc(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type, hsize_t size)
+H5FD_alloc(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type, hsize_t size, haddr_t *frag_addr, hsize_t *frag_size)
 {
     haddr_t ret_value = HADDR_UNDEF;    /* Return value */
 
@@ -187,7 +192,7 @@ HDfprintf(stderr, "%s: type = %u, size = %Hu\n", FUNC, (unsigned)type, size);
             HGOTO_ERROR(H5E_VFL, H5E_NOSPACE, HADDR_UNDEF, "driver allocation request failed")
     } /* end if */
     else {
-        ret_value = H5FD_extend(file, type, TRUE, size);
+        ret_value = H5FD_extend(file, type, TRUE, size, frag_addr, frag_size);
         if(!H5F_addr_defined(ret_value))
             HGOTO_ERROR(H5E_VFL, H5E_NOSPACE, HADDR_UNDEF, "driver eoa update request failed")
     } /* end else */
@@ -325,7 +330,7 @@ H5FD_try_extend(H5FD_t *file, H5FD_mem_t type, haddr_t blk_end,
     /* Check if the block is exactly at the end of the file */
     if(H5F_addr_eq(blk_end, eoa)) {
         /* Extend the object by extending the underlying file */
-        if(HADDR_UNDEF == H5FD_extend(file, type, FALSE, extra_requested))
+        if(HADDR_UNDEF == H5FD_extend(file, type, FALSE, extra_requested, NULL, NULL))
             HGOTO_ERROR(H5E_VFL, H5E_CANTEXTEND, FAIL, "driver extend request failed")
 
         /* Indicate success */
