@@ -146,8 +146,8 @@ static herr_t H5C_flush_invalidate_cache(const H5F_t *  f,
                                           hid_t    dxpl_id,
 			                  unsigned flags);
 
-//static herr_t H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id,
-//H5C_ring_t ring, unsigned flags);
+static herr_t H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id,
+H5C_ring_t ring, unsigned flags);
 
 static herr_t H5C_flush_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
     unsigned flags);
@@ -6107,7 +6107,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
+static herr_t
 H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
     unsigned flags)
 {

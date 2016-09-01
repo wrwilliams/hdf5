@@ -4280,8 +4280,6 @@ H5_DLL herr_t H5C__generate_image(const H5F_t *f, H5C_t * cache_ptr, H5C_cache_e
 H5_DLL herr_t H5C__flush_marked_entries(H5F_t * f, hid_t dxpl_id);
 H5_DLL int H5C__iter_tagged_entries(H5C_t *cache, haddr_t tag, hbool_t match_global,
     H5C_tag_iter_cb_t cb, void *cb_ctx);
-H5_DLL herr_t H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id,
-    H5C_ring_t ring, unsigned flags);
 
 /* Routines for operating on entry tags */
 H5_DLL herr_t H5C__tag_entry(H5C_t * cache_ptr, H5C_cache_entry_t * entry_ptr,

@@ -715,7 +715,6 @@ test_file_properties(void)
     const char *filename;
     MPI_Comm comm = MPI_COMM_WORLD;
     MPI_Info info = MPI_INFO_NULL;
-    int mpi_size, mpi_rank;
     herr_t ret;                 /* Generic return value */
 
     filename = (const char *)GetTestParameters();
