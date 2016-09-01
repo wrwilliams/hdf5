@@ -146,8 +146,8 @@ static herr_t H5C_flush_invalidate_cache(const H5F_t *  f,
                                           hid_t    dxpl_id,
 			                  unsigned flags);
 
-static herr_t H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id,
-    H5C_ring_t ring, unsigned flags);
+//static herr_t H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id,
+//H5C_ring_t ring, unsigned flags);
 
 static herr_t H5C_flush_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
     unsigned flags);
@@ -4200,6 +4200,13 @@ H5C_unprotect(H5F_t *		  f,
 
             HDassert(((!was_clean) || dirtied) == entry_ptr->in_slist);
 
+#ifdef H5_HAVE_PARALLEL
+            if(TRUE == entry_ptr->coll_access) {
+                entry_ptr->coll_access = FALSE;
+                H5C__REMOVE_FROM_COLL_LIST(cache_ptr, entry_ptr, FAIL)
+            } /* end if */
+#endif /* H5_HAVE_PARALLEL */
+
             if(H5C__flush_single_entry(f, dxpl_id, entry_ptr, flush_flags, NULL, NULL) < 0)
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTUNPROTECT, FAIL, "Can't flush entry")
 
@@ -6100,7 +6107,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
+herr_t
 H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
     unsigned flags)
 {
@@ -7134,6 +7141,7 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
             } /* end if */
             else
 #endif /* H5_HAVE_PARALLEL */
+
             if(H5F_block_write(f, entry_ptr->type->mem_type, entry_ptr->addr,
                     image_size, dxpl_id, entry_ptr->image_ptr) < 0)
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't write image to file.")
