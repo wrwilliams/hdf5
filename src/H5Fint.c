@@ -1098,9 +1098,18 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
     if(NULL == (a_plist = (H5P_genplist_t *)H5I_object(fapl_id)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not file access property list")
 
+    /* Check if page Buffering is enabled */
     if(H5P_get(a_plist, H5F_ACS_PAGE_BUFFER_SIZE_NAME, &page_buf_size) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get page buffer size")
     if(page_buf_size) {
+#ifdef H5_HAVE_PARALLEL
+        /* Collective metadata writes are not supported with page buffering */
+        if(file->coll_md_write)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, 
+                        "Collective metadata writes are not supported with page buffering.")
+#endif /* H5_HAVE_PARALLEL */
+
+        /* Query for other page buffer cache properties */
         if(H5P_get(a_plist, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_NAME, &page_buf_min_meta_perc) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get minimum metadata fraction of page buffer")
         if(H5P_get(a_plist, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_NAME, &page_buf_min_raw_perc) < 0)

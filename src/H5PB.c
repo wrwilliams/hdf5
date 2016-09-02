@@ -552,17 +552,20 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
 
 #ifdef H5_HAVE_PARALLEL
     if(H5F_HAS_FEATURE(f, H5FD_FEAT_HAS_MPI)) {
+#if 1
+        mpio_bypass_pb = TRUE;
+#else
+        /* MSC - why this stopped working ? */
         int mpi_size;
 
         if((mpi_size = H5F_mpi_get_size(f)) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't retrieve MPI communicator size");
         if(1 != mpi_size)
             mpio_bypass_pb = TRUE;
+#endif
     }
 #endif
-
-    //fprintf(stderr, "Read Request at addr %llu, size %zu\n", addr, size);
-
+    //fprintf(stderr, "%s: addr %llu, size %zu\n", FUNC, addr, size);
     if(NULL == (dxpl = (H5P_genplist_t *)H5I_object(dxpl_id)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
 
@@ -847,16 +850,20 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
                 page_buf->accesses[0] ++;
         }
 #endif /* H5PB_COLLECT_STATS */
-    //fprintf(stderr, "Write Request at addr %llu, size %zu\n", addr, size);
-
+    //fprintf(stderr, "%s: addr %llu, size %zu\n", FUNC, addr, size);
 #ifdef H5_HAVE_PARALLEL
     if(H5F_HAS_FEATURE(f, H5FD_FEAT_HAS_MPI)) {
+#if 1
+        mpio_bypass_pb = TRUE;
+#else
+        /* MSC - why this stopped working ? */
         int mpi_size;
 
         if((mpi_size = H5F_mpi_get_size(f)) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't retrieve MPI communicator size");
         if(1 != mpi_size)
             mpio_bypass_pb = TRUE;
+#endif
     }
 #endif
 
@@ -1089,7 +1096,7 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
                 //fprintf(stderr, "New page READ at addr %llu, buf ptr %p\n", search_addr, new_page_buf);
 
                 /* allocate space for the page buffer */
-                if(NULL == (new_page_buf = H5MM_malloc(page_size)))
+                if(NULL == (new_page_buf = H5MM_calloc(page_size)))
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for page buffer entry");
 
                 /* create the new loaded PB entry */
@@ -1261,6 +1268,7 @@ H5PB__write_entry(const H5F_t *f, H5PB_entry_t *page_entry, H5P_genplist_t *dxpl
     HDassert(page_entry);
 
     type = (H5F_MEM_PAGE_RAW == page_entry->type ? H5FD_MEM_DRAW : H5FD_MEM_SUPER);
+
 #ifdef H5_DEBUG_BUILD
     if(H5FD_MEM_DRAW == type) {
         if(NULL == (my_dxpl = (H5P_genplist_t *)H5I_object(H5AC_rawdata_dxpl_id)))

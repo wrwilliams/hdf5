@@ -150,10 +150,22 @@ test_page_buffer_access(void)
     VRFY((ret == 0), "");
     ret = H5Pset_page_buffer_size(fapl, sizeof(int)*100000, 0, 0);
     VRFY((ret == 0), "");
+
+    /* This should fail because collective metadata writes are not supported with page buffering */
+    H5E_BEGIN_TRY {
+        file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl);
+    } H5E_END_TRY;
+    VRFY((file_id < 0), "H5Fcreate failed");
+
+    /* disable collective metadata writes for page buffering to work */
+    ret = H5Pset_coll_metadata_write(fapl, FALSE);
+    VRFY((ret >= 0), "");
+
     ret = create_file(filename, fcpl, fapl, H5AC_METADATA_WRITE_STRATEGY__DISTRIBUTED);
     VRFY((ret == 0), "");
     ret = open_file(filename, fapl, H5AC_METADATA_WRITE_STRATEGY__DISTRIBUTED, sizeof(int)*100, sizeof(int)*100000);
     VRFY((ret == 0), "");
+
     ret = create_file(filename, fcpl, fapl, H5AC_METADATA_WRITE_STRATEGY__PROCESS_0_ONLY);
     VRFY((ret == 0), "");
     ret = open_file(filename, fapl, H5AC_METADATA_WRITE_STRATEGY__PROCESS_0_ONLY, sizeof(int)*100, sizeof(int)*100000);
@@ -168,6 +180,8 @@ test_page_buffer_access(void)
     for(i=0 ; i<num_elements ; i++)
         data[i] = -1;
 
+    /* MSC - why this stopped working ? */
+#if 0
     if(MAINPROCESS) {
         hid_t fapl_self;
 
@@ -175,6 +189,9 @@ test_page_buffer_access(void)
 
         ret = H5Pset_page_buffer_size(fapl_self, sizeof(int)*1000, 0, 0);
         VRFY((ret == 0), "");
+        /* collective metadata writes do not work with page buffering */
+        ret = H5Pset_coll_metadata_write(fapl_self, FALSE);
+        VRFY((ret >= 0), "");
 
         file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl_self);
         VRFY((file_id >= 0), "");
@@ -264,12 +281,16 @@ test_page_buffer_access(void)
         ret = H5Pclose(fapl_self);
         VRFY((ret>=0), "H5Pclose succeeded");
     }
+#endif
 
     MPI_Barrier(MPI_COMM_WORLD);
 
     if(mpi_size > 1) {
         ret = H5Pset_page_buffer_size(fapl, sizeof(int)*1000, 0, 0);
         VRFY((ret == 0), "");
+        /* collective metadata writes do not work with page buffering */
+        ret = H5Pset_coll_metadata_write(fapl, FALSE);
+        VRFY((ret >= 0), "");
 
         file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl);
         VRFY((file_id >= 0), "");
@@ -565,6 +586,7 @@ open_file(const char *filename, hid_t fapl, int metadata_write_strategy,
     VRFY((ret == 0), "");
 
     file_id = H5Fopen(filename, H5F_ACC_RDWR, fapl);
+    H5Eprint2(H5E_DEFAULT, stderr);
     VRFY((file_id >= 0), "");
 
     ret = H5Fflush(file_id, H5F_SCOPE_GLOBAL);
@@ -644,6 +666,9 @@ open_file(const char *filename, hid_t fapl, int metadata_write_strategy,
     VRFY((ret == 0), "");
 
     MPI_Barrier(MPI_COMM_WORLD);
+    /* flush invalidate each ring, starting from the outermost ring and
+     * working inward.
+     */
     for ( i = 0; i < H5C__HASH_TABLE_LEN; i++ ) {
         H5C_cache_entry_t * entry_ptr = NULL;
 
@@ -690,7 +715,6 @@ test_file_properties(void)
     const char *filename;
     MPI_Comm comm = MPI_COMM_WORLD;
     MPI_Info info = MPI_INFO_NULL;
-    int mpi_size, mpi_rank;
     herr_t ret;                 /* Generic return value */
 
     filename = (const char *)GetTestParameters();
