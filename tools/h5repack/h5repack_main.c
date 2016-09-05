@@ -359,6 +359,7 @@ static int read_info(const char *filename, pack_opt_t *options)
         }
     }
 
+
 done:
     if (fp)
         HDfclose(fp);
