@@ -20,7 +20,9 @@
 # in column one with a '#'.
 #------------------------------------------------------------------------------
 
-./.autom4te.cfg                 _DO_NOT_DISTRIBUTE_
+./.gitattributes       _DO_NOT_DISTRIBUTE_
+./.gitignore           _DO_NOT_DISTRIBUTE_
+./.autom4te.cfg        _DO_NOT_DISTRIBUTE_
 ./.h5chkright.ini      _DO_NOT_DISTRIBUTE_
 ./ACKNOWLEDGMENTS
 ./COPYING
@@ -89,6 +91,10 @@
 ./bin/timekeeper      _DO_NOT_DISTRIBUTE_
 ./bin/trace
 ./bin/yodconfigure
+./bin/pkgscrpts/h5rmflags                  _DO_NOT_DISTRIBUTE_
+./bin/pkgscrpts/makeHDF5BinaryTarfiles.pl  _DO_NOT_DISTRIBUTE_
+./bin/pkgscrpts/makeInternalREADME.pl      _DO_NOT_DISTRIBUTE_
+./bin/pkgscrpts/makeOuterREADME.pl         _DO_NOT_DISTRIBUTE_
 
 ./config/COPYING
 ./config/BlankForm
@@ -2307,6 +2313,7 @@
 ./tools/h5repack/testfiles/h5repack_layout.h5.ddl
 ./tools/h5repack/testfiles/h5repack_layout.UD.h5-plugin_none.ddl
 ./tools/h5repack/testfiles/h5repack_layout.h5-plugin_test.ddl
+./tools/h5repack/testfiles/h5repack_layout.h5-plugin_zero.tst
 ./tools/h5repack/testfiles/1_vds.h5-vds_dset_chunk20x10x5-v.ddl
 ./tools/h5repack/testfiles/2_vds.h5-vds_chunk3x6x9-v.ddl
 ./tools/h5repack/testfiles/3_1_vds.h5-vds_chunk2x5x8-v.ddl
