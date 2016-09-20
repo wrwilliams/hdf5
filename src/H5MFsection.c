@@ -250,7 +250,7 @@ done:
  * Purpose:	Free a 'simple/small/large' section node
  *
  * Return:	Success:	non-negative
- *		Failure:	negative
+ *          Failure:	negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -283,7 +283,7 @@ H5MF_sect_free(H5FS_section_info_t *_sect)
  * Purpose:	Deserialize a buffer into a "live" section
  *
  * Return:	Success:	non-negative
- *		Failure:	negative
+ *          Failure:	negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -327,7 +327,7 @@ done:
  * Purpose:	Check the validity of a section
  *
  * Return:	Success:	non-negative
- *		Failure:	negative
+ *          Failure:	negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -362,10 +362,10 @@ H5MF_sect_valid(const H5FS_section_class_t H5_ATTR_UNUSED *cls,
  * Function:	H5MF_sect_split
  *
  * Purpose:	Split SECT into 2 sections: fragment for alignment & the aligned section
- *		SECT's addr and size are updated to point to the aligned section
+ *          SECT's addr and size are updated to point to the aligned section
  *
  * Return:	Success:	the fragment for aligning sect
- *		Failure:	null
+ *          Failure:	null
  *
  * Programmer:	Vailin Choi, July 29, 2008
  *
@@ -402,10 +402,10 @@ done:
  *
  * Purpose:	Can two sections of this type merge?
  *
- * Note:        Second section must be "after" first section
+ * Note: Second section must be "after" first section
  *
  * Return:	Success:	non-negative (TRUE/FALSE)
- *		Failure:	negative
+ *          Failure:	negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -440,10 +440,10 @@ H5MF_sect_simple_can_merge(const H5FS_section_info_t *_sect1,
  *
  * Purpose:	Merge two sections of this type
  *
- * Note:        Second section always merges into first node
+ * Note: Second section always merges into first node
  *
  * Return:	Success:	non-negative
- *		Failure:	negative
+ *          Failure:	negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -485,7 +485,7 @@ done:
  * Purpose:	Can this section shrink the container?
  *
  * Return:	Success:	non-negative (TRUE/FALSE)
- *		Failure:	negative
+ *          Failure:	negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -585,7 +585,7 @@ done:
  * Purpose:	Shrink container with section
  *
  * Return:	Success:	non-negative
- *		Failure:	negative
+ *          Failure:	negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -648,9 +648,9 @@ done:
  * Function:    H5MF_sect_small_add
  *
  * Purpose:     Perform actions on a small "meta" action before adding it to the free space manager:
- *		  1) Drop the section if it is at page end and its size <= page end threshold
- *		  2) Adjust section size to include page end threshold if 
- *		     (section size + threshold) is at page end
+ *              1) Drop the section if it is at page end and its size <= page end threshold
+ *              2) Adjust section size to include page end threshold if 
+ *                 (section size + threshold) is at page end
  *
  * Return:      Success:        non-negative
  *              Failure:        negative
@@ -676,7 +676,7 @@ HDfprintf(stderr, "%s: Entering, section {%a, %Hu}\n", FUNC, (*sect)->sect_info.
 
     /* Do not adjust the section raw data or global heap data */
     if(udata->alloc_type == H5FD_MEM_DRAW || udata->alloc_type == H5FD_MEM_GHEAP)
-	HGOTO_DONE(ret_value);
+        HGOTO_DONE(ret_value);
 
     sect_end = (*sect)->sect_info.addr + (*sect)->sect_info.size;
     rem = sect_end % udata->f->shared->fs.page_size;
@@ -716,7 +716,7 @@ done:
  * Note: 	A small section is allowed to shrink only at closing.
  *
  * Return:	Success:	non-negative (TRUE/FALSE)
- *		Failure:	negative
+ *          Failure:	negative
  *
  * Programmer:	Vailin Choi; Dec 2012
  *
@@ -740,7 +740,7 @@ H5MF_sect_small_can_shrink(const H5FS_section_info_t *_sect, void *_udata)
 
     /* Retrieve the end of the file's address space */
     if(HADDR_UNDEF == (eoa = H5FD_get_eoa(udata->f->shared->lf, udata->alloc_type)))
-	HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "driver get_eoa request failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "driver get_eoa request failed")
 
     /* Compute address of end of section to check */
     end = sect->sect_info.addr + sect->sect_info.size;
@@ -748,13 +748,13 @@ H5MF_sect_small_can_shrink(const H5FS_section_info_t *_sect, void *_udata)
     /* Check if the section is exactly at the end of the allocated space in the file */
     if(H5F_addr_eq(end, eoa) && udata->allow_small_shrink) {
         /* Set the shrinking type */
-	udata->shrink = H5MF_SHRINK_EOA;
+        udata->shrink = H5MF_SHRINK_EOA;
 #ifdef H5MF_ALLOC_DEBUG_MORE
 HDfprintf(stderr, "%s: section {%a, %Hu}, shrinks file, eoa = %a\n", FUNC, sect->sect_info.addr, sect->sect_info.size, eoa);
 #endif /* H5MF_ALLOC_DEBUG_MORE */
 
-	/* Indicate shrinking can occur */
-	HGOTO_DONE(TRUE)
+        /* Indicate shrinking can occur */
+        HGOTO_DONE(TRUE)
     } /* end if */
 
 done:
@@ -768,7 +768,7 @@ done:
  * Purpose:	Shrink container with section
  *
  * Return:	Success:	non-negative
- *		Failure:	negative 
+ *          Failure:	negative 
  * 
  * Programmer:	Vailin Choi; Dec 2012
  *
@@ -793,11 +793,11 @@ H5MF_sect_small_shrink(H5FS_section_info_t **_sect, void *_udata)
 
     /* Release section's space at EOA */
     if(H5F_free(udata->f, udata->dxpl_id, udata->alloc_type, (*sect)->sect_info.addr, (*sect)->sect_info.size) < 0)
-	HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "driver free request failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "driver free request failed")
 
     /* Free section */
     if(H5MF_sect_free((H5FS_section_info_t *)*sect) < 0)
-	HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free simple section node")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free simple section node")
 
     /* Mark section as freed, for free space manager */
     *sect = NULL;
@@ -812,11 +812,11 @@ done:
  *
  * Purpose:	Can two sections of this type merge?
  *
- * Note:        Second section must be "after" first section
- *		The "merged" section cannot cross page boundary.
+ * Note: Second section must be "after" first section
+ *       The "merged" section cannot cross page boundary.
  *
  * Return:	Success:	non-negative (TRUE/FALSE)
- *		Failure:	negative
+ *          Failure:	negative
  *
  * Programmer:	Vailin Choi; Dec 2012
  *
@@ -858,12 +858,12 @@ HDfprintf(stderr, "%s: Leaving: ret_value = %t\n", FUNC, ret_value);
  *
  * Purpose:	Merge two sections of this type
  *
- * Note:        Second section always merges into first node.
- *		If the size of the "merged" section is equal to file space page size,
- *		free the section.
+ * Note: Second section always merges into first node.
+ *       If the size of the "merged" section is equal to file space page size,
+ *       free the section.
  *
  * Return:	Success:	non-negative
- *		Failure:	negative
+ *          Failure:	negative
  *
  * Programmer:	Vailin Choi; Dec 2012
  *
@@ -891,11 +891,11 @@ H5MF_sect_small_merge(H5FS_section_info_t **_sect1, H5FS_section_info_t *_sect2,
     (*sect1)->sect_info.size += sect2->sect_info.size;
 
     if((*sect1)->sect_info.size == udata->f->shared->fs.page_size) {
-	if(H5MF_xfree(udata->f, udata->alloc_type, udata->dxpl_id, (*sect1)->sect_info.addr, (*sect1)->sect_info.size) < 0)
-	    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "can't free merged section")
-	if(H5MF_sect_free((H5FS_section_info_t *)(*sect1)) < 0)
-	    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free section node")
-	*sect1 = NULL;
+        if(H5MF_xfree(udata->f, udata->alloc_type, udata->dxpl_id, (*sect1)->sect_info.addr, (*sect1)->sect_info.size) < 0)
+            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "can't free merged section")
+        if(H5MF_sect_free((H5FS_section_info_t *)(*sect1)) < 0)
+            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free section node")
+        *sect1 = NULL;
     } /* end if */
 
     /* Get rid of second section */
@@ -917,10 +917,10 @@ done:
  *
  * Purpose:	Can two sections of this type merge?
  *
- * Note:        Second section must be "after" first section
+ * Note: Second section must be "after" first section
  *
  * Return:	Success:	non-negative (TRUE/FALSE)
- *		Failure:	negative
+ *          Failure:	negative
  *
  * Programmer:	Vailin Choi; Dec 2012
  *
@@ -957,10 +957,10 @@ HDfprintf(stderr, "%s: Leaving: ret_value = %t\n", FUNC, ret_value);
  *
  * Purpose:	Merge two sections of this type
  *
- * Note:        Second section always merges into first node
+ * Note: Second section always merges into first node
  *
  * Return:	Success:	non-negative
- *		Failure:	negative
+ *          Failure:	negative
  *
  * Programmer:	Vailin Choi; Dec 2012
  *
@@ -1001,7 +1001,7 @@ done:
  * Purpose:	Can this section shrink the container?
  *
  * Return:	Success:	non-negative (TRUE/FALSE)
- *		Failure:	negative
+ *          Failure:	negative
  *
  * Programmer:	Vailin Choi; Dec 2012
  *
@@ -1026,7 +1026,7 @@ H5MF_sect_large_can_shrink(const H5FS_section_info_t *_sect, void *_udata)
 
     /* Retrieve the end of the file's address space */
     if(HADDR_UNDEF == (eoa = H5FD_get_eoa(udata->f->shared->lf, udata->alloc_type)))
-	HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "driver get_eoa request failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "driver get_eoa request failed")
 
     /* Compute address of end of section to check */
     end = sect->sect_info.addr + sect->sect_info.size;
@@ -1054,7 +1054,7 @@ done:
  * Purpose:	Shrink container with section
  *
  * Return:	Success:	non-negative
- *		Failure:	negative
+ *          Failure:	negative
  *
  * Programmer:	Vailin Choi; Dec 2012
  *
@@ -1079,11 +1079,11 @@ H5MF_sect_large_shrink(H5FS_section_info_t **_sect, void *_udata)
 
     /* Release section's space at EOA with file driver */
     if(H5F_free(udata->f, udata->dxpl_id, udata->alloc_type, (*sect)->sect_info.addr, (*sect)->sect_info.size) < 0)
-	HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "driver free request failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "driver free request failed")
 
     /* Free section */
     if(H5MF_sect_free((H5FS_section_info_t *)*sect) < 0)
-	HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free simple section node")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free simple section node")
 
     /* Mark section as freed, for free space manager */
     *sect = NULL;

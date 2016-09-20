@@ -919,8 +919,8 @@ H5FD_log_query(const H5FD_t *_file, unsigned long *flags /* out */)
 static haddr_t
 H5FD_log_alloc(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, hsize_t size)
 {
-    H5FD_log_t	*file = (H5FD_log_t *)_file;
-    haddr_t addr;
+    H5FD_log_t *file = (H5FD_log_t *)_file;
+    haddr_t addr = HADDR_UNDEF;
     haddr_t ret_value = HADDR_UNDEF;    /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -928,13 +928,7 @@ H5FD_log_alloc(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, hsi
     /* Compute the address for the block to allocate */
     addr = file->eoa;
 
-    /* Check if we need to align this block */
-    if(!file->pub.paged_aggr && size >= file->pub.threshold) {
-        /* Check for an already aligned block */
-        if(addr % file->pub.alignment != 0)
-            addr = ((addr / file->pub.alignment) + 1) * file->pub.alignment;
-    } /* end if */
-
+    /* Extend the end-of-allocated space address */
     file->eoa = addr + size;
 
     /* Retain the (first) flavor of the information written to the file */

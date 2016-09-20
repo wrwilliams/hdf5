@@ -234,6 +234,13 @@ typedef enum H5F_mem_t	H5FD_mem_t;
      * image to store in memory.
      */
 #define H5FD_FEAT_CAN_USE_FILE_IMAGE_CALLBACKS 0x00000800
+    /*
+     * Defining H5FD_FEAT_USE_ALLOC_SIZE for a VFL driver
+     * means that the library will just pass the allocation size to the
+     * the driver's allocation callback without adding the alignment size.
+     * This is specifically used for the split driver.
+     */
+#define H5FD_FEAT_USE_ALLOC_SIZE	0x00001000
 
 /* Forward declaration */
 typedef struct H5FD_t H5FD_t;
