@@ -23,6 +23,26 @@
 namespace H5 {
 #endif
 
+//class H5_DLLCPP H5Location;  // forward declaration for UserData4Aiterate
+
+// Define the operator function pointer for H5Aiterate().
+//typedef void (*attr_operator_t)( H5Location& loc/*in*/,
+                                 //const H5std_string attr_name/*in*/,
+                                 //void *operator_data/*in,out*/);
+
+//! User data for attribute iteration
+ /* class UserData4Aiterate {
+   public:
+	attr_operator_t op;
+	void* opData;
+	H5Location* location;
+};
+ */ 
+
+// Class forwarding
+class H5_DLLCPP ArrayType;
+class H5_DLLCPP VarLenType;
+
 /*! \class H5Location
     \brief H5Location is an abstract base class, added in version 1.8.12.
 
@@ -239,6 +259,9 @@ class H5_DLLCPP H5Location : public IdComponent {
 	VarLenType openVarLenType(const H5std_string& name) const;
 
 // end From CommonFG
+
+	///\brief Returns an identifier.
+	//virtual hid_t getId() const;
 
 	/// For subclasses, H5File and Group, to throw appropriate exception.
 	virtual void throwException(const H5std_string& func_name, const H5std_string& msg) const;
