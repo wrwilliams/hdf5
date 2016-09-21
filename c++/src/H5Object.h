@@ -38,6 +38,23 @@
 namespace H5 {
 #endif
 
+// Class forwarding
+class H5_DLLCPP H5Object;
+class H5_DLLCPP Attribute;
+
+// Define the operator function pointer for H5Aiterate().
+typedef void (*attr_operator_t)( H5Object& loc/*in*/,
+                                 const H5std_string attr_name/*in*/,
+                                 void *operator_data/*in,out*/);
+
+// User data for attribute iteration
+class UserData4Aiterate {
+    public:
+	attr_operator_t op;
+	void* opData;
+	H5Object* location;
+};
+
 /*! \class H5Object
     \brief Class H5Object is a bridge between H5Location and DataSet, DataType,
      and Group.
