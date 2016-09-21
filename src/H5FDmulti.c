@@ -1188,6 +1188,7 @@ H5FD_multi_query(const H5FD_t *_f, unsigned long *flags /* out */)
         *flags = 0;
         *flags |= H5FD_FEAT_DATA_SIEVE;       /* OK to perform data sieving for faster raw data reads & writes */
         *flags |= H5FD_FEAT_AGGREGATE_SMALLDATA; /* OK to aggregate "small" raw data allocations */
+        *flags |= H5FD_FEAT_USE_ALLOC_SIZE; 
     } /* end if */
 
     return(0);
