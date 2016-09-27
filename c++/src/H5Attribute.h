@@ -26,8 +26,10 @@ namespace H5 {
 
     An attribute has many characteristics similar to a dataset, thus both
     Attribute and DataSet are derivatives of AbstractDs.  Attribute also
-    inherits from IdComponent because an attribute is an HDF5 component that
-    is identified by an identifier.
+    inherits from H5Location because an attribute can be used to specify
+    a location.
+
+    Inheritance: multiple H5Location/AbstractDs -> IdComponent
 */
 class H5_DLLCPP Attribute : public AbstractDs, public IdComponent {
    public:
