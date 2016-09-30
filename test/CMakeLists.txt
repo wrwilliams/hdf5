@@ -206,6 +206,7 @@ set (H5_TESTS
     ohdr
     stab
     gheap
+    evict_on_close
     farray
     earray
     btree2
