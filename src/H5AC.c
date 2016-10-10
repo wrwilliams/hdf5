@@ -2439,12 +2439,12 @@ done:
  *
  *              As heavy use of this function is almost certainly a
  *              bad idea, the metadata cache tracks the number of
- *              successful calls to this function, and (if 
+ *              successful calls to this function, and (if
  *              H5C_DO_SANITY_CHECKS is defined) displays any
  *              non-zero count on cache shutdown.
  *
- *		This function is just a wrapper that calls the H5C 
- *		version of the function.
+ *              This function is just a wrapper that calls the H5C
+ *              version of the function.
  *
  * Return:      FAIL if error is detected, SUCCEED otherwise.
  *
@@ -2470,6 +2470,49 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5AC_flush_dependency_exists()
+ *
+ * Purpose:     Test to see if a flush dependency relationship exists
+ *              between the supplied parent and child.  Both parties
+ *              are indicated by addresses so as to avoid the necessity
+ *              of protect / unprotect calls prior to this call.
+ *
+ *              If either the parent or the child is not in the metadata
+ *              cache, the function sets *fd_exists_ptr to FALSE.
+ *
+ *              If both are in the cache, the childs list of parents is
+ *              searched for the proposed parent.  If the proposed parent
+ *              is found in the childs parent list, the function sets
+ *              *fd_exists_ptr to TRUE.  In all other non-error cases,
+ *              the function sets *fd_exists_ptr FALSE.
+ *
+ * Return:      SUCCEED on success/FAIL on failure.  Note that
+ *              *fd_exists_ptr is undefined on failure.
+ *
+ * Programmer:  John Mainzer
+ *              9/28/16
+ *
+ *-------------------------------------------------------------------------
+ */
+#ifndef NDEBUG
+herr_t
+H5AC_flush_dependency_exists(H5F_t *f, haddr_t parent_addr, haddr_t child_addr,
+    hbool_t *fd_exists_ptr)
+{
+    hbool_t             ret_value;      /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    ret_value = H5C_flush_dependency_exists(f, parent_addr, child_addr, 
+                                            fd_exists_ptr);
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5AC_flush_dependency_exists() */
+#endif /* NDEBUG */
+
+
+/*-------------------------------------------------------------------------
  *
  * Function:    H5AC_verify_entry_type()
  *
@@ -2478,9 +2521,9 @@ done:
  *              type field contains the expected value.
  *
  *              If the specified entry is in cache, *in_cache_ptr is set
- *              to TRUE, and *type_ok_ptr is set to TRUE or FALSE
- *              depending on whether the entries type field matches the
- *              expected_type parameter
+ *              to TRUE, and *type_ok_ptr is set to TRUE or FALSE depending 
+ *		on whether the entries type field matches the 
+ *		expected_type parameter
  *
  *              If the target entry is not in cache, *in_cache_ptr is
  *              set to FALSE, and *type_ok_ptr is undefined.
@@ -2488,19 +2531,24 @@ done:
  *              Note that this function is only defined if NDEBUG
  *              is not defined.
  *
- *		This function is just a wrapper that calls the H5C 
- *		version of the function.
+ *              This function is just a wrapper that calls the H5C
+ *              version of the function.
  *
  * Return:      FAIL if error is detected, SUCCEED otherwise.
  *
  * Programmer:  John Mainzer, 5/30/14
  *
+ * Changes:	None.
+ *
+ *						JRM -- 9/17/16
+ *
  *-------------------------------------------------------------------------
  */
 #ifndef NDEBUG
 herr_t
-H5AC_verify_entry_type(const H5F_t *f, haddr_t addr, const H5AC_class_t *expected_type,
-    hbool_t *in_cache_ptr, hbool_t *type_ok_ptr)
+H5AC_verify_entry_type(const H5F_t *f, haddr_t addr, 
+    const H5AC_class_t *expected_type, hbool_t *in_cache_ptr, 
+    hbool_t *type_ok_ptr)
 {
     herr_t              ret_value = SUCCEED;      /* Return value */
 
@@ -2513,6 +2561,7 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC_verify_entry_type() */
 #endif /* NDEBUG */
+
 
 
 

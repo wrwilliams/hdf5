@@ -69,6 +69,7 @@
 #define H5C__CLASS_NO_FLAGS_SET			((unsigned)0x0)
 #define H5C__CLASS_SPECULATIVE_LOAD_FLAG	((unsigned)0x1)
 #define H5C__CLASS_COMPRESSED_FLAG		((unsigned)0x2)
+
 /* The following flags may only appear in test code */
 #define H5C__CLASS_NO_IO_FLAG			((unsigned)0x4)
 #define H5C__CLASS_SKIP_READS			((unsigned)0x8)
@@ -97,14 +98,6 @@
  */
 #define H5C__DEFAULT_MAX_CACHE_SIZE     ((size_t)(4 * 1024 * 1024))
 #define H5C__DEFAULT_MIN_CLEAN_SIZE     ((size_t)(2 * 1024 * 1024))
-
-/* Maximum height of flush dependency relationships between entries.  This is
- * currently tuned to the extensible array (H5EA) data structure, which only
- * requires 6 levels of dependency (i.e. heights 0-6) (actually, the extensible
- * array needs 4 levels, plus another 2 levels are needed: one for the layer
- * under the extensible array and one for the layer above it).
- */
-#define H5C__NUM_FLUSH_DEP_HEIGHTS            6
 
 /* Values for cache entry magic field */
 #define H5C__H5C_CACHE_ENTRY_T_MAGIC		0x005CAC0A
@@ -212,6 +205,7 @@
 #define H5C__TAKE_OWNERSHIP_FLAG		0x0800
 #define H5C__FLUSH_LAST_FLAG			0x1000
 #define H5C__FLUSH_COLLECTIVELY_FLAG		0x2000
+#define H5C__EVICT_ALLOW_LAST_PINS_FLAG         0x4000
 #define H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG     0x8000
 
 /* Definitions for cache "tag" property */
@@ -1488,34 +1482,43 @@ typedef int H5C_ring_t;
  *
  * Fields supporting the 'flush dependency' feature:
  *
- * Entries in the cache may have a 'flush dependency' on another entry in the
+ * Entries in the cache may have 'flush dependencies' on other entries in the
  * cache.  A flush dependency requires that all dirty child entries be flushed
  * to the file before a dirty parent entry (of those child entries) can be
  * flushed to the file.  This can be used by cache clients to create data
  * structures that allow Single-Writer/Multiple-Reader (SWMR) access for the
  * data structure.
  *
- * The leaf child entry will have a "height" of 0, with any parent entries
- * having a height of 1 greater than the maximum height of any of their child
- * entries (flush dependencies are allowed to create asymmetric trees of
- * relationships).
+ * flush_dep_parent:    Pointer to the array of flush dependency parent entries
+ *              for this entry.
  *
- * flush_dep_parent:	Pointer to the parent entry for an entry in a flush
- *		dependency relationship.
+ * flush_dep_nparents:  Number of flush dependency parent entries for this
+ *              entry, i.e. the number of valid elements in flush_dep_parent.
  *
- * child_flush_dep_height_rc:	An array of reference counts for child entries,
- *		where the number of children of each height is tracked.
+ * flush_dep_parent_nalloc: The number of allocated elements in
+ *              flush_dep_parent_nalloc.
  *
- * flush_dep_height:	The height of the entry, which is one greater than the
- *		maximum height of any of its child entries..
+ * flush_dep_nchildren: Number of flush dependency children for this entry.  If
+ *              this field is nonzero, then this entry must be pinned and
+ *              therefore cannot be evicted.
  *
- * pinned_from_client:	Whether the entry was pinned by an explicit pin request
- *		from a cache client.
+ * flush_dep_ndirty_children: Number of flush dependency children that are
+ *              either dirty or have a nonzero flush_dep_ndirty_children.  If
+ *              this field is nonzero, then this entry cannot be flushed.
  *
- * pinned_from_cache:	Whether the entry was pinned implicitly as a
- *		request of being a parent entry in a flush dependency
- *		relationship.
+ * flush_dep_nunser_children:  Number of flush dependency children
+ *		that are either unserialized, or have a non-zero number of 
+ *		positive number of unserialized children.
  *
+ *		Note that since there is no requirement that a clean entry
+ *		be serialized, it is possible that flush_dep_nunser_children
+ *		to be greater than flush_dep_ndirty_children.
+ *
+ *		This field exist to facilitate correct ordering of entry
+ *		serializations when it is necessary to serialize all the 
+ *		entries in the metadata cache.  Thus in the cache
+ *		serialization, no entry can be serialized unless this
+ *		field contains 0.
  *
  * Fields supporting the hash table:
  *
@@ -1663,17 +1666,82 @@ typedef int H5C_ring_t;
  *		TRUE iff the entry is dirty when H5C_prep_for_file_close()
  *		is called.
  *
- * fd_parent_addr: If the entry is a child in a flush dependency relationship
- *		when H5C_prep_for_file_close() is called, this field 
- *		must contain the on disk address of the parent.
+ * fd_parent_count: If the entry is a child in one or more flush dependency 
+ *		relationships, this field contains the number of flush 
+ *		dependency parents.
  *
- *		In all other cases, the field is set to HADDR_UNDEF.
+ *		In all other cases, the field is set to zero.
+ *
+ *		Note that while this count is initially taken from the 
+ *		flush dependency fields above, if the entry is in the 
+ *		cache image (i.e. include_in_image is TRUE), any parents
+ *		that are not in the image are removed from this count and
+ *		from the fd_parent_addrs array below.
+ *
+ *		Finally observe that if the entry is dirty and in the 
+ *		cache image, and its parent is dirty and not in the cache
+ *		image, then the entry must be removed from the cache image
+ *		to avoid violating the flush dependency flush ordering.
+ *
+ * fd_parent_addrs: If the entry is a child in one or more flush dependency 
+ *		relationship when H5C_prep_for_file_close() is called, this 
+ *		field must contain a pointer to an array of size 
+ *		fd_parent_count containing the on disk addresses of the 
+ *		parent.
+ *
+ *		In all other cases, the field is set to NULL.
+ *
+ *		Note that while this list of addresses is initially taken 
+ *		from the flush dependency fields above, if the entry is in the 
+ *		cache image (i.e. include_in_image is TRUE), any parents
+ *		that are not in the image are removed from this list, and 
+ *		and from the fd_parent_count above.
+ *
+ *		Finally observe that if the entry is dirty and in the 
+ *		cache image, and its parent is dirty and not in the cache
+ *		image, then the entry must be removed from the cache image
+ *		to avoid violating the flush dependency flush ordering.
  *
  * fd_child_count: If the entry is a parent in a flush dependency 
  *		relationship, this field contains the number of flush 
  *		dependency children.
  *
  *		In all other cases, the field is set to zero.
+ *
+ *		Note that while this count is initially taken from the 
+ *		flush dependency fields above, if the entry is in the 
+ *		cache image (i.e. include_in_image is TRUE), any children
+ *		that are not in the image are removed from this count.
+ *
+ * fd_dirty_child_count: If the entry is a parent in a flush dependency 
+ *		relationship, this field contains the number of dirty flush 
+ *		dependency children.
+ *
+ *		In all other cases, the field is set to zero.
+ *
+ *		Note that while this count is initially taken from the 
+ *		flush dependency fields above, if the entry is in the 
+ *		cache image (i.e. include_in_image is TRUE), any dirty 
+ *		children that are not in the image are removed from this 
+ *		count.
+ *
+ * image_fd_height: Flush dependency height of the entry in the cache image.
+ *
+ *		The flush dependency height of any entry involved in a 
+ *		flush dependency relationship is defined to be the 
+ *		longest flush dependency path from that entry to an entry
+ *		with no flush depenency children.  
+ *
+ *		Since the image_fd_height is used to order entries in the 
+ *		cache image so that fd parents preceed fd children, for 
+ *		purposes of this field, and entry is at flush dependency
+ *		level 0 if it either has no children, or if all of its
+ *		children are not in the cache image.  
+ *
+ *		Note that if a child in a flush dependency relationship is 
+ *		dirty and in the cache image, and its parent is dirty and
+ *		not in the cache image, then the child must be excluded 
+ *		from the cache image to maintain flush ordering.
  *
  * prefetched:	Boolean flag indicating that the on disk image of the entry
  *		has been loaded into the cache prior any request for the 
@@ -1728,6 +1796,17 @@ typedef int H5C_ring_t;
  *
  *		The value of this field is undefined in prefetched is FALSE.
  *
+ * serialization_count:  Integer field used to maintain a count of the 
+ *		number of times each entry is serialized during cache 
+ *		serialization.  While no entry should be serialized more than
+ *		once in any serialization call, throw an assertion if any 
+ *		flush depencency parent is serialized more than once during 
+ *		a single cache serialization.
+ *
+ *		This is a debugging field, and thus is maintained only if 
+ *		NDEBUG is undefined.
+ *
+ *
  * Cache entry stats collection fields:
  *
  * These fields should only be compiled in when both H5C_COLLECT_CACHE_STATS
@@ -1747,6 +1826,7 @@ typedef int H5C_ring_t;
  * 		been pinned in cache in its life time.
  *
  ****************************************************************************/
+
 typedef struct H5C_cache_entry_t {
     uint32_t			magic;
     H5C_t                     * cache_ptr;
@@ -1781,9 +1861,12 @@ typedef struct H5C_cache_entry_t {
     H5C_ring_t                  ring;
 
     /* fields supporting the 'flush dependency' feature: */
-    struct H5C_cache_entry_t  *	flush_dep_parent;
-    uint64_t			child_flush_dep_height_rc[H5C__NUM_FLUSH_DEP_HEIGHTS];
-    unsigned			flush_dep_height;
+    struct H5C_cache_entry_t ** flush_dep_parent;
+    unsigned                    flush_dep_nparents;
+    unsigned                    flush_dep_parent_nalloc;
+    unsigned                    flush_dep_nchildren;
+    unsigned                    flush_dep_ndirty_children;
+    unsigned			flush_dep_nunser_children;
     hbool_t			pinned_from_client;
     hbool_t			pinned_from_cache;
 
@@ -1808,10 +1891,17 @@ typedef struct H5C_cache_entry_t {
     int32_t			lru_rank;
     int32_t			image_index;
     hbool_t			image_dirty;
-    haddr_t			fd_parent_addr;
+    uint64_t                    fd_parent_count;
+    haddr_t		      * fd_parent_addrs;
     uint64_t			fd_child_count;
+    uint64_t			fd_dirty_child_count;
+    uint32_t			image_fd_height;
     hbool_t			prefetched;
     int				prefetch_type_id;
+
+#ifndef NDEBUG	/* debugging field */
+    int				serialization_count;
+#endif /* NDEBUG */
 
 #if H5C_COLLECT_CACHE_ENTRY_STATS
     /* cache entry stats fields */
@@ -1820,6 +1910,7 @@ typedef struct H5C_cache_entry_t {
     int32_t			flushes;
     int32_t			pins;
 #endif /* H5C_COLLECT_CACHE_ENTRY_STATS */
+
 } H5C_cache_entry_t;
 
 
@@ -1865,20 +1956,89 @@ typedef struct H5C_cache_entry_t {
  *		entry has been modified since the last time it was written
  *		to disk as a regular piece of metadata.
  *
- * flush_dep_height:	The height of the entry, which is one greater than the
- *		maximum height of any of its child entries..
+ * image_fd_height: Flush dependency height of the entry in the cache image.
  *
- * fd_parent_addr: If the entry is a child in a flush dependency relationship
- *		when H5C_prep_for_file_close() is called, this field 
- *		must contain the on disk address of the parent.
+ *              The flush dependency height of any entry involved in a
+ *              flush dependency relationship is defined to be the
+ *              longest flush dependency path from that entry to an entry
+ *              with no flush depenency children.
  *
- *		In all other cases, the field is set to HADDR_UNDEF.
+ *              Since the image_fd_height is used to order entries in the
+ *              cache image so that fd parents preceed fd children, for
+ *              purposes of this field, and entry is at flush dependency
+ *              level 0 if it either has no children, or if all of its
+ *              children are not in the cache image.
+ *
+ *              Note that if a child in a flush dependency relationship is
+ *              dirty and in the cache image, and its parent is dirty and
+ *              not in the cache image, then the child must be excluded
+ *              from the cache image to maintain flush ordering.
+ *
+ * fd_parent_count: If the entry is a child in one or more flush dependency
+ *              relationships, this field contains the number of flush
+ *              dependency parents.
+ *
+ *              In all other cases, the field is set to zero.
+ *
+ *              Note that while this count is initially taken from the
+ *              flush dependency fields in the associated instance of 
+ *		H5C_cache_entry_t, if the entry is in the cache image 
+ *		(i.e. include_in_image is TRUE), any parents that are 
+ *		not in the image are removed from this count and
+ *              from the fd_parent_addrs array below.
+ *
+ *              Finally observe that if the entry is dirty and in the
+ *              cache image, and its parent is dirty and not in the cache
+ *              image, then the entry must be removed from the cache image
+ *              to avoid violating the flush dependency flush ordering.
+ *		This should have happended before the construction of 
+ *		the instance of H5C_image_entry_t.
+ *
+ * fd_parent_addrs: If the entry is a child in one or more flush dependency
+ *              relationship when H5C_prep_for_file_close() is called, this
+ *              field must contain a pointer to an array of size
+ *              fd_parent_count containing the on disk addresses of the
+ *              parents.
+ *
+ *              In all other cases, the field is set to NULL.
+ *
+ *              Note that while this list of addresses is initially taken
+ *              from the flush dependency fields in the associated instance of
+ *              H5C_cache_entry_t, if the entry is in the cache image 
+ *		(i.e. include_in_image is TRUE), any parents that are not 
+ *		in the image are removed from this list, and from the 
+ *		fd_parent_count above.
+ *
+ *              Finally observe that if the entry is dirty and in the
+ *              cache image, and its parent is dirty and not in the cache
+ *              image, then the entry must be removed from the cache image
+ *              to avoid violating the flush dependency flush ordering.
+ *		This should have happended before the construction of 
+ *		the instance of H5C_image_entry_t.
  *
  * fd_child_count: If the entry is a parent in a flush dependency 
  *		relationship, this field contains the number of flush 
  *		dependency children.
  *
  *		In all other cases, the field is set to zero.
+ *
+ *              Note that while this count is initially taken from the
+ *              flush dependency fields in the associated instance of
+ *              H5C_cache_entry_t, if the entry is in the cache image 
+ *		(i.e. include_in_image is TRUE), any children
+ *              that are not in the image are removed from this count.
+ *
+ * fd_dirty_child_count: If the entry is a parent in a flush dependency
+ *              relationship, this field contains the number of dirty flush
+ *              dependency children.
+ *
+ *              In all other cases, the field is set to zero.
+ *
+ *              Note that while this count is initially taken from the
+ *              flush dependency fields in the associated instance of
+ *              H5C_cache_entry_t, if the entry is in the cache image 
+ *		(i.e. include_in_image is TRUE), any dirty children 
+ *		that are not in the image are removed from this count.
  *
  * image_ptr:	Pointer to void.  When not NULL, this field points to a
  * 		dynamically allocated block of size bytes in which the
@@ -1900,9 +2060,11 @@ typedef struct H5C_image_entry_t {
     int32_t			image_index;
     int32_t			lru_rank;
     hbool_t			is_dirty;
-    unsigned			flush_dep_height;
-    haddr_t			fd_parent_addr;
+    unsigned			image_fd_height;
+    uint64_t                    fd_parent_count;
+    haddr_t                   * fd_parent_addrs;
     uint64_t			fd_child_count;
+    uint64_t                    fd_dirty_child_count;
     void  		      *	image_ptr;
 } H5C_image_entry_t;
 
@@ -2352,9 +2514,12 @@ H5_DLL herr_t H5C_mark_entries_as_clean(H5F_t *f, hid_t dxpl_id, int32_t ce_arra
 H5_DLL hbool_t H5C_cache_is_clean(const H5F_t *f, H5C_ring_t inner_ring);
 H5_DLL herr_t H5C_get_entry_ptr_from_addr(const H5F_t *f, haddr_t addr,
     void **entry_ptr_ptr);
+H5_DLL herr_t H5C_flush_dependency_exists(H5F_t *f, haddr_t parent_addr, 
+    haddr_t child_addr, hbool_t *fd_exists_ptr);
 H5_DLL herr_t H5C_verify_entry_type(const H5F_t *f, haddr_t addr,
     const H5C_class_t *expected_type, hbool_t *in_cache_ptr,
     hbool_t *type_ok_ptr);
+H5_DLL herr_t H5C_validate_index_list(H5C_t * cache_ptr);
 #endif /* NDEBUG */
 
 #endif /* !_H5Cprivate_H */

@@ -52,22 +52,13 @@
 #define H5C__EPOCH_MARKER_TYPE  H5C__MAX_NUM_TYPE_IDS
 
 
-/* With the introduction of the fractal heap, it is now possible for
- * entries to be dirtied, resized, and/or moved in the flush callbacks.
- * As a result, on flushes, it may be necessary to make multiple passes
- * through the slist before it is empty.  The H5C__MAX_PASSES_ON_FLUSH
- * #define is used to set an upper limit on the number of passes.
- * The current value was obtained via personal communication with
- * Quincey.  I have applied a fudge factor of 2.
- *
- *						-- JRM
- */
-#define H5C__MAX_PASSES_ON_FLUSH	4
-
 /* Cache configuration settings */
 
 #define H5C__HASH_TABLE_LEN     (64 * 1024) /* must be a power of 2 */
 #define H5C__H5C_T_MAGIC	0x005CAC0E
+
+/* Initial allocated size of the "flush_dep_parent" array */
+#define H5C_FLUSH_DEP_PARENT_INIT 8
 
 /* Cache client ID for epoch markers */
 /* Note that H5C__MAX_EPOCH_MARKERS is defined in H5Cprivate.h, not here because
@@ -4585,10 +4576,10 @@ if ( ( (entry_ptr) == NULL ) ||                                                \
  *		field is intended to allow marking of output of with
  *		the processes mpi rank.
  *
- * get_entry_ptr_from_addr_counter: Counter used to track the number of 
- *		times the H5C_get_entry_ptr_from_addr() function has been 
- *		called successfully.  This field is only defined when 
- *		NDEBUG is not #defined.
+ * get_entry_ptr_from_addr_counter: Counter used to track the number of
+ *              times the H5C_get_entry_ptr_from_addr() function has been
+ *              called successfully.  This field is only defined when
+ *              NDEBUG is not #defined.
  *
  ****************************************************************************/
 struct H5C_t {
@@ -4811,7 +4802,7 @@ struct H5C_t {
     char			prefix[H5C__PREFIX_LEN];
 
 #ifndef NDEBUG
-    int64_t			get_entry_ptr_from_addr_counter;
+    int64_t                     get_entry_ptr_from_addr_counter;
 #endif /* NDEBUG */
 
 #if 1 /* test code -- delete before checkin */ /* JRM */
@@ -4857,13 +4848,15 @@ H5_DLL herr_t H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id,
     int64_t *entry_size_change_ptr, H5SL_t *collective_write_list);
 H5_DLL herr_t H5C_free_image_entries_array(H5C_t * cache_ptr);
 H5_DLL herr_t H5C_load_cache_image(H5F_t *f, hid_t dxpl_id);
+H5_DLL herr_t H5C__mark_flush_dep_serialized(H5C_cache_entry_t * entry_ptr);
+H5_DLL herr_t H5C__mark_flush_dep_unserialized(H5C_cache_entry_t * entry_ptr);
 H5_DLL herr_t H5C_make_space_in_cache(H5F_t * f, hid_t   dxpl_id,
     size_t  space_needed, hbool_t write_permitted);
 H5_DLL herr_t H5C_tag_entry(H5C_t * cache_ptr, H5C_cache_entry_t * entry_ptr,
     hid_t dxpl_id);
 H5_DLL herr_t H5C__flush_marked_entries(H5F_t * f, hid_t dxpl_id);
-H5_DLL int H5C__iter_tagged_entries(H5C_t *cache, haddr_t tag, hbool_t match_global,
-    H5C_tag_iter_cb_t cb, void *cb_ctx);
+H5_DLL int H5C__iter_tagged_entries(H5C_t *cache, haddr_t tag, 
+    hbool_t match_global, H5C_tag_iter_cb_t cb, void *cb_ctx);
 
 /* Routines for operating on entry tags */
 H5_DLL herr_t H5C__tag_entry(H5C_t * cache_ptr, H5C_cache_entry_t * entry_ptr,

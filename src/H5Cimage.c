@@ -75,6 +75,7 @@
 #define H5C__MDCI_ENTRY_IS_FD_CHILD_FLAG	0x08
 
 #define H5C__MDCI_MAX_FD_CHILDREN		USHRT_MAX
+#define H5C__MDCI_MAX_FD_PARENTS		USHRT_MAX
 
 /******************/
 /* Local Typedefs */
@@ -132,6 +133,11 @@ static uint8_t * H5C_encode_cache_image_header(H5C_t *cache_ptr, uint8_t *buf);
 static uint8_t * H5C_encode_cache_image_entry(H5F_t * f, H5C_t * cache_ptr, 
     uint8_t * buf, int entry_num, size_t expected_entry_header_len);
 
+static herr_t H5C_prep_for_file_close__compute_fd_heights(H5C_t * cache_ptr);
+
+static void H5C_prep_for_file_close__compute_fd_heights_real(
+    H5C_cache_entry_t  *entry_ptr, uint32_t fd_height);
+
 static void H5C_prep_for_file_close__partition_image_entries_array(
     H5C_t * cache_ptr, int bottom, int * middle_ptr, int top);
 
@@ -157,7 +163,7 @@ static herr_t H5C_serialize_ring(const H5F_t * f, hid_t dxpl_id,
 
 static herr_t H5C_serialize_single_entry(const H5F_t *f, hid_t dxpl_id, 
     H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, 
-    hbool_t *restart_fd_scan_ptr, hbool_t *restart_list_scan_ptr);
+    hbool_t *restart_list_scan_ptr);
 
 static herr_t H5C__write_cache_image_superblock_msg(H5F_t *f, hid_t dxpl_id, 
     hbool_t create);
@@ -291,6 +297,7 @@ H5C_construct_cache_image_buffer(H5F_t * f, H5C_t * cache_ptr)
      * and comparing the result with the original data.
      */
     {
+        int             j;
         uint32_t        old_chksum;
         const uint8_t *	q;
         H5C_t *	        fake_cache_ptr = NULL;
@@ -345,13 +352,31 @@ H5C_construct_cache_image_buffer(H5F_t * f, H5C_t * cache_ptr)
                      (fake_cache_ptr->image_entries)[i].lru_rank);
 	    HDassert((cache_ptr->image_entries)[i].is_dirty == 
                      (fake_cache_ptr->image_entries)[i].is_dirty);
-	    /* don't check flush_dep_height as it is not stored in 
+	    /* don't check image_fd_height as it is not stored in 
              * the metadata cache image block.
              */
-	    HDassert((cache_ptr->image_entries)[i].fd_parent_addr == 
-                     (fake_cache_ptr->image_entries)[i].fd_parent_addr);
 	    HDassert((cache_ptr->image_entries)[i].fd_child_count == 
                      (fake_cache_ptr->image_entries)[i].fd_child_count);
+	    HDassert((cache_ptr->image_entries)[i].fd_dirty_child_count == 
+                     (fake_cache_ptr->image_entries)[i].fd_dirty_child_count);
+	    HDassert((cache_ptr->image_entries)[i].fd_parent_count ==
+                     (fake_cache_ptr->image_entries)[i].fd_parent_count);
+
+	    for (j = 0; 
+                 j < (int)((cache_ptr->image_entries)[i].fd_parent_count); j++)
+		HDassert((cache_ptr->image_entries)[i].fd_parent_addrs[j] ==
+                         (fake_cache_ptr->image_entries)[i].fd_parent_addrs[j]);
+
+	    /* free the fd_parent_addrs array if it exists */
+	    if ( (fake_cache_ptr->image_entries)[i].fd_parent_addrs ) {
+
+		HDassert((fake_cache_ptr->image_entries)[i].fd_parent_count > 0);
+		(fake_cache_ptr->image_entries)[i].fd_parent_addrs = (haddr_t *)
+		    H5MM_xfree((fake_cache_ptr->image_entries)[i].fd_parent_addrs);
+		(fake_cache_ptr->image_entries)[i].fd_parent_count = 0;
+	    } else 
+		HDassert((fake_cache_ptr->image_entries)[i].fd_parent_count == 0);
+
 	    HDassert((cache_ptr->image_entries)[i].image_ptr);
             HDassert((fake_cache_ptr->image_entries)[i].image_ptr);
             HDassert(!HDmemcmp((cache_ptr->image_entries)[i].image_ptr,
@@ -372,7 +397,9 @@ H5C_construct_cache_image_buffer(H5F_t * f, H5C_t * cache_ptr)
 
 	HDassert(chksum == old_chksum);
 
-	fake_cache_ptr->image_entries = (H5C_image_entry_t *)H5MM_xfree(fake_cache_ptr->image_entries);
+	fake_cache_ptr->image_entries = 
+	    (H5C_image_entry_t *)H5MM_xfree(fake_cache_ptr->image_entries);
+
 	fake_cache_ptr = (H5C_t *)H5MM_xfree(fake_cache_ptr);
     }
 #endif /* NDEBUG */
@@ -419,6 +446,11 @@ done:
  *
  * Programmer:  John Mainzer, 8/10/15
  *
+ * Changes:	Updated function to allow for possibility of multiple 
+ *		flush dependency parents and related changes.
+ *
+ *						JRM -- 9/14/16
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -456,7 +488,6 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
                                         /* that array does not exist.        */
     unsigned            flush_flags = (H5C__FLUSH_INVALIDATE_FLAG | 
 				       H5C__FLUSH_CLEAR_ONLY_FLAG);
-    unsigned            u;              /* Local index variable */
     herr_t      	ret_value = SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -501,34 +532,32 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
     HDassert(type->get_load_size);
     HDassert(type->deserialize);
 
-
-    /* if *pf_entry_ptr is a flush dependency child, destroy that 
-     * relationship now.  The client will restore the relationship with
+    /* if *pf_entry_ptr is a flush dependency child, destroy all such
+     * relationships now.  The client will restore the relationship(s) with
      * the deserialized entry if appropriate.
      */
-    if ( pf_entry_ptr->flush_dep_parent ) {
+    //HDassert(pf_entry_ptr->fd_parent_count == pf_entry_ptr->flush_dep_nparents);
+    for ( i = (int)(pf_entry_ptr->fd_parent_count) - 1; i >= 0; i--) {
 
-	HDassert(pf_entry_ptr->flush_dep_parent->addr == \
-                 pf_entry_ptr->fd_parent_addr);
-
-	if ( pf_entry_ptr->flush_dep_parent->prefetched ) {
-
-	    /* decrement the fd_child_count on the parent */
-	    HDassert(pf_entry_ptr->flush_dep_parent->fd_child_count > 0);
-            (pf_entry_ptr->flush_dep_parent->fd_child_count)--;
-        }
-
-        if ( H5C_destroy_flush_dependency(pf_entry_ptr->flush_dep_parent,
+	HDassert(pf_entry_ptr->flush_dep_parent);
+	HDassert(pf_entry_ptr->flush_dep_parent[i]);
+	HDassert(pf_entry_ptr->flush_dep_parent[i]->magic == 
+		 H5C__H5C_CACHE_ENTRY_T_MAGIC);
+	HDassert(pf_entry_ptr->flush_dep_parent[i]->flush_dep_nchildren > 0);
+        HDassert(pf_entry_ptr->fd_parent_addrs);
+	HDassert(pf_entry_ptr->flush_dep_parent[i]->addr ==
+                 pf_entry_ptr->fd_parent_addrs[i]);
+	
+        if ( H5C_destroy_flush_dependency(pf_entry_ptr->flush_dep_parent[i],
                                           pf_entry_ptr) < 0 )
 
 	    HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL,
                         "can't destroy pf entry parent flush dependency.");
 
-        pf_entry_ptr->fd_parent_addr = HADDR_UNDEF;
+        pf_entry_ptr->fd_parent_addrs[i] = HADDR_UNDEF;
     }
 
-    HDassert(NULL == pf_entry_ptr->flush_dep_parent);
-    HDassert(HADDR_UNDEF == pf_entry_ptr->fd_parent_addr);
+    HDassert(pf_entry_ptr->flush_dep_nparents == 0);
 
 
     /* If *pf_entry_ptr is a flush dependency parent, destroy its flush 
@@ -681,65 +710,71 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
 
     HDassert( ( dirty == FALSE ) || ( type->id == 5 || type->id == 6) );
 
-    ds_entry_ptr->magic                = H5C__H5C_CACHE_ENTRY_T_MAGIC;
-    ds_entry_ptr->cache_ptr            = f->shared->cache;
-    ds_entry_ptr->addr                 = addr;
-    ds_entry_ptr->size                 = len;
+    ds_entry_ptr->magic                     	= H5C__H5C_CACHE_ENTRY_T_MAGIC;
+    ds_entry_ptr->cache_ptr                 	= f->shared->cache;
+    ds_entry_ptr->addr                      	= addr;
+    ds_entry_ptr->size                      	= len;
     HDassert(ds_entry_ptr->size < H5C_MAX_ENTRY_SIZE);
-    ds_entry_ptr->compressed	       = compressed;
-    ds_entry_ptr->compressed_size      = compressed_size;
-    ds_entry_ptr->image_ptr            = pf_entry_ptr->image_ptr;
-    ds_entry_ptr->image_up_to_date     = !dirty;
-    ds_entry_ptr->type                 = type;
-    ds_entry_ptr->is_dirty	       = dirty | pf_entry_ptr->is_dirty;
-    ds_entry_ptr->dirtied              = FALSE;
-    ds_entry_ptr->is_protected         = FALSE;
-    ds_entry_ptr->is_read_only         = FALSE;
-    ds_entry_ptr->ro_ref_count         = 0;
-    ds_entry_ptr->is_pinned            = FALSE;
-    ds_entry_ptr->in_slist             = FALSE;
-    ds_entry_ptr->flush_marker         = FALSE;
+    ds_entry_ptr->compressed	            	= compressed;
+    ds_entry_ptr->compressed_size           	= compressed_size;
+    ds_entry_ptr->image_ptr                 	= pf_entry_ptr->image_ptr;
+    ds_entry_ptr->image_up_to_date          	= !dirty;
+    ds_entry_ptr->type                      	= type;
+    ds_entry_ptr->is_dirty	            	= dirty | 
+						  pf_entry_ptr->is_dirty;
+    ds_entry_ptr->dirtied                   	= FALSE;
+    ds_entry_ptr->is_protected              	= FALSE;
+    ds_entry_ptr->is_read_only              	= FALSE;
+    ds_entry_ptr->ro_ref_count              	= 0;
+    ds_entry_ptr->is_pinned                 	= FALSE;
+    ds_entry_ptr->in_slist                  	= FALSE;
+    ds_entry_ptr->flush_marker              	= FALSE;
 #ifdef H5_HAVE_PARALLEL
-    ds_entry_ptr->clear_on_unprotect   = FALSE;
-    ds_entry_ptr->flush_immediately    = FALSE;
-    ds_entry_ptr->coll_access          = FALSE;
+    ds_entry_ptr->clear_on_unprotect        	= FALSE;
+    ds_entry_ptr->flush_immediately         	= FALSE;
+    ds_entry_ptr->coll_access               	= FALSE;
 #endif /* H5_HAVE_PARALLEL */
-    ds_entry_ptr->flush_in_progress    = FALSE;
-    ds_entry_ptr->destroy_in_progress  = FALSE;
+    ds_entry_ptr->flush_in_progress         	= FALSE;
+    ds_entry_ptr->destroy_in_progress       	= FALSE;
 
-    ds_entry_ptr->ring		       = pf_entry_ptr->ring;
+    ds_entry_ptr->ring		            	= pf_entry_ptr->ring;
 
     /* Initialize flush dependency height fields */
-    ds_entry_ptr->flush_dep_parent     = NULL;
-    for ( u = 0; u < H5C__NUM_FLUSH_DEP_HEIGHTS; u++ )
-        ds_entry_ptr->child_flush_dep_height_rc[u] = 0;
-    ds_entry_ptr->flush_dep_height     = 0;
+    ds_entry_ptr->flush_dep_parent          	= NULL;
+    ds_entry_ptr->flush_dep_nparents        	= 0;
+    ds_entry_ptr->flush_dep_parent_nalloc   	= 0;
+    ds_entry_ptr->flush_dep_nchildren       	= 0;
+    ds_entry_ptr->flush_dep_ndirty_children 	= 0;
+    ds_entry_ptr->flush_dep_nunser_children 	= 0;
 
     /* Initialize fields supporting the hash table: */
-    ds_entry_ptr->ht_next              = NULL;
-    ds_entry_ptr->ht_prev              = NULL;
-    ds_entry_ptr->il_next              = NULL;
-    ds_entry_ptr->il_prev              = NULL;
+    ds_entry_ptr->ht_next                   	= NULL;
+    ds_entry_ptr->ht_prev                   	= NULL;
+    ds_entry_ptr->il_next                   	= NULL;
+    ds_entry_ptr->il_prev                   	= NULL;
 
     /* Initialize fields supporting replacement policies: */
-    ds_entry_ptr->next                 = NULL;
-    ds_entry_ptr->prev                 = NULL;
-    ds_entry_ptr->aux_next             = NULL;
-    ds_entry_ptr->aux_prev             = NULL;
+    ds_entry_ptr->next                      	= NULL;
+    ds_entry_ptr->prev                      	= NULL;
+    ds_entry_ptr->aux_next                  	= NULL;
+    ds_entry_ptr->aux_prev                  	= NULL;
 #ifdef H5_HAVE_PARALLEL
-    pf_entry_ptr->coll_next             = NULL;
-    pf_entry_ptr->coll_prev             = NULL;
+    pf_entry_ptr->coll_next                 	= NULL;
+    pf_entry_ptr->coll_prev                 	= NULL;
 #endif /* H5_HAVE_PARALLEL */
 
     /* initialize cache image related fields */
-    ds_entry_ptr->include_in_image     = FALSE;
-    ds_entry_ptr->lru_rank	       = 0;
-    ds_entry_ptr->image_index	       = -1;
-    ds_entry_ptr->image_dirty	       = FALSE;
-    ds_entry_ptr->fd_parent_addr       = HADDR_UNDEF;
-    ds_entry_ptr->fd_child_count       = pf_entry_ptr->fd_child_count;
-    ds_entry_ptr->prefetched	       = FALSE;
-    ds_entry_ptr->prefetch_type_id     = 0;
+    ds_entry_ptr->include_in_image          	= FALSE;
+    ds_entry_ptr->lru_rank	            	= 0;
+    ds_entry_ptr->image_index	            	= -1;
+    ds_entry_ptr->image_dirty	            	= FALSE;
+    ds_entry_ptr->fd_parent_count           	= 0;
+    ds_entry_ptr->fd_parent_addrs           	= NULL;
+    ds_entry_ptr->fd_child_count            	= pf_entry_ptr->fd_child_count;
+    ds_entry_ptr->fd_dirty_child_count      	= 0;
+    ds_entry_ptr->image_fd_height           	= 0;
+    ds_entry_ptr->prefetched	            	= FALSE;
+    ds_entry_ptr->prefetch_type_id          	= 0;
 
     H5C__RESET_CACHE_ENTRY_STATS(ds_entry_ptr);
 
@@ -903,6 +938,9 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
     i = 0;
     if ( fd_children != NULL ) {
 
+        int j;
+	hbool_t found;
+
 	H5C__UPDATE_RP_FOR_PROTECT(cache_ptr, ds_entry_ptr, FAIL)
 
         ds_entry_ptr->is_protected = TRUE;
@@ -911,7 +949,22 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
 
 	    HDassert((fd_children[i])->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
 	    HDassert((fd_children[i])->prefetched);
-	    HDassert((fd_children[i])->fd_parent_addr == ds_entry_ptr->addr);
+	    HDassert((fd_children[i])->fd_parent_count > 0);
+	    HDassert((fd_children[i])->fd_parent_addrs);
+
+	    j = 0;
+            found = FALSE;
+	    while ( ( j < (int)((fd_children[i])->fd_parent_count) ) && 
+                    ( ! found ) ) {
+
+		if ( (fd_children[i])->fd_parent_addrs[j] ==
+		     ds_entry_ptr->addr ) {
+
+		    found = TRUE;
+		}
+		j++;
+	    }
+	    HDassert(found);
 
 	    if (H5C_create_flush_dependency(ds_entry_ptr, fd_children[i]) < 0) {
 
@@ -1004,6 +1057,15 @@ H5C_free_image_entries_array(H5C_t * cache_ptr)
             HDassert(ie_ptr->image_index == i);
 	    HDassert(ie_ptr->image_ptr != NULL);
 
+	    /* free the parent addrs array if appropriate */
+	    if ( ie_ptr->fd_parent_addrs ) {
+
+		HDassert(ie_ptr->fd_parent_count > 0);
+		ie_ptr->fd_parent_addrs = 
+			(haddr_t *)H5MM_xfree(ie_ptr->fd_parent_addrs);
+            } else
+		HDassert(ie_ptr->fd_parent_count == 0);
+
             /* free the image */
             ie_ptr->image_ptr = H5MM_xfree(ie_ptr->image_ptr);
 
@@ -1079,7 +1141,7 @@ hbool_t
 H5C_get_serialization_in_progress(H5F_t * f)
 {
     H5C_t * cache_ptr;
-    hbool_t ret_value;   /* Return value */
+    hbool_t ret_value = FALSE;   /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -1113,7 +1175,11 @@ H5C_get_serialization_in_progress(H5F_t * f)
  *-------------------------------------------------------------------------
  */
 herr_t
+#if H5C_COLLECT_CACHE_STATS
 H5C_image_stats(H5C_t * cache_ptr, hbool_t print_header)
+#else /* H5C_COLLECT_CACHE_STATS */
+H5C_image_stats(H5C_t * cache_ptr, hbool_t H5_ATTR_UNUSED print_header)
+#endif /* H5C_COLLECT_CACHE_STATS */
 {
 #if H5C_COLLECT_CACHE_STATS
     int         i;
@@ -1299,9 +1365,9 @@ H5C_load_cache_image(H5F_t *    f,
         }
 
         /* free the image entries array.  Note that all on disk image 
-         * image buffers have been transferred to their respective
-         * prefetched entries so we can just free the array of 
-         * H5C_image_entry_t.
+         * image buffers and fd parent address arrays have been transferred 
+	 * to their respective prefetched entries so we can just free the 
+         * array of H5C_image_entry_t.
          */
 #ifndef NDEBUG
         {
@@ -1315,6 +1381,7 @@ H5C_load_cache_image(H5F_t *    f,
 		HDassert(ie_ptr);
                 HDassert(ie_ptr->magic == H5C__H5C_IMAGE_ENTRY_T_MAGIC);
                 HDassert(ie_ptr->image_index == i);
+	        HDassert(ie_ptr->fd_parent_addrs == NULL);
                 HDassert(ie_ptr->image_ptr == NULL);
             }
         }
@@ -1601,11 +1668,11 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
              *      the cache are marked as such, and we have a count
              *      of same.
              *
+             *   5) Flush dependency heights are calculated for all 
+             *      entries that will be included in the cache image.
+             *
              * If there are any entries to be included in the metadata cache
              * image, allocate, populate, and sort the image_entries array.  
-             * Sort the array now, as we still have the flush_dep_height 
-             * for each entry.  If we wait until after the flushes, we would 
-	     * have to store these values.
              *
              * If the metadata cache image will be empty, delete the 
              * metadata cache image superblock extension message, set 
@@ -1623,8 +1690,12 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
 
                         "can't setup image entries array.")
 
+                HDassert(H5C_validate_index_list(cache_ptr)==SUCCEED);/* JRM */
+
 		H5C_prep_for_file_close__qsort_image_entries_array( cache_ptr, 
 					0, cache_ptr->num_entries_in_image - 1);
+
+                HDassert(H5C_validate_index_list(cache_ptr)==SUCCEED);/* JRM */
 
 	    } else { /* cancel creation of metadata cache iamge */
 
@@ -1644,6 +1715,8 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
          		    "can't remove MDC image msg from superblock ext.")
 
 		}
+
+                HDassert(H5C_validate_index_list(cache_ptr)==SUCCEED);/* JRM */
 
 		cache_ptr->image_ctl.generate_image = FALSE;
 	    }
@@ -1889,9 +1962,10 @@ H5C__prefetched_entry_serialize(const H5F_t H5_ATTR_UNUSED *f,
 static herr_t
 H5C__prefetched_entry_notify(H5C_notify_action_t action, void * thing)
 {
-    H5C_cache_entry_t *  entry_ptr; 
-    H5C_cache_entry_t *  parent_ptr; 
-    herr_t               ret_value = SUCCEED;
+    int 		i;
+    H5C_cache_entry_t * entry_ptr; 
+    H5C_cache_entry_t * parent_ptr; 
+    herr_t              ret_value = SUCCEED;
 
     FUNC_ENTER_STATIC
 
@@ -1911,15 +1985,15 @@ H5C__prefetched_entry_notify(H5C_notify_action_t action, void * thing)
             break;
 
         case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
-            if ( entry_ptr->flush_dep_parent ) {
+	    for ( i = 0; i < (int)(entry_ptr->flush_dep_nparents); i++ ) {
 
-		HDassert(entry_ptr->flush_dep_parent->magic ==
-                         H5C__H5C_CACHE_ENTRY_T_MAGIC);
-                HDassert((entry_ptr->flush_dep_parent->addr ==
-                          entry_ptr->fd_parent_addr) ||
-                         (!(entry_ptr->flush_dep_parent->prefetched)));
+		HDassert(entry_ptr->flush_dep_parent);
 
-		parent_ptr = entry_ptr->flush_dep_parent;
+		parent_ptr = entry_ptr->flush_dep_parent[i];
+
+		HDassert(parent_ptr);
+		HDassert(parent_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+		HDassert(parent_ptr->flush_dep_nchildren > 0);
 
                 /* destroy flush dependency with flush dependency parent */
                 if ( H5C_destroy_flush_dependency(parent_ptr, entry_ptr) < 0) {
@@ -1937,10 +2011,8 @@ H5C__prefetched_entry_notify(H5C_notify_action_t action, void * thing)
                      */
 		    HDassert(parent_ptr->fd_child_count > 0);
 		    (parent_ptr->fd_child_count)--;
-                    HDassert((parent_ptr->flush_dep_height == 0) ||
-                             (parent_ptr->fd_child_count > 0));
 		}
-            } /* end if ( entry_ptr->flush_dep_parent ) */
+	    }
             break;
 
         default:
@@ -1969,6 +2041,10 @@ done:
  * Programmer:  John Mainzer
  *              8/13/15
  *
+ * Changes:	Updated routine to free the fd parent addrs array if 
+ *		appropriate.
+ *						JRM -- 9/13/16
+ *
  *-------------------------------------------------------------------------
  */
 
@@ -1986,6 +2062,16 @@ H5C__prefetched_entry_free_icr(void * thing)
 
     HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_BAD_MAGIC);
     HDassert(entry_ptr->prefetched);
+
+    if ( entry_ptr->fd_parent_addrs != NULL ) {
+
+	HDassert(entry_ptr->fd_parent_count > 0);
+	entry_ptr->fd_parent_addrs = 
+	    (haddr_t *)H5MM_xfree((void *)entry_ptr->fd_parent_addrs);
+
+    } else {
+	HDassert(entry_ptr->fd_parent_count == 0);
+    }
 
     if ( entry_ptr->image_ptr != NULL )
 
@@ -2030,12 +2116,16 @@ H5C__prefetched_entry_fsf_size(const void H5_ATTR_UNUSED * thing,
  * Programmer:  John Mainzer
  *		7/27/15
  *
+ * Changes:	Updated for changes in the contents of entry header.
+ *
+ *						JRM -- 9/12/16
+ *
  *-------------------------------------------------------------------------
  */
 size_t
 H5C_cache_image_block_entry_header_size(H5F_t * f)
 {
-    size_t ret_value;   /* Return value */
+    size_t ret_value = 0;   /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -2045,8 +2135,9 @@ H5C_cache_image_block_entry_header_size(H5F_t * f)
 			  1 +			/* flags                    */
 			  1 +			/* ring                     */
 			  2 +			/* dependency child count   */
+			  2 +			/* dirty dep child count    */
+			  2 +			/* dependency parent count  */
 			  4 +			/* index in LRU             */
-                          H5F_SIZEOF_ADDR(f) +  /* dependency parent offset */
 			  H5F_SIZEOF_ADDR(f) +  /* entry offset             */
 			  H5F_SIZEOF_SIZE(f) ); /* entry length             */
 
@@ -2102,6 +2193,10 @@ H5C_cache_image_block_header_size(void)
  * Programmer:  John Mainzer
  *              8/9/15
  *
+ * Changes:	Modified to support multiple flush dependency parents
+ *		and related issues.
+ *						JRM -- 9/12/16
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2126,9 +2221,7 @@ H5C_decode_cache_image_buffer(H5F_t * f, H5C_t * cache_ptr)
     HDassert(cache_ptr->image_entries == NULL);
     HDassert(cache_ptr->num_entries_in_image == 0);
 
-
     p = (uint8_t *)cache_ptr->image_buffer;
-
 
     /* decode metadata cache image header */
 
@@ -2163,7 +2256,7 @@ H5C_decode_cache_image_buffer(H5F_t * f, H5C_t * cache_ptr)
     for ( i = 0; i < cache_ptr->num_entries_in_image; i++ ) {
 
 	(cache_ptr->image_entries)[i].magic = H5C__H5C_IMAGE_ENTRY_T_MAGIC;
-        (cache_ptr->image_entries)[i].flush_dep_height = 0;
+        (cache_ptr->image_entries)[i].image_fd_height = 0;
         (cache_ptr->image_entries)[i].image_index = i;
         (cache_ptr->image_entries)[i].image_ptr = NULL;
 
@@ -2303,6 +2396,11 @@ done:
  * Programmer:  John Mainzer
  *              8/6/15
  *
+ * Changes:	Modified funtion to reflect changes in the on disk image 
+ *		of the cache image entry caused by the possibility of 
+ *		multiple flush dependency parents.
+ *							JRM -- 9/12/16
+ *
  *-------------------------------------------------------------------------
  */
 const uint8_t *
@@ -2313,17 +2411,22 @@ H5C_decode_cache_image_entry(H5F_t * f,
                              size_t expected_entry_header_len)
 {
     hbool_t		is_dirty = FALSE;
+#ifndef NDEBUG	/* only used in assertions */
     hbool_t		in_lru = FALSE;
     hbool_t		is_fd_parent = FALSE;
     hbool_t		is_fd_child = FALSE;
-    haddr_t		fd_parent_addr;
+#endif /* NDEBUG */ /* only used in assertions */
+    int			i;
     haddr_t 		addr;
-    size_t		size;
+    size_t		size = 0;
     void *		image_ptr;
     uint8_t             flags = 0;
     uint8_t		type_id;
     uint8_t		ring;
     uint16_t 		fd_child_count;
+    uint16_t 		fd_dirty_child_count;
+    uint16_t 		fd_parent_count;
+    haddr_t           * fd_parent_addrs = NULL;
     int32_t		lru_rank;
     H5C_image_entry_t * ie_ptr = NULL;
     const uint8_t *	p;
@@ -2367,11 +2470,13 @@ H5C_decode_cache_image_entry(H5F_t * f,
     
     if ( flags & H5C__MDCI_ENTRY_DIRTY_FLAG ) 		is_dirty = TRUE;
 
+#ifndef NDEBUG	/* only used in assertions */
     if ( flags & H5C__MDCI_ENTRY_IN_LRU_FLAG ) 		in_lru = TRUE;
 
     if ( flags & H5C__MDCI_ENTRY_IS_FD_PARENT_FLAG ) 	is_fd_parent = TRUE;
 
     if ( flags & H5C__MDCI_ENTRY_IS_FD_CHILD_FLAG )	is_fd_child = TRUE;
+#endif /* NDEBUG */ /* only used in assertions */
 
 
     /* decode ring */
@@ -2387,18 +2492,24 @@ H5C_decode_cache_image_entry(H5F_t * f,
               ( !is_fd_parent && ( fd_child_count == 0 ) ) );
 
 
+    /* decode dirty dependency child count */
+    UINT16DECODE(p, fd_dirty_child_count);
+
+    HDassert(fd_dirty_child_count <= fd_child_count);
+
+
+    /* decode dependency parent count */
+    UINT16DECODE(p, fd_parent_count);
+
+    HDassert( ( is_fd_child && ( fd_parent_count > 0 ) ) ||
+              ( !is_fd_child && ( fd_parent_count == 0 ) ) );
+
+
     /* decode index in LRU */
     INT32DECODE(p, lru_rank);
 
     HDassert( ( in_lru && ( lru_rank >= 0 ) ) ||
               ( ! in_lru && ( lru_rank == -1 ) ) );
-
-
-    /* decode dependency parent offset */
-    H5F_addr_decode(f, &p, &fd_parent_addr);
-
-    HDassert( ( is_fd_child && ( HADDR_UNDEF != fd_parent_addr ) ) ||
-              ( ! is_fd_child && ( HADDR_UNDEF == fd_parent_addr ) ) );
 
 
     /* decode entry offset */
@@ -2411,6 +2522,28 @@ H5C_decode_cache_image_entry(H5F_t * f,
     H5F_DECODE_LENGTH(f, p, size);
 
     HDassert(size > 0);
+
+
+    /* if parent count greater than zero, allocate array for parent 
+     * addresses, and decode addresses into the array.
+     */
+    if ( fd_parent_count > 0 ) {
+
+        fd_parent_addrs = (haddr_t *)
+	    H5MM_malloc((size_t)(fd_parent_count) * H5F_SIZEOF_ADDR(f));
+
+        if ( NULL == fd_parent_addrs )
+
+	    HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, NULL, \
+                        "memory allocation failed for fd parent addrs buffer")
+
+	for ( i = 0; i < fd_parent_count; i++ ) {
+
+            H5F_addr_decode(f, &p, &(fd_parent_addrs[i]));
+
+            HDassert(HADDR_UNDEF != fd_parent_addrs[i]);
+        }
+    }
 
 
     /* allocate buffer for entry image */
@@ -2435,21 +2568,24 @@ H5C_decode_cache_image_entry(H5F_t * f,
 
     /* verify expected length of entry image */
 
-    if ( (size_t)(p - buf) != expected_entry_header_len + size )
+    if ( (size_t)(p - buf) != expected_entry_header_len + 
+                    ((size_t)fd_parent_count * H5F_SIZEOF_ADDR(f)) + size )
 
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, NULL, "Bad entry image len.")
 
     
     /* copy data into target */
-    ie_ptr->addr             = addr;
-    ie_ptr->size             = size;
-    ie_ptr->ring             = (H5C_ring_t)ring;
-    ie_ptr->type_id          = (int32_t)type_id;
-    ie_ptr->lru_rank         = lru_rank;
-    ie_ptr->is_dirty         = is_dirty;
-    ie_ptr->fd_parent_addr   = fd_parent_addr;
-    ie_ptr->fd_child_count   = (uint64_t)fd_child_count;
-    ie_ptr->image_ptr        = image_ptr;
+    ie_ptr->addr                 = addr;
+    ie_ptr->size                 = size;
+    ie_ptr->ring                 = (H5C_ring_t)ring;
+    ie_ptr->type_id              = (int32_t)type_id;
+    ie_ptr->lru_rank             = lru_rank;
+    ie_ptr->is_dirty             = is_dirty;
+    ie_ptr->fd_child_count       = (uint64_t)fd_child_count;
+    ie_ptr->fd_dirty_child_count = (uint64_t)fd_dirty_child_count;
+    ie_ptr->fd_parent_count      = (uint64_t)fd_parent_count;
+    ie_ptr->fd_parent_addrs      = fd_parent_addrs;
+    ie_ptr->image_ptr            = image_ptr;
 
 
     ret_value = p;
@@ -2484,6 +2620,10 @@ done:
  * Programmer:  John Mainzer
  *              8/11/15
  *
+ * Changes:	Updated for possibility of multiple flush dependency 
+ *		parents and related changes.
+ *						JRM -- 9/14/16
+ *
  *-------------------------------------------------------------------------
  */
 
@@ -2492,6 +2632,8 @@ H5C_destroy_pf_entry_child_flush_deps(H5C_t *cache_ptr,
                                       H5C_cache_entry_t * pf_entry_ptr,
 				      H5C_cache_entry_t ** fd_children)
 {
+    hbool_t		found;
+    int			i;
     int			entries_visited = 0;
     int			fd_children_found = 0;
     H5C_cache_entry_t * entry_ptr;
@@ -2518,24 +2660,75 @@ H5C_destroy_pf_entry_child_flush_deps(H5C_t *cache_ptr,
     {
 	HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
 
+	/* here we look at entry_ptr->flush_dep_nparents and not 
+         * entry_ptr->fd_parent_count as it is possible that some 
+	 * or all of the prefetched flush dependency child relationships
+	 * have already been destroyed.
+         */
 	if ( ( entry_ptr->prefetched ) &&
-             ( entry_ptr->flush_dep_parent == pf_entry_ptr ) ) {
+             ( entry_ptr->flush_dep_nparents > 0 ) ) {
 
-	    HDassert(entry_ptr->fd_parent_addr == pf_entry_ptr->addr);
+	    i = 0;
+	    found = FALSE;
+
             HDassert(entry_ptr->type);
             HDassert(entry_ptr->type->id == H5AC_PREFETCHED_ENTRY_ID);
+	    HDassert(entry_ptr->fd_parent_count >=
+                     entry_ptr->flush_dep_nparents);
+	    HDassert(entry_ptr->fd_parent_addrs);
+	    HDassert(entry_ptr->flush_dep_parent);
 
-	    HDassert(NULL == fd_children[fd_children_found]);
+	    while ( ( ! found ) && ( i < (int)(entry_ptr->fd_parent_count) ) ) {
 
-	    fd_children[fd_children_found] = entry_ptr;
+		HDassert(entry_ptr->flush_dep_parent[i]);
+		HDassert(entry_ptr->flush_dep_parent[i]->magic ==
+			 H5C__H5C_CACHE_ENTRY_T_MAGIC);
 
-	    fd_children_found++;
+		if ( pf_entry_ptr == entry_ptr->flush_dep_parent[i] ) {
 
-            if ( H5C_destroy_flush_dependency(pf_entry_ptr, entry_ptr) < 0 )
+		    found = TRUE;
+		}
+		i++;
+            }
 
-	        HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL,
-                           "can't destroy pf entry child flush dependency.");
-        }
+	    if ( found ) {
+
+	        HDassert(NULL == fd_children[fd_children_found]);
+
+	        fd_children[fd_children_found] = entry_ptr;
+
+	        fd_children_found++;
+
+                if ( H5C_destroy_flush_dependency(pf_entry_ptr, entry_ptr) < 0 )
+
+	            HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL,
+                              "can't destroy pf entry child flush dependency.");
+
+	    }
+
+	    if ( found ) { 
+
+		/* sanity check -- verify that the address of the parent 
+                 * appears in entry_ptr->fd_parent_addrs.  Must do a search,
+                 * as with flush dependency creates and destroys, 
+                 * entry_ptr->fd_parent_addrs and entry_ptr->flush_dep_parent
+                 * can list parents in different order.
+                 */
+		found = FALSE;
+		i = 0;
+
+	        while ( ( ! found ) && 
+                        ( i < (int)(entry_ptr->fd_parent_count) ) ) {
+
+		    if ( pf_entry_ptr->addr == entry_ptr->fd_parent_addrs[i] ) {
+
+		        found = TRUE;
+		    }
+		    i++;
+                } 
+		HDassert(found);
+	    }
+	}
 
         entries_visited++;
 
@@ -2632,6 +2825,11 @@ done:
  * Programmer:  John Mainzer
  *              8/6/15
  *
+ * Changes:	Updated for changes in file format of cache image entry
+ *		driven by possibility of multiple flush dependency parents.
+ *
+ *						JRM - 9/12/16
+ *
  *-------------------------------------------------------------------------
  */
 uint8_t *
@@ -2641,6 +2839,7 @@ H5C_encode_cache_image_entry(H5F_t * f,
                              int entry_num,
                              size_t expected_entry_header_len)
 {
+    int                 i;
     H5C_image_entry_t *	ie_ptr;
     uint8_t             flags = 0;
     uint8_t *		p;
@@ -2693,7 +2892,7 @@ H5C_encode_cache_image_entry(H5F_t * f,
     if ( ie_ptr->fd_child_count > 0 )
 	flags |= H5C__MDCI_ENTRY_IS_FD_PARENT_FLAG;
 
-    if ( H5F_addr_defined(ie_ptr->fd_parent_addr) ) 
+    if ( ie_ptr->fd_parent_count > 0 ) 
 	flags |= H5C__MDCI_ENTRY_IS_FD_CHILD_FLAG;
 
     *p++ = flags;
@@ -2711,14 +2910,28 @@ H5C_encode_cache_image_entry(H5F_t * f,
     UINT16ENCODE(p, (uint16_t)(ie_ptr->fd_child_count));
 
 
+    /* validate and encode dirty dependency child count */
+
+    if ( ie_ptr->fd_dirty_child_count > H5C__MDCI_MAX_FD_CHILDREN )
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, NULL, \
+                    "fd_dirty_child_count out of range.")
+
+    UINT16ENCODE(p, (uint16_t)(ie_ptr->fd_dirty_child_count));
+
+
+    /* validate and encode dependency parent count */
+
+    if ( ie_ptr->fd_parent_count > H5C__MDCI_MAX_FD_PARENTS )
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, NULL, \
+                    "fd_parent_count out of range.")
+
+    UINT16ENCODE(p, (uint16_t)(ie_ptr->fd_parent_count));
+
+
+
     /* encode index in LRU */
 
     INT32ENCODE(p, ie_ptr->lru_rank);
-
-
-    /* encode dependency parent offset */
-
-    H5F_addr_encode(f, &p, ie_ptr->fd_parent_addr);
 
 
     /* encode entry offset */
@@ -2731,6 +2944,14 @@ H5C_encode_cache_image_entry(H5F_t * f,
     H5F_ENCODE_LENGTH(f, p, ie_ptr->size);
 
 
+    /* encode dependency parent offsets -- if any */
+
+    for ( i = 0; i < (int)(ie_ptr->fd_parent_count); i++ ) {
+    
+	H5F_addr_encode(f, &p, ie_ptr->fd_parent_addrs[i]);
+    }
+
+
     /* copy entry image */
 
     HDmemcpy(p, ie_ptr->image_ptr, ie_ptr->size);
@@ -2739,7 +2960,9 @@ H5C_encode_cache_image_entry(H5F_t * f,
 
     /* verify expected length of entry image */
 
-    if ( (size_t)(p - buf) != expected_entry_header_len + ie_ptr->size )
+    if ( (size_t)(p - buf) != expected_entry_header_len + 
+                              (ie_ptr->fd_parent_count * H5F_SIZEOF_ADDR(f)) +
+                              ie_ptr->size )
 
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, NULL, "Bad entry image len.")
 
@@ -2751,6 +2974,386 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 
 } /* H5C_encode_cache_image_entry() */
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Function:    H5C_prep_for_file_close__compute_fd_heights
+ *
+ * Purpose:     Recent modifications to flush dependency support in the
+ *		metadata cache have removed the notion of flush dependency
+ *		height.  This is a problem for the cache image feature,
+ *		as flush dependency height is used to order entries in the
+ *		cache image so that flush dependency parents appear before
+ *		flush dependency children. (Recall that the flush dependency
+ *		height of an entry in a flush dependency relationship is the
+ *		length of the longest path from the entry to a leaf entry --
+ *		that is an entry with flush dependency parents, but no 
+ *		flush dependency children.  With the introduction of the 
+ *		possibility of multiple flush dependency parents, we have
+ *		a flush partial dependency latice, not a flush dependency 
+ *		tree.  But since the partial latice is acyclic, the concept 
+ *		of flush dependency height still makes sense.
+ *
+ *		The purpose of this function is to compute the flush 
+ *		dependency height of all entries that appear in the cache
+ *		image.  
+ *
+ *		At present, entries are included or excluded from the 
+ *		cache image depending upon the ring in which they reside.
+ *		Thus there is no chance that once side of a flush dependency
+ *		will be in the cache image, and the other side not.
+ *
+ *		However, once we start placing a limit on the size of the
+ *		cache image, or start excluding prefetched entries from
+ *		the cache image if they haven't been accessed in some 
+ *		number of file close / open cycles, this will no longer 
+ *		be the case.  
+ *
+ *		In particular, if a flush dependency child is dirty, and
+ *		one of its flush dependency parents is dirty and not in
+ *		the cache image, then the flush dependency child cannot
+ *		be in the cache image without violating flush ordering.
+ *
+ *		Observe that a clean flush dependency child can be either 
+ *		in or out of the cache image without effect on flush 
+ *		dependencies.
+ *
+ *		Similarly, a flush dependency parent can always be part 
+ *		of a cache image, regardless of whether it is clean or 
+ *		dirty -- but remember that a flush dependency parent can
+ *		also be a flush dependency child.
+ *		
+ *		Finally, note that for purposes of the cache image, flush
+ *		dependency height ends when a flush dependecy relation 
+ *		passes off the cache image.
+ *
+ *		On exit, the flush dependency height of each entry in the 
+ *		cache image should be calculated and stored in the cache
+ *		entry.  Entries will be removed from the cache image if
+ *		necessary to maintain flush ordering.
+ *		
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              9/6/16
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C_prep_for_file_close__compute_fd_heights(H5C_t * cache_ptr)
+{
+    hbool_t 		done = FALSE;
+    int			i;
+    int			j;
+    unsigned		entries_removed_from_image = 0;
+    unsigned		external_parent_fd_refs_removed = 0;
+    unsigned		external_child_fd_refs_removed = 0;
+    H5C_cache_entry_t * entry_ptr;
+    H5C_cache_entry_t * parent_ptr;
+    herr_t              ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* sanity checks */
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+
+    /* Remove from the cache image all dirty entries that are 
+     * flush dependency children of dirty entries that are not in the
+     * cache image.  Must do this, as if we fail to do so, the parent 
+     * will be written to file before the child.  Since it is possible 
+     * that the child will have dirty children of its own, this may take
+     * multiple passes through the index list.
+     */
+    done = FALSE;
+    while ( ! done ) {
+
+	done = TRUE;
+	entry_ptr = cache_ptr->il_head;
+        while ( entry_ptr != NULL ) {
+
+	    HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+
+	    if ( ( entry_ptr->image_dirty ) &&
+                 ( entry_ptr->include_in_image ) &&
+                 ( entry_ptr->fd_parent_count > 0 ) ) {
+
+		HDassert(entry_ptr->flush_dep_parent != NULL);
+
+		for ( i = 0; i < (int)(entry_ptr->flush_dep_nparents); i++ ) {
+
+		    parent_ptr = entry_ptr->flush_dep_parent[i];
+
+		    HDassert(parent_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+		    HDassert(entry_ptr->ring == parent_ptr->ring);
+
+		    if ( ( parent_ptr->is_dirty ) &&
+                         ( ! parent_ptr->include_in_image ) &&
+                         ( entry_ptr->include_in_image ) ) {
+
+			/* must remove child from image -- only do this once */
+			entries_removed_from_image++;
+			entry_ptr->include_in_image = FALSE;
+		    }
+		} /* for */
+            }
+
+	    entry_ptr = entry_ptr->il_next;
+
+        } /* while ( entry_ptr != NULL ) */
+    } /* while ( ! done ) */ 
+
+    /* at present, entries are included in the cache image if they reside
+     * in a specified set of rings.  Thus it should be impossible for 
+     * entries_removed_from_image to be positive.  Assert that this is 
+     * so.  Note that this will change when we start aging entries out 
+     * of the cache image.
+     */
+    HDassert(entries_removed_from_image == 0);
+
+    /* Next, remove from entries in the cache image, references to 
+     * flush dependency parents or children that are not in the cache image.
+     */
+    entry_ptr = cache_ptr->il_head;
+    while ( entry_ptr != NULL ) {
+
+	if ( ( ! entry_ptr->include_in_image ) &&
+	     ( entry_ptr->flush_dep_nparents > 0 ) ) {
+
+	    HDassert(entry_ptr->flush_dep_parent != NULL);
+
+	    for ( i = 0; i < (int)(entry_ptr->flush_dep_nparents); i++ ) {
+
+	        parent_ptr = entry_ptr->flush_dep_parent[i];
+
+		HDassert(parent_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+		HDassert(entry_ptr->ring == parent_ptr->ring);
+
+		if ( parent_ptr->include_in_image ) {
+
+		    /* must remove reference to child */
+		    HDassert(parent_ptr->fd_child_count > 0);
+		    parent_ptr->fd_child_count--;
+
+		    if ( entry_ptr->is_dirty ) {
+
+			HDassert(parent_ptr->fd_dirty_child_count > 0);
+			parent_ptr->fd_dirty_child_count--;
+		    }
+
+		    external_child_fd_refs_removed++;
+		}
+	    } /* for */
+	} else if ( ( entry_ptr->include_in_image ) &&
+                    ( entry_ptr->flush_dep_nparents > 0 ) ) {
+
+	    HDassert(entry_ptr->flush_dep_parent != NULL);
+	    HDassert(entry_ptr->flush_dep_nparents == 
+                     entry_ptr->fd_parent_count);
+	    HDassert(entry_ptr->fd_parent_addrs);
+
+	    for ( i = 0; i < (int)(entry_ptr->flush_dep_nparents); i++ ) {
+
+	        parent_ptr = entry_ptr->flush_dep_parent[i];
+
+		HDassert(parent_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+		HDassert(entry_ptr->ring == parent_ptr->ring);
+
+		if ( ! parent_ptr->include_in_image ) {
+
+		    /* must remove reference to parent */
+		    HDassert(entry_ptr->fd_parent_count > 0);
+		    parent_ptr->fd_child_count--;
+
+		    HDassert(parent_ptr->addr == entry_ptr->fd_parent_addrs[i]);
+
+		    entry_ptr->fd_parent_addrs[i] = HADDR_UNDEF;
+
+		    external_parent_fd_refs_removed++;
+		}
+	    } /* for */
+
+	    /* touch up fd_parent_addrs array if necessary */
+	    if ( entry_ptr->fd_parent_count == 0 ) {
+
+		H5MM_xfree(entry_ptr->fd_parent_addrs);
+		entry_ptr->fd_parent_addrs = NULL;
+
+	    } else if ( entry_ptr->flush_dep_nparents > 
+                        entry_ptr->fd_parent_count ) {
+
+		haddr_t * old_fd_parent_addrs = entry_ptr->fd_parent_addrs;
+
+		entry_ptr->fd_parent_addrs = (haddr_t *)
+		     H5MM_calloc(sizeof(haddr_t) * 
+                                 (size_t)(entry_ptr->fd_parent_addrs));
+
+		if ( NULL == entry_ptr->fd_parent_addrs )
+		    HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, \
+                          "memory allocation failed for fd parent addr array");
+
+		j = 0;
+	        for ( i = 0; i < (int)(entry_ptr->flush_dep_nparents); i++ ) {
+
+		    if ( old_fd_parent_addrs[i] != HADDR_UNDEF ) {
+
+			entry_ptr->fd_parent_addrs[j] = old_fd_parent_addrs[i];
+			j++;
+		    }
+		}
+
+		HDassert(j == (int)(entry_ptr->fd_parent_count));
+	    }
+	}
+
+        entry_ptr = entry_ptr->il_next;
+
+    } /* while ( entry_ptr != NULL ) */
+
+    /* at present, no extenal parent or child flush dependency links 
+     * should exist -- hence the following assertions.  This will change
+     * if we support ageout of entries in the cache image.
+     */
+
+    HDassert(external_child_fd_refs_removed == 0);
+    HDassert(external_parent_fd_refs_removed == 0);
+
+
+    /* at this point we should have removed all flush dependencies that 
+     * cross cache image boundaries.  Now compute the flush dependency
+     * heights for all entries in the image.
+     *
+     * Until I can think of a better way, do this via a depth first
+     * search implemented via a recursive function call.
+     *
+     * Note that entry_ptr->image_fd_height has already been initialized to 0
+     * for all entries that may appear in the cache image.
+     */
+    entry_ptr = cache_ptr->il_head;
+    while ( entry_ptr != NULL ) {
+
+	if ( ( entry_ptr->include_in_image ) &&
+	     ( entry_ptr->fd_child_count == 0 ) &&
+             ( entry_ptr->fd_parent_count > 0 ) ) {
+
+	    for ( i = 0; i < (int)(entry_ptr->fd_parent_count); i++ ) {
+
+	        parent_ptr = entry_ptr->flush_dep_parent[i];
+
+	        HDassert(parent_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+
+	        if ( ( parent_ptr->include_in_image ) &&
+                     ( parent_ptr->image_fd_height <= 0 ) ) 
+
+		    H5C_prep_for_file_close__compute_fd_heights_real(parent_ptr,
+                                                                     1);
+	    }
+        }
+
+        entry_ptr = entry_ptr->il_next;
+
+    } /* while ( entry_ptr != NULL ) */
+
+done:
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5C_prep_for_file_close__compute_fd_heights() */
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Function:    H5C_prep_for_file_close__compute_fd_heights_real
+ *
+ * Purpose:     H5C_prep_for_file_close__compute_fd_heights() prepares
+ *		for the computation of flush dependency heights of all
+ *		entries in the cache image, this function actually does
+ *		it.
+ *
+ *		The basic observation behind this function is as follows:
+ *
+ *		Suppose you have an entry E with a flush dependency 
+ *		height of X.  Then the parents of E must all have 
+ *		flush dependency X + 1 or greater.
+ *
+ *		Use this observation to compute flush dependency height
+ *		of all entries in the cache image via the following
+ *		recursive algorithm:
+ *
+ *		1) On entry, set the flush dependency height of the 
+ *		   supplied cache entry to the supplied value.
+ *
+ *		2) Examine all the flush dependency parents of the 
+ *		   supplied entry.  
+ *
+ *		   If the parent is in the cache image, and has flush 
+ *		   dependency height less than or equal to the flush
+ *		   dependency height of the current entry, call the 
+ *		   recursive routine on the parent with flush dependency
+ *		   height equal to the flush dependency height of the 
+ *		   child plus 1.
+ *
+ *		   Otherwise do nothing.
+ *
+ *		Observe that if the flush dependency height of all entries
+ *		in the image is initialized to zero, and if this recursive 
+ *		function is called with flush dependency height 0 on all 
+ *		entries in the cache image with FD parents in the image, 
+ *		but without FD children in the image, the correct flush 
+ *		dependency height should be set for all entries in the 
+ *		cache image.
+ *		
+ * Return:      void
+ *
+ * Programmer:  John Mainzer
+ *              9/6/16
+ *
+ *-------------------------------------------------------------------------
+ */
+void
+H5C_prep_for_file_close__compute_fd_heights_real(H5C_cache_entry_t  *entry_ptr,
+                                                 uint32_t fd_height)
+{
+    int i;
+    H5C_cache_entry_t * parent_ptr;
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    /* sanity checks */
+    HDassert(entry_ptr);
+    HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+    HDassert(entry_ptr->include_in_image);
+    HDassert((entry_ptr->image_fd_height == 0) ||
+             (entry_ptr->image_fd_height < fd_height));
+    HDassert(((fd_height == 0) && (entry_ptr->fd_child_count == 0)) ||
+             ((fd_height > 0) && (entry_ptr->fd_child_count > 0)));
+
+    entry_ptr->image_fd_height = fd_height;
+
+    if ( entry_ptr->flush_dep_nparents > 0 ) {
+
+	HDassert(entry_ptr->flush_dep_parent);
+
+	for ( i = 0; i < (int)(entry_ptr->fd_parent_count); i++ ) {
+
+	    parent_ptr = entry_ptr->flush_dep_parent[i];
+
+	    HDassert(parent_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+
+	    if ( ( parent_ptr->include_in_image ) &&
+                 ( parent_ptr->image_fd_height <= fd_height ) ) {
+
+		H5C_prep_for_file_close__compute_fd_heights_real(parent_ptr,
+                                                                 fd_height + 1);
+	    }
+        }
+    }
+
+
+    FUNC_LEAVE_NOAPI_VOID
+
+} /* H5C_prep_for_file_close__compute_fd_heights_real() */
 
 
 /*-------------------------------------------------------------------------
@@ -2799,7 +3402,7 @@ H5C_prep_for_file_close__partition_image_entries_array(H5C_t * cache_ptr,
 
     pivot_ptr = &((cache_ptr->image_entries)[bottom]);
 
-    HDassert((pivot_ptr->flush_dep_height == 0) ||
+    HDassert((pivot_ptr->image_fd_height == 0) ||
              (pivot_ptr->lru_rank == -1));
 
     i = bottom - 1;
@@ -2811,11 +3414,11 @@ H5C_prep_for_file_close__partition_image_entries_array(H5C_t * cache_ptr,
 	    i++;
             ith_ptr = &((cache_ptr->image_entries)[i]);
 
-            if ( pivot_ptr->flush_dep_height > 0 )
+            if ( pivot_ptr->image_fd_height > 0 )
             {
                 HDassert(pivot_ptr->lru_rank == -1);
 
-		if ( ith_ptr->flush_dep_height <= pivot_ptr->flush_dep_height )
+		if ( ith_ptr->image_fd_height <= pivot_ptr->image_fd_height )
                 {
 		    i_le_pivot = TRUE;
                 }
@@ -2825,7 +3428,7 @@ H5C_prep_for_file_close__partition_image_entries_array(H5C_t * cache_ptr,
                 HDassert(pivot_ptr->lru_rank >= -1);
 
 		if ( ( ith_ptr->lru_rank >= pivot_ptr->lru_rank ) &&
-                     ( ith_ptr->flush_dep_height == 0 ) )
+                     ( ith_ptr->image_fd_height == 0 ) )
                 {
 		    i_le_pivot = TRUE;
                 }
@@ -2837,11 +3440,11 @@ H5C_prep_for_file_close__partition_image_entries_array(H5C_t * cache_ptr,
 	    j--;
 	    jth_ptr = &((cache_ptr->image_entries)[j]);
 
-            if ( pivot_ptr->flush_dep_height > 0 )
+            if ( pivot_ptr->image_fd_height > 0 )
             {
                 HDassert(pivot_ptr->lru_rank == -1);
 
-		if ( jth_ptr->flush_dep_height >= pivot_ptr->flush_dep_height )
+		if ( jth_ptr->image_fd_height >= pivot_ptr->image_fd_height )
                 {
 		    HDassert(jth_ptr->lru_rank == -1);
 
@@ -2853,7 +3456,7 @@ H5C_prep_for_file_close__partition_image_entries_array(H5C_t * cache_ptr,
                 HDassert(pivot_ptr->lru_rank >= -1);
 
 		if ( ( jth_ptr->lru_rank <= pivot_ptr->lru_rank ) ||
-                     ( jth_ptr->flush_dep_height > 0 ) )
+                     ( jth_ptr->image_fd_height > 0 ) )
                 {
 		    j_ge_pivot = TRUE;
                 }
@@ -2949,19 +3552,19 @@ H5C_prep_for_file_close__qsort_image_entries_array(H5C_t * cache_ptr,
 	    HDassert(ie_ptr);
             HDassert(ie_ptr->magic == H5C__H5C_IMAGE_ENTRY_T_MAGIC);
             HDassert(ie_ptr->image_index == i);
-            HDassert((ie_ptr->flush_dep_height == 0) ||
+            HDassert((ie_ptr->image_fd_height == 0) ||
                      (ie_ptr->lru_rank == -1));
 
 	    HDassert(next_ie_ptr);
             HDassert(next_ie_ptr->magic == H5C__H5C_IMAGE_ENTRY_T_MAGIC);
             HDassert(next_ie_ptr->image_index == i + 1);
-            HDassert((next_ie_ptr->flush_dep_height == 0 ) ||
+            HDassert((next_ie_ptr->image_fd_height == 0 ) ||
                      (next_ie_ptr->lru_rank == -1 ) );
 
-            HDassert(ie_ptr->flush_dep_height >= 
-                     next_ie_ptr->flush_dep_height);
+            HDassert(ie_ptr->image_fd_height >= 
+                     next_ie_ptr->image_fd_height);
 
-	    HDassert((ie_ptr->flush_dep_height > 0) ||
+	    HDassert((ie_ptr->image_fd_height > 0) ||
                      ((ie_ptr->lru_rank <= 0) &&
                       (ie_ptr->lru_rank <= next_ie_ptr->lru_rank)) ||
                      (ie_ptr->lru_rank < next_ie_ptr->lru_rank));
@@ -2986,6 +3589,12 @@ H5C_prep_for_file_close__qsort_image_entries_array(H5C_t * cache_ptr,
  *
  * Programmer:  John Mainzer
  *              8/4/15
+ *
+ * Changes:	Modified function to support multiple flush dependency
+ *		parents, and the removal of the flush_dependency_height
+ *		field from H5C_cache_entry_t.
+ *
+ *						JRM -- 9/9/16
  *
  *-------------------------------------------------------------------------
  */
@@ -3023,18 +3632,20 @@ H5C_prep_for_file_close__setup_image_entries_array(H5C_t * cache_ptr)
 
     for ( j = 0; j <= num_entries_in_image; j++ ) {
 
-	image_entries[j].magic            = H5C__H5C_IMAGE_ENTRY_T_MAGIC;
-	image_entries[j].addr             = HADDR_UNDEF;
-	image_entries[j].size             = 0;
-        image_entries[j].ring		  = H5C_RING_UNDEFINED;
-	image_entries[j].type_id          = -1;
-	image_entries[j].image_index      = -1;
-	image_entries[j].lru_rank         = 0;
-	image_entries[j].is_dirty         = FALSE; 
-	image_entries[j].flush_dep_height = 0;
-	image_entries[j].fd_parent_addr   = HADDR_UNDEF;
-	image_entries[j].fd_child_count   = 0;
-	image_entries[j].image_ptr        = NULL;
+	image_entries[j].magic                = H5C__H5C_IMAGE_ENTRY_T_MAGIC;
+	image_entries[j].addr                 = HADDR_UNDEF;
+	image_entries[j].size                 = 0;
+        image_entries[j].ring		      = H5C_RING_UNDEFINED;
+	image_entries[j].type_id              = -1;
+	image_entries[j].image_index          = -1;
+	image_entries[j].lru_rank             = 0;
+	image_entries[j].is_dirty             = FALSE; 
+	image_entries[j].image_fd_height      = 0;
+	image_entries[j].fd_parent_count      = 0;
+	image_entries[j].fd_parent_addrs      = NULL;
+	image_entries[j].fd_child_count       = 0;
+	image_entries[j].fd_dirty_child_count = 0;
+	image_entries[j].image_ptr            = NULL;
     }
 
 
@@ -3057,9 +3668,9 @@ H5C_prep_for_file_close__setup_image_entries_array(H5C_t * cache_ptr)
 
 	    HDassert(entry_ptr->type);
 
-	    image_entries[j].addr             = entry_ptr->addr;
-	    image_entries[j].size             = entry_ptr->size;
-	    image_entries[j].ring             = entry_ptr->ring;
+	    image_entries[j].addr                 = entry_ptr->addr;
+	    image_entries[j].size                 = entry_ptr->size;
+	    image_entries[j].ring                 = entry_ptr->ring;
 
 	    /* when a prefetched entry is included in the image, store
              * its underlying type id in the image entry, not 
@@ -3067,19 +3678,30 @@ H5C_prep_for_file_close__setup_image_entries_array(H5C_t * cache_ptr)
              */
 	    if ( entry_ptr->type->id == H5AC_PREFETCHED_ENTRY_ID )
 
-		image_entries[j].type_id      = entry_ptr->prefetch_type_id;
+		image_entries[j].type_id          = entry_ptr->prefetch_type_id;
 
 	    else
 
-                image_entries[j].type_id      = entry_ptr->type->id;
+                image_entries[j].type_id          = entry_ptr->type->id;
 
-	    image_entries[j].image_index      = j;
-	    image_entries[j].lru_rank         = entry_ptr->lru_rank;
-	    image_entries[j].is_dirty         = entry_ptr->is_dirty;
-	    image_entries[j].flush_dep_height = entry_ptr->flush_dep_height;
-	    image_entries[j].fd_parent_addr   = entry_ptr->fd_parent_addr;
-	    image_entries[j].fd_child_count   = entry_ptr->fd_child_count;
-	    image_entries[j].image_ptr        = entry_ptr->image_ptr;
+	    image_entries[j].image_index          = j;
+	    image_entries[j].lru_rank             = entry_ptr->lru_rank;
+	    image_entries[j].is_dirty             = entry_ptr->is_dirty;
+	    image_entries[j].image_fd_height      = entry_ptr->image_fd_height;
+	    image_entries[j].fd_parent_count      = entry_ptr->fd_parent_count;
+	    image_entries[j].fd_parent_addrs      = entry_ptr->fd_parent_addrs;
+	    image_entries[j].fd_child_count       = entry_ptr->fd_child_count;
+	    image_entries[j].fd_dirty_child_count = 
+						entry_ptr->fd_dirty_child_count;
+	    image_entries[j].image_ptr            = entry_ptr->image_ptr;
+
+	    /* Null out entry_ptr->fd_parent_addrs and set 
+             * entry_ptr->fd_parent_count to zero so that ownership of the
+             * flush dependency parents address array is transferred to the 
+	     * image entry.
+             */
+	    entry_ptr->fd_parent_count = 0;
+	    entry_ptr->fd_parent_addrs = NULL;
 
             j++;
 
@@ -3095,6 +3717,7 @@ H5C_prep_for_file_close__setup_image_entries_array(H5C_t * cache_ptr)
 
     HDassert(j == num_entries_in_image);
 
+    HDassert(image_entries[j].fd_parent_addrs == NULL);
     HDassert(image_entries[j].image_ptr == NULL);
 
     cache_ptr->image_entries = image_entries;
@@ -3139,6 +3762,11 @@ done:
  * Programmer:  John Mainzer
  *              7/21/15
  *
+ * Changes:	Unpdated function to support multiple flush dependency
+ *		parents, and to compute flush dependency heights.
+ *
+ *						JRM -- 9/5/15 
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3151,9 +3779,11 @@ H5C_prep_for_file_close__scan_entries(H5F_t *f,
     int                 j;
     int			entries_visited = 0;
     int			lru_rank = 1;
+    int32_t		num_entries_tentatively_in_image = 0;
     int32_t		num_entries_in_image = 0;
     size_t		image_len;
     size_t		entry_header_len;
+    size_t		fd_parents_list_len;
     H5C_cache_entry_t * entry_ptr;
     herr_t		ret_value = SUCCEED;      /* Return value */
 
@@ -3188,6 +3818,11 @@ H5C_prep_for_file_close__scan_entries(H5F_t *f,
         HDassert(entry_ptr->image_up_to_date);
         HDassert(entry_ptr->image_ptr);
 
+	/* initially, we mark all entries in the rings included
+         * in the cache image as being included in the in the 
+         * image.  Depending on circumstances, we may exclude some
+         * of these entries later.
+         */
 	if ( entry_ptr->ring > H5C_MAX_RING_IN_IMAGE ) {
 
 	    include_in_image = FALSE;
@@ -3204,40 +3839,156 @@ H5C_prep_for_file_close__scan_entries(H5F_t *f,
 
 	    entry_ptr->lru_rank = -1;
             entry_ptr->image_dirty = entry_ptr->is_dirty;
+	    entry_ptr->image_fd_height = 0; /* will compute this later */
 
-            if ( entry_ptr->flush_dep_parent ) {
+	    /* initially, include all flush dependency parents in the
+             * the list of flush dependencies to be stored in the 
+             * image.  We may remove some or all of these later.
+             */
+	    if ( entry_ptr->flush_dep_nparents > 0 ) {
 
-                HDassert(entry_ptr->flush_dep_parent->magic == \
-                         H5C__H5C_CACHE_ENTRY_T_MAGIC);
-                HDassert(entry_ptr->flush_dep_parent->is_pinned);
+	        /* the parents addresses array may already exist -- reallocate
+                 * as needed.
+                 */
+		if ( entry_ptr->flush_dep_nparents == 
+		     entry_ptr->fd_parent_count ) {
 
-		entry_ptr->fd_parent_addr = entry_ptr->flush_dep_parent->addr;
+		    /* parent addresses array should already be allocated 
+                     * and of the correct size.
+                     */
+		    HDassert(entry_ptr->fd_parent_addrs);
+
+		} else if ( entry_ptr->fd_parent_count > 0 ) {
+
+		    HDassert(entry_ptr->fd_parent_addrs);
+                    entry_ptr->fd_parent_addrs = (haddr_t *)
+                            H5MM_xfree(entry_ptr->fd_parent_addrs);
+
+		} else {
+
+		    HDassert(entry_ptr->fd_parent_count == 0);
+		    HDassert(entry_ptr->fd_parent_addrs == NULL);
+		}
+
+		entry_ptr->fd_parent_count = entry_ptr->flush_dep_nparents;
+
+		if ( NULL == entry_ptr->fd_parent_addrs ) {
+
+		    entry_ptr->fd_parent_addrs = (haddr_t *)
+		        H5MM_malloc(sizeof(haddr_t) * 
+                                    (size_t)(entry_ptr->fd_parent_count));
+
+		     if ( NULL == entry_ptr->fd_parent_addrs )
+
+        	        HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, \
+                         "memory allocation failed for fd parent addrs buffer");
+		}
+
+		for ( i = 0; i < (int)(entry_ptr->fd_parent_count); i++ ) {
+
+		    entry_ptr->fd_parent_addrs[i] = 
+				entry_ptr->flush_dep_parent[i]->addr;
+
+		    HDassert(H5F_addr_defined(entry_ptr->fd_parent_addrs[i]));
+		}
+            } else if ( entry_ptr->fd_parent_count > 0 ) {
+
+		HDassert(entry_ptr->fd_parent_addrs);
+		entry_ptr->fd_parent_addrs = (haddr_t *)
+			H5MM_xfree(entry_ptr->fd_parent_addrs);
+	    } else {
+
+		HDassert(entry_ptr->fd_parent_addrs == NULL);
+            }
+
+	    /* initially, all flush dependency children are included int
+             * the count of flush dependency child relationships to be 
+             * represented in the cache image.  Some or all of these 
+             * may be dropped from the image later.
+             */
+	    if ( entry_ptr->flush_dep_nchildren > 0 ) {
+
+		if ( ! entry_ptr->is_pinned )
+
+                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+                                "encountered unpinned fd parent?!?")
+
+		entry_ptr->fd_child_count = entry_ptr->flush_dep_nchildren;
+		entry_ptr->fd_dirty_child_count = 
+			entry_ptr->flush_dep_ndirty_children;
 	    }
 
-	    if ( entry_ptr->flush_dep_height > 0 ) {
+	    num_entries_tentatively_in_image++;
+        }
 
-                /* only interested in the number of direct flush 
-                 * flush dependency children.
-                 */
-	        if ( ! entry_ptr->is_pinned )
+        entries_visited++;
 
-		    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                	        "encountered unpinned fd parent?!?")
+        entry_ptr = entry_ptr->il_next;
+    }
 
-                j = (int)(entry_ptr->flush_dep_height - 1);
-                entry_ptr->fd_child_count = 
-		        entry_ptr->child_flush_dep_height_rc[j];
+    HDassert(entries_visited == cache_ptr->index_len);
 
-		HDassert(entry_ptr->fd_child_count > 0);
-            }
+    /* Now compute the flush dependency heights of all flush dependency
+     * relationships to be represented in the image.
+     *
+     * If all entries in the target rings are included in the 
+     * image, the flush dependency heights are simply the heights 
+     * of all flush dependencies in the target rings.
+     *
+     * However, if we restrict appearance in the cache image either 
+     * by number of entries in the image, restrictions on the number 
+     * of times a prefetched entry can appear in an image, or image 
+     * size, it is possible that flush dependency parents or children
+     * of entries that are in the image may not be included in the
+     * the image.  In this case, we must prune all flush dependency 
+     * relationships that cross the image boundary, and all exclude 
+     * from the image all dirty flush dependency children that have 
+     * a dirty flush dependency parent that is not in the image. 
+     * This is necessary to preserve the required flush ordering.
+     * 
+     * These details are tended to by the following call to 
+     * H5C_prep_for_file_close__compute_fd_heights().  Because the 
+     * exact contents of the image cannot be known until after this
+     * call, computation of the image size is delayed.
+     */
+    if ( H5C_prep_for_file_close__compute_fd_heights(cache_ptr) < 0 )
+
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+                    "computation of flush dependency heights failed?!?")
+
+
+    /* At this point, all entries that will appear in the cache
+     * image should be marked correctly.  Compute the size of the 
+     * cache image.
+     */
+    entries_visited = 0;
+    entry_ptr = cache_ptr->il_head;
+
+    while ( entry_ptr != NULL )
+    {
+	HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+
+        if ( entry_ptr->include_in_image ) {
+
+	    if ( entry_ptr->fd_parent_count > 0 ) {
+
+		fd_parents_list_len = 
+		    (size_t)(H5F_SIZEOF_ADDR(f) * entry_ptr->fd_parent_count);
+
+	    } else { 
+
+		fd_parents_list_len = (size_t)0;
+	    }
 
 	    if ( entry_ptr->compressed )
 
-	        image_len += entry_header_len + entry_ptr->compressed_size;
+	        image_len += entry_header_len + fd_parents_list_len + 
+                             entry_ptr->compressed_size;
 
 	    else 
 
-	        image_len += entry_header_len + entry_ptr->size;
+	        image_len += entry_header_len + fd_parents_list_len + 
+                             entry_ptr->size;
 
 	    num_entries_in_image++;
         }
@@ -3248,13 +3999,16 @@ H5C_prep_for_file_close__scan_entries(H5F_t *f,
     }
 
     HDassert(entries_visited == cache_ptr->index_len);
+    HDassert(num_entries_in_image <= num_entries_tentatively_in_image);
+
 
     j = 0;
     for ( i = H5C_MAX_RING_IN_IMAGE + 1; i <= H5C_RING_SB; i++ )
 
 	j += cache_ptr->index_ring_len[i];
 
-    HDassert(entries_visited == (num_entries_in_image + j));
+    /* this will change */
+    HDassert(entries_visited == (num_entries_tentatively_in_image + j));
 
     cache_ptr->num_entries_in_image = num_entries_in_image;
 
@@ -3329,18 +4083,24 @@ done:
  * Programmer:  John Mainzer
  *              8/14/15
  *
+ * Changes:	Updated function for possibility of multiple flush 
+ *		dependency parents and related changes.
+ *
+ *						JRM -- 9/13/16
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5C_reconstruct_cache_contents(H5F_t * f, hid_t dxpl_id, H5C_t * cache_ptr)
 {
     int			i;
-#ifndef NDEBUG
     int			j;
+#ifndef NDEBUG
     H5C_image_entry_t * ie_ptr = NULL;
     H5C_cache_entry_t *	entry_ptr;
 #endif /* NDEBUG */
     H5C_cache_entry_t *	pf_entry_ptr;
+    H5C_cache_entry_t *	parent_ptr;
     herr_t 		ret_value = SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -3395,14 +4155,17 @@ H5C_reconstruct_cache_contents(H5F_t * f, hid_t dxpl_id, H5C_t * cache_ptr)
 	H5C__UPDATE_STATS_FOR_PREFETCH(cache_ptr, pf_entry_ptr->is_dirty)
 
 
-	/* if the prefetched entry is the child in a flush dependency
-         * relationship, recreate that flush dependency.
+	/* if the prefetched entry is the child in one or more flush 
+         * dependency relationships, recreate those flush dependencies.
          */
-        if ( H5F_addr_defined(pf_entry_ptr->fd_parent_addr) ) {
+	for ( j = 0; j < (int)(pf_entry_ptr->fd_parent_count); j++ ) {
 
-            H5C_cache_entry_t *	parent_ptr = NULL;
+	    HDassert(pf_entry_ptr->fd_parent_addrs);
+	    HDassert(H5F_addr_defined(pf_entry_ptr->fd_parent_addrs[j]));
 
-	    H5C__SEARCH_INDEX(cache_ptr, pf_entry_ptr->fd_parent_addr, \
+	    parent_ptr = NULL;
+
+	    H5C__SEARCH_INDEX(cache_ptr, pf_entry_ptr->fd_parent_addrs[j], \
                               parent_ptr, FAIL)
 
 	    if ( parent_ptr == NULL )
@@ -3411,7 +4174,7 @@ H5C_reconstruct_cache_contents(H5F_t * f, hid_t dxpl_id, H5C_t * cache_ptr)
 		            "fd parent not in cache?!?")
 
 	    HDassert(parent_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
-            HDassert(parent_ptr->addr == pf_entry_ptr->fd_parent_addr);
+            HDassert(parent_ptr->addr == pf_entry_ptr->fd_parent_addrs[j]);
             HDassert(parent_ptr->lru_rank == -1);
 
 	    /* Must protect parent entry to set up a flush dependency.
@@ -3452,29 +4215,26 @@ H5C_reconstruct_cache_contents(H5F_t * f, hid_t dxpl_id, H5C_t * cache_ptr)
 	HDassert(pf_entry_ptr);
 	HDassert(pf_entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
 	HDassert(pf_entry_ptr->prefetched);
-	HDassert(ie_ptr->fd_parent_addr == pf_entry_ptr->fd_parent_addr);
+	HDassert(ie_ptr->fd_parent_count == pf_entry_ptr->fd_parent_count);
+        HDassert(pf_entry_ptr->fd_parent_count == 
+                 pf_entry_ptr->flush_dep_nparents);
 	HDassert(ie_ptr->lru_rank == pf_entry_ptr->lru_rank);
 
-	if ( H5F_addr_defined(ie_ptr->fd_parent_addr) ) {
+        for ( j = 0; j < (int)(pf_entry_ptr->fd_parent_count); j++ ) {
 
-	    HDassert(pf_entry_ptr->flush_dep_parent);
-            HDassert(pf_entry_ptr->flush_dep_parent->addr ==
-                     pf_entry_ptr->fd_parent_addr);
+	    parent_ptr = pf_entry_ptr->flush_dep_parent[j];
+	    HDassert(parent_ptr);
+	    HDassert(parent_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+	    HDassert(pf_entry_ptr->fd_parent_addrs);
+	    HDassert(pf_entry_ptr->fd_parent_addrs[j] == parent_ptr->addr);
+	    HDassert(parent_ptr->flush_dep_nchildren > 0);
         }
 
 	HDassert(ie_ptr->fd_child_count == pf_entry_ptr->fd_child_count);
-
-	if ( pf_entry_ptr->fd_child_count > 0 ) {
-
-	    j = (int)(pf_entry_ptr->flush_dep_height - 1);
-
-	    HDassert(pf_entry_ptr->fd_child_count == 
-		     pf_entry_ptr->child_flush_dep_height_rc[j]);
-
-	} else {
-
-	    HDassert(pf_entry_ptr->flush_dep_height == 0);
-	}
+	HDassert(pf_entry_ptr->fd_child_count == 
+                 pf_entry_ptr->flush_dep_nchildren);
+	HDassert(pf_entry_ptr->fd_dirty_child_count == 
+                 pf_entry_ptr->flush_dep_ndirty_children);
     }
 
     /* scan the LRU, and verify the expected ordering of the 
@@ -3570,6 +4330,10 @@ done:
  * Programmer:  John Mainzer
  *              8/14/15
  *
+ * Changes:	Updated for possibility of multiple flush dependency
+ *		parents and related changes.
+ *						JRM -- 9/13/16
+ *
  *-------------------------------------------------------------------------
  */
 
@@ -3577,7 +4341,6 @@ H5C_cache_entry_t *
 H5C_reconstruct_cache_entry(H5C_t * cache_ptr, int i)
 {
     hbool_t		file_is_rw;
-    int			u;
     H5C_image_entry_t * ie_ptr = NULL;
     H5C_cache_entry_t *	pf_entry_ptr = NULL;
     H5C_cache_entry_t *	ret_value = NULL;      /* Return value */
@@ -3610,17 +4373,17 @@ H5C_reconstruct_cache_entry(H5C_t * cache_ptr, int i)
 
 
     /* initialize the prefetched entry from the entry image */
-    pf_entry_ptr->magic			= H5C__H5C_CACHE_ENTRY_T_MAGIC;
-    pf_entry_ptr->cache_ptr 		= cache_ptr;
-    pf_entry_ptr->addr			= ie_ptr->addr;
-    pf_entry_ptr->size			= ie_ptr->size;
-    pf_entry_ptr->ring			= ie_ptr->ring;
-    pf_entry_ptr->compressed		= FALSE;
-    pf_entry_ptr->compressed_size	= 0;
-    pf_entry_ptr->image_ptr		= ie_ptr->image_ptr;
-    pf_entry_ptr->image_up_to_date	= TRUE;
-    pf_entry_ptr->type			= &prefetched_entry_class;
-    pf_entry_ptr->tag			= H5AC__IGNORE_TAG;
+    pf_entry_ptr->magic				= H5C__H5C_CACHE_ENTRY_T_MAGIC;
+    pf_entry_ptr->cache_ptr 			= cache_ptr;
+    pf_entry_ptr->addr				= ie_ptr->addr;
+    pf_entry_ptr->size				= ie_ptr->size;
+    pf_entry_ptr->ring				= ie_ptr->ring;
+    pf_entry_ptr->compressed			= FALSE;
+    pf_entry_ptr->compressed_size		= 0;
+    pf_entry_ptr->image_ptr			= ie_ptr->image_ptr;
+    pf_entry_ptr->image_up_to_date		= TRUE;
+    pf_entry_ptr->type				= &prefetched_entry_class;
+    pf_entry_ptr->tag				= H5AC__IGNORE_TAG;
 
     /* force dirty entries to clean if the file read only -- must do 
      * this as otherwise the cache will attempt to write them on file
@@ -3628,56 +4391,78 @@ H5C_reconstruct_cache_entry(H5C_t * cache_ptr, int i)
      * extension message and the cache image block will not be removed.
      * Hence no danger in this.
      */
-    pf_entry_ptr->is_dirty		= ie_ptr->is_dirty && file_is_rw;
-    pf_entry_ptr->dirtied		= FALSE;
-    pf_entry_ptr->is_protected		= FALSE;
-    pf_entry_ptr->is_read_only		= FALSE;
-    pf_entry_ptr->ro_ref_count		= 0;
-    pf_entry_ptr->is_pinned		= FALSE;
-    pf_entry_ptr->in_slist		= FALSE;
-    pf_entry_ptr->flush_marker		= FALSE;
-    pf_entry_ptr->flush_me_last		= FALSE;
+    pf_entry_ptr->is_dirty			= ie_ptr->is_dirty && 
+						  file_is_rw;
+    pf_entry_ptr->dirtied			= FALSE;
+    pf_entry_ptr->is_protected			= FALSE;
+    pf_entry_ptr->is_read_only			= FALSE;
+    pf_entry_ptr->ro_ref_count			= 0;
+    pf_entry_ptr->is_pinned			= FALSE;
+    pf_entry_ptr->in_slist			= FALSE;
+    pf_entry_ptr->flush_marker			= FALSE;
+    pf_entry_ptr->flush_me_last			= FALSE;
 #ifdef H5_HAVE_PARALLEL
-    pf_entry_ptr->clear_on_unprotect	= FALSE;
-    pf_entry_ptr->flush_immediately	= FALSE;
-    pf_entry_ptr->coll_access           = FALSE;
+    pf_entry_ptr->clear_on_unprotect		= FALSE;
+    pf_entry_ptr->flush_immediately		= FALSE;
+    pf_entry_ptr->coll_access           	= FALSE;
 #endif
-    pf_entry_ptr->flush_in_progress	= FALSE;
-    pf_entry_ptr->destroy_in_progress	= FALSE;
+    pf_entry_ptr->flush_in_progress		= FALSE;
+    pf_entry_ptr->destroy_in_progress		= FALSE;
 
-    /* Initialize flush dependency height fields */
-    pf_entry_ptr->flush_dep_parent	= NULL;
-    for(u = 0; u < H5C__NUM_FLUSH_DEP_HEIGHTS; u++)
-        pf_entry_ptr->child_flush_dep_height_rc[u] = 0;
-    pf_entry_ptr->flush_dep_height	= 0;
-    pf_entry_ptr->pinned_from_client	= FALSE;
-    pf_entry_ptr->pinned_from_cache	= FALSE;
+    /* Initialize flush dependency fields */
+    pf_entry_ptr->flush_dep_parent		= NULL;
+    pf_entry_ptr->flush_dep_nparents		= 0;
+    pf_entry_ptr->flush_dep_parent_nalloc	= 0;
+    pf_entry_ptr->flush_dep_nchildren		= 0;
+    pf_entry_ptr->flush_dep_ndirty_children	= 0;
+    pf_entry_ptr->flush_dep_nunser_children	= 0;
+    pf_entry_ptr->pinned_from_client		= FALSE;
+    pf_entry_ptr->pinned_from_cache		= FALSE;
 
     /* Initialize fields supporting the hash table: */
-    pf_entry_ptr->ht_next		= NULL;
-    pf_entry_ptr->ht_prev		= NULL;
-    pf_entry_ptr->il_next		= NULL;
-    pf_entry_ptr->il_prev		= NULL;
+    pf_entry_ptr->ht_next			= NULL;
+    pf_entry_ptr->ht_prev			= NULL;
+    pf_entry_ptr->il_next			= NULL;
+    pf_entry_ptr->il_prev			= NULL;
 
     /* Initialize fields supporting replacement policies: */
-    pf_entry_ptr->next			= NULL;
-    pf_entry_ptr->prev			= NULL;
-    pf_entry_ptr->aux_next		= NULL;
-    pf_entry_ptr->aux_prev		= NULL;
+    pf_entry_ptr->next				= NULL;
+    pf_entry_ptr->prev				= NULL;
+    pf_entry_ptr->aux_next			= NULL;
+    pf_entry_ptr->aux_prev			= NULL;
 #ifdef H5_HAVE_PARALLEL
-    pf_entry_ptr->coll_next             = NULL;
-    pf_entry_ptr->coll_prev             = NULL;
+    pf_entry_ptr->coll_next             	= NULL;
+    pf_entry_ptr->coll_prev             	= NULL;
 #endif /* H5_HAVE_PARALLEL */
 
     /* Initialize cache image related fields */
-    pf_entry_ptr->include_in_image	= FALSE;
-    pf_entry_ptr->lru_rank		= ie_ptr->lru_rank;
-    pf_entry_ptr->image_index		= -1;
-    pf_entry_ptr->image_dirty		= FALSE;
-    pf_entry_ptr->fd_parent_addr	= ie_ptr->fd_parent_addr;
-    pf_entry_ptr->fd_child_count	= ie_ptr->fd_child_count;
-    pf_entry_ptr->prefetched		= TRUE;
-    pf_entry_ptr->prefetch_type_id	= ie_ptr->type_id;
+    pf_entry_ptr->include_in_image		= FALSE;
+    pf_entry_ptr->lru_rank			= ie_ptr->lru_rank;
+    pf_entry_ptr->image_index			= -1;
+    pf_entry_ptr->image_dirty			= FALSE;
+    pf_entry_ptr->fd_parent_count		= ie_ptr->fd_parent_count;
+    pf_entry_ptr->fd_parent_addrs		= ie_ptr->fd_parent_addrs;
+    pf_entry_ptr->fd_child_count		= ie_ptr->fd_child_count;
+    pf_entry_ptr->fd_dirty_child_count		= ie_ptr->fd_dirty_child_count;
+    pf_entry_ptr->image_fd_height		= 0;
+    pf_entry_ptr->prefetched			= TRUE;
+    pf_entry_ptr->prefetch_type_id		= ie_ptr->type_id;
+
+    /* array of addresses of flush dependency parents is now transferred to
+     * the prefetched entry.  Thus set ie_ptr->fd_parent_addrs to NULL.
+     */
+    HDassert(pf_entry_ptr->fd_parent_addrs == ie_ptr->fd_parent_addrs);
+    HDassert(pf_entry_ptr->fd_parent_count == ie_ptr->fd_parent_count);
+
+    if ( pf_entry_ptr->fd_parent_count > 0 ) {
+
+	HDassert(ie_ptr->fd_parent_addrs);
+        ie_ptr->fd_parent_addrs = NULL;
+
+    } else {
+    
+        HDassert(ie_ptr->fd_parent_addrs == NULL);
+    }
 
 
     /* On disk image of entry is now transferred to the prefetched entry.
@@ -3802,6 +4587,30 @@ H5C_serialize_cache(const H5F_t *f, hid_t dxpl_id)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "an extreme sanity check failed on entry.\n");
 #endif /* H5C_DO_EXTREME_SANITY_CHECKS */
 
+#ifndef NDEBUG
+    /* if this is a debug build, set the serialization_count field of 
+     * each entry in the cache to zero before we start the serialization.
+     * This allows us to detect the case in which any entry is serialized
+     * more than once (a performance issues), and more importantly, the 
+     * case is which any flush depencency parent is serializes more than
+     * once (a correctness issue).
+     */
+     {
+        H5C_cache_entry_t * scan_ptr = NULL;
+
+        scan_ptr = cache_ptr->il_head;
+
+        while ( scan_ptr != NULL ) {
+
+	    HDassert(scan_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+
+	    scan_ptr->serialization_count = 0;
+
+	    scan_ptr = scan_ptr->il_next;
+        }
+     }
+#endif /* NDEBUG */
+
     /* set cache_ptr->serialization_in_progress to TRUE, and back 
      * to FALSE at the end of the function.  Must maintain this flag
      * to support H5C_get_serialization_in_progress(), which is in 
@@ -3828,6 +4637,26 @@ H5C_serialize_cache(const H5F_t *f, hid_t dxpl_id)
 
     } /* end while */
 
+#ifndef NDEBUG
+    /* Verify that no entry has been serialized more than once.
+     * FD parents with multiple serializations should have been caught
+     * elsewhere, so no specific check for them here.
+     */
+     {
+        H5C_cache_entry_t * scan_ptr = NULL;
+
+        scan_ptr = cache_ptr->il_head;
+
+        while ( scan_ptr != NULL ) {
+
+	    HDassert(scan_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+	    HDassert(scan_ptr->serialization_count <= 1);
+
+	    scan_ptr = scan_ptr->il_next;
+        }
+     }
+#endif /* NDEBUG */
+
 done:
 
     cache_ptr->serialization_in_progress = FALSE;
@@ -3851,7 +4680,7 @@ done:
  *		returns failure.
  *
  *              If flush dependencies appear in the target ring, the
- *              function makes repeated passes through the slist 
+ *              function makes repeated passes through the index list
  *		serializing entries in flush dependency order.
  *
  *		All entries outside the H5C_RING_SBE are marked for 
@@ -3864,6 +4693,13 @@ done:
  * Programmer:  John Mainzer
  *              9/11/15
  *
+ * Changes:	Reworked function for multiple flush dependency parents
+ *		and removal of flush dependency height.  Doing this 
+ *		required the addition fo the flush_dep_ndirty_children
+ *		field in H5C_cache_entry_t, and supporting code.
+ *
+ *						JRM -- 8/31/16
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3871,9 +4707,8 @@ H5C_serialize_ring(const H5F_t * f,
                    hid_t    dxpl_id,
                    H5C_ring_t ring)
 {
-    hbool_t		restart_fd_scan = TRUE;
+    hbool_t		done = FALSE;
     hbool_t		restart_list_scan = FALSE;
-    unsigned		fd_height;
     H5C_t             * cache_ptr;
     H5C_cache_entry_t * entry_ptr;
     herr_t              ret_value = SUCCEED;
@@ -3894,118 +4729,152 @@ H5C_serialize_ring(const H5F_t * f,
     HDassert(cache_ptr->serialization_in_progress);
 
     /* The objective here is to serialize all entries in the cache ring
-     * in increasing flush dependency height order.
+     * in flush dependency order.
      *
-     * The basic algorithm is to scan the cache index list once for each 
-     * flush dependency level, serializing all entries at the current
-     * level on each scan, and then incrementing the target dependency
-     * level by one and repeating the process until all flush dependency
-     * levels have been scaned.
+     * The basic algorithm is to scan the cache index list looking for 
+     * unserialized entries that are either not in a flush dependency
+     * relationship, or which have no unserialized children.  Any such
+     * entry is serialized and its flush dependency parents (if any) are 
+     * informed -- allowing them to decrement their userialized child counts.
      *
-     * However, this algorithm is greatly complicated by the ability
+     * However, this algorithm is complicated by the ability
      * of client serialization callbacks to perform operations on 
      * on the cache which can result in the insertion, deletion, 
-     * relocation, resizing, flushing, eviction, and removal (via the
+     * relocation, resize, dirty, flush, eviction, or removal (via the
      * take ownership flag) of entries.  Changes in the flush dependency
      * structure are also possible.
      *
-     * In particular, if either:
+     * On the other hand, the algorithm is simplified by the fact that 
+     * we are serializing, not flushing.  Thus, as long as all entries 
+     * are serialized correctly, it doesn't matter if we have to go back
+     * and serialize an entry a second time.
      *
-     *    1) An entry other than the target entry is inserted or loaded 
-     *       into the cache, or
+     * These possible actions result in the following modfications to 
+     * tha basic algorithm:
      *
-     *    2) An entry other than the target entry is relocated, or 
+     * 1) In the event of an entry expunge, eviction or removal, we must 
+     *    restart the scan as it is possible that the next entry in our 
+     *    scan is no longer in the cache.  Were we to examine this entry,
+     *    we would be accessing deallocated memory.
      *
-     *    3) The flush dependency tree is altered (more specifically,
-     *	     the flush dependency height of some node is altered), 
+     * 2) A resize, dirty, or insertion of an entry may result in the 
+     *    the increment of a flush dependency parent's dirty and/or 
+     *    unserialized child count.  In the context of serializing the 
+     *    the cache, this is a non-issue, as even if we have already 
+     *    serialized the parent, it will be marked dirty and its image 
+     *    marked out of date if appropriate when the child is serialized.  
+     *    
+     *    However, this is a major issue for a flush, as were this to happen
+     *    in a flush, it would violate the invarient that the flush dependency
+     *    feature is intended to enforce.  As the metadata cache has no 
+     *    control over the behavior of cache clients, it has no way of 
+     *    preventing this behaviour.  However, it should detect it if at all
+     *    possible.  
      *
-     * we must restart the scan from the beginning lest we either miss 
-     * serializing an entry, or we fail to serialize entries in increasing
-     * flush dependency height order.
+     *    Do this by maintaining a count of the number of times each entry is
+     *    serialized during a cache serialization.  If any flush dependency 
+     *    parent is serialized more than once, throw an assertion failure.
      *
-     * Similarly, if an entry is moved (i.e. its address is changed) it 
-     * will be removed from the index and reinserted.  This will cause it
-     * to be moved to the end of the index list.  If this happesn, we
-     * must restart the current scan of the index list.
+     * 3) An entry relocation will typically change the location of the 
+     *    entry in the index list.  This shouldn't cause problems as we 
+     *    will scan the index list until we make a complete pass without 
+     *    finding anything to serialize -- making relocations of either 
+     *    the current or next entries irrelevant.
      *
-     * H5C_serialize_single_entry() should recognize these situations, and
-     * set restart_fd_scan or restart_list_scan to TRUE when they appear.
+     *    Note that since a relocation may result in our skipping part of 
+     *    the index list, we must always do at least one more pass through
+     *    the index list after an entry relocation.
+     *
+     * 4) Changes in the flush dependency structure are possible on 
+     *    entry insertion, load, expunge, evict, or remove.  Destruction
+     *    of a flush dependency has no effect, as it can only relax the 
+     *    flush dependencies.  Creation of a flush dependency can create
+     *    an unserialized child of a flush dependency parent where all 
+     *    flush dependency children were previously serialized.  Should
+     *    this child dirty the flush dependency parent when it is serialized,
+     *    the parent will be re-serialized.
+     *
+     *    Per the discussion of 2) above, this is a non issue for cache 
+     *    serialization, and a major problem for cache flush.  Using the
+     *    same detection mechanism, throw an assertion failure if this 
+     *    condition appears.  
      *
      * Observe that either eviction or removal of entries as a result of 
      * a serialization is not a problem as long as the flush depencency 
      * tree does not change beyond the removal of a leaf.
      */
 
-    while ( restart_fd_scan ) 
-    {
-        restart_fd_scan = FALSE;
-        restart_list_scan = FALSE;
-        
-        fd_height = 0;
+    while ( ! done ) {
 
-	while ( ( fd_height <= H5C__NUM_FLUSH_DEP_HEIGHTS ) && 
-                ( !restart_fd_scan ) )
-        {
-	    entry_ptr = cache_ptr->il_head;
+	done = TRUE; /* set to FALSE if any activity in inner loop */
 
-	    while ( ( entry_ptr != NULL ) && ( !restart_fd_scan ) )
-            {
-	        HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+	entry_ptr = cache_ptr->il_head;
 
-	        /* verify that either the entry is already serialized, or
-                 * that it is assigned to either the target or an inner 
-                 * ring.
+	while ( entry_ptr != NULL ) {
+
+	    HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+
+	    /* verify that either the entry is already serialized, or
+             * that it is assigned to either the target or an inner 
+             * ring.
+             */
+            HDassert((entry_ptr->ring >= ring) || 
+                     (entry_ptr->image_up_to_date));
+
+	    /* skip flush me last entries or inner ring entries */
+	    if ( ( ! entry_ptr->flush_me_last ) &&
+                 ( entry_ptr->ring == ring ) ) {
+
+		/* if we encounter an unserialized entry in the current
+                 * ring that is not marked flush me last, we are not done.
                  */
-                HDassert((entry_ptr->ring >= ring) || 
-                         (entry_ptr->image_up_to_date));
+		if ( ! entry_ptr->image_up_to_date )
+		    done = FALSE;
 
-		/* skip flush me last entries or inner ring entries */
-		if ( ( ! entry_ptr->flush_me_last ) &&
-                     ( entry_ptr->ring == ring ) ) {
+		/* serialize the entry if its image is not up to date
+                 * and it has no unserialized flush dependency children.
+                 */
+		if ( ( ! entry_ptr->image_up_to_date ) &&
+                     ( entry_ptr->flush_dep_nunser_children == 0 ) ) {
 
-		    if ( fd_height > entry_ptr->flush_dep_height ) {
+		    HDassert(entry_ptr->serialization_count == 0);
 
-			HDassert(entry_ptr->image_up_to_date);
+		    /* serialize the entry */
+		    if ( H5C_serialize_single_entry(f, dxpl_id, 
+                                                    cache_ptr, entry_ptr,
+                                                    &restart_list_scan) < 0 )
 
-		    } else if ( fd_height == entry_ptr->flush_dep_height ) {
+            	        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+				    "entry serialization failed.");
 
-		        if ( ! entry_ptr->image_up_to_date ) {
+                    HDassert(entry_ptr->flush_dep_nunser_children == 0);
+		    HDassert(entry_ptr->serialization_count == 0);
 
-		            /* serialize the entry */
-		            if ( H5C_serialize_single_entry(f, dxpl_id, 
-                                                      cache_ptr, entry_ptr,
-                                                      &restart_fd_scan,
-                                                      &restart_list_scan) < 0 )
+#ifndef NDEBUG
+		    entry_ptr->serialization_count++;
+#endif /* NDEBUG */
+                 }
 
-            			    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-					        "entry serialization failed.");
-                        }
 #if H5C_COLLECT_CACHE_STATS
-			if ( restart_fd_scan )
-			    cache_ptr->index_scan_restarts++;
-                        else if ( restart_list_scan )
-                                cache_ptr->hash_bucket_scan_restarts++;
+		if ( restart_list_scan )
+		    cache_ptr->index_scan_restarts++;
 #endif /* H5C_COLLECT_CACHE_STATS */
-		    } 
-                } /* if ( ( ! entry_ptr->flush_me_last ) && */
-                  /*      ( !restart_scan ) )               */
+            } /* if ( ( ! entry_ptr->flush_me_last ) && */
+              /*      ( !restart_scan ) )               */
 
-                if ( restart_list_scan ) {
+            if ( restart_list_scan ) {
 
-		    restart_list_scan = FALSE;
-                    entry_ptr = cache_ptr->il_head;
+                restart_list_scan = FALSE;
+                entry_ptr = cache_ptr->il_head;
 
-                } else {
+            } else {
 
-		    entry_ptr = entry_ptr->il_next;
-                }
-            } /* while ( ( entry_ptr != NULL ) && ( !restart_scan ) ) */
+	        entry_ptr = entry_ptr->il_next;
+            }
 
-            fd_height++;
+	} /* while ( entry_ptr != NULL ) */
 
-	} /* while ( ( fd_height <= H5C__NUM_FLUSH_DEP_HEIGHTS ) && */
-          /*         ( !restart_scan ) )                            */
-    } /* while ( restart_scan ) */
+    } /* while ( ! done ) */
 
 
     /* At this point, all entries not marked "flush me last" and in
@@ -4030,28 +4899,40 @@ H5C_serialize_ring(const H5F_t * f,
 
 		if ( ! entry_ptr->image_up_to_date ) {
 
+		    HDassert(entry_ptr->serialization_count == 0);
+                    HDassert(entry_ptr->flush_dep_nunser_children == 0);
+
 	            /* serialize the entry */
 	            if ( H5C_serialize_single_entry(f, dxpl_id,  cache_ptr, 
-					      entry_ptr, &restart_fd_scan,
-                                              &restart_list_scan) < 0 ) {
+					            entry_ptr, 
+                                                    &restart_list_scan) < 0 ) {
 
 		        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
 			            "entry serialization failed.");
 
-		    } else if ( restart_fd_scan || restart_list_scan ) {
+		    } else if ( restart_list_scan ) {
 
 		        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
 			"flush_me_last entry serialization triggered restart.");
 		    }
+
+                    HDassert(entry_ptr->flush_dep_nunser_children == 0);
+		    HDassert(entry_ptr->serialization_count == 0);
+
+#ifndef NDEBUG
+		    entry_ptr->serialization_count++;
+#endif /* NDEBUG */
                 }
             } else {
 
 	        HDassert(entry_ptr->image_up_to_date);
+		HDassert(entry_ptr->serialization_count <= 1);
+                HDassert(entry_ptr->flush_dep_nunser_children == 0);
 
             } 
         } /* if ( entry_ptr->ring == ring ) */
 
-	    entry_ptr = entry_ptr->il_next;
+	entry_ptr = entry_ptr->il_next;
 
     } /* while ( entry_ptr != NULL ) */
 
@@ -4076,7 +4957,11 @@ done:
  *
  * Programmer:  John Mainzer, 7/24/15
  *
- * Changes:	None
+ * Changes:	Reworked for multiple flush dependency parents and the 
+ *		removal of flush dependency height.  In particular, this
+ *		involved removing the restart_fd_scan_ptr parameter.
+ *
+ *						JRM -- 9/1/16
  *
  *-------------------------------------------------------------------------
  */
@@ -4086,11 +4971,9 @@ H5C_serialize_single_entry(const H5F_t *f,
                            hid_t dxpl_id, 
 		           H5C_t *cache_ptr,
                            H5C_cache_entry_t *entry_ptr,
-                           hbool_t *restart_fd_scan_ptr,
                            hbool_t *restart_list_scan_ptr)
 {
     hbool_t		was_dirty;
-    hbool_t		target_entry_relocated = FALSE;
     unsigned 		serialize_flags = H5C__SERIALIZE_NO_FLAGS_SET;
     haddr_t		new_addr = HADDR_UNDEF;
     haddr_t		old_addr = HADDR_UNDEF;
@@ -4111,8 +4994,6 @@ H5C_serialize_single_entry(const H5F_t *f,
     HDassert(!entry_ptr->is_protected);
     HDassert(!entry_ptr->flush_in_progress);
     HDassert(entry_ptr->type);
-    HDassert(restart_fd_scan_ptr);
-    HDassert(*restart_fd_scan_ptr == FALSE);
     HDassert(restart_list_scan_ptr);
     HDassert(*restart_list_scan_ptr == FALSE);
 
@@ -4173,7 +5054,6 @@ H5C_serialize_single_entry(const H5F_t *f,
     cache_ptr->entries_loaded_counter         = 0;
     cache_ptr->entries_inserted_counter	      = 0;
     cache_ptr->entries_relocated_counter      = 0;
-    cache_ptr->entry_fd_height_change_counter = 0;
 
     /* Call client's pre-serialize callback, if there's one */
     if ( ( entry_ptr->type->pre_serialize != NULL ) && 
@@ -4322,8 +5202,6 @@ H5C_serialize_single_entry(const H5F_t *f,
             int64_t saved_slist_size_increase;
 #endif /* H5C_DO_SANITY_CHECKS */
 
-	    target_entry_relocated = TRUE;
-
 	    /* since the entry has moved, it is probably no longer in 
              * the same place in its list.  Thus at a minimum, we must set 
              * *restart_list_scan_ptr to TRUE.
@@ -4432,24 +5310,37 @@ H5C_serialize_single_entry(const H5F_t *f,
 
 #if H5C_DO_MEMORY_SANITY_CHECKS
         HDassert(0 == HDmemcmp(((uint8_t *)entry_ptr->image_ptr) + image_len, 
-                                       H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE));
+                                H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE));
 #endif /* H5C_DO_MEMORY_SANITY_CHECKS */
 
         entry_ptr->image_up_to_date = TRUE;
+
+	/* propagate the fact that the entry is serialized up the 
+         * flush dependency chain if appropriate.  Since the image must
+         * have been out of date for this function to have been called
+         * (see assertion on entry), no need to check that -- only check
+         * for flush dependency parents.
+         */
+	HDassert(entry_ptr->flush_dep_nunser_children == 0);
+	if ( H5C__mark_flush_dep_serialized(entry_ptr) < 0 )
+	    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, \
+                        "Can't propagate flush dep serialized flag")
     }
 
     /* reset the flush_in progress flag */
     entry_ptr->flush_in_progress = FALSE;
 
-    /* set *restart_fd_scan_ptr to TRUE if appropriate */
-    if ( ( cache_ptr->entries_loaded_counter > 0 ) ||
-         ( cache_ptr->entries_inserted_counter > 0 ) ||
-         ( cache_ptr->entries_relocated_counter > 1 ) ||
-         ( ( cache_ptr->entries_relocated_counter > 0 ) &&
-           ( ! target_entry_relocated ) ) ||
-         ( cache_ptr->entry_fd_height_change_counter > 0 ) ) {
+    /* set *restart_fd_scan_ptr to TRUE if appropriate, and if we 
+     * haven't already done so.
+     */
+    if ( ! (*restart_list_scan_ptr) ) {
 
-	*restart_fd_scan_ptr = TRUE;
+        if ( ( cache_ptr->entries_loaded_counter > 0 ) ||
+             ( cache_ptr->entries_inserted_counter > 0 ) ||
+             ( cache_ptr->entries_relocated_counter > 0 ) ) {
+
+	    *restart_list_scan_ptr = TRUE;
+        }
     }
 
 done:

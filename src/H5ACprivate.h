@@ -326,6 +326,7 @@ H5_DLLVAR hid_t H5AC_rawdata_dxpl_id;
 #define H5AC__TAKE_OWNERSHIP_FLAG         H5C__TAKE_OWNERSHIP_FLAG
 #define H5AC__FLUSH_LAST_FLAG		  H5C__FLUSH_LAST_FLAG
 #define H5AC__FLUSH_COLLECTIVELY_FLAG	  H5C__FLUSH_COLLECTIVELY_FLAG
+#define H5AC__EVICT_ALLOW_LAST_PINS_FLAG  H5C__EVICT_ALLOW_LAST_PINS_FLAG
 
 
 /* #defines of flags used to report entry status in the
@@ -411,6 +412,8 @@ H5_DLL herr_t H5AC_stats(const H5F_t *f);
 H5_DLL herr_t H5AC_dump_cache(const H5F_t *f);
 H5_DLL herr_t H5AC_get_entry_ptr_from_addr(const H5F_t *f, haddr_t addr,
     void ** entry_ptr_ptr);
+H5_DLL herr_t H5AC_flush_dependency_exists(H5F_t *f, haddr_t parent_addr, 
+    haddr_t child_addr, hbool_t *fd_exists_ptr);
 H5_DLL herr_t H5AC_verify_entry_type(const H5F_t * f, haddr_t addr,
     const H5AC_class_t * expected_type, hbool_t * in_cache_ptr,
     hbool_t * type_ok_ptr);
