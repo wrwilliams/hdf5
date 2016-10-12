@@ -60,12 +60,6 @@
 /* Initial allocated size of the "flush_dep_parent" array */
 #define H5C_FLUSH_DEP_PARENT_INIT 8
 
-/* Cache client ID for epoch markers */
-/* Note that H5C__MAX_EPOCH_MARKERS is defined in H5Cprivate.h, not here because
- * it is needed to dimension arrays in H5C_t.
- */
-#define H5C__EPOCH_MARKER_TYPE	H5C__MAX_NUM_TYPE_IDS
-
 /****************************************************************************
  *
  * We maintain doubly linked lists of instances of H5C_cache_entry_t for a

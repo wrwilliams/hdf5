@@ -161,9 +161,8 @@ static herr_t H5C__mark_flush_dep_dirty(H5C_cache_entry_t * entry);
 
 static herr_t H5C__mark_flush_dep_clean(H5C_cache_entry_t * entry);
 
-static herr_t H5C__generate_image(const H5F_t *f, H5C_t * cache_ptr, 
-    H5C_cache_entry_t *entry_ptr, hid_t dxpl_id, 
-    int64_t *entry_size_change_ptr);
+static herr_t H5C__generate_image(const H5F_t *f, H5C_t * cache_ptr, H5C_cache_entry_t *entry_ptr, 
+                                  hid_t dxpl_id, int64_t *entry_size_change_ptr);
 
 #if H5C_DO_SLIST_SANITY_CHECKS
 static hbool_t H5C_entry_in_skip_list(H5C_t * cache_ptr, 
@@ -1815,14 +1814,14 @@ H5C_mark_entry_dirty(void *thing)
         }
     } else if ( entry_ptr->is_pinned ) {
         hbool_t		was_clean;
-	hbool_t		image_was_up_to_date;
+        hbool_t		image_was_up_to_date;
 
-	was_clean = !entry_ptr->is_dirty;
-	image_was_up_to_date = entry_ptr->image_up_to_date;
+        was_clean = !entry_ptr->is_dirty;
+        image_was_up_to_date = entry_ptr->image_up_to_date;
 
         /* mark the entry as dirty if it isn't already */
         entry_ptr->is_dirty = TRUE;
-	entry_ptr->image_up_to_date = FALSE;
+        entry_ptr->image_up_to_date = FALSE;
 
         /* Propagate the dirty flag up the flush dependency chain if appropriate */
         if(was_clean) {
@@ -1830,20 +1829,19 @@ H5C_mark_entry_dirty(void *thing)
 
             if(entry_ptr->flush_dep_nparents > 0)
                 if(H5C__mark_flush_dep_dirty(entry_ptr) < 0)
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, \
-                                "Can't propagate flush dep dirty flag")
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "Can't propagate flush dep dirty flag")
         } /* end if */
 
-	if ( image_was_up_to_date ) {
+        if ( image_was_up_to_date ) {
 
-	    if ( entry_ptr->flush_dep_nparents > 0 ) {
+            if ( entry_ptr->flush_dep_nparents > 0 ) {
 
-		if ( H5C__mark_flush_dep_unserialized(entry_ptr) < 0 )
+                if ( H5C__mark_flush_dep_unserialized(entry_ptr) < 0 )
 
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, \
-			"Can't propagate serialization status to fd parents")
-	    }
-	}
+                        "Can't propagate serialization status to fd parents")
+            }
+        }
 
         if(!entry_ptr->in_slist) {
             H5C__INSERT_ENTRY_IN_SLIST(cache_ptr, entry_ptr, FAIL)
@@ -1982,20 +1980,20 @@ H5C_move_entry(H5C_t *	     cache_ptr,
         hbool_t		was_dirty;
 
         was_dirty = entry_ptr->is_dirty;
-	entry_ptr->is_dirty = TRUE;
+        entry_ptr->is_dirty = TRUE;
 
-	/* This shouldn't be needed, but it keeps the test code happy */
-	if ( entry_ptr->image_up_to_date ) {
+        /* This shouldn't be needed, but it keeps the test code happy */
+        if ( entry_ptr->image_up_to_date ) {
 
-	    entry_ptr->image_up_to_date = FALSE;
+            entry_ptr->image_up_to_date = FALSE;
 
-	    if ( entry_ptr->flush_dep_nparents > 0 ) {
+            if ( entry_ptr->flush_dep_nparents > 0 ) {
 
-		if ( H5C__mark_flush_dep_unserialized(entry_ptr) < 0 )
+                if ( H5C__mark_flush_dep_unserialized(entry_ptr) < 0 )
 
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, \
-			"Can't propagate serialization status to fd parents")
-	    }
+                        "Can't propagate serialization status to fd parents")
+            }
         }
 
         /* Propagate the dirty flag up the flush dependency chain if
@@ -2044,7 +2042,6 @@ done:
 #endif /* H5C_DO_EXTREME_SANITY_CHECKS */
 
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5C_move_entry() */
 
 
@@ -4497,8 +4494,7 @@ H5C_unprotect(H5F_t *		  f,
              * if appropriate */
             if(entry_ptr->flush_dep_nparents > 0)
                 if(H5C__mark_flush_dep_dirty(entry_ptr) < 0)
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, \
-                                "Can't propagate flush dep dirty flag")
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "Can't propagate flush dep dirty flag")
 
             /* Update index for newly dirtied entry */
             H5C__UPDATE_INDEX_FOR_ENTRY_DIRTY(cache_ptr, entry_ptr)
@@ -4509,8 +4505,7 @@ H5C_unprotect(H5F_t *		  f,
              * if appropriate */
             if(entry_ptr->flush_dep_nparents > 0)
                 if(H5C__mark_flush_dep_clean(entry_ptr) < 0)
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, \
-                                "Can't propagate flush dep dirty flag")
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "Can't propagate flush dep dirty flag")
         } /* end else-if */
 
         /* Pin or unpin the entry as requested. */
@@ -4888,6 +4883,15 @@ H5C_create_flush_dependency(void * parent_thing, void * child_thing)
     HDassert(cache_ptr);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
     HDassert(cache_ptr == child_entry->cache_ptr);
+#ifndef NDEBUG
+    /* Make sure the parent is not already a parent */
+    {
+        unsigned u;
+
+        for(u = 0; u < child_entry->flush_dep_nparents; u++)
+            HDassert(child_entry->flush_dep_parent[u] != parent_entry);
+    } /* end block */
+#endif /* NDEBUG */
 
 #ifndef NDEBUG
     /* Make sure the parent is not already a parent */
@@ -4927,8 +4931,7 @@ H5C_create_flush_dependency(void * parent_thing, void * child_thing)
             HDassert(!child_entry->flush_dep_parent);
 
             if(NULL == (child_entry->flush_dep_parent = (H5C_cache_entry_t **)H5FL_BLK_MALLOC(parent, H5C_FLUSH_DEP_PARENT_INIT * sizeof(H5C_cache_entry_t *))))
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, \
-                  "memory allocation failed for flush dependency parent list")
+                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for flush dependency parent list")
             child_entry->flush_dep_parent_nalloc = H5C_FLUSH_DEP_PARENT_INIT;
         } /* end if */
         else {
@@ -4939,7 +4942,7 @@ H5C_create_flush_dependency(void * parent_thing, void * child_thing)
                 HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for flush dependency parent list")
             child_entry->flush_dep_parent_nalloc *= 2;
         } /* end else */
-	cache_ptr->entry_fd_height_change_counter++;
+        cache_ptr->entry_fd_height_change_counter++;
     } /* end if */
 
     /* Add the dependency to the child's parent array */
@@ -4963,9 +4966,9 @@ H5C_create_flush_dependency(void * parent_thing, void * child_thing)
      */
     if ( ! child_entry->image_up_to_date ) {
 
-	HDassert(parent_entry->flush_dep_nunser_children <
+        HDassert(parent_entry->flush_dep_nunser_children <
                  parent_entry->flush_dep_nchildren);
-	parent_entry->flush_dep_nunser_children++;
+        parent_entry->flush_dep_nunser_children++;
     }
 
     /* Post-conditions, for successful operation */
@@ -5079,9 +5082,9 @@ H5C_destroy_flush_dependency(void *parent_thing, void * child_thing)
     /* adjust parent entry's number of unserialized children */
     if ( ! child_entry->image_up_to_date ) {
 
-	HDassert(parent_entry->flush_dep_nunser_children > 0);
+        HDassert(parent_entry->flush_dep_nunser_children > 0);
 
-	parent_entry->flush_dep_nunser_children--;
+        parent_entry->flush_dep_nunser_children--;
     }
 
     /* Shrink or free the parent array if apporpriate */
@@ -5107,21 +5110,21 @@ done:
  * Function:    H5C_flush_dependency_exists()
  *
  * Purpose:	Test to see if a flush dependency relationship exists 
- *		between the supplied parent and child.  Both parties 
- *		are indicated by addresses so as to avoid the necessity
- *		of protect / unprotect calls prior to this call. 
+ *          between the supplied parent and child.  Both parties 
+ *          are indicated by addresses so as to avoid the necessity
+ *          of protect / unprotect calls prior to this call. 
  *
- *		If either the parent or the child is not in the metadata 
- *		cache, the function sets *fd_exists_ptr to FALSE.
+ *          If either the parent or the child is not in the metadata 
+ *          cache, the function sets *fd_exists_ptr to FALSE.
  *
- *		If both are in the cache, the childs list of parents is 
- *		searched for the proposed parent.  If the proposed parent
- *		is found in the childs parent list, the function sets
- *		*fd_exists_ptr to TRUE.  In all other non-error cases, 
- *		the function sets *fd_exists_ptr FALSE.
+ *          If both are in the cache, the childs list of parents is 
+ *          searched for the proposed parent.  If the proposed parent
+ *          is found in the childs parent list, the function sets
+ *          *fd_exists_ptr to TRUE.  In all other non-error cases, 
+ *          the function sets *fd_exists_ptr FALSE.
  *
  * Return:      SUCCEED on success/FAIL on failure.  Note that 
- *		*fd_exists_ptr is undefined on failure.
+ *              *fd_exists_ptr is undefined on failure.
  *
  * Programmer:  John Mainzer
  *              9/28/16
@@ -5133,13 +5136,13 @@ herr_t
 H5C_flush_dependency_exists(H5F_t *f, haddr_t parent_addr, haddr_t child_addr,
     hbool_t *fd_exists_ptr)
 {
-    hbool_t		fd_exists = FALSE;	/* whether flush dependency */
-						/* exists.                  */
-    H5C_t *             cache_ptr;		/* ptr to cache */
-    H5C_cache_entry_t *	parent_ptr;             /* Ptr to parent entry */
-    H5C_cache_entry_t *	child_ptr;              /* Ptr to child entry */
-    unsigned            u;                      /* Local index variable */
-    hbool_t             ret_value = FALSE;      /* Return value */
+    hbool_t             fd_exists = FALSE;  /* whether flush dependency */
+                                            /* exists.                  */
+    H5C_t *             cache_ptr;          /* ptr to cache */
+    H5C_cache_entry_t *	parent_ptr;         /* Ptr to parent entry */
+    H5C_cache_entry_t *	child_ptr;          /* Ptr to child entry */
+    unsigned            u;                  /* Local index variable */
+    hbool_t             ret_value = FALSE;  /* Return value */
 
     FUNC_ENTER_NOAPI(NULL)
 
@@ -5165,20 +5168,20 @@ H5C_flush_dependency_exists(H5F_t *f, haddr_t parent_addr, haddr_t child_addr,
 
         if ( child_ptr->flush_dep_nparents > 0 ) {
 
-	    HDassert(child_ptr->flush_dep_parent);
-	    HDassert(child_ptr->flush_dep_parent_nalloc >= 
+            HDassert(child_ptr->flush_dep_parent);
+            HDassert(child_ptr->flush_dep_parent_nalloc >= 
                      child_ptr->flush_dep_nparents);
 
             for ( u = 0; u < child_ptr->flush_dep_nparents; u++ ) {
 
                 if ( child_ptr->flush_dep_parent[u] == parent_ptr ) {
 
-	            fd_exists = TRUE;
-	            HDassert(parent_ptr->flush_dep_nchildren > 0);
+                    fd_exists = TRUE;
+                    HDassert(parent_ptr->flush_dep_nchildren > 0);
                     break;
-		}
-	    }
-	}
+                }
+            }
+        }
     }
 
     *fd_exists_ptr = fd_exists;
@@ -6753,11 +6756,8 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
 
         /* this done, start the scan of the slist */
         restart_slist_scan = TRUE;
-
         while(restart_slist_scan || (node_ptr != NULL)) {
-
             if(restart_slist_scan) {
-
                 restart_slist_scan = FALSE;
 
                 /* Start at beginning of skip list */
@@ -6771,8 +6771,7 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
                 next_entry_ptr = (H5C_cache_entry_t *)H5SL_item(node_ptr);
 
                 if(NULL == next_entry_ptr)
-                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                                "next_entry_ptr == NULL ?!?!")
+                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "next_entry_ptr == NULL ?!?!")
 
                 HDassert(next_entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
                 HDassert(next_entry_ptr->is_dirty);
@@ -6802,15 +6801,10 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
              * from the slist.
              */
             node_ptr = H5SL_next(node_ptr);
-
             if(node_ptr != NULL) {
-
                 next_entry_ptr = (H5C_cache_entry_t *)H5SL_item(node_ptr);
-
                 if(NULL == next_entry_ptr)
-                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                               "next_entry_ptr == NULL ?!?!")
-
+                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "next_entry_ptr == NULL ?!?!")
                 HDassert(next_entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
                 HDassert(next_entry_ptr->is_dirty);
                 HDassert(next_entry_ptr->in_slist);
@@ -6833,21 +6827,12 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
             HDassert(entry_ptr != NULL);
             HDassert(entry_ptr->in_slist);
 
-            if ( ( ( !entry_ptr->flush_me_last ) 
-                   ||
-                   ( (entry_ptr->flush_me_last ) 
-                     &&
-                     (cache_ptr->num_last_entries >= cache_ptr->slist_len)
-                   )
-                 ) 
-                 &&
-                 (entry_ptr->flush_dep_nchildren == 0) 
-                 &&
-                 ( entry_ptr->ring == ring )
-               ) {
-
+            if(((!entry_ptr->flush_me_last) ||
+                    ((entry_ptr->flush_me_last) &&
+                        (cache_ptr->num_last_entries >= cache_ptr->slist_len))) &&
+                    (entry_ptr->flush_dep_nchildren == 0) &&
+                    (entry_ptr->ring == ring)) {
                 if(entry_ptr->is_protected) {
-
                     /* we have major problems -- but lets flush
                      * everything we can before we flag an error.
                      */
@@ -6908,8 +6893,7 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
 #endif /* H5C_DO_SANITY_CHECKS */
 
                     if(H5C__flush_single_entry(f, dxpl_id, entry_ptr, 
-                                (cooked_flags | H5C__FLUSH_INVALIDATE_FLAG | 
-                                 H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG), 
+                                (cooked_flags | H5C__FLUSH_INVALIDATE_FLAG | H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG), 
                                 entry_size_change_ptr, NULL) < 0)
                         HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "dirty entry flush destroy failed.")
 #if H5C_DO_SANITY_CHECKS
@@ -7087,7 +7071,7 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
                             "next_entry_ptr->magic is invalid?!?!?.")
         } /* end while loop scanning index list */
 
-	old_ring_pel_len = cur_ring_pel_len;
+        old_ring_pel_len = cur_ring_pel_len;
         entry_ptr = cache_ptr->pel_head_ptr;
         cur_ring_pel_len = 0;
         while(entry_ptr != NULL) {
@@ -7100,23 +7084,21 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
             entry_ptr = entry_ptr->next;
         } /* end while */
 
-	if((cur_ring_pel_len > 0) && (cur_ring_pel_len >= old_ring_pel_len)) {
+        if((cur_ring_pel_len > 0) && (cur_ring_pel_len >= old_ring_pel_len)) {
 
-	    /* TODO: this doesn't seem to be used -- delete when convenient */
+            /* TODO: this doesn't seem to be used -- delete when convenient */
             /* Don't error if allowed to have pinned entries remaining */
-	    if(evict_flags)
+            if(evict_flags)
                 HGOTO_DONE(TRUE)
 
-	   /* The number of pinned entries in the ring is positive, and 
-            * it is not declining.  Scream and die.
-	    */
+            /* The number of pinned entries in the ring is positive, and 
+             * it is not declining.  Scream and die.
+             */
             HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Pinned entry count not decreasing, cur_ring_pel_len = %d, old_ring_pel_len = %d, ring = %d", (int)cur_ring_pel_len, (int)old_ring_pel_len, (int)ring)
         } /* end if */
 
         HDassert(protected_entries == cache_ptr->pl_len);
-
-        if((protected_entries > 0) && 
-           (protected_entries == cache_ptr->index_len))
+        if((protected_entries > 0) && (protected_entries == cache_ptr->index_len))
             HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Only protected entries left in cache, protected_entries = %d", (int)protected_entries)
     } /* main while loop */
 
@@ -7372,7 +7354,7 @@ H5C_flush_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,  unsigned flags)
                            ( entry_ptr->flush_dep_ndirty_children == 0 ) ) ) &&
                      (entry_ptr->ring == ring)) {
 
-		HDassert(entry_ptr->flush_dep_nunser_children == 0);
+                HDassert(entry_ptr->flush_dep_nunser_children == 0);
 
                 if(entry_ptr->is_protected) {
                     /* we probably have major problems -- but lets 
@@ -7851,16 +7833,15 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
         if(entry_ptr->type->clear && (entry_ptr->type->clear)(f, (void *)entry_ptr, FALSE) < 0)
             HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to clear entry")
 
-	/* Propagate the clean flag up the flush dependency chain if
+        /* Propagate the clean flag up the flush dependency chain if
          * appropriate */
         if(was_dirty) {
-	    HDassert(entry_ptr->flush_dep_ndirty_children == 0);
+            HDassert(entry_ptr->flush_dep_ndirty_children == 0);
 
-	    if(entry_ptr->flush_dep_nparents > 0)
-		if(H5C__mark_flush_dep_clean(entry_ptr) < 0)
-		    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, \
-                                "Can't propagate flush dep clean flag")
-	} /* end if */
+            if(entry_ptr->flush_dep_nparents > 0)
+                if(H5C__mark_flush_dep_clean(entry_ptr) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "Can't propagate flush dep clean flag")
+        } /* end if */
     }
 
     /* reset the flush_in progress flag */
@@ -9445,30 +9426,30 @@ H5C_entry_in_skip_list(H5C_t * cache_ptr, H5C_cache_entry_t *target_ptr)
  * Function:    H5C_get_entry_ptr_from_addr()
  *
  * Purpose:     Debugging function that attempts to look up an entry in the 
- *		cache by its file address, and if found, returns a pointer 
- *		to the entry in *entry_ptr_ptr.  If the entry is not in the 
- *		cache, *entry_ptr_ptr is set to NULL.
+ *              cache by its file address, and if found, returns a pointer 
+ *              to the entry in *entry_ptr_ptr.  If the entry is not in the 
+ *              cache, *entry_ptr_ptr is set to NULL.
  *
- *		WARNING: This call should be used only in debugging  
- *			 routines, and it should be avoided when 
- *			 possible.
+ *              WARNING: This call should be used only in debugging  
+ *                       routines, and it should be avoided when 
+ *                       possible.
  *
- *			 Further, if we ever multi-thread the cache, 
- *			 this routine will have to be either discarded 
- *			 or heavily re-worked.
+ *                       Further, if we ever multi-thread the cache, 
+ *                       this routine will have to be either discarded 
+ *                       or heavily re-worked.
  *
- *			 Finally, keep in mind that the entry whose 
- *			 pointer is obtained in this fashion may not 
- *			 be in a stable state.  
+ *                       Finally, keep in mind that the entry whose 
+ *                       pointer is obtained in this fashion may not 
+ *                       be in a stable state.  
  *
- *		Note that this function is only defined if NDEBUG
- *		is not defined.
+ *              Note that this function is only defined if NDEBUG
+ *              is not defined.
  *
- *		As heavy use of this function is almost certainly a 
- *		bad idea, the metadata cache tracks the number of 
- *		successful calls to this function, and (if 
+ *              As heavy use of this function is almost certainly a 
+ *              bad idea, the metadata cache tracks the number of 
+ *              successful calls to this function, and (if 
  *              H5C_DO_SANITY_CHECKS is defined) displays any 
- *		non-zero count on cache shutdown.
+ *              non-zero count on cache shutdown.
  *
  * Return:      FAIL if error is detected, SUCCEED otherwise.
  *
@@ -9840,13 +9821,11 @@ H5C__mark_flush_dep_dirty(H5C_cache_entry_t * entry)
 
     /* Iterate over the parent entries, if any */
     for(u = 0; u < entry->flush_dep_nparents; u++) {
-	/* Sanity check */
-	HDassert(entry->flush_dep_parent[u]->flush_dep_ndirty_children < 
-                 entry->flush_dep_parent[u]->flush_dep_nchildren);
+        /* Sanity check */
+        HDassert(entry->flush_dep_parent[u]->flush_dep_ndirty_children < entry->flush_dep_parent[u]->flush_dep_nchildren);
 
-	/* Adjust the parent's number of dirty children */
-	entry->flush_dep_parent[u]->flush_dep_ndirty_children++;
-
+        /* Adjust the parent's number of dirty children */
+        entry->flush_dep_parent[u]->flush_dep_ndirty_children++;
     } /* end for */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
@@ -9918,13 +9897,12 @@ H5C__mark_flush_dep_serialized(H5C_cache_entry_t * entry_ptr)
     /* Iterate over the parent entries, if any */
     for(u = 0; u < entry_ptr->flush_dep_nparents; u++) {
 
-	HDassert(entry_ptr->flush_dep_parent);
-	HDassert(entry_ptr->flush_dep_parent[u]->magic == 
-                 H5C__H5C_CACHE_ENTRY_T_MAGIC);
-	HDassert(entry_ptr->flush_dep_parent[u]->flush_dep_nunser_children > 0);
+        HDassert(entry_ptr->flush_dep_parent);
+        HDassert(entry_ptr->flush_dep_parent[u]->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+        HDassert(entry_ptr->flush_dep_parent[u]->flush_dep_nunser_children > 0);
 
-	/* decrement the parents number of unserialized children */
-	entry_ptr->flush_dep_parent[u]->flush_dep_nunser_children--;
+        /* decrement the parents number of unserialized children */
+        entry_ptr->flush_dep_parent[u]->flush_dep_nunser_children--;
 
     } /* end for */
 
@@ -9937,8 +9915,8 @@ H5C__mark_flush_dep_serialized(H5C_cache_entry_t * entry_ptr)
  * Function:    H5C__mark_flush_dep_unserialized()
  *
  * Purpose:     Decrement the flush_dep_nunser_children fields of all the 
- *		target entry's flush dependency parents in response to 
- *		the target entry becoming unserialized.
+ *              target entry's flush dependency parents in response to 
+ *              the target entry becoming unserialized.
  *
  * Return:      Non-negative on success/Negative on failure
  *
@@ -9959,15 +9937,14 @@ H5C__mark_flush_dep_unserialized(H5C_cache_entry_t * entry_ptr)
 
     /* Iterate over the parent entries, if any */
     for(u = 0; u < entry_ptr->flush_dep_nparents; u++) {
-	/* Sanity check */
-	HDassert(entry_ptr->flush_dep_parent);
-	HDassert(entry_ptr->flush_dep_parent[u]->magic == 
-                 H5C__H5C_CACHE_ENTRY_T_MAGIC);
-	HDassert(entry_ptr->flush_dep_parent[u]->flush_dep_nunser_children < 
+        /* Sanity check */
+        HDassert(entry_ptr->flush_dep_parent);
+        HDassert(entry_ptr->flush_dep_parent[u]->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+        HDassert(entry_ptr->flush_dep_parent[u]->flush_dep_nunser_children < 
                  entry_ptr->flush_dep_parent[u]->flush_dep_nchildren);
 
-	/* increment parents number of usserialized children */
-	entry_ptr->flush_dep_parent[u]->flush_dep_nunser_children++;
+        /* increment parents number of usserialized children */
+        entry_ptr->flush_dep_parent[u]->flush_dep_nunser_children++;
     } /* end for */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
