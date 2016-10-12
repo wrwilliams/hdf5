@@ -34,6 +34,7 @@
 
 ./m4/aclocal_cxx.m4
 ./m4/aclocal_fc.m4
+./m4/aclocal_fc.f90
 ./m4/ax_check_class.m4
 ./m4/ax_check_classpath.m4
 ./m4/ax_check_java_home.m4
@@ -102,8 +103,7 @@
 ./config/gnu-cxxflags
 ./config/gnu-fflags
 ./config/gnu-flags
-./config/i386-pc-cygwin32
-./config/i686-pc-cygwin
+./config/cygwin
 ./config/ibm-aix
 ./config/ibm-flags
 ./config/intel-fflags
@@ -117,7 +117,6 @@
 ./config/pgi-fflags
 ./config/pgi-flags
 ./config/solaris
-./config/x86_64-pc-cygwin
 
 ./config/site-specific/BlankForm
 

@@ -18,29 +18,36 @@
 !
 #include <H5config_f.inc>
 
-PROGRAM table_test
+MODULE TSTTABLE
 
-  USE H5TB ! module of H5TB
-  USE HDF5 ! module of HDF5 library
+CONTAINS
 
+!-------------------------------------------------------------------------
+! test_begin
+!-------------------------------------------------------------------------
+
+SUBROUTINE test_begin(string)
+  CHARACTER(LEN=*), INTENT(IN) :: string
+  WRITE(*, fmt = '(A)', ADVANCE = 'no') string
+END SUBROUTINE test_begin
+
+!-------------------------------------------------------------------------
+! passed
+!-------------------------------------------------------------------------
+
+SUBROUTINE passed()
+  WRITE(*, fmt = '(T12,A6)')  'PASSED'
+END SUBROUTINE passed
+
+END MODULE TSTTABLE
+
+
+MODULE TSTTABLE_TESTS
+
+  USE TH5_MISC_GEN
   IMPLICIT NONE
-  INTEGER :: errcode = 0
 
-  !
-  ! Initialize FORTRAN predefined datatypes.
-  !
-  CALL h5open_f(errcode)
-
-  CALL test_table1()
-  CALL test_table2()
-
-  !
-  ! Close FORTRAN predefined datatypes.
-  !
-  CALL h5close_f(errcode)
-
-END PROGRAM table_test
-
+CONTAINS
 
 !-------------------------------------------------------------------------
 ! test_table1
@@ -50,6 +57,7 @@ SUBROUTINE test_table1()
 
   USE H5TB ! module of H5TB
   USE HDF5 ! module of HDF5 library
+  USE TSTTABLE ! module for testing table support routines
 
   IMPLICIT NONE
   
@@ -278,7 +286,8 @@ SUBROUTINE test_table1()
   ! compare read and write buffers.
   !
      DO i = 1, nrecords
-        IF ( bufrr(i) .NE. bufr(i) ) THEN
+       CALL VERIFY("h5tbread_field_name_f", bufrr(i), bufr(i), errcode)
+       IF (errcode .NE.0 ) THEN
            PRINT *, 'read buffer differs from write buffer'
            PRINT *,  bufrr(i), ' and ',   bufr(i)
            STOP
@@ -293,7 +302,8 @@ SUBROUTINE test_table1()
   ! compare read and write buffers.
   !
      DO i = 1, nrecords
-        IF ( bufdr(i) .NE. bufd(i) ) THEN
+        CALL VERIFY("h5tbread_field_name_f", bufdr(i), bufd(i), errcode)
+        IF (errcode .NE.0 ) THEN
            PRINT *, 'read buffer differs from write buffer'
            PRINT *,  bufdr(i), ' and ',   bufd(i)
            STOP
@@ -310,7 +320,8 @@ SUBROUTINE test_table1()
   ! compare read and write buffers.
   !
   DO i = 1, nrecords
-     IF ( bufrr(i) .NE. bufr(i) ) THEN
+     CALL VERIFY("h5tbread_field_name_f", bufrr(i), bufr(i), errcode)
+     IF (errcode .NE.0 ) THEN
         PRINT *, 'read buffer differs from write buffer'
         PRINT *,  bufrr(i), ' and ',   bufr(i)
         STOP
@@ -357,7 +368,8 @@ SUBROUTINE test_table1()
   ! compare read and write buffers.
   !
   DO i = 1, nrecords
-     IF ( bufsr(i) .NE. bufs(i) ) THEN
+     CALL VERIFY("h5tbread_field_index_f", bufsr(i), bufs(i), errcode)
+     IF (errcode .NE.0 ) THEN
         PRINT *, 'read buffer differs from write buffer'
         PRINT *,  bufsr(i), ' and ',   bufs(i)
         STOP
@@ -371,7 +383,8 @@ SUBROUTINE test_table1()
   ! compare read and write buffers.
   !
   DO i = 1, nrecords
-     IF ( bufir(i) .NE. bufi(i) ) THEN
+     CALL VERIFY("h5tbread_field_index_f", bufir(i), bufi(i), errcode)
+     IF (errcode .NE.0 ) THEN
         PRINT *, 'read buffer differs from write buffer'
         PRINT *,  bufir(i), ' and ',   bufi(i)
         STOP
@@ -385,7 +398,8 @@ SUBROUTINE test_table1()
      ! compare read and write buffers.
      !
      DO i = 1, nrecords
-        IF ( bufrr(i) .NE. bufr(i) ) THEN
+        CALL VERIFY("h5tbread_field_index_f", bufrr(i), bufr(i), errcode)
+        IF (errcode .NE.0 ) THEN
            PRINT *, 'read buffer differs from write buffer'
            PRINT *,  bufrr(i), ' and ',   bufr(i)
            STOP
@@ -399,7 +413,8 @@ SUBROUTINE test_table1()
      ! compare read and write buffers.
      !
      DO i = 1, nrecords
-        IF ( bufdr(i) .NE. bufd(i) ) THEN
+        CALL VERIFY("h5tbread_field_index_f", bufdr(i), bufd(i), errcode)
+        IF (errcode .NE.0 ) THEN
            PRINT *, 'read buffer differs from write buffer'
            PRINT *,  bufdr(i), ' and ',   bufd(i)
            STOP
@@ -414,7 +429,8 @@ SUBROUTINE test_table1()
   ! compare read and write buffers.
   !
   DO i = 1, nrecords
-     IF ( bufrr(i) .NE. bufr(i) ) THEN
+     CALL VERIFY("h5tbread_field_index_f", bufrr(i), bufr(i), errcode)
+     IF (errcode .NE.0 ) THEN
         PRINT *, 'read buffer differs from write buffer'
         PRINT *,  bufrr(i), ' and ',   bufr(i)
         STOP
@@ -439,7 +455,8 @@ SUBROUTINE test_table1()
   ! compare read and write buffers.
   !
   DO i = 1, nrecords
-     IF ( bufrr(i) .NE. bufr(i) ) THEN
+     CALL VERIFY("h5tbread_field_index_f", bufrr(i), bufr(i), errcode)
+     IF (errcode .NE.0 ) THEN
         PRINT *, 'read buffer differs from write buffer'
         PRINT *,  bufrr(i), ' and ',   bufr(i)
         STOP
@@ -536,6 +553,7 @@ SUBROUTINE test_table2()
 
   USE H5TB ! module of H5TB
   USE HDF5 ! module of HDF5 library
+  USE TSTTABLE ! module for testing table support routines
 
   IMPLICIT NONE
   
@@ -574,7 +592,6 @@ SUBROUTINE test_table2()
   INTEGER(hsize_t), PARAMETER :: chunk_size = 10
   TYPE(particle_t), DIMENSION(1:nrecords), TARGET :: fill_data
   INTEGER :: compress
-  INTEGER :: status
   INTEGER :: i
   INTEGER(SIZE_T) :: dst_size
   TYPE(particle_t), DIMENSION(1:nrecords), TARGET :: dst_buf
@@ -665,11 +682,12 @@ SUBROUTINE test_table2()
   CALL h5tbread_table_f(file_id, table_name_fill, nfields, dst_size, dst_offset, dst_sizes, f_ptr3, errcode)
 
   DO i = 1, nfields
-     IF(r_data(i)%name.NE.fill_data(i)%name.OR. &
-          r_data(i)%lati.NE.fill_data(i)%lati.OR. &
-          r_data(i)%long.NE.fill_data(i)%long.OR. &
-          r_data(i)%pressure.NE.fill_data(i)%pressure.OR. &
-          r_data(i)%temperature.NE.fill_data(i)%temperature)THEN
+     CALL VERIFY("h5tbread_table_f", r_data(i)%name, fill_data(i)%name, errcode)
+     CALL VERIFY("h5tbread_table_f", r_data(i)%lati, fill_data(i)%lati, errcode)
+     CALL VERIFY("h5tbread_table_f", r_data(i)%long, fill_data(i)%long, errcode)
+     CALL VERIFY("h5tbread_table_f", r_data(i)%pressure, fill_data(i)%pressure, errcode)
+     CALL VERIFY("h5tbread_table_f", r_data(i)%temperature, fill_data(i)%temperature, errcode)
+     IF (errcode .NE.0 ) THEN
         PRINT*,'H5TBmake/read_table_f --filled-- FAILED'
         STOP
      ENDIF
@@ -688,11 +706,12 @@ SUBROUTINE test_table2()
   CALL h5tbread_table_f(file_id, table_name, nfields, dst_size, dst_offset, dst_sizes, f_ptr3, errcode)
 
   DO i = 1, nfields
-     IF(r_data(i)%name.NE.p_data(i)%name.OR. &
-          r_data(i)%lati.NE.p_data(i)%lati.OR. &
-          r_data(i)%long.NE.p_data(i)%long.OR. &
-          r_data(i)%pressure.NE.p_data(i)%pressure.OR. &
-          r_data(i)%temperature.NE.p_data(i)%temperature)THEN
+     CALL VERIFY("h5tbread_table_f", r_data(i)%name, p_data(i)%name, errcode)
+     CALL VERIFY("h5tbread_table_f", r_data(i)%lati, p_data(i)%lati, errcode)
+     CALL VERIFY("h5tbread_table_f", r_data(i)%long, p_data(i)%long, errcode)
+     CALL VERIFY("h5tbread_table_f", r_data(i)%pressure, p_data(i)%pressure, errcode)
+     CALL VERIFY("h5tbread_table_f", r_data(i)%temperature, p_data(i)%temperature, errcode)
+     IF (errcode .NE.0 ) THEN
         PRINT*,'H5TBmake/read_table_f FAILED'
         STOP
      ENDIF
@@ -711,22 +730,31 @@ SUBROUTINE test_table2()
 
 END SUBROUTINE test_table2
 
+END MODULE TSTTABLE_TESTS
 
-!-------------------------------------------------------------------------
-! test_begin
-!-------------------------------------------------------------------------
 
-SUBROUTINE test_begin(string)
-  CHARACTER(LEN=*), INTENT(IN) :: string
-  WRITE(*, fmt = '(A)', ADVANCE = 'no') string
-END SUBROUTINE test_begin
+PROGRAM table_test
 
-!-------------------------------------------------------------------------
-! passed
-!-------------------------------------------------------------------------
+  USE H5TB ! module of H5TB
+  USE HDF5 ! module of HDF5 library
+  USE TSTTABLE_TESTS ! module for testing table routines
 
-SUBROUTINE passed()
-  WRITE(*, fmt = '(T12,A6)')  'PASSED'
-END SUBROUTINE passed
+  IMPLICIT NONE
+  INTEGER :: errcode = 0
+
+  !
+  ! Initialize FORTRAN predefined datatypes.
+  !
+  CALL h5open_f(errcode)
+
+  CALL test_table1()
+  CALL test_table2()
+
+  !
+  ! Close FORTRAN predefined datatypes.
+  !
+  CALL h5close_f(errcode)
+
+END PROGRAM table_test
 
 

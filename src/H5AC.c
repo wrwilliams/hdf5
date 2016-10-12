@@ -184,13 +184,15 @@ done:
 herr_t
 H5AC__init_package(void)
 {
+#if defined H5_DEBUG_BUILD | defined H5_HAVE_PARALLEL
     H5P_genplist_t  *xfer_plist;    /* Dataset transfer property list object */
-#ifdef H5_HAVE_PARALLEL
-    H5P_coll_md_read_flag_t coll_meta_read;
-#endif /* H5_HAVE_PARALLEL */
+#endif /* defined H5_DEBUG_BUILD | defined H5_HAVE_PARALLEL */
 #ifdef H5_DEBUG_BUILD
     H5FD_dxpl_type_t  dxpl_type;    /* Property indicating the type of the internal dxpl */
 #endif /* H5_DEBUG_BUILD */
+#ifdef H5_HAVE_PARALLEL
+    H5P_coll_md_read_flag_t coll_meta_read;
+#endif /* H5_HAVE_PARALLEL */
     herr_t ret_value = SUCCEED;     /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -202,9 +204,8 @@ H5AC__init_package(void)
         const char *s;  /* String for environment variables */
 
         s = HDgetenv("H5_COLL_API_SANITY_CHECK");
-        if(s && HDisdigit(*s)) {
+        if(s && HDisdigit(*s))
             H5_coll_api_sanity_check_g = (hbool_t)HDstrtol(s, NULL, 0);
-        }
     }
 #endif /* H5_HAVE_PARALLEL */
 
@@ -279,7 +280,9 @@ H5AC__init_package(void)
     H5AC_rawdata_dxpl_id = H5P_DATASET_XFER_DEFAULT;
 #endif /* defined(H5_HAVE_PARALLEL) || defined(H5_DEBUG_BUILD) */
 
+#if defined(H5_DEBUG_BUILD) | defined(H5_HAVE_PARALLEL)
 done:
+#endif /* defined(H5_DEBUG_BUILD) | defined(H5_HAVE_PARALLEL) */
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5AC__init_package() */
 
