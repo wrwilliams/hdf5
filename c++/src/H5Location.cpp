@@ -2158,6 +2158,9 @@ H5G_obj_t H5Location::getObjTypeByIdx(hsize_t idx, H5std_string& type_name) cons
     return (obj_type);
 }
 
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+#endif /* H5_NO_DEPRECATED_SYMBOLS */
+
 //--------------------------------------------------------------------------
 // Function:    H5Location::throwException
 ///\brief       Invokes subclass' throwException
@@ -2170,9 +2173,6 @@ void H5Location::throwException(const H5std_string& func_name, const H5std_strin
 {
    throwException(func_name, msg);
 }
-
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 //--------------------------------------------------------------------------
 // Function:    f_DataType_setId - friend
