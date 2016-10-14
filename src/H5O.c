@@ -1052,7 +1052,7 @@ done:
  *              the same effect as calling H5Gclose, H5Dclose, or H5Tclose.
  *
  * Return:	Success:	Non-negative
- *		Failure:	Negative
+ *          Failure:	Negative
  *
  * Programmer:	James Laird
  *		July 14 2006
