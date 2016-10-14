@@ -415,6 +415,7 @@
 ./c++/test/tfilter.cpp
 ./c++/test/th5s.cpp
 ./c++/test/th5s.h5
+./c++/test/titerate.cpp
 ./c++/test/tlinks.cpp
 ./c++/test/tobject.cpp
 ./c++/test/ttypes.cpp
@@ -2851,7 +2852,6 @@
 ./config/cmake/ConfigureChecks.cmake
 ./config/cmake/CPack.Info.plist.in
 ./config/cmake/CTestCustom.cmake
-./config/cmake/FindHDF5.cmake.in
 ./config/cmake/FindHDFJAVA.cmake.in
 ./config/cmake/FindJNI.cmake
 ./config/cmake/H5cxx_config.h.in
