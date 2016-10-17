@@ -777,6 +777,11 @@
 ./src/H5Ppublic.h
 ./src/H5Pstrcpl.c
 ./src/H5Ptest.c
+./src/H5PB.c
+./src/H5PBpkg.c
+./src/H5PBmodule.h
+./src/H5PBprivate.h
+./src/H5PBpublic.h
 ./src/H5PL.c
 ./src/H5PLmodule.h
 ./src/H5PLprivate.h
