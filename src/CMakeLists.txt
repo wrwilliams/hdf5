@@ -186,6 +186,7 @@ set (H5F_SOURCES
     ${HDF5_SRC_DIR}/H5Fmpi.c
     ${HDF5_SRC_DIR}/H5Fquery.c
     ${HDF5_SRC_DIR}/H5Fsfile.c
+    ${HDF5_SRC_DIR}/H5Fspace.c
     ${HDF5_SRC_DIR}/H5Fsuper.c
     ${HDF5_SRC_DIR}/H5Fsuper_cache.c
     ${HDF5_SRC_DIR}/H5Ftest.c
@@ -499,7 +500,7 @@ set (H5PB_HDRS
     ${HDF5_SRC_DIR}/H5PBpkg.h
     ${HDF5_SRC_DIR}/H5PBpublic.h
 )
-IDE_GENERATED_PROPERTIES ("H5PL" "${H5PL_HDRS}" "${H5PL_SOURCES}" )
+IDE_GENERATED_PROPERTIES ("H5PB" "${H5PB_HDRS}" "${H5PB_SOURCES}" )
 
 set (H5PL_SOURCES
     ${HDF5_SRC_DIR}/H5PL.c

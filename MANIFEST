@@ -778,8 +778,8 @@
 ./src/H5Pstrcpl.c
 ./src/H5Ptest.c
 ./src/H5PB.c
-./src/H5PBpkg.c
 ./src/H5PBmodule.h
+./src/H5PBpkg.h
 ./src/H5PBprivate.h
 ./src/H5PBpublic.h
 ./src/H5PL.c
@@ -878,6 +878,8 @@
 ./test/H5srcdir_str.h.in
 ./test/Makefile.am
 ./test/accum.c
+./test/aggr_nopersist.h5
+./test/aggr_persist.h5
 ./test/app_ref.c
 ./test/bad_compound.h5
 ./test/be_data.h5
@@ -976,9 +978,13 @@
 ./test/multi_file_v16-r.h5
 ./test/multi_file_v16-s.h5
 ./test/noencoder.h5
+./test/none_nopersist.h5
+./test/none_persist.h5
 ./test/ntypes.c
 ./test/ohdr.c
 ./test/objcopy.c
+./test/paged_nopersist.h5
+./test/paged_persist.h5
 ./test/plugin.c
 ./test/reserved.c
 ./test/pool.c
@@ -1019,6 +1025,7 @@
 ./test/tmisc.c
 ./test/tmtimen.h5
 ./test/tmtimeo.h5
+./test/tpage_buffer.c
 ./test/ttime.c
 ./test/trefer.c
 ./test/trefstr.c
