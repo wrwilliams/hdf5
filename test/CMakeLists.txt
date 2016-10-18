@@ -245,6 +245,7 @@ set (H5_TESTS
     cross_read
     freespace
     mf
+    tpage_buffer
     vds
     file_image
     unregister
