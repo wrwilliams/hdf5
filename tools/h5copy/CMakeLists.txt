@@ -14,6 +14,7 @@ TARGET_NAMING (h5copy STATIC)
 TARGET_C_PROPERTIES (h5copy STATIC " " " ")
 target_link_libraries (h5copy  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
 set_target_properties (h5copy PROPERTIES FOLDER tools)
+set_global_variable (HDF5_UTILS_TO_EXPORT "${HDF5_UTILS_TO_EXPORT};h5copy")
 
 set (H5_DEP_EXECUTABLES h5copy)
 
@@ -46,5 +47,7 @@ endif (BUILD_TESTING)
 install (
     TARGETS
         h5copy
+    EXPORT
+        ${HDF5_EXPORTED_TARGETS}
     RUNTIME DESTINATION ${HDF5_INSTALL_BIN_DIR} COMPONENT toolsapplications
 )
