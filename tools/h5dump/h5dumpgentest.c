@@ -3459,8 +3459,12 @@ static void gent_array8(void)
     herr_t      status = -1;
     hsize_t sdims[] = {F64_DIM0};
     hsize_t tdims[] = {F64_DIM1};
-    int         wdata[F64_DIM1];      /* Write buffer */
+    int         *wdata;      /* Write buffer */
     unsigned int i;
+
+    /* Allocate data buffer */
+    wdata = HDmalloc(F64_DIM1 * sizeof(int));
+    HDassert(wdata);
 
     /*
      * Initialize data.  i is the element in the dataspace, j and k the
@@ -3495,6 +3499,7 @@ static void gent_array8(void)
             status = H5Dwrite (dset, filetype, H5S_ALL, H5S_ALL, H5P_DEFAULT, wdata);
             HDassert(status >= 0);
     }
+
     /*
      * Close and release resources.
      */
@@ -3506,6 +3511,7 @@ static void gent_array8(void)
     HDassert(status >= 0);
     status = H5Fclose (file);
     HDassert(status >= 0);
+    HDfree(wdata);
 }
 
 static void gent_empty(void)
@@ -7588,13 +7594,17 @@ static void gent_compound_intsizes(void) {
             int64_t dset64[F70_XDIM][F70_YDIM64];
             double  dsetdbl[F70_XDIM][F70_YDIM8];
     } Array1Struct;
-    Array1Struct Array1[F70_LENGTH];
+    Array1Struct *Array1;
 
     hid_t Array1Structid; /* File datatype identifier */
     herr_t status; /* Error checking variable */
     hsize_t dim[] = { F70_LENGTH }; /* Dataspace dimensions     */
 
     int m, n, o; /* Array init loop vars     */
+
+    /* Allocate buffer */
+    Array1 = (Array1Struct *)HDmalloc(sizeof(Array1Struct) * F70_LENGTH);
+    HDassert(Array1);
 
     /* Initialize the data in the arrays/datastructure                */
     for (m = 0; m < F70_LENGTH; m++) {
@@ -7605,9 +7615,8 @@ static void gent_compound_intsizes(void) {
         valu8bits = (uint8_t) ~0u;  /* all 1s */
         for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dsetu8[n][0] = valu8bits;
-            for(o = 1; o < (int)dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++)
                 Array1[m].dsetu8[n][o] = (uint8_t)(Array1[m].dsetu8[n][o-1] << 1);
-            }
             valu8bits = (uint8_t)(valu8bits << 1);
         }
 
@@ -7617,9 +7626,8 @@ static void gent_compound_intsizes(void) {
         valu16bits = (uint16_t) ~0u;  /* all 1s */
         for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dsetu16[n][0] = valu16bits;
-            for(o = 1; o < (int)dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++)
                 Array1[m].dsetu16[n][o] = (uint16_t)(Array1[m].dsetu16[n][o-1] << 1);
-            }
             valu16bits = (uint16_t)(valu16bits << 1);
         }
 
@@ -7629,9 +7637,8 @@ static void gent_compound_intsizes(void) {
         valu32bits = (uint32_t) ~0u;  /* all 1s */
         for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dsetu32[n][0] = valu32bits;
-            for(o = 1; o < (int)dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++)
                 Array1[m].dsetu32[n][o] = Array1[m].dsetu32[n][o-1] << 1;
-            }
             valu32bits <<= 1;
         }
 
@@ -7641,9 +7648,8 @@ static void gent_compound_intsizes(void) {
         valu64bits = (uint64_t) ~0Lu;  /* all 1s */
         for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dsetu64[n][0] = valu64bits;
-            for(o = 1; o < (int)dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++)
                 Array1[m].dsetu64[n][o] = Array1[m].dsetu64[n][o-1] << 1;
-            }
             valu64bits <<= 1;
         }
 
@@ -7653,9 +7659,8 @@ static void gent_compound_intsizes(void) {
         val8bits = (int8_t) ~0;  /* all 1s */
         for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dset8[n][0] = val8bits;
-            for(o = 1; o < (int)dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++)
                 Array1[m].dset8[n][o] = (int8_t)(Array1[m].dset8[n][o-1] << 1);
-            }
             val8bits = (int8_t)(val8bits << 1);
         }
 
@@ -7665,9 +7670,8 @@ static void gent_compound_intsizes(void) {
         val16bits = (int16_t) ~0;  /* all 1s */
         for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dset16[n][0] = val16bits;
-            for(o = 1; o < (int)dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++)
                 Array1[m].dset16[n][o] = (int16_t)(Array1[m].dset16[n][o-1] << 1);
-            }
             val16bits = (int16_t)(val16bits << 1);
         }
 
@@ -7677,9 +7681,8 @@ static void gent_compound_intsizes(void) {
         val32bits = (int32_t) ~0;  /* all 1s */
         for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dset32[n][0] = val32bits;
-            for(o = 1; o < (int)dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++)
                 Array1[m].dset32[n][o] = Array1[m].dset32[n][o-1] << 1;
-            }
             val32bits <<= 1;
         }
 
@@ -7689,9 +7692,8 @@ static void gent_compound_intsizes(void) {
         val64bits = (int64_t) ~0L;  /* all 1s */
         for(n = 0; n < (int)dims[0]; n++){
             Array1[m].dset64[n][0] = val64bits;
-            for(o = 1; o < (int)dims[1]; o++) {
+            for(o = 1; o < (int)dims[1]; o++)
                 Array1[m].dset64[n][o] = Array1[m].dset64[n][o-1] << 1;
-            }
             val64bits <<= 1;
         }
 
@@ -7825,6 +7827,8 @@ static void gent_compound_intsizes(void) {
 
     status = H5Fclose(fid);
     HDassert(status >= 0);
+
+    HDfree(Array1);
 }
 
 static void gent_compound_attr_intsizes(void) {
@@ -8739,13 +8743,17 @@ static void gent_compound_int_array(void) {
             int64_t dset64[F76_DIM64];
             double  dsetdbl[F76_DIM8];
     } Cmpd1Struct;
-    Cmpd1Struct Cmpd1[F76_LENGTH];
+    Cmpd1Struct *Cmpd1;
 
     hid_t Cmpd1Structid; /* File datatype identifier */
     herr_t status; /* Error checking variable */
     hsize_t dim[] = { F76_LENGTH }; /* Dataspace dimensions     */
 
     int m, n; /* Array init loop vars     */
+
+    /* Allocate buffer */
+    Cmpd1 = (Cmpd1Struct *)HDmalloc(sizeof(Cmpd1Struct) * F76_LENGTH);
+    HDassert(Cmpd1);
 
     /* Initialize the data in the arrays/datastructure                */
     for (m = 0; m < F76_LENGTH; m++) {
@@ -8951,6 +8959,8 @@ static void gent_compound_int_array(void) {
 
     status = H5Fclose(fid);
     HDassert(status >= 0);
+
+    HDfree(Cmpd1);
 }
 
 static void gent_compound_ints(void) {
@@ -8975,7 +8985,7 @@ static void gent_compound_ints(void) {
             int64_t dset64;
             double  dsetdbl;
     } Cmpd1Struct;
-    Cmpd1Struct Cmpd1[F77_LENGTH];
+    Cmpd1Struct *Cmpd1;
 
     typedef struct Cmpd2Struct {
             uint64_t dsetu64;
@@ -8988,7 +8998,7 @@ static void gent_compound_ints(void) {
             int8_t  dset8;
             double  dsetdbl;
     } Cmpd2Struct;
-    Cmpd2Struct Cmpd2[F77_LENGTH];
+    Cmpd2Struct *Cmpd2;
 
     hid_t Cmpd1Structid; /* File datatype identifier */
     hid_t Cmpd2Structid; /* File datatype identifier */
@@ -8996,6 +9006,12 @@ static void gent_compound_ints(void) {
     hsize_t dim[] = { F77_LENGTH }; /* Dataspace dimensions     */
 
     int m; /* Array init loop vars     */
+
+    /* Allocate buffers */
+    Cmpd1 = (Cmpd1Struct *)HDmalloc(sizeof(Cmpd1Struct) * F77_LENGTH);
+    HDassert(Cmpd1);
+    Cmpd2 = (Cmpd2Struct *)HDmalloc(sizeof(Cmpd2Struct) * F77_LENGTH);
+    HDassert(Cmpd2);
 
     /* Initialize the data in the arrays/datastructure                */
     for (m = 0; m < F77_LENGTH; m++) {
@@ -9173,6 +9189,9 @@ static void gent_compound_ints(void) {
 
     status = H5Fclose(fid);
     HDassert(status >= 0);
+
+    HDfree(Cmpd1);
+    HDfree(Cmpd2);
 }
 
 /*-------------------------------------------------------------------------
@@ -9921,7 +9940,7 @@ static void gent_compound_complex2(void)
         multiple_nested_compound e;   /* Compound inside compound with further nested compound */
     } compound;
 
-    compound        buf[F82_DIM32];        /* compound */
+    compound        *buf;        /* compound */
 
     hid_t file, type=-1, space=-1, dset=-1;
     hid_t dset_array_a, dset_array_b, dset_array_c;
@@ -9931,6 +9950,10 @@ static void gent_compound_complex2(void)
     unsigned dset_array_ndims;
     hsize_t  dset_array_a_dims[1], dset_array_b_dims[1], dset_array_c_dims[2];
     hsize_t  nelmts = F82_DIM32;
+
+    /* Allocate buffer */
+    buf = (compound *)HDmalloc(sizeof(compound) * F82_DIM32);
+    HDassert(buf);
 
     file = H5Fcreate(FILE82, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
@@ -10179,6 +10202,8 @@ static void gent_compound_complex2(void)
 //    }
 
     H5Fclose(file);
+
+    HDfree(buf);
 }
 
 /*-------------------------------------------------------------------------
