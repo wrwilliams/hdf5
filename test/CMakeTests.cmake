@@ -155,6 +155,8 @@ endforeach (plistfile ${HDF5_REFERENCE_PLIST_FILES})
 #-- Copy all the HDF5 files from the test directory into the source directory
 # --------------------------------------------------------------------
 set (HDF5_REFERENCE_TEST_FILES
+    aggr_nopersist.h5
+    aggr_persist.h5
     bad_compound.h5
     be_data.h5
     be_extlink1.h5
@@ -180,6 +182,10 @@ set (HDF5_REFERENCE_TEST_FILES
     multi_file_v16-r.h5
     multi_file_v16-s.h5
     noencoder.h5
+    none_nopersist.h5
+    none_persist.h5
+    paged_nopersist.h5
+    paged_persist.h5
     specmetaread.h5
     tarrold.h5
     tbad_msg_count.h5
