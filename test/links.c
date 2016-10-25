@@ -14871,9 +14871,9 @@ error:
  *
  * Purpose:	Test links
  *
- * Return:	Success:	exit(0)
+ * Return:	Success:	exit(EXIT_SUCCESS)
  *
- *		Failure:	exit(non-zero)
+ *		Failure:	exit(EXIT_FAILURE)
  *
  * Programmer:	Robb Matzke
  *              Friday, August 14, 1998
@@ -15073,7 +15073,7 @@ main(void)
     if(nerrors) {
         printf("***** %d LINK TEST%s FAILED! *****\n",
                 nerrors, 1 == nerrors ? "" : "S");
-        HDexit(1);
+        HDexit(EXIT_FAILURE);
     }
     printf("All link tests passed.\n");
 
