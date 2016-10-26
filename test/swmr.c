@@ -86,6 +86,9 @@ static int test_file_lock_swmr_same(hid_t fapl);
 static int test_file_lock_concur(hid_t fapl);            
 static int test_file_lock_swmr_concur(hid_t fapl);       
 
+/* Test file lock environment variable */
+static int test_file_lock_env_var(hid_t fapl);
+
 /* Tests for SWMR VFD flag */
 static int test_swmr_vfd_flag(void);
 
@@ -5857,7 +5860,154 @@ error:
 
 } /* end test_file_lock_swmr_concur() */
 
+
+
 #endif /* !(defined(H5_HAVE_FORK && defined(H5_HAVE_WAITPID)) */
+
+/****************************************************************
+**
+**  test_file_lock_swmr_concur(): low-level file test routine.
+**    With the implementation of file locking, this test checks file
+**    open with different combinations of flags + SWMR flags.
+**    This is for concurrent access.
+**
+*****************************************************************/
+static int
+test_file_lock_env_var(hid_t in_fapl)
+{
+    hid_t fid = -1;             /* File ID */
+    hid_t fapl = -1;                    /* File access property list */
+    char filename[NAME_BUF_SIZE];       /* file name */
+    pid_t childpid=0;           /* Child process ID */
+    int child_status;           /* Status passed to waitpid */
+    int child_wait_option=0;        /* Options passed to waitpid */
+    int out_pdf[2];
+    int notify = 0;
+
+
+    TESTING("File locking environment variable");
+
+#if !(defined(H5_HAVE_FORK) && defined(H5_HAVE_WAITPID))
+    SKIPPED();
+    HDputs("    Test skipped due to fork or waitpid not defined.");
+    return 0;
+#else
+
+    /* Set the environment variable */
+    if(HDsetenv("HDF5_USE_FILE_LOCKING", "FALSE", TRUE) < 0)
+        TEST_ERROR
+
+    if((fapl = H5Pcopy(in_fapl)) < 0)
+        TEST_ERROR
+
+    /* Set the filename to use for this test (dependent on fapl) */
+    h5_fixname(FILENAME[1], fapl, filename, sizeof(filename));
+  
+    /* Create the test file */
+    if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+        TEST_ERROR
+
+    /* Close the file */
+    if(H5Fclose(fid) < 0)
+        TEST_ERROR
+
+    /* Open a file for read-only and then read-write. This would
+     * normally fail due to the file locking scheme but should
+     * pass when the environment variable is set to disable file
+     * locking.
+     */
+
+    /* Create 1 pipe */
+    if(HDpipe(out_pdf) < 0)
+        TEST_ERROR
+
+    /* Fork child process */
+    if((childpid = HDfork()) < 0)
+        TEST_ERROR
+
+    if(childpid == 0) {
+        
+        /* Child process */
+
+        hid_t child_fid;    /* File ID */
+        int child_notify = 0;
+
+        /* Close unused write end for out_pdf */
+        if(HDclose(out_pdf[1]) < 0)
+            HDexit(EXIT_FAILURE);
+
+        /* Wait for notification from parent process */
+        while(child_notify != 1) {
+            if(HDread(out_pdf[0], &child_notify, sizeof(int)) < 0)
+                HDexit(EXIT_FAILURE);
+        } /* end while */
+
+        /* Open the test file */
+        if((child_fid = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
+            TEST_ERROR
+
+        /* Close the pipe */
+        if(HDclose(out_pdf[0]) < 0)
+            HDexit(EXIT_FAILURE);
+
+        HDexit(EXIT_SUCCESS);
+    } /* end if */
+
+    /* close unused read end for out_pdf */
+    if(HDclose(out_pdf[0]) < 0)
+        TEST_ERROR
+
+    /* Open the test file */
+    if((fid = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
+        TEST_ERROR
+    
+    /* Notify child process */
+    notify = 1;
+    if(HDwrite(out_pdf[1], &notify, sizeof(int)) < 0)
+        TEST_ERROR;
+
+    /* Close the pipe */
+    if(HDclose(out_pdf[1]) < 0)
+        TEST_ERROR;
+
+    /* Wait for child process to complete */
+    if(HDwaitpid(childpid, &child_status, child_wait_option) < 0)
+        TEST_ERROR
+
+    /* Check if child terminated normally */
+    if(WIFEXITED(child_status)) {
+        /* Check exit status of the child */
+        if(WEXITSTATUS(child_status) != 0)
+            TEST_ERROR
+    } /* end if */
+    else
+        TEST_ERROR
+
+    /* Close the file */
+    if(H5Fclose(fid) < 0)
+        TEST_ERROR
+
+    /* Close the copied property list */
+    if(H5Pclose(fapl) < 0)
+        TEST_ERROR
+
+    PASSED();
+
+    return 0;
+
+error:
+    H5E_BEGIN_TRY {
+        H5Pclose(fapl);
+        H5Fclose(fid);
+    } H5E_END_TRY;
+
+    return -1;
+
+
+#endif /* !(defined(H5_HAVE_FORK && defined(H5_HAVE_WAITPID)) */
+
+} /* end test_file_lock_env_var() */
+
 
 static int
 test_swmr_vfd_flag(void)
@@ -6700,6 +6850,8 @@ main(void)
     int nerrors = 0;    /* The # of errors */
     hid_t fapl = -1;    /* File access property list ID */
     char *driver = NULL;    /* VFD string (from env variable) */
+    char *lock_env_var = NULL; /* file locking env var pointer */
+    hbool_t use_file_locking;   /* read from env var */
 
     /* Skip this test if SWMR I/O is not supported for the VFD specified
      * by the environment variable.
@@ -6708,7 +6860,17 @@ main(void)
     if(!H5FD_supports_swmr_test(driver)) {
         printf("This VFD does not support SWMR I/O\n");
         return EXIT_SUCCESS;
-    }
+    } /* end if */
+
+    /* Check the environment variable that determines if we care
+     * about file locking. File locking should be used unless explicitly
+     * disabled.
+     */
+    lock_env_var = HDgetenv("HDF5_USE_FILE_LOCKING");
+    if(lock_env_var && !HDstrcmp(lock_env_var, "FALSE"))
+        use_file_locking = FALSE;
+    else
+        use_file_locking = TRUE;    
 
     /* Set up */
     h5_reset();
@@ -6750,45 +6912,52 @@ main(void)
     nerrors += test_append_flush_dataset_fixed(fapl);
     nerrors += test_append_flush_dataset_multiple(fapl);
 
-    /* 
-     * Tests for:
-     *   file open flags--single process access
-     *   file open flags--concurrent access
-     */
-    nerrors += test_file_lock_same(fapl);              
-    nerrors += test_file_lock_concur(fapl);            
-    /* 
-     * Tests for:
-     *   file open flags+SWMR flags--single process access
-     *   file open flags+SWMR flags--concurrent access 
-     *
-     * Modify the following 2 routines to test for files:
-     *   H5Fcreate(write, latest format) or  H5Fcreate(SWMR write, non-latest-format) 
-     *   --both result in v3 superblock and latest version suppport
-     */
-    nerrors += test_file_lock_swmr_same(fapl);         
-    nerrors += test_file_lock_swmr_concur(fapl);       
+    if(use_file_locking) {
+        /* 
+         * Tests for:
+         *   file open flags--single process access
+         *   file open flags--concurrent access
+         */
+        nerrors += test_file_lock_same(fapl);              
+        nerrors += test_file_lock_concur(fapl);            
+        /* 
+         * Tests for:
+         *   file open flags+SWMR flags--single process access
+         *   file open flags+SWMR flags--concurrent access 
+         *
+         * Modify the following 2 routines to test for files:
+         *   H5Fcreate(write, latest format) or  H5Fcreate(SWMR write, non-latest-format) 
+         *   --both result in v3 superblock and latest version suppport
+         */
+        nerrors += test_file_lock_swmr_same(fapl);         
+        nerrors += test_file_lock_swmr_concur(fapl);
+    } /* end if */
 
     /* Tests SWMR VFD compatibility flag.
      * Only needs to run when the VFD is the default (sec2).
      */
     if(NULL == driver || !HDstrcmp(driver, "") || !HDstrcmp(driver, "sec2"))
         nerrors += test_swmr_vfd_flag();
-    
+
+    /* This test changes the HDF5_USE_FILE_LOCKING environment variable
+     * so it should be run last.
+     */
+    nerrors += test_file_lock_env_var(fapl);
+
     if(nerrors)
-	goto error;
+        goto error;
 
     printf("All tests passed.\n");
 
     h5_cleanup(FILENAME, fapl);
 
-    return 0;
+    return EXIT_SUCCESS;
 
 error:
     nerrors = MAX(1, nerrors);
     printf("***** %d SWMR TEST%s FAILED! *****\n",
         nerrors, 1 == nerrors ? "" : "S");
-    return 1;
+    return EXIT_FAILURE;
 
-} /* main() */
+} /* end main() */
 

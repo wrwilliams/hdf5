@@ -1061,6 +1061,8 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
     hbool_t             set_flag = FALSE;   /*set the status_flags in the superblock */
     hbool_t             clear = FALSE;      /*clear the status_flags 	    */
     H5F_t              *ret_value = NULL;   /*actual return value           */
+    char               *lock_env_var = NULL;/*env var pointer               */
+    hbool_t             use_file_locking;   /*read from env var             */
 
     FUNC_ENTER_NOAPI(NULL)
 
@@ -1074,6 +1076,16 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
      */
     if(NULL == (drvr = H5FD_get_class(fapl_id)))
         HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "unable to retrieve VFL class")
+
+    /* Check the environment variable that determines if we care
+     * about file locking. File locking should be used unless explicitly
+     * disabled.
+     */
+    lock_env_var = HDgetenv("HDF5_USE_FILE_LOCKING");
+    if(lock_env_var && !HDstrcmp(lock_env_var, "FALSE"))
+        use_file_locking = FALSE;
+    else
+        use_file_locking = TRUE;    
 
     /*
      * Opening a file is a two step process. First we try to open the
@@ -1159,13 +1171,18 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
                 HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file")
         } /* end if */
 
-        /* Place an advisory lock on the file & create the 'top' file structure */
-        if((H5FD_lock(lf, (hbool_t)((flags & H5F_ACC_RDWR) ? TRUE : FALSE)) < 0) ||
-                (NULL == (file = H5F_new(NULL, flags, fcpl_id, fapl_id, lf)))) {
-            if(H5FD_close(lf) < 0) /* Closing will remove the lock */
-                HDONE_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
-            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to lock the file or initialize file structure")
-        } /* end if */
+        /* Place an advisory lock on the file */
+        if(use_file_locking)
+            if(H5FD_lock(lf, (hbool_t)((flags & H5F_ACC_RDWR) ? TRUE : FALSE)) < 0) {
+                /* Locking failed - Closing will remove the lock */                
+                if(H5FD_close(lf) < 0) 
+                    HDONE_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
+                HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to lock the file")
+            } /* end if */
+
+        /* Create the 'top' file structure */
+        if(NULL == (file = H5F_new(NULL, flags, fcpl_id, fapl_id, lf)))
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to initialize file structure")
 
 	    /* Need to set status_flags in the superblock if the driver has a 'lock' method */
 	    if(drvr->lock)
@@ -1276,7 +1293,7 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
                 HGOTO_ERROR(H5E_FILE, H5E_CANTFLUSH, NULL, "unable to flush superblock")
 
             /* Remove the file lock for SWMR_WRITE */
-            if(H5F_INTENT(file) & H5F_ACC_SWMR_WRITE) { 
+            if(use_file_locking && (H5F_INTENT(file) & H5F_ACC_SWMR_WRITE)) { 
                 if(H5FD_unlock(file->shared->lf) < 0)
                     HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to unlock the file")
             } /* end if */
