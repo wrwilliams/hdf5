@@ -1107,5 +1107,65 @@ H5_combine_path(const char* path1, const char* path2, char **full_name /*out*/)
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5_combine_name() */
+} /* end H5_combine_path() */
+
+
+/*--------------------------------------------------------------------------
+ * Function:    H5_nanosleep
+ *
+ * Purpose:     Sleep for a given # of nanoseconds
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ * Programmer:  Quincey Koziol
+ *              October 01, 2016
+ *--------------------------------------------------------------------------
+ */
+void
+H5_nanosleep(uint64_t nanosec)
+{
+    struct timespec sleeptime;  /* Struct to hold time to sleep */
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    /* Set up time to sleep */
+    sleeptime.tv_sec = 0;
+    sleeptime.tv_nsec = (long)nanosec;
+
+    HDnanosleep(&sleeptime, NULL);
+
+    FUNC_LEAVE_NOAPI_VOID
+} /* end H5_nanosleep() */
+
+
+/*--------------------------------------------------------------------------
+ * Function:    H5_get_time
+ *
+ * Purpose:     Get the current time, as the time of seconds after the UNIX epoch
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ * Programmer:  Quincey Koziol
+ *              October 05, 2016
+ *--------------------------------------------------------------------------
+ */
+double
+H5_get_time(void)
+{
+#ifdef H5_HAVE_GETTIMEOFDAY
+    struct timeval curr_time;
+#endif /* H5_HAVE_GETTIMEOFDAY */
+    double ret_value = (double)0.0f;
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+#ifdef H5_HAVE_GETTIMEOFDAY
+    HDgettimeofday(&curr_time, NULL);
+
+    ret_value = (double)curr_time.tv_sec + ((double)curr_time.tv_usec / (double)1000000.0f);
+#endif /* H5_HAVE_GETTIMEOFDAY */
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5_get_time() */
+
 

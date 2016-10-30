@@ -130,6 +130,11 @@ do
     for compress in "" "-c 5"
     do
         echo
+        echo "*******************************************************************************"
+        echo "** Loop testing parameters: $index_type $compress"
+        echo "*******************************************************************************"
+        echo
+        echo
         echo "###############################################################################"
         echo "## Generator test"
         echo "###############################################################################"
@@ -167,7 +172,7 @@ do
         # Launch the Writer
         echo launch the swmr_start_writer
         seed="" # Put -r <random seed> command here
-        ./swmr_start_write $compress $index_type $Nrecords $seed &
+        ./swmr_start_write $compress $index_type $Nrecords $seed 2>&1 |tee swmr_writer.out &
         pid_writer=$!
         $DPRINT pid_writer=$pid_writer
 
@@ -183,7 +188,7 @@ do
         while [ $n -lt $Nreaders ]; do
             #seed="-r ${seeds[$n]}"
             seed=""
-            ./swmr_reader $Nsecs_add $seed &
+            ./swmr_reader $Nsecs_add $seed 2>&1 |tee swmr_reader.out.$n &
             pid_readers="$pid_readers $!"
             n=`expr $n + 1`
         done
@@ -213,8 +218,13 @@ do
         $DPRINT nerrors=$nerrors
         if test $nerrors -ne 0 ; then
             echo "SWMR tests failed with $nerrors errors."
+            echo "(Writer and reader output preserved)"
             exit 1
         fi
+
+        # Clean up output files
+        rm -f swmr_writer.out
+        rm -f swmr_reader.out.*
 
         echo
         echo "###############################################################################"
@@ -235,7 +245,7 @@ do
         # Launch the Writer
         echo launch the swmr_writer
         seed="" # Put -r <random seed> command here
-        ./swmr_writer -o $Nrecords $seed &
+        ./swmr_writer -o $Nrecords $seed 2>&1 |tee swmr_writer.out &
         pid_writer=$!
         $DPRINT pid_writer=$pid_writer
 
@@ -250,7 +260,7 @@ do
         while [ $n -lt $Nreaders ]; do
             #seed="-r ${seeds[$n]}"
             seed=""
-            ./swmr_reader $Nsecs_add $seed &
+            ./swmr_reader $Nsecs_add $seed 2>&1 |tee swmr_reader.out.$n &
             pid_readers="$pid_readers $!"
             n=`expr $n + 1`
         done
@@ -280,8 +290,13 @@ do
         $DPRINT nerrors=$nerrors
         if test $nerrors -ne 0 ; then
             echo "SWMR tests failed with $nerrors errors."
+            echo "(Writer and reader output preserved)"
             exit 1
         fi
+
+        # Clean up output files
+        rm -f swmr_writer.out
+        rm -f swmr_reader.out.*
 
         echo
         echo "###############################################################################"
@@ -293,7 +308,7 @@ do
         # Launch the Remove Writer
         echo launch the swmr_remove_writer
         seed="" # Put -r <random seed> command here
-        ./swmr_remove_writer -o $Nrecs_rem $seed &
+        ./swmr_remove_writer -o $Nrecs_rem $seed 2>&1 |tee swmr_writer.out &
         pid_writer=$!
         $DPRINT pid_writer=$pid_writer
 
@@ -308,7 +323,7 @@ do
         while [ $n -lt $Nreaders ]; do
             #seed="-r ${seeds[$n]}"
             seed=""
-            ./swmr_remove_reader $Nsecs_rem $seed &
+            ./swmr_remove_reader $Nsecs_rem $seed 2>&1 |tee swmr_reader.out.$n &
             pid_readers="$pid_readers $!"
             n=`expr $n + 1`
         done
@@ -338,8 +353,13 @@ do
         $DPRINT nerrors=$nerrors
         if test $nerrors -ne 0 ; then
             echo "SWMR tests failed with $nerrors errors."
+            echo "(Writer and reader output preserved)"
             exit 1
         fi
+
+        # Clean up output files
+        rm -f swmr_writer.out
+        rm -f swmr_reader.out.*
 
         echo
         echo "###############################################################################"
@@ -369,7 +389,7 @@ do
         # Launch the Add/Remove Writer
         echo launch the swmr_addrem_writer
         seed="" # Put -r <random seed> command here
-        ./swmr_addrem_writer $Nrecords $seed &
+        ./swmr_addrem_writer $Nrecords $seed 2>&1 |tee swmr_writer.out &
         pid_writer=$!
         $DPRINT pid_writer=$pid_writer
 
@@ -384,7 +404,7 @@ do
         while [ $n -lt $Nreaders ]; do
             #seed="-r ${seeds[$n]}"
             seed=""
-            ./swmr_remove_reader $Nsecs_addrem $seed &
+            ./swmr_remove_reader $Nsecs_addrem $seed 2>&1 |tee swmr_reader.out.$n &
             pid_readers="$pid_readers $!"
             n=`expr $n + 1`
         done
@@ -414,8 +434,13 @@ do
         $DPRINT nerrors=$nerrors
         if test $nerrors -ne 0 ; then
             echo "SWMR tests failed with $nerrors errors."
+            echo "(Writer and reader output preserved)"
             exit 1
         fi
+
+        # Clean up output files
+        rm -f swmr_writer.out
+        rm -f swmr_reader.out.*
 
         echo
         echo "###############################################################################"
@@ -437,7 +462,7 @@ do
         rm -f $WRITER_MESSAGE
         # Launch the Sparse writer
         echo launch the swmr_sparse_writer
-        nice -n 20 ./swmr_sparse_writer $Nrecs_spa &
+        nice -n 20 ./swmr_sparse_writer $Nrecs_spa 2>&1 |tee swmr_writer.out &
         pid_writer=$!
         $DPRINT pid_writer=$pid_writer
 
@@ -450,7 +475,7 @@ do
         echo launch $Nrdrs_spa swmr_sparse_readers
         while [ $n -lt $Nrdrs_spa ]; do
             # The sparse reader spits out a LOT of data so it's set to 'quiet'
-            ./swmr_sparse_reader -q $Nrecs_spa &
+            ./swmr_sparse_reader -q $Nrecs_spa 2>&1 |tee swmr_reader.out.$n &
             pid_readers="$pid_readers $!"
             n=`expr $n + 1`
         done
@@ -479,8 +504,13 @@ do
         $DPRINT nerrors=$nerrors
         if test $nerrors -ne 0 ; then
             echo "SWMR tests failed with $nerrors errors."
+            echo "(Writer and reader output preserved)"
             exit 1
         fi
+
+        # Clean up output files
+        rm -f swmr_writer.out
+        rm -f swmr_reader.out.*
     done
 done
 

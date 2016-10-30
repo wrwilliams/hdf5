@@ -162,7 +162,7 @@ H5O_oh_tag(const H5O_loc_t *oloc, hid_t dxpl_id, haddr_t *tag)
     HDassert(oloc);
 
     /* Get object header for object */
-    if(NULL == (oh = H5O_protect(oloc, dxpl_id, H5AC__READ_ONLY_FLAG)))
+    if(NULL == (oh = H5O_protect(oloc, dxpl_id, H5AC__READ_ONLY_FLAG, FALSE)))
         HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, FAIL, "unable to protect object's object header")
 
     /* Get object header's address (i.e. the tag value for this object) */

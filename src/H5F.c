@@ -1455,10 +1455,10 @@ H5Fget_metadata_read_retry_info(hid_t file_id, H5F_retry_info_t *info)
                 if(file->shared->retries[i] != NULL) {
                     /* Allocate memory for retries[i]
                      *
-                     * This memory is returned to the user, so we have to use
-                     * the HD functions instead of the H5MM functions.
+                     * This memory should be released by the user with
+                     * the H5free_memory() call.
                      */
-                    if(NULL == (info->retries[j] = (uint32_t *)HDmalloc(tot_size)))
+                    if(NULL == (info->retries[j] = (uint32_t *)H5MM_malloc(tot_size)))
                         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
 
                     /* Copy the information */
@@ -1713,7 +1713,7 @@ H5Fstart_swmr_write(hid_t file_id)
         HGOTO_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
 
     /* Flush the superblock */
-    if(H5F_flush_tagged_metadata(file, (haddr_t)0, H5AC_ind_read_dxpl_id) < 0)
+    if(H5F_flush_tagged_metadata(file, H5AC__SUPERBLOCK_TAG, H5AC_ind_read_dxpl_id) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "unable to flush superblock")
 
     /* Evict all flushed entries in the cache except the pinned superblock */
@@ -1754,7 +1754,7 @@ done:
             HDONE_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
 
         /* Flush the superblock */
-        if(H5F_flush_tagged_metadata(file, (haddr_t)0, H5AC_ind_read_dxpl_id) < 0)
+        if(H5F_flush_tagged_metadata(file, H5AC__SUPERBLOCK_TAG, H5AC_ind_read_dxpl_id) < 0)
             HDONE_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "unable to flush superblock")
     } /* end if */
 

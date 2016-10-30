@@ -1114,6 +1114,9 @@ typedef off_t               h5_stat_size_t;
 #ifndef HDmodf
     #define HDmodf(X,Y)    modf(X,Y)
 #endif /* HDmodf */
+#ifndef HDnanosleep
+    #define HDnanosleep(N, O)    nanosleep(N, O)
+#endif /* HDnanosleep */
 #ifndef HDopen
     #ifdef _O_BINARY
         #define HDopen(S,F,M)    open(S,F|_O_BINARY,M)
@@ -2595,6 +2598,8 @@ H5_DLL uint32_t H5_hash_string(const char *str);
 
 /* Time related routines */
 H5_DLL time_t H5_make_time(struct tm *tm);
+H5_DLL void H5_nanosleep(uint64_t nanosec);
+H5_DLL double H5_get_time(void);
 
 /* Functions for building paths, etc. */
 H5_DLL herr_t   H5_build_extpath(const char *name, char **extpath /*out*/);

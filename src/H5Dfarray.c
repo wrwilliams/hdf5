@@ -145,7 +145,7 @@ static herr_t H5D__farray_idx_reset(H5O_storage_chunk_t *storage, hbool_t reset_
 static herr_t H5D__farray_idx_dump(const H5O_storage_chunk_t *storage, FILE *stream);
 static herr_t H5D__farray_idx_dest(const H5D_chk_idx_info_t *idx_info);
 
-/* Generic extensible array routines */
+/* Generic fixed array routines */
 static herr_t H5D__farray_idx_open(const H5D_chk_idx_info_t *idx_info);
 static herr_t H5D__farray_idx_depend(const H5D_chk_idx_info_t *idx_info);
 
@@ -726,15 +726,17 @@ H5D__farray_filt_debug(FILE *stream, int indent, int fwidth, hsize_t idx,
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Copied and modified from H5Dearrary.c
+ * Programmer:	Vailin Choi
+ *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
 H5D__farray_idx_depend(const H5D_chk_idx_info_t *idx_info)
 {
+    H5O_t *oh = NULL;                   /* Object header */
     H5O_loc_t oloc;                     /* Temporary object header location for dataset */
-    H5O_proxy_t *oh_proxy = NULL;       /* Dataset's object header proxy */
+    H5AC_proxy_entry_t *oh_proxy;       /* Dataset's object header proxy */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_STATIC
@@ -756,18 +758,22 @@ H5D__farray_idx_depend(const H5D_chk_idx_info_t *idx_info)
     oloc.file = idx_info->f;
     oloc.addr = idx_info->storage->u.farray.dset_ohdr_addr;
 
-    /* Pin the dataset's object header proxy */
-    if(NULL == (oh_proxy = H5O_pin_flush_dep_proxy(&oloc, idx_info->dxpl_id)))
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTPIN, FAIL, "unable to pin dataset object header proxy")
+    /* Get header */
+    if(NULL == (oh = H5O_protect(&oloc, idx_info->dxpl_id, H5AC__READ_ONLY_FLAG, TRUE)))
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTPROTECT, FAIL, "unable to protect object header")
 
-    /* Make the extensible array a child flush dependency of the dataset's object header */
-    if(H5FA_depend((H5AC_info_t *)oh_proxy, idx_info->storage->u.farray.fa) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTDEPEND, FAIL, "unable to create flush dependency on object header")
+    /* Retrieve the dataset's object header proxy */
+    if(NULL == (oh_proxy = H5O_get_proxy(oh)))
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to get dataset object header proxy")
+
+    /* Make the fixed array a child flush dependency of the dataset's object header proxy */
+    if(H5FA_depend(idx_info->storage->u.farray.fa, idx_info->dxpl_id, oh_proxy) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTDEPEND, FAIL, "unable to create flush dependency on object header proxy")
 
 done:
-    /* Unpin the dataset's object header proxy */
-    if(oh_proxy && H5O_unpin_flush_dep_proxy(oh_proxy) < 0)
-        HDONE_ERROR(H5E_DATASET, H5E_CANTUNPIN, FAIL, "unable to unpin dataset object header proxy")
+    /* Release the object header from the cache */
+    if(oh && H5O_unprotect(&oloc, idx_info->dxpl_id, oh, H5AC__NO_FLAGS_SET) < 0)
+        HDONE_ERROR(H5E_DATASET, H5E_CANTUNPROTECT, FAIL, "unable to release object header")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__farray_idx_depend() */

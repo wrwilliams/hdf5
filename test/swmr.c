@@ -32,25 +32,30 @@
 
 /*
  * This file needs to access private information from the H5F package.
- * This file also needs to access the file testing code.
+ * This file also needs to access the file, file driver, dataset,
+ * and object header testing code.
  */
 #define H5F_FRIEND      /*suppress error about including H5Fpkg   */
 #define H5F_TESTING
 #include "H5Fpkg.h"     /* File access              */
 
-#define H5D_FRIEND              /*suppress error about including H5FDpkg          */
+#define H5D_FRIEND      /*suppress error about including H5Dpkg          */
 #define H5D_TESTING
-#include "H5Dpkg.h"
+#include "H5Dpkg.h"	/* Datasets 				*/
 
-/* This file needs to access the file driver testing code */
 #define H5FD_FRIEND     /*suppress error about including H5FDpkg      */
 #define H5FD_TESTING
 #include "H5FDpkg.h"    /* File drivers             */
+
+#define H5O_FRIEND	/*suppress error about including H5Opkg	  */
+#define H5O_TESTING
+#include "H5Opkg.h"     /* Object headers			*/
 
 
 const char *FILENAME[] = {
     "swmr0",        /* 0 */
     "swmr1",        /* 1 */
+    "swmr2",        /* 2 */
     NULL
 };
 
@@ -65,6 +70,7 @@ static int test_metadata_read_retry_info(hid_t in_fapl);
 static int test_start_swmr_write(hid_t in_fapl, hbool_t new_format);
 static int test_err_start_swmr_write(hid_t in_fapl, hbool_t new_format);
 static int test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format);
+static int test_start_swmr_write_stress_ohdr(hid_t in_fapl);
 
 /* Tests for H5Pget/set_object_flush_cb() */
 static herr_t flush_cb(hid_t obj_id, void *_udata);
@@ -2925,6 +2931,167 @@ error:
 #endif /* !(defined(H5_HAVE_FORK) && defined(H5_HAVE_WAITPID)) */
 
 /*
+ * test_start_swmr_write_stress_ohdr():
+ *
+ * Verify that H5Fswmr_start_write() works correctly when the dataspace header
+ * message is not located in chunk #0 of the object header.
+ *
+ */
+static int
+test_start_swmr_write_stress_ohdr(hid_t in_fapl)
+{
+    hid_t fid = -1;			/* File IDs */
+    hid_t fapl;                         /* File access property list */
+    char filename[NAME_BUF_SIZE];       /* File name */
+    hid_t did = -1, did2 = -1;          /* Dataset IDs */
+    hid_t sid = -1;                     /* Dataspace ID */
+    hid_t tid = -1;                     /* Datatype ID */
+    hid_t dcpl = -1;                    /* Dataset creation property list ID */
+    hid_t aid = -1;                     /* Attribute ID */
+    hsize_t chunk_dims[2] = {10, 10};
+    hsize_t maxdims[2] = {H5S_UNLIMITED, H5S_UNLIMITED};
+    char fill[256];                     /* Fill value for dataset */
+    char attr_data[32];                 /* Data value for attribute */
+    hsize_t dims[2] = {1,1};
+    unsigned chunk_num;                 /* Object header chunk # for dataspace message */
+
+    /* Output message about test being performed */
+    TESTING("H5Fstart_swmr_write()--stress object header messages");
+
+    /* Initialize buffers */
+    HDmemset(fill, 0, sizeof(fill));
+    HDmemset(attr_data, 0, sizeof(attr_data));
+
+    if((fapl = H5Pcopy(in_fapl)) < 0) 
+        FAIL_STACK_ERROR
+
+    /* Set the filename to use for this test (dependent on fapl) */
+    h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
+
+    /* Set to use the latest library format */
+    if(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
+        FAIL_STACK_ERROR
+
+    /* Create the test file */
+    if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+        FAIL_STACK_ERROR
+
+    /* Create a chunked dataset with 2 extendible dimensions */
+    if((sid = H5Screate_simple(1, dims, maxdims)) < 0)
+        FAIL_STACK_ERROR;
+    if((tid = H5Tcopy(H5T_C_S1)) < 0)
+        FAIL_STACK_ERROR;
+    if(H5Tset_size(tid, 256) < 0)
+        FAIL_STACK_ERROR;
+    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
+        FAIL_STACK_ERROR
+    if(H5Pset_chunk(dcpl, 1, chunk_dims) < 0)
+        FAIL_STACK_ERROR;
+    if(H5Pset_fill_value(dcpl, tid, &fill) < 0)
+        FAIL_STACK_ERROR;
+    if((did = H5Dcreate2(fid, "dataset", tid, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
+        FAIL_STACK_ERROR;
+
+    /* Retrieve the chunk # for the dataspace message */
+    chunk_num = UINT_MAX;
+    if(H5O_msg_get_chunkno_test(did, H5O_SDSPACE_ID, &chunk_num) < 0)
+        FAIL_STACK_ERROR;
+    /* Should be in chunk #0 for now */
+    if(0 != chunk_num)
+        TEST_ERROR;
+
+    /* Create a second chunked dataset with 2 extendible dimensions */
+    /* (So that the original dataset's object header can't be extended) */
+    if((sid = H5Screate_simple(1, dims, maxdims)) < 0)
+        FAIL_STACK_ERROR;
+    if((tid = H5Tcopy(H5T_C_S1)) < 0)
+        FAIL_STACK_ERROR;
+    if(H5Tset_size(tid, 256) < 0)
+        FAIL_STACK_ERROR;
+    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
+        FAIL_STACK_ERROR
+    if(H5Pset_chunk(dcpl, 1, chunk_dims) < 0)
+        FAIL_STACK_ERROR;
+    if(H5Pset_fill_value(dcpl, tid, &fill) < 0)
+        FAIL_STACK_ERROR;
+    if((did2 = H5Dcreate2(fid, "dataset2", tid, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
+        FAIL_STACK_ERROR;
+
+    /* Close the second dataset */
+    if(H5Dclose(did2) < 0)
+        FAIL_STACK_ERROR
+
+    /* Close the objects for the dataset creation */
+    if(H5Sclose(sid) < 0)
+        FAIL_STACK_ERROR
+    if(H5Tclose(tid) < 0)
+        FAIL_STACK_ERROR
+    if(H5Pclose(dcpl) < 0)
+        FAIL_STACK_ERROR
+
+    /* Create attribute on original dataset, to push dataspace header message out of header chunk #0 */
+    if((sid = H5Screate(H5S_SCALAR)) < 0)
+        FAIL_STACK_ERROR;
+    if((tid = H5Tcopy(H5T_C_S1)) < 0)
+        FAIL_STACK_ERROR;
+    if(H5Tset_size(tid, 32) < 0)
+        FAIL_STACK_ERROR;
+    if(H5Tset_strpad(tid, H5T_STR_NULLTERM) < 0)
+        FAIL_STACK_ERROR;
+    if((aid = H5Acreate2(did, "attr", tid, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+        FAIL_STACK_ERROR;
+    if(H5Awrite(aid, tid, attr_data) < 0)
+        FAIL_STACK_ERROR;
+    if(H5Sclose(sid) < 0)
+        FAIL_STACK_ERROR
+    if(H5Tclose(tid) < 0)
+        FAIL_STACK_ERROR
+    if(H5Aclose(aid) < 0)
+        FAIL_STACK_ERROR
+
+    /* Retrieve the chunk # for the dataspace message */
+    chunk_num = UINT_MAX;
+    if(H5O_msg_get_chunkno_test(did, H5O_SDSPACE_ID, &chunk_num) < 0)
+        FAIL_STACK_ERROR;
+    /* Should be in chunk #0 for now */
+    if(1 != chunk_num)
+        TEST_ERROR;
+
+    /* Enable SWMR write */
+    if(H5Fstart_swmr_write(fid) < 0)
+        FAIL_STACK_ERROR;
+
+    /* Close the dataset */
+    if(H5Dclose(did) < 0)
+        FAIL_STACK_ERROR
+
+    /* Close the file */
+    if(H5Fclose(fid) < 0)
+        FAIL_STACK_ERROR
+
+    /* Close the FAPL */
+    if(H5Pclose(fapl) < 0)
+        FAIL_STACK_ERROR
+
+    PASSED();
+    return 0;
+
+error:
+    H5E_BEGIN_TRY {
+        H5Sclose(aid);
+        H5Sclose(tid);
+        H5Sclose(sid);
+        H5Sclose(did);
+        H5Sclose(did2);
+        H5Pclose(dcpl);
+        H5Pclose(fapl);
+        H5Fclose(fid);
+    } H5E_END_TRY;
+
+    return -1;
+} /* test_start_swmr_write_stress_ohdr() */
+
+/*
  * Tests for H5Pset/get_object_flush_cb() 
  */
 
@@ -4917,7 +5084,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
         FAIL_STACK_ERROR
 
     /* Set the filename to use for this test (dependent on fapl) */
-    h5_fixname(FILENAME[1], fapl, filename, sizeof(filename));
+    h5_fixname(FILENAME[2], fapl, filename, sizeof(filename));
 
     /* Set to use latest library format */
     if(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
@@ -6740,6 +6907,7 @@ main(void)
     nerrors += test_err_start_swmr_write(fapl, FALSE);
     nerrors += test_start_swmr_write_concur(fapl, TRUE);
     nerrors += test_start_swmr_write_concur(fapl, FALSE);
+    nerrors += test_start_swmr_write_stress_ohdr(fapl);
 
     /* Tests for H5Pget/set_object_flush_cb() */
     nerrors += test_object_flush_cb(fapl);

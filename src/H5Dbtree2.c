@@ -641,8 +641,9 @@ H5D__bt2_idx_init(const H5D_chk_idx_info_t H5_ATTR_UNUSED *idx_info,
 static herr_t
 H5D__btree2_idx_depend(const H5D_chk_idx_info_t *idx_info)
 {
+    H5O_t *oh = NULL;                   /* Object header */
     H5O_loc_t oloc;                     /* Temporary object header location for dataset */
-    H5O_proxy_t *oh_proxy = NULL;       /* Dataset's object header proxy */
+    H5AC_proxy_entry_t *oh_proxy;       /* Dataset's object header proxy */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_STATIC
@@ -664,18 +665,22 @@ H5D__btree2_idx_depend(const H5D_chk_idx_info_t *idx_info)
     oloc.file = idx_info->f;
     oloc.addr = idx_info->storage->u.btree.dset_ohdr_addr;
 
-    /* Pin the dataset's object header proxy */
-    if(NULL == (oh_proxy = H5O_pin_flush_dep_proxy(&oloc, idx_info->dxpl_id)))
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTPIN, FAIL, "unable to pin dataset object header proxy")
+    /* Get header */
+    if(NULL == (oh = H5O_protect(&oloc, idx_info->dxpl_id, H5AC__READ_ONLY_FLAG, TRUE)))
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTPROTECT, FAIL, "unable to protect object header")
 
-    /* Make the v2 B-tree a child flush dependency of the dataset's object header */
-    if(H5B2_depend((H5AC_info_t *)oh_proxy, idx_info->storage->u.btree2.bt2) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTDEPEND, FAIL, "unable to create flush dependency on object header")
+    /* Retrieve the dataset's object header proxy */
+    if(NULL == (oh_proxy = H5O_get_proxy(oh)))
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to get dataset object header proxy")
+
+    /* Make the v2 B-tree a child flush dependency of the dataset's object header proxy */
+    if(H5B2_depend(idx_info->storage->u.btree2.bt2, idx_info->dxpl_id, oh_proxy) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTDEPEND, FAIL, "unable to create flush dependency on object header proxy")
 
 done:
-    /* Unpin the dataset's object header proxy */
-    if(oh_proxy && H5O_unpin_flush_dep_proxy(oh_proxy) < 0)
-        HDONE_ERROR(H5E_DATASET, H5E_CANTUNPIN, FAIL, "unable to unpin dataset object header proxy")
+    /* Release the object header from the cache */
+    if(oh && H5O_unprotect(&oloc, idx_info->dxpl_id, oh, H5AC__NO_FLAGS_SET) < 0)
+        HDONE_ERROR(H5E_DATASET, H5E_CANTUNPROTECT, FAIL, "unable to release object header")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__btree2_idx_depend() */

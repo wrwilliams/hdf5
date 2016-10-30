@@ -37,9 +37,10 @@
 /* Local Prototypes */
 /********************/
 
-static hid_t open_skeleton(const char *filename, unsigned verbose, unsigned old);
-static int add_records(hid_t fid, unsigned verbose, unsigned long nrecords,
-    unsigned long flush_count);
+static hid_t open_skeleton(const char *filename, hbool_t verbose, FILE *verbose_file,
+    unsigned random_seed, hbool_t old);
+static int add_records(hid_t fid, hbool_t verbose, FILE *verbose_file,
+    unsigned long nrecords, unsigned long flush_count);
 static void usage(void);
 
 
@@ -51,8 +52,17 @@ static void usage(void);
  * Parameters:  const char *filename
  *              The filename of the SWMR HDF5 file to open
  *
- *              unsigned verbose
+ *              hbool_t verbose
  *              Whether or not to emit verbose console messages
+ *
+ *              FILE *verbose_file
+ *              File handle for verbose output
+ *
+ *              unsigned random_seed
+ *              Random seed for the file (used for verbose logging)
+ *
+ *              hbool_t old
+ *              Whether to write in "old" file format
  *
  * Return:      Success:    The file ID of the opened SWMR file
  *                          The dataset IDs are stored in a global array
@@ -62,7 +72,8 @@ static void usage(void);
  *-------------------------------------------------------------------------
  */
 static hid_t
-open_skeleton(const char *filename, unsigned verbose, unsigned old)
+open_skeleton(const char *filename, hbool_t verbose, FILE *verbose_file,
+    unsigned random_seed, hbool_t old)
 {
     hid_t fid;          /* File ID for new HDF5 file */
     hid_t fapl;         /* File access property list */
@@ -96,9 +107,13 @@ open_skeleton(const char *filename, unsigned verbose, unsigned old)
     }
 #endif /* QAK */
 
-#ifdef QAK
-    H5Pset_fapl_log(fapl, "append.log", H5FD_LOG_ALL, (size_t)(512 * 1024 * 1024));
-#endif /* QAK */
+    if(verbose) {
+        char verbose_name[1024];
+
+        HDsnprintf(verbose_name, sizeof(verbose_name), "swmr_writer.log.%u", random_seed);
+
+        H5Pset_fapl_log(fapl, verbose_name, H5FD_LOG_ALL, (size_t)(512 * 1024 * 1024));
+    } /* end if */
 
     /* Open the file */
     if((fid = H5Fopen(filename, H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE, fapl)) < 0)
@@ -110,7 +125,7 @@ open_skeleton(const char *filename, unsigned verbose, unsigned old)
 
     /* Emit informational message */
     if(verbose)
-        HDfprintf(stderr, "Opening datasets\n");
+        HDfprintf(verbose_file, "Opening datasets\n");
 
     /* Open the datasets */
     for(u = 0; u < NLEVELS; u++)
@@ -133,8 +148,11 @@ open_skeleton(const char *filename, unsigned verbose, unsigned old)
  * Parameters:  hid_t fid
  *              The file ID of the SWMR HDF5 file
  *
- *              unsigned verbose
+ *              hbool_t verbose
  *              Whether or not to emit verbose console messages
+ *
+ *              FILE *verbose_file
+ *              File handle for verbose output
  *
  *              unsigned long nrecords
  *              # of records to write to the datasets
@@ -148,7 +166,8 @@ open_skeleton(const char *filename, unsigned verbose, unsigned old)
  *-------------------------------------------------------------------------
  */
 static int
-add_records(hid_t fid, unsigned verbose, unsigned long nrecords, unsigned long flush_count)
+add_records(hid_t fid, hbool_t verbose, FILE *verbose_file,
+    unsigned long nrecords, unsigned long flush_count)
 {
     hid_t tid;                              /* Datatype ID for records */
     hid_t mem_sid;                          /* Memory dataspace ID */
@@ -245,7 +264,7 @@ add_records(hid_t fid, unsigned verbose, unsigned long nrecords, unsigned long f
 
     /* Emit informational message */
     if(verbose)
-        HDfprintf(stderr, "Closing datasets\n");
+        HDfprintf(verbose_file, "Closing datasets\n");
 
     /* Close the datasets */
     for(u = 0; u < NLEVELS; u++)
@@ -281,9 +300,10 @@ int main(int argc, const char *argv[])
     hid_t fid;                  /* File ID for file opened */
     long nrecords = 0;          /* # of records to append */
     long flush_count = 10000;   /* # of records to write between flushing file */
-    unsigned verbose = 1;       /* Whether to emit some informational messages */
-    unsigned old = 0;           /* Whether to use non-latest-format when opening file */
-    unsigned use_seed = 0;      /* Set to 1 if a seed was set on the command line */
+    hbool_t verbose = TRUE;     /* Whether to emit some informational messages */
+    FILE *verbose_file = NULL;  /* File handle for verbose output */
+    hbool_t old = FALSE;        /* Whether to use non-latest-format when opening file */
+    hbool_t use_seed = FALSE;   /* Set to TRUE if a seed was set on the command line */
     unsigned random_seed = 0;   /* Random # seed */
     unsigned u;                 /* Local index variable */
     int temp;
@@ -306,13 +326,13 @@ int main(int argc, const char *argv[])
 
                     /* Be quiet */
                     case 'q':
-                        verbose = 0;
+                        verbose = FALSE;
                         u++;
                         break;
                     
                     /* Random # seed */
                     case 'r':
-                        use_seed = 1;
+                        use_seed = TRUE;
                         temp = HDatoi(argv[u + 1]);
                         random_seed = (unsigned)temp;
                         u += 2;
@@ -320,7 +340,7 @@ int main(int argc, const char *argv[])
 
                     /* Use non-latest-format when opening file */
                     case 'o':
-                        old = 1;
+                        old = TRUE;
                         u++;
                         break;
 
@@ -344,26 +364,39 @@ int main(int argc, const char *argv[])
     if(flush_count >= nrecords)
         usage();
 
-    /* Emit informational message */
-    if(verbose) {
-        HDfprintf(stderr, "Parameters:\n");
-        HDfprintf(stderr, "\t# of records between flushes = %ld\n", flush_count);
-        HDfprintf(stderr, "\t# of records to write = %ld\n", nrecords);
-    } /* end if */
-
     /* Set the random seed */
-    if(0 == use_seed) {
+    if(!use_seed) {
         struct timeval t;
+
         HDgettimeofday(&t, NULL);
         random_seed = (unsigned)(t.tv_usec);
     } /* end if */
     HDsrandom(random_seed);
+
+    /* Open output file */
+    if(verbose) {
+        char verbose_name[1024];
+
+        HDsnprintf(verbose_name, sizeof(verbose_name), "swmr_writer.out.%u", random_seed);
+        if(NULL == (verbose_file = HDfopen(verbose_name, "w"))) {
+            HDfprintf(stderr, "Can't open verbose output file!\n");
+            HDexit(1);
+        }
+    } /* end if */
+
+    /* Emit informational message */
+    if(verbose) {
+        HDfprintf(verbose_file, "Parameters:\n");
+        HDfprintf(verbose_file, "\t# of records between flushes = %ld\n", flush_count);
+        HDfprintf(verbose_file, "\t# of records to write = %ld\n", nrecords);
+    } /* end if */
+
     /* ALWAYS emit the random seed for possible debugging */
-    HDfprintf(stderr, "Using writer random seed: %u\n", random_seed);
+    HDfprintf(stdout, "Using writer random seed: %u\n", random_seed);
 
     /* Emit informational message */
     if(verbose)
-        HDfprintf(stderr, "Generating symbol names\n");
+        HDfprintf(verbose_file, "Generating symbol names\n");
 
     /* Generate dataset names */
     if(generate_symbols() < 0)
@@ -371,10 +404,10 @@ int main(int argc, const char *argv[])
 
     /* Emit informational message */
     if(verbose)
-        HDfprintf(stderr, "Opening skeleton file: %s\n", FILENAME);
+        HDfprintf(verbose_file, "Opening skeleton file: %s\n", FILENAME);
 
     /* Open file skeleton */
-    if((fid = open_skeleton(FILENAME, verbose, old)) < 0) {
+    if((fid = open_skeleton(FILENAME, verbose, verbose_file, random_seed, old)) < 0) {
         HDfprintf(stderr, "Error opening skeleton file!\n");
         HDexit(1);
     } /* end if */
@@ -384,17 +417,17 @@ int main(int argc, const char *argv[])
 
     /* Emit informational message */
     if(verbose)
-        HDfprintf(stderr, "Adding records\n");
+        HDfprintf(verbose_file, "Adding records\n");
 
     /* Append records to datasets */
-    if(add_records(fid, verbose, (unsigned long)nrecords, (unsigned long)flush_count) < 0) {
+    if(add_records(fid, verbose, verbose_file, (unsigned long)nrecords, (unsigned long)flush_count) < 0) {
         HDfprintf(stderr, "Error appending records to datasets!\n");
         HDexit(1);
     } /* end if */
 
     /* Emit informational message */
     if(verbose)
-        HDfprintf(stderr, "Releasing symbols\n");
+        HDfprintf(verbose_file, "Releasing symbols\n");
 
     /* Clean up the symbols */
     if(shutdown_symbols() < 0) {
@@ -404,7 +437,7 @@ int main(int argc, const char *argv[])
 
     /* Emit informational message */
     if(verbose)
-        HDfprintf(stderr, "Closing objects\n");
+        HDfprintf(verbose_file, "Closing objects\n");
 
     /* Close objects opened */
     if(H5Fclose(fid) < 0) {
@@ -414,3 +447,4 @@ int main(int argc, const char *argv[])
 
     return 0;
 }
+

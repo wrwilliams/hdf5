@@ -1270,7 +1270,7 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
             /* Flush the superblock */
             if(H5F_super_dirty(file) < 0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, NULL, "unable to mark superblock as dirty")
-            if(H5F_flush_tagged_metadata(file, (haddr_t)0, H5AC_ind_read_dxpl_id) < 0)
+            if(H5F_flush_tagged_metadata(file, H5AC__SUPERBLOCK_TAG, H5AC_ind_read_dxpl_id) < 0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTFLUSH, NULL, "unable to flush superblock")
 
 	    /* Remove the file lock for SWMR_WRITE */

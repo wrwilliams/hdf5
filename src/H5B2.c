@@ -1567,7 +1567,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5B2_depend(H5AC_info_t *parent_entry, H5B2_t *bt2)
+H5B2_depend(H5B2_t *bt2, hid_t dxpl_id, H5AC_proxy_entry_t *parent)
 {
     /* Local variables */
     H5B2_hdr_t  *hdr = bt2->hdr;        /* Header for B-tree */
@@ -1575,41 +1575,27 @@ H5B2_depend(H5AC_info_t *parent_entry, H5B2_t *bt2)
 
     FUNC_ENTER_NOAPI(SUCCEED)
 
-#ifdef QAK
-HDfprintf(stderr, "%s: Called\n", FUNC);
-#endif /* QAK */
-
     /*
      * Check arguments.
-     *
-     * At present, this function is only used to setup a flush dependency
-     * between an object header proxy and the v2 B-tree header when
-     * the B-tree is being used to index a chunked data set.
-     *
-     * Make sure that the parameters are congruent with this.
      */
     HDassert(bt2);
     HDassert(hdr);
-    HDassert(parent_entry);
-    HDassert(parent_entry->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
-    HDassert(parent_entry->type);
-    HDassert(parent_entry->type->id == H5AC_OHDR_PROXY_ID);
-    HDassert(hdr->parent == NULL || hdr->parent == parent_entry);
+    HDassert(parent);
+    HDassert(hdr->parent == NULL || hdr->parent == parent);
 
     /*
-     * Check to see if the flush dependency between the object header proxy
+     * Check to see if the flush dependency between the parent
      * and the v2 B-tree header has already been setup.  If it hasn't, then
      * set it up.
      */
     if(NULL == hdr->parent) {
         /* Set the shared v2 B-tree header's file context for this operation */
-        bt2->hdr->f = bt2->f;
+        hdr->f = bt2->f;
 
-        /* Set up flush dependency between parent entry and B-tree header */
-        if(H5B2__create_flush_depend(parent_entry, (H5AC_info_t *)hdr) < 0)
-            HGOTO_ERROR(H5E_BTREE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency on file metadata")
-
-	hdr->parent = parent_entry;
+        /* Add the v2 B-tree as a child of the parent (proxy) */
+        if(H5AC_proxy_entry_add_child(parent, hdr->f, dxpl_id, hdr) < 0)
+            HGOTO_ERROR(H5E_BTREE, H5E_CANTSET, FAIL, "unable to add v2 B-tree as child of proxy")
+	hdr->parent = parent;
     } /* end if */
 
 done:

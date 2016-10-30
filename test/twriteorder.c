@@ -284,7 +284,9 @@ int write_wo_file(void)
     }
 
     /* all writes done. return succeess. */
+#ifdef DEBUG
     printf("wrote %d blocks\n", nlinkedblock_g);
+#endif
     return 0;
 }
 
@@ -329,7 +331,9 @@ int read_wo_file(void)
 #endif
     }
 
+#ifdef DEBUG
     printf("read %d blocks\n", linkedblocks_read);
+#endif
     return 0;
 }
 
@@ -407,7 +411,9 @@ main(int argc, char *argv[])
     /* launch writer */
     /* ============= */
     /* this process continues to launch the writer */
+#ifdef DEBUG
     printf("%d: continue as the writer process\n", mypid);
+#endif
     if (write_wo_file() < 0){
 	fprintf(stderr, "write_wo_file encountered error\n");
 	Hgoto_error(1);

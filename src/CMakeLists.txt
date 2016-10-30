@@ -44,8 +44,10 @@ IDE_GENERATED_PROPERTIES ("H5A" "${H5A_HDRS}" "${H5A_SOURCES}" )
 
 set (H5AC_SOURCES
     ${HDF5_SRC_DIR}/H5AC.c
+    ${HDF5_SRC_DIR}/H5ACdbg.c
     ${HDF5_SRC_DIR}/H5AClog.c
     ${HDF5_SRC_DIR}/H5ACmpio.c
+    ${HDF5_SRC_DIR}/H5ACproxy.c
 )
 
 set (H5AC_HDRS
@@ -84,6 +86,7 @@ IDE_GENERATED_PROPERTIES ("H5B2" "${H5B2_HDRS}" "${H5B2_SOURCES}" )
 
 set (H5C_SOURCES
     ${HDF5_SRC_DIR}/H5C.c
+    ${HDF5_SRC_DIR}/H5Cdbg.c
     ${HDF5_SRC_DIR}/H5Cepoch.c
     ${HDF5_SRC_DIR}/H5Clog.c
     ${HDF5_SRC_DIR}/H5Cmpio.c
@@ -454,7 +457,6 @@ set (H5O_SOURCES
     ${HDF5_SRC_DIR}/H5Oname.c
     ${HDF5_SRC_DIR}/H5Onull.c
     ${HDF5_SRC_DIR}/H5Opline.c
-    ${HDF5_SRC_DIR}/H5Oproxy.c
     ${HDF5_SRC_DIR}/H5Orefcount.c
     ${HDF5_SRC_DIR}/H5Osdspace.c
     ${HDF5_SRC_DIR}/H5Oshared.c
