@@ -8211,7 +8211,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static herr_t
-test_chunk_fast(hid_t fapl)
+test_chunk_fast(const char *env_h5_driver, hid_t fapl)
 {
     char        filename[FILENAME_BUF_SIZE];
     hid_t       fid = -1;       /* File ID */
@@ -12702,7 +12702,7 @@ main(void)
         nerrors += (test_huge_chunks(my_fapl) < 0		? 1 : 0);
         nerrors += (test_chunk_cache(my_fapl) < 0		? 1 : 0);
         nerrors += (test_big_chunks_bypass_cache(my_fapl) < 0   ? 1 : 0);
-        nerrors += (test_chunk_fast(my_fapl) < 0	? 1 : 0);
+        nerrors += (test_chunk_fast(envval, my_fapl) < 0	? 1 : 0);
         nerrors += (test_reopen_chunk_fast(my_fapl) < 0		? 1 : 0);
         nerrors += (test_chunk_fast_bug1(my_fapl) < 0           ? 1 : 0);
         nerrors += (test_chunk_expand(my_fapl) < 0		? 1 : 0);
