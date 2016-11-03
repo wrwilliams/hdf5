@@ -303,11 +303,7 @@ verify_no_unknown_tags(hid_t fid)
         entry_ptr = cache_ptr->index[i];
         while(entry_ptr != NULL) {
             if(!entry_ptr->dirtied)
-{
-HDfprintf(stderr, "entry_ptr->addr = %a\n", entry_ptr->addr);
-HDfprintf(stderr, "entry_ptr->type->name = '%s'\n", entry_ptr->type->name);
                 TEST_ERROR;
-}
 
             entry_ptr = entry_ptr->ht_next;
         } /* end if */
@@ -450,11 +446,7 @@ verify_tag(hid_t fid, int id, haddr_t tag)
         while(entry_ptr != NULL) {
             if(entry_ptr->type->id == id && !entry_ptr->dirtied) {
                 if(entry_ptr->tag_info->tag != tag)
-{
-HDfprintf(stderr, "entry_ptr->tag_info->tag = %a\n", entry_ptr->tag_info->tag);
-HDfprintf(stderr, "tag = %a\n", tag);
                     TEST_ERROR;
-}
 
                 /* Mark the entry/tag pair as found */
                 entry_ptr->dirtied = TRUE;
