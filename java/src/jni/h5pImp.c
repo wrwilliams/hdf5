@@ -5019,7 +5019,7 @@ Java_hdf_hdf5lib_H5_H5Pset_1mdc_1log_1options
     herr_t      retVal = -1;
     const char *lstr;
 
-    PIN_JAVA_STRING0(location, lstr);
+    PIN_JAVA_STRING(location, lstr);
 
     retVal = H5Pset_mdc_log_options((hid_t)fapl_id, (hbool_t)is_enabled, lstr, (hbool_t)start_on_access);
 
