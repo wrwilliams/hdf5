@@ -49,7 +49,7 @@ class H5_DLLCPP H5Object;  // forward declaration for UserData4Aiterate
 ///\brief	Default constructor: Creates a stub attribute
 // Programmer	Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
-Attribute::Attribute() : AbstractDs(), IdComponent(), id(H5I_INVALID_HID) {}
+Attribute::Attribute() : AbstractDs(), H5Location(), id(H5I_INVALID_HID) {}
 
 //--------------------------------------------------------------------------
 // Function:	Attribute copy constructor
@@ -57,7 +57,7 @@ Attribute::Attribute() : AbstractDs(), IdComponent(), id(H5I_INVALID_HID) {}
 ///\param	original  - IN: Original Attribute object to copy
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-Attribute::Attribute(const Attribute& original) : AbstractDs(), IdComponent(), id(original.id)
+Attribute::Attribute(const Attribute& original) : AbstractDs(), H5Location(), id(original.id)
 {
     incRefCount(); // increment number of references to this id
 }
@@ -70,7 +70,7 @@ Attribute::Attribute(const Attribute& original) : AbstractDs(), IdComponent(), i
 ///\exception	H5::AttributeIException
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-Attribute::Attribute(const hid_t existing_id) : AbstractDs(), IdComponent(), id(existing_id)
+Attribute::Attribute(const hid_t existing_id) : AbstractDs(), H5Location(), id(existing_id)
 {
     incRefCount(); // increment number of references to this id
 }
@@ -279,23 +279,6 @@ DataSpace Attribute::getSpace() const
 }
 
 //--------------------------------------------------------------------------
-// Function:	Attribute::getFileName
-///\brief	Gets the name of the file, in which this attribute belongs.
-///\return	File name
-///\exception	H5::IdComponentException
-// Programmer	Binh-Minh Ribler - Jul, 2004
-//--------------------------------------------------------------------------
-H5std_string Attribute::getFileName() const
-{
-   try {
-      return(p_get_file_name());
-   }
-   catch (IdComponentException& E) {
-      throw FileIException("Attribute::getFileName", E.getDetailMsg());
-   }
-}
-
-//--------------------------------------------------------------------------
 // Function:	Attribute::getName
 ///\brief	Gets the name of this attribute, returning its length.
 ///\param	attr_name - OUT: Buffer for the name string as char*
@@ -483,31 +466,6 @@ hsize_t Attribute::getStorageSize() const
 }
 
 //--------------------------------------------------------------------------
-// Function:	Attribute::flush
-///\brief	Flushes all buffers associated with a file specified by
-///		this attribute, to disk.
-///\param	scope - IN: Specifies the scope of the flushing action,
-///		which can be either of these values:
-///		\li \c H5F_SCOPE_GLOBAL - Flushes the entire virtual file
-///		\li \c H5F_SCOPE_LOCAL - Flushes only the specified file
-///\exception	H5::AttributeIException
-///\par Description
-///		This attribute is used to identify the file to be flushed.
-// Programmer	Binh-Minh Ribler - 2012
-// Modification
-//	Sep 2012 - BMR
-//		Duplicated from H5Location
-//--------------------------------------------------------------------------
-void Attribute::flush(H5F_scope_t scope) const
-{
-   herr_t ret_value = H5Fflush(getId(), scope);
-   if( ret_value < 0 )
-   {
-      throw AttributeIException("Attribute::flush", "H5Fflush failed");
-   }
-}
-
-//--------------------------------------------------------------------------
 // Function:    Attribute::getId
 ///\brief	Get the id of this attribute
 ///\return	Attribute identifier
@@ -517,6 +475,11 @@ void Attribute::flush(H5F_scope_t scope) const
 //		addition, member IdComponent::id is moved into subclasses, and
 //		IdComponent::getId now becomes pure virtual function.
 // Programmer   Binh-Minh Ribler - May, 2008
+// Modification
+//	Aug 2016 - BMR
+//		Note that Attribute is now inheriting from H5Location, because
+//		an attribute id can be used to specify a location in HDF5
+//		library.
 //--------------------------------------------------------------------------
 hid_t Attribute::getId() const
 {

@@ -102,9 +102,6 @@ class H5_DLLCPP H5Object : public H5Location {
 	ssize_t getObjName(H5std_string& obj_name, size_t len = 0) const;
 	H5std_string getObjName() const;
 
-	// Noop destructor.
-	virtual ~H5Object();
-
    protected:
 	// Default constructor
 	H5Object();
@@ -121,6 +118,13 @@ class H5_DLLCPP H5Object : public H5Location {
 
 	// Copy constructor: makes copy of an H5Object object.
 	// H5Object(const H5Object& original);
+
+        // Sets the identifier of this object to a new value. - this one
+        // doesn't increment reference count
+        virtual void p_setId(const hid_t new_id) = 0;
+
+	// Noop destructor.
+	virtual ~H5Object();
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
