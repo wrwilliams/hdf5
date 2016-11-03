@@ -47,7 +47,7 @@ set (H5AC_SOURCES
     ${HDF5_SRC_DIR}/H5ACdbg.c
     ${HDF5_SRC_DIR}/H5AClog.c
     ${HDF5_SRC_DIR}/H5ACmpio.c
-    ${HDF5_SRC_DIR}/H5ACproxy.c
+    ${HDF5_SRC_DIR}/H5ACproxy_entry.c
 )
 
 set (H5AC_HDRS

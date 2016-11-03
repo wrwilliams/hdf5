@@ -1502,7 +1502,7 @@ if ( ( (cache_ptr)->index_size !=                                           \
  *-------------------------------------------------------------------------
  */
 
-#ifdef H5C_DO_SANITY_CHECKS
+#if H5C_DO_SANITY_CHECKS
 #define H5C__REMOVE_ENTRY_FROM_SLIST(cache_ptr, entry_ptr, during_flush)    \
 {                                                                           \
     HDassert( (cache_ptr) );                                                \
