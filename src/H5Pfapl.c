@@ -186,7 +186,6 @@
 /* Definition for object flush callback */
 #define H5F_ACS_OBJECT_FLUSH_CB_SIZE		sizeof(H5F_object_flush_t)
 #define H5F_ACS_OBJECT_FLUSH_CB_DEF             {NULL, NULL}
-<<<<<<< HEAD
 /* Definition for status_flags in the superblock */
 #define H5F_ACS_CLEAR_STATUS_FLAGS_SIZE         sizeof(hbool_t)
 #define H5F_ACS_CLEAR_STATUS_FLAGS_DEF          FALSE
