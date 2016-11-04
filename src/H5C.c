@@ -2150,12 +2150,12 @@ H5C_protect(H5F_t *		f,
     hbool_t             coll_access = FALSE; /* whether access to the cache entry is done collectively */
 #endif /* H5_HAVE_PARALLEL */
     hbool_t		write_permitted;
+    hbool_t             was_loaded = FALSE;     /* Whether the entry was loaded as a result of the protect */
     size_t		empty_space;
     void *		thing;
     H5C_cache_entry_t *	entry_ptr;
     H5P_genplist_t    * dxpl;    /* dataset transfer property list */
     void *		ret_value = NULL;       /* Return value */
-hbool_t was_loaded = FALSE;
 
     FUNC_ENTER_NOAPI(NULL)
 
@@ -2443,15 +2443,9 @@ hbool_t was_loaded = FALSE;
          */
         H5C__UPDATE_RP_FOR_INSERTION(cache_ptr, entry_ptr, NULL)
 
-was_loaded = TRUE;
-#ifdef QAK
-        /* If the entry's type has a 'notify' callback send a 'after load'
-         * notice now that the entry is fully integrated into the cache.
-         */
-        if(entry_ptr->type->notify &&
-                (entry_ptr->type->notify)(H5C_NOTIFY_ACTION_AFTER_LOAD, entry_ptr) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, NULL, "can't notify client about entry inserted into cache")
-#endif /* QAK */
+        /* Record that the entry was loaded, to trigger a notify callback later */
+        /* (After the entry is fully added to the cache) */
+        was_loaded = TRUE;
     }
 
     HDassert( entry_ptr->addr == addr );
@@ -2553,16 +2547,11 @@ was_loaded = TRUE;
         }
     }
 
-#ifdef ASK
     /* If we loaded the entry and the entry's type has a 'notify' callback, send
-     * a 'after insertion' notice now that the entry is fully integrated into
+     * an 'after load' notice now that the entry is fully integrated into
      * the cache and protected.  We must wait until it is protected so it is not
      * evicted during the notify callback.
      */
-    if(!hit && entry_ptr->type->notify &&
-            (entry_ptr->type->notify)(H5C_NOTIFY_ACTION_AFTER_LOAD, entry_ptr) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, NULL, "can't notify client about entry inserted into cache")
-#endif
     if(was_loaded) {
         /* If the entry's type has a 'notify' callback send a 'after load'
          * notice now that the entry is fully integrated into the cache.

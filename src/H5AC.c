@@ -998,18 +998,18 @@ H5AC_mark_entry_dirty(void *thing)
     /* Sanity check */
     HDassert(thing);
 
+    /* Set up entry & cache pointers */
+    entry_ptr = (H5AC_info_t *)thing;
+    cache_ptr = entry_ptr->cache_ptr;
+
 #if H5AC__TRACE_FILE_ENABLED
     /* For the mark pinned or protected entry dirty call, only the addr
      * is really necessary in the trace file.  Write the result to catch
      * occult errors.
      */
     if(NULL != (trace_file_ptr = H5C_get_trace_file_ptr_from_entry(thing)))
-        sprintf(trace, "%s 0x%lx", FUNC,
-	        (unsigned long)(((H5C_cache_entry_t *)thing)->addr));
+        sprintf(trace, "%s 0x%lx", FUNC, (unsigned long)(entry_ptr->addr));
 #endif /* H5AC__TRACE_FILE_ENABLED */
-
-    entry_ptr = (H5AC_info_t *)thing;
-    cache_ptr = entry_ptr->cache_ptr;
 
     /* Check if log messages are being emitted */
     if(H5C_get_logging_status(cache_ptr, &log_enabled, &curr_logging) < 0)
@@ -2759,7 +2759,7 @@ herr_t
 H5AC_remove_entry(void *_entry)
 {
     H5AC_info_t *entry = (H5AC_info_t *)_entry; /* Entry to remove */
-    H5C_t *cache;                       /* Pointer to the entry's associated metadata cache */
+    H5C_t *cache = NULL;                /* Pointer to the entry's associated metadata cache */
 #if H5AC__TRACE_FILE_ENABLED
     char                trace[128] = "";
     FILE *              trace_file_ptr = NULL;
