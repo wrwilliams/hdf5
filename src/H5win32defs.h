@@ -42,6 +42,7 @@ typedef __int64             h5_stat_size_t;
 #define HDlseek(F,O,W)      _lseeki64(F,O,W)
 #define HDlstat(S,B)        _lstati64(S,B)
 #define HDmkdir(S,M)        _mkdir(S)
+#define HDnanosleep(S)      Wnanosleep(S)
 #define HDoff_t             __int64
 /* _O_BINARY must be set in Windows to avoid CR-LF <-> LF EOL
  * transformations when performing I/O.
