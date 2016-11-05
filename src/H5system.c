@@ -911,6 +911,27 @@ Wflock(int fd, int operation) {
     return 0;
 } /* end Wflock() */
 
+
+ /*--------------------------------------------------------------------------
+  * Function:    Wnanosleep
+  *
+  * Purpose:     Sleep for a given # of nanoseconds (Windows version)
+  *
+  * Return:      SUCCEED/FAIL
+  *
+  * Programmer:  Dana Robinson
+  *              Fall 2016
+  *--------------------------------------------------------------------------
+  */
+void
+Wnanosleep(uint64_t nanosec)
+{
+    /* XXX: Currently just a placeholder */
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    FUNC_LEAVE_NOAPI_VOID
+} /* end Wnanosleep() */
+
 #endif /* H5_HAVE_WIN32_API */
 
 
