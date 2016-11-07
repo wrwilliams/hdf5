@@ -221,7 +221,7 @@ H5C__tag_entry(H5C_t *cache, H5C_cache_entry_t *entry, hid_t dxpl_id)
         /* Perform some sanity checks to ensure that a correct tag is being applied */
         if(H5C_verify_tag(entry->type->id, tag) < 0)
             HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "tag verification failed")
-    } /* end if */
+    } /* end else */
 #endif
 
     /* Search the list of tagged object addresses in the cache */
