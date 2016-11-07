@@ -21,13 +21,13 @@ EXIT_SUCCESS=0
 EXIT_FAILURE=1
 
 H5CLEAR=../../src/misc/h5clear
-H5CLEAR_BIN=`pwd`/$H5CLEAR    	# The path of the tool binary
+H5CLEAR_BIN=`pwd`/$H5CLEAR        # The path of the tool binary
 
 GENTEST=h5clear_gentest         # Generate test files
-GENTEST_BIN=`pwd`/$GENTEST	# The path to the binary
+GENTEST_BIN=`pwd`/$GENTEST    # The path to the binary
 
-OPENCHK=clear_open_chk		# Try opening the test file
-OPENCHK_BIN=`pwd`/$OPENCHK	# The path to the binary
+OPENCHK=clear_open_chk        # Try opening the test file
+OPENCHK_BIN=`pwd`/$OPENCHK    # The path to the binary
 
 SUCCEED=0
 FAIL=1
@@ -43,78 +43,69 @@ TESTING() {
    echo "Testing $* $SPACES" | cut -c1-70 | tr -d '\012'
 }
 
-# (1) Use "h5clear" to clear the status_flags in the test file
-# (2) Open the test file via "clear_open_chk"
-# $1 is the filename for testing
-TOOLTEST() {
-    TESTING $H5CLEAR $1
-    fname=$1
-    # Use "h5clear" to clear the status_flags in the test file
-    $RUNSERIAL $H5CLEAR_BIN $fname
-    if test $? -ne $SUCCEED; then
-	echo ".....$H5CLEAR: should succeed"
-	nerrors=`expr $nerrors + 1`
-    else
-	# Open the test file via "clear_open_chk"
-	$OPENCHK_BIN $fname
-	if test $? -ne $SUCCEED; then
-	    echo "......$OPENCHK: should succeed"
-	    nerrors=`expr $nerrors + 1`
-	else
-	    echo "PASSED"
-	fi
-    fi
-}
 
 
-
-# Use "clear_open_chk" to check if the file open succeeds or fails
+# (1)Use "clear_open_chk" to check if the file open succeeds or fails
 # $1 is the filename to open
 # $2 is the expected return from "clear_open_chk"
-OPENCHK() {
+# (2) Use "h5clear" to clear the status_flags in the test file
+# (3) Open the test file via "clear_open_chk"
+TOOLTEST() {
     fname=$1
     expected=$2
-    #
+    # (1)
     $OPENCHK_BIN $fname 2>/dev/null
     actual=$?
     if test $actual -ne $expected; then
        echo "Unexpected return from $OPENCHK"
        nerrors=`expr $nerrors + 1`
     fi
+    # (2)
+    TESTING $H5CLEAR $1
+    fname=$1
+    # Use "h5clear" to clear the status_flags in the test file
+    $RUNSERIAL $H5CLEAR_BIN $fname
+    if test $? -ne $SUCCEED; then
+    echo ".....$H5CLEAR: should succeed"
+    nerrors=`expr $nerrors + 1`
+    else
+    # (3) Open the test file via "clear_open_chk"
+    $OPENCHK_BIN $fname
+    if test $? -ne $SUCCEED; then
+        echo "......$OPENCHK: should succeed"
+        nerrors=`expr $nerrors + 1`
+    else
+        echo "PASSED"
+    fi
+    fi
 }
 
 ##############################################################################
 ##############################################################################
-###			  T H E   T E S T S                                ###
+###              T H E   T E S T S                                ###
 ##############################################################################
 ##############################################################################
 #
-$GENTEST_BIN				# Create HDF5 test files
-if test $? -ne 0; then			# Error returned from generating test files
+$GENTEST_BIN                # Create HDF5 test files
+if test $? -ne 0; then            # Error returned from generating test files
     echo "$GENTEST: .....fail in generating test files"
     nerrors=`expr $nerrors + 1`
 else
     # Initial file open fails
     # After "h5clear" the file, the subsequent file open succeeds
-    OPENCHK h5clear_sec2_v3.h5 $FAIL	
-    TOOLTEST h5clear_sec2_v3.h5		
+    TOOLTEST h5clear_sec2_v3.h5 $FAIL
     #
-    OPENCHK h5clear_log_v3.h5 $FAIL	
-    TOOLTEST h5clear_log_v3.h5 
+    TOOLTEST h5clear_log_v3.h5 $FAIL
     #
-    OPENCHK latest_h5clear_sec2_v3.h5 $FAIL
-    TOOLTEST latest_h5clear_sec2_v3.h5
+    TOOLTEST latest_h5clear_sec2_v3.h5 $FAIL
     #
-    OPENCHK latest_h5clear_log_v3.h5 $FAIL	
-    TOOLTEST latest_h5clear_log_v3.h5
+    TOOLTEST latest_h5clear_log_v3.h5 $FAIL
 fi
 #
 #
 # File open succeeds because the library does not check status_flags for file with < v3 superblock
-OPENCHK h5clear_sec2_v0.h5 $SUCCEED
-TOOLTEST h5clear_sec2_v0.h5
-OPENCHK h5clear_sec2_v2.h5 $SUCCEED
-TOOLTEST h5clear_sec2_v2.h5
+TOOLTEST h5clear_sec2_v0.h5 $SUCCEED
+TOOLTEST h5clear_sec2_v2.h5 $SUCCEED
 #
 # Clean up test files
 if test -z "$HDF5_NOCLEANUP"; then
