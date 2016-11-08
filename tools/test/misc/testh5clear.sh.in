@@ -23,9 +23,6 @@ EXIT_FAILURE=1
 H5CLEAR=../../src/misc/h5clear
 H5CLEAR_BIN=`pwd`/$H5CLEAR        # The path of the tool binary
 
-GENTEST=h5clear_gentest         # Generate test files
-GENTEST_BIN=`pwd`/$GENTEST    # The path to the binary
-
 OPENCHK=clear_open_chk        # Try opening the test file
 OPENCHK_BIN=`pwd`/$OPENCHK    # The path to the binary
 
@@ -86,21 +83,15 @@ TOOLTEST() {
 ##############################################################################
 ##############################################################################
 #
-$GENTEST_BIN                # Create HDF5 test files
-if test $? -ne 0; then            # Error returned from generating test files
-    echo "$GENTEST: .....fail in generating test files"
-    nerrors=`expr $nerrors + 1`
-else
-    # Initial file open fails
-    # After "h5clear" the file, the subsequent file open succeeds
-    TOOLTEST h5clear_sec2_v3.h5 $FAIL
-    #
-    TOOLTEST h5clear_log_v3.h5 $FAIL
-    #
-    TOOLTEST latest_h5clear_sec2_v3.h5 $FAIL
-    #
-    TOOLTEST latest_h5clear_log_v3.h5 $FAIL
-fi
+# Initial file open fails
+# After "h5clear" the file, the subsequent file open succeeds
+TOOLTEST h5clear_sec2_v3.h5 $FAIL
+#
+TOOLTEST h5clear_log_v3.h5 $FAIL
+#
+TOOLTEST latest_h5clear_sec2_v3.h5 $FAIL
+#
+TOOLTEST latest_h5clear_log_v3.h5 $FAIL
 #
 #
 # File open succeeds because the library does not check status_flags for file with < v3 superblock
