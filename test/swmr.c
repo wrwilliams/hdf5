@@ -41,15 +41,15 @@
 
 #define H5D_FRIEND      /*suppress error about including H5Dpkg          */
 #define H5D_TESTING
-#include "H5Dpkg.h"	/* Datasets 				*/
+#include "H5Dpkg.h"    /* Datasets                 */
 
 #define H5FD_FRIEND     /*suppress error about including H5FDpkg      */
 #define H5FD_TESTING
 #include "H5FDpkg.h"    /* File drivers             */
 
-#define H5O_FRIEND	/*suppress error about including H5Opkg	  */
+#define H5O_FRIEND    /*suppress error about including H5Opkg      */
 #define H5O_TESTING
-#include "H5Opkg.h"     /* Object headers			*/
+#include "H5Opkg.h"     /* Object headers            */
 
 
 const char *FILENAME[] = {
@@ -85,12 +85,12 @@ static int test_append_flush_dataset_fixed(hid_t in_fapl);
 static int test_append_flush_dataset_multiple(hid_t in_fapl);
 
 /* Tests for file open flags/SWMR flags: single process access */
-static int test_file_lock_same(hid_t fapl);              
-static int test_file_lock_swmr_same(hid_t fapl);         
+static int test_file_lock_same(hid_t fapl);
+static int test_file_lock_swmr_same(hid_t fapl);
 
 /* Tests for file open flags/SWMR flags: concurrent process access */
-static int test_file_lock_concur(hid_t fapl);            
-static int test_file_lock_swmr_concur(hid_t fapl);       
+static int test_file_lock_concur(hid_t fapl);
+static int test_file_lock_swmr_concur(hid_t fapl);
 
 /* Test file lock environment variable */
 static int test_file_lock_env_var(hid_t fapl);
@@ -109,11 +109,11 @@ static int test_multiple_same(hid_t in_fapl, hbool_t new_format);
  */
 
 /*
- *  test_metadata_read_attempts(): 
+ *  test_metadata_read_attempts():
  *
  *  Checks the following two public routines work as specified:
- *  H5Pset_metadata_read_attempts() 
- *  H5Pget_metadata_read_attempts() 
+ *  H5Pset_metadata_read_attempts()
+ *  H5Pget_metadata_read_attempts()
  */
 static int
 test_metadata_read_attempts(hid_t in_fapl)
@@ -135,10 +135,10 @@ test_metadata_read_attempts(hid_t in_fapl)
     /* Set the filename to use for this test (dependent on fapl) */
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
-    /* 
+    /*
      * Set A:
      *  Tests on verifying the # of read attempts when:
-     *    --setting/getting read attempts from a 
+     *    --setting/getting read attempts from a
      *      file access property list.
      */
     /* Get # of read attempts -- should be the default: 1 */
@@ -188,11 +188,11 @@ test_metadata_read_attempts(hid_t in_fapl)
     if(H5Pclose(fapl) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Set B:
      *  Tests on verifying read attempts when:
      *    --create a file with non-SWMR access
-     *    --opening files with SWMR access 
+     *    --opening files with SWMR access
      *    --using default or non-default file access property list
      */
     /* Test 1 */
@@ -366,11 +366,11 @@ test_metadata_read_attempts(hid_t in_fapl)
     if(H5Pclose(file_fapl) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Set C:
      *  Tests on verifying read attempts when:
      *    --create a file with SWMR access
-     *    --opening files with non-SWMR access 
+     *    --opening files with non-SWMR access
      *    --using default or non-default file access property list
      */
     /* Test 1 */
@@ -612,11 +612,11 @@ test_metadata_read_attempts(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Set D:
      *  Tests on verifying read attempts when:
      *    --create with non-SWMR access
-     *    --opening files with SWMR access 
+     *    --opening files with SWMR access
      *    --H5reopen the files
      */
 
@@ -702,11 +702,11 @@ test_metadata_read_attempts(hid_t in_fapl)
     if(H5Fclose(fid2) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Set E:
      *  Tests on verifying read attempts when:
      *    --create with SWMR access
-     *    --opening files with non-SWMR access 
+     *    --opening files with non-SWMR access
      *    --H5reopen the files
      */
 
@@ -818,9 +818,9 @@ error:
 } /* test_metadata_read_attempts() */
 
 /*
- *  test_metadata_read_retry_info(): 
+ *  test_metadata_read_retry_info():
  *
- *  Checks whether the public routine H5Fget_metadata_read_retry_info 
+ *  Checks whether the public routine H5Fget_metadata_read_retry_info
  *  works as specified.
  *
  */
@@ -1112,7 +1112,7 @@ test_metadata_read_retry_info(hid_t in_fapl)
         FAIL_STACK_ERROR
 
 
-    /* 
+    /*
      * Case 2: tests on retries info
      */
 
@@ -1153,7 +1153,7 @@ test_metadata_read_retry_info(hid_t in_fapl)
     if((f = (H5F_t *)H5I_object(fid)) == NULL)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Increment 1st set of retries for metadata items:
      *   a) v2 B-tree leaf node--retries[4][1]
      *   b) Extensive array data block--retries[15][1]
@@ -1203,7 +1203,7 @@ test_metadata_read_retry_info(hid_t in_fapl)
             H5free_memory(info.retries[i]);
     }
 
-    /* 
+    /*
      * Increment 2nd set of retries for metadata items:
      *   a) Object header--retries[0][0]
      *   b) Extensive array datablock--retries[15][0]
@@ -1235,7 +1235,7 @@ test_metadata_read_retry_info(hid_t in_fapl)
     if(H5Fget_metadata_read_retry_info(fid, &info) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Verify info has both previous + current retries information:
      */
     for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++) {
@@ -1253,7 +1253,7 @@ test_metadata_read_retry_info(hid_t in_fapl)
                 if(info.retries[i][1] != 500)
                     TEST_ERROR
                 break;
-    
+
             case 15: /* Extensive array data block */
                 if(info.retries[i][0] != 1)
                     TEST_ERROR
@@ -1403,7 +1403,7 @@ test_metadata_read_retry_info(hid_t in_fapl)
 
     /*
      * Open a file with SWMR access, default # of read attempts:
-     *   --increment retries for metadata item: fixed array data block page (retries[19][0]) 
+     *   --increment retries for metadata item: fixed array data block page (retries[19][0])
      * H5Freopen the same file:
      *   --increment retries for metadata item: free-space sections (retries[9][1])--
      */
@@ -1521,7 +1521,7 @@ error:
  *  test_start_swmr_write():
  *
  *  Verify SWMR writing is enabled via H5Fstart_swmr_write():
- *  Mainly test for file created with SWMR_WRITE + with/without latest format: 
+ *  Mainly test for file created with SWMR_WRITE + with/without latest format:
  *  --file will have v3 superblock and all latest version support enabled
  *
  *  (A) Creating a file
@@ -1534,14 +1534,14 @@ error:
  *      Open the file with write + non-latest-format
  *      --file has v3 superblock and all latest version support enabled
  *      Open dataset "dataset1" 3 times--keep it open
- *	Write to "dataset1"
- *	Create a group in the file
+ *    Write to "dataset1"
+ *    Create a group in the file
  *      Create a chunked dataset "dataset2" in the group--should be using latest chunk indexing--keep it open
  *      Should succeed in enabling SWMR
- *	Should succeed in reading from multiple opens of "dataset1"
- *      Close multiple opens of "dataset1" 
- *	Close "dataset2"
- *      Create "dataset3"--should be using latest chunk indexing 
+ *    Should succeed in reading from multiple opens of "dataset1"
+ *      Close multiple opens of "dataset1"
+ *    Close "dataset2"
+ *      Create "dataset3"--should be using latest chunk indexing
  *      Close "dataset3"
  *      Close the group and file
  */
@@ -1571,7 +1571,7 @@ test_start_swmr_write(hid_t in_fapl, hbool_t new_format)
 
 
     /* Get a copy of the parameter fapl (non-latest-format) */
-    if((fapl = H5Pcopy(in_fapl)) < 0) 
+    if((fapl = H5Pcopy(in_fapl)) < 0)
         FAIL_STACK_ERROR
 
     if(new_format) {
@@ -1587,8 +1587,8 @@ test_start_swmr_write(hid_t in_fapl, hbool_t new_format)
     /* Set the filename to use for this test (dependent on fapl) */
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
-    /* 
-     * Case A: when creating a file 
+    /*
+     * Case A: when creating a file
      */
 
     /* Create the file with SWMR write + non-latest-format */
@@ -1612,17 +1612,17 @@ test_start_swmr_write(hid_t in_fapl, hbool_t new_format)
         FAIL_STACK_ERROR
 
     /* Create "dataset1" */
-    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0) 
+    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
         FAIL_STACK_ERROR
-    if(H5Pset_chunk(dcpl, 1, chunk_dim) < 0) 
+    if(H5Pset_chunk(dcpl, 1, chunk_dim) < 0)
         FAIL_STACK_ERROR
-    if((sid1 = H5Screate_simple(1, dim, max_dim)) < 0) 
+    if((sid1 = H5Screate_simple(1, dim, max_dim)) < 0)
         FAIL_STACK_ERROR;
-    if((did1 = H5Dcreate2(fid, "dataset1", H5T_NATIVE_INT, sid1, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) 
+    if((did1 = H5Dcreate2(fid, "dataset1", H5T_NATIVE_INT, sid1, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
         FAIL_STACK_ERROR;
 
     /* Get the chunk index type */
-    if(H5D__layout_idx_type_test(did1, &idx_type) < 0) 
+    if(H5D__layout_idx_type_test(did1, &idx_type) < 0)
         FAIL_STACK_ERROR;
     if(idx_type != H5D_CHUNK_IDX_EARRAY)
         FAIL_PUTS_ERROR("should be using extensible array as index");
@@ -1637,7 +1637,7 @@ test_start_swmr_write(hid_t in_fapl, hbool_t new_format)
         ret = H5Fstart_swmr_write(fid);
     } H5E_END_TRY;
     if(new_format) {
-        if(ret < 0) TEST_ERROR  
+        if(ret < 0) TEST_ERROR
     } else if(ret >= 0)
         TEST_ERROR
 
@@ -1677,8 +1677,8 @@ test_start_swmr_write(hid_t in_fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR;
 
-    /* 
-     * Case B: when opening a file 
+    /*
+     * Case B: when opening a file
      */
 
     /* Open the file again with write + non-latest-format */
@@ -1723,17 +1723,17 @@ test_start_swmr_write(hid_t in_fapl, hbool_t new_format)
         FAIL_STACK_ERROR
 
     /* Create "dataset2" in the group, keep it open */
-    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0) 
+    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
         FAIL_STACK_ERROR
-    if(H5Pset_chunk(dcpl, 2, chunk_dim2) < 0) 
+    if(H5Pset_chunk(dcpl, 2, chunk_dim2) < 0)
         FAIL_STACK_ERROR
-    if((sid2 = H5Screate_simple(2, dim2, max_dim2)) < 0) 
+    if((sid2 = H5Screate_simple(2, dim2, max_dim2)) < 0)
         FAIL_STACK_ERROR;
-    if((did2 = H5Dcreate2(gid, "dataset2", H5T_NATIVE_INT, sid2, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) 
+    if((did2 = H5Dcreate2(gid, "dataset2", H5T_NATIVE_INT, sid2, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
         FAIL_STACK_ERROR;
 
     /* Get the chunk index type for "dataset2" */
-    if(H5D__layout_idx_type_test(did2, &idx_type) < 0) 
+    if(H5D__layout_idx_type_test(did2, &idx_type) < 0)
         FAIL_STACK_ERROR;
     if(idx_type != H5D_CHUNK_IDX_BT2)
         FAIL_PUTS_ERROR("should be using v2 B-tree chunk indexing");
@@ -1794,17 +1794,17 @@ test_start_swmr_write(hid_t in_fapl, hbool_t new_format)
         FAIL_STACK_ERROR;
 
     /* Create "dataset3" */
-    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0) 
+    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
         FAIL_STACK_ERROR
-    if(H5Pset_chunk(dcpl, 2, chunk_dim2) < 0) 
+    if(H5Pset_chunk(dcpl, 2, chunk_dim2) < 0)
         FAIL_STACK_ERROR
-    if((sid3 = H5Screate_simple(2, dim2, max_dim2)) < 0) 
+    if((sid3 = H5Screate_simple(2, dim2, max_dim2)) < 0)
         FAIL_STACK_ERROR;
-    if((did3 = H5Dcreate2(fid, "dataset3", H5T_NATIVE_INT, sid3, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) 
+    if((did3 = H5Dcreate2(fid, "dataset3", H5T_NATIVE_INT, sid3, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
         FAIL_STACK_ERROR;
 
     /* Get the chunk index type for "dataset3" */
-    if(H5D__layout_idx_type_test(did3, &idx_type) < 0) 
+    if(H5D__layout_idx_type_test(did3, &idx_type) < 0)
         FAIL_STACK_ERROR;
     if(idx_type != H5D_CHUNK_IDX_BT2)
         FAIL_PUTS_ERROR("should be using v2 B-tree as index");
@@ -1881,7 +1881,7 @@ error:
  *      Create a file with (a) write + latest format or (b) SMWR write + non-latest-format
  *      Close the file
  *      (1) --Open the file with write + with/without latest format
- *      --Enable SWMR writing mode twice 
+ *      --Enable SWMR writing mode twice
  *      --First time succeed, second time fail
  *      --Close the file
         (2) --Open the file with write + with/without latest format
@@ -1921,12 +1921,12 @@ test_err_start_swmr_write(hid_t in_fapl, hbool_t new_format)
     hid_t bad_fid = -1;     /* Test fid (should never represent a real ID) */
     herr_t ret;             /* Return value */
     char filename[NAME_BUF_SIZE];   /* File name */
-    
+
     /* Create a copy of the input parameter in_fapl */
-    if((fapl = H5Pcopy(in_fapl)) < 0) 
+    if((fapl = H5Pcopy(in_fapl)) < 0)
         FAIL_STACK_ERROR
 
-    if((new_fapl = H5Pcopy(in_fapl)) < 0) 
+    if((new_fapl = H5Pcopy(in_fapl)) < 0)
         FAIL_STACK_ERROR
     /* Set to use the latest library format */
     if(H5Pset_libver_bounds(new_fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
@@ -1935,7 +1935,7 @@ test_err_start_swmr_write(hid_t in_fapl, hbool_t new_format)
     if(new_format) {
         TESTING("H5Fstart_swmr_write() on failure conditions for latest format");
 
-    if((fapl = H5Pcopy(new_fapl)) < 0) 
+    if((fapl = H5Pcopy(new_fapl)) < 0)
         FAIL_STACK_ERROR
     } else {
         TESTING("H5Fstart_swmr_write() on failure conditions for without latest format");
@@ -1945,7 +1945,7 @@ test_err_start_swmr_write(hid_t in_fapl, hbool_t new_format)
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
 
-    /* 
+    /*
      * (A) When creating a file:
      */
 
@@ -2014,7 +2014,7 @@ test_err_start_swmr_write(hid_t in_fapl, hbool_t new_format)
             FAIL_STACK_ERROR;
     } /* end if */
 
-    /* 
+    /*
      * (B) When opening a file which is created with the latest format
      */
 
@@ -2023,7 +2023,7 @@ test_err_start_swmr_write(hid_t in_fapl, hbool_t new_format)
         FAIL_STACK_ERROR;
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR;
-    
+
     /* Case 1 */
 
     /* Open the file with SWMR write + with/without latest format */
@@ -2130,8 +2130,8 @@ test_err_start_swmr_write(hid_t in_fapl, hbool_t new_format)
         FAIL_STACK_ERROR;
 
 
-    /* 
-     * (C) Failure cases for multiple opens 
+    /*
+     * (C) Failure cases for multiple opens
      */
 
     /* Case 1 */
@@ -2143,7 +2143,7 @@ test_err_start_swmr_write(hid_t in_fapl, hbool_t new_format)
     /* Close the file */
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR;
-    
+
     /* Open the file with write + with/without latest format */
     if((fid = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
         FAIL_STACK_ERROR;
@@ -2326,8 +2326,8 @@ error:
  *      Child: concurrent open of the file with read & SWMR read (fail)
  *  (2) Parent: open a file with write access; enable SWMR writing mode
  *      Child: open the file 2 times with read & SWMR read (succeed)
- *	       open the dataset 2 times with the 2 file opens
- *	       verify data read from multiple opens of the dataset is correct
+ *           open the dataset 2 times with the 2 file opens
+ *           verify data read from multiple opens of the dataset is correct
  *  (3) Parent: open a file with write access; enable SWMR writing mode
  *      Child: Concurrent open of the file with read only (fail)
  *  (4) Parent: open a file with write access; enable SWMR writing mode
@@ -2350,7 +2350,7 @@ test_start_swmr_write_concur(hid_t H5_ATTR_UNUSED in_fapl, hbool_t H5_ATTR_UNUSE
 static int
 test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
 {
-    hid_t fid = -1, fid1 = -1, fid2 = -1;	/* File IDs */
+    hid_t fid = -1, fid1 = -1, fid2 = -1;    /* File IDs */
     hid_t fapl;             /* File access property list */
     pid_t childpid=0;           /* Child process ID */
     pid_t tmppid;           /* Child process ID returned by waitpid */
@@ -2378,7 +2378,7 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
         TESTING("H5Fstart_swmr_write()--concurrent access for non-latest-format");
     } /* end if */
 
-    if((fapl = H5Pcopy(in_fapl)) < 0) 
+    if((fapl = H5Pcopy(in_fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Set the filename to use for this test (dependent on fapl) */
@@ -2422,10 +2422,10 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
     if(HDpipe(out_pdf) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      *  Case (1):
-     *  Verify concurrent file open with H5F_ACC_RDONLY|H5F_ACC_SWMR_READ 
-     *  will fail without H5Fstart_swmr_write() 
+     *  Verify concurrent file open with H5F_ACC_RDONLY|H5F_ACC_SWMR_READ
+     *  will fail without H5Fstart_swmr_write()
      */
 
     /* Fork child process */
@@ -2433,9 +2433,9 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
         FAIL_STACK_ERROR
 
     if(childpid == 0) { /* Child process */
-	int child_notify = 0;
+    int child_notify = 0;
 
-	/* Close unused write end for out_pdf */
+    /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -2453,9 +2453,9 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
         if(fid >= 0)
             HDexit(EXIT_FAILURE);
 
-	/* Close the pipe */
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
-	    HDexit(EXIT_FAILURE);
+        HDexit(EXIT_FAILURE);
 
         HDexit(EXIT_SUCCESS);
     }
@@ -2492,10 +2492,10 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      *  Case (2):
-     *  Verify concurrent file open with H5F_ACC_RDONLY|H5F_ACC_SWMR_READ 
-     *  will succeed with H5Fstart_swmr_write() 
+     *  Verify concurrent file open with H5F_ACC_RDONLY|H5F_ACC_SWMR_READ
+     *  will succeed with H5Fstart_swmr_write()
      */
 
     /* Create 2 pipes */
@@ -2511,13 +2511,13 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
     if(childpid == 0) { /* Child process */
         hid_t child_fid1 = -1, child_fid2;    /* File IDs */
         hid_t child_did1 = -1, child_did2 = -1;    /* Dataset IDs */
-	int child_notify = 0;
-	int rdata = 0;
-	
+    int child_notify = 0;
+    int rdata = 0;
+
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
             HDexit(EXIT_FAILURE);
-	/* close unused read end for in_pdf */
+    /* close unused read end for in_pdf */
         if(HDclose(in_pdf[0]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -2533,23 +2533,23 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
         if((child_fid2 = H5Fopen(filename, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl)) < 0)
             HDexit(EXIT_FAILURE);
 
-	/* open "dataset" 2 times */
-	if((child_did1 = H5Dopen2(child_fid1, "dataset", H5P_DEFAULT)) < 0)
+    /* open "dataset" 2 times */
+    if((child_did1 = H5Dopen2(child_fid1, "dataset", H5P_DEFAULT)) < 0)
             HDexit(EXIT_FAILURE);
-	if((child_did2 = H5Dopen2(child_fid2, "dataset", H5P_DEFAULT)) < 0)
-            HDexit(EXIT_FAILURE);
-
-	/* Read from "dataset" via child_did1 */
-	rdata = 0;
-	if(H5Dread(child_did1, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata) < 0)
-            HDexit(EXIT_FAILURE);
-	if(rdata != 88)
+    if((child_did2 = H5Dopen2(child_fid2, "dataset", H5P_DEFAULT)) < 0)
             HDexit(EXIT_FAILURE);
 
-	/* Notify parent process */
+    /* Read from "dataset" via child_did1 */
+    rdata = 0;
+    if(H5Dread(child_did1, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata) < 0)
+            HDexit(EXIT_FAILURE);
+    if(rdata != 88)
+            HDexit(EXIT_FAILURE);
+
+    /* Notify parent process */
         child_notify = 2;
-	if(HDwrite(in_pdf[1], &child_notify, sizeof(int)) < 0)
-	    HDexit(EXIT_FAILURE);
+    if(HDwrite(in_pdf[1], &child_notify, sizeof(int)) < 0)
+        HDexit(EXIT_FAILURE);
 
         /* Wait for notification from parent process */
         while(child_notify != 3) {
@@ -2557,41 +2557,41 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
                 HDexit(EXIT_FAILURE);
         }
 
-	/* Refresh "dataset" via child_did2 */
-	if(H5Drefresh(child_did2) < 0)
+    /* Refresh "dataset" via child_did2 */
+    if(H5Drefresh(child_did2) < 0)
             HDexit(EXIT_FAILURE);
 
-	/* Read from "dataset" child_did2 */
-	rdata = 0;
-	if(H5Dread(child_did2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata) < 0)
+    /* Read from "dataset" child_did2 */
+    rdata = 0;
+    if(H5Dread(child_did2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata) < 0)
             HDexit(EXIT_FAILURE);
-	if(rdata != 99)
-            HDexit(EXIT_FAILURE);
-
-	/* Read from "dataset" child_did1 */
-	rdata = 0;
-	if(H5Dread(child_did1, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata) < 0)
-            HDexit(EXIT_FAILURE);
-	if(rdata != 99)
+    if(rdata != 99)
             HDexit(EXIT_FAILURE);
 
-	/* Close the dataset */
-	if(H5Dclose(child_did1))
+    /* Read from "dataset" child_did1 */
+    rdata = 0;
+    if(H5Dread(child_did1, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata) < 0)
             HDexit(EXIT_FAILURE);
-	if(H5Dclose(child_did2))
+    if(rdata != 99)
             HDexit(EXIT_FAILURE);
 
-	/* Close the file */
+    /* Close the dataset */
+    if(H5Dclose(child_did1))
+            HDexit(EXIT_FAILURE);
+    if(H5Dclose(child_did2))
+            HDexit(EXIT_FAILURE);
+
+    /* Close the file */
         if(H5Fclose(child_fid1) < 0)
             HDexit(EXIT_FAILURE);
         if(H5Fclose(child_fid2) < 0)
             HDexit(EXIT_FAILURE);
 
-	/* Close the pipe */
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
-	    HDexit(EXIT_FAILURE);
-	if(HDclose(in_pdf[1]) < 0)
-	    HDexit(EXIT_FAILURE);
+        HDexit(EXIT_FAILURE);
+    if(HDclose(in_pdf[1]) < 0)
+        HDexit(EXIT_FAILURE);
 
         HDexit(EXIT_SUCCESS);
     }
@@ -2687,10 +2687,10 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
         FAIL_STACK_ERROR
 
 
-    /* 
+    /*
      *  Case (3):
      *  Verify concurrent file open with H5F_ACC_RDONLY
-     *  will fail with H5Fstart_swmr_write() 
+     *  will fail with H5Fstart_swmr_write()
      */
     /* Create 1 pipe */
     if(HDpipe(out_pdf) < 0)
@@ -2701,9 +2701,9 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
         FAIL_STACK_ERROR
 
     if(childpid == 0) { /* Child process */
-	int child_notify = 0;
+    int child_notify = 0;
 
-	/* Close unused write end for out_pdf */
+    /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -2759,10 +2759,10 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      *  Case (4):
      *  Verify concurrent file open with H5F_ACC_RDWR
-     *  will fail with H5Fstart_swmr_write() 
+     *  will fail with H5Fstart_swmr_write()
      */
 
     /* Create 1 pipe */
@@ -2774,9 +2774,9 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
         FAIL_STACK_ERROR
 
     if(childpid == 0) { /* Child process */
-	 int child_notify = 0;
+    int child_notify = 0;
 
-	/* Close unused write end for out_pdf */
+    /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -2793,9 +2793,9 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
         if(fid >= 0)
             HDexit(EXIT_FAILURE);
 
-	/* Close the pipe */
-	if(HDclose(out_pdf[0]) < 0)
-	    HDexit(EXIT_FAILURE);
+    /* Close the pipe */
+    if(HDclose(out_pdf[0]) < 0)
+        HDexit(EXIT_FAILURE);
 
         HDexit(EXIT_SUCCESS);
     } /* end if */
@@ -2836,10 +2836,10 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      *  Case (5):
      *  Verify concurrent file open with H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE
-     *  will fail with H5Fstart_swmr_write() 
+     *  will fail with H5Fstart_swmr_write()
      */
 
     /* Create 1 pipe */
@@ -2851,9 +2851,9 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
         FAIL_STACK_ERROR
 
     if(childpid == 0) { /* Child process */
-	int child_notify = 0;
+    int child_notify = 0;
 
-	/* Close unused write end for out_pdf */
+    /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -2870,9 +2870,9 @@ test_start_swmr_write_concur(hid_t in_fapl, hbool_t new_format)
         if(fid >= 0)
             HDexit(EXIT_FAILURE);
 
-	/* Close the pipe */
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
-	    HDexit(EXIT_FAILURE);
+        HDexit(EXIT_FAILURE);
 
         HDexit(EXIT_SUCCESS);
     }
@@ -2943,7 +2943,7 @@ error:
 static int
 test_start_swmr_write_stress_ohdr(hid_t in_fapl)
 {
-    hid_t fid = -1;			/* File IDs */
+    hid_t fid = -1;            /* File IDs */
     hid_t fapl;                         /* File access property list */
     char filename[NAME_BUF_SIZE];       /* File name */
     hid_t did = -1, did2 = -1;          /* Dataset IDs */
@@ -2965,7 +2965,7 @@ test_start_swmr_write_stress_ohdr(hid_t in_fapl)
     HDmemset(fill, 0, sizeof(fill));
     HDmemset(attr_data, 0, sizeof(attr_data));
 
-    if((fapl = H5Pcopy(in_fapl)) < 0) 
+    if((fapl = H5Pcopy(in_fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Set the filename to use for this test (dependent on fapl) */
@@ -3095,11 +3095,11 @@ error:
 } /* test_start_swmr_write_stress_ohdr() */
 
 /*
- * Tests for H5Pset/get_object_flush_cb() 
+ * Tests for H5Pset/get_object_flush_cb()
  */
 
 /* The callback function for object flush property */
-static herr_t 
+static herr_t
 flush_cb(hid_t H5_ATTR_UNUSED obj_id, void *_udata)
 {
     unsigned *flush_ct = (unsigned*)_udata;
@@ -3109,10 +3109,10 @@ flush_cb(hid_t H5_ATTR_UNUSED obj_id, void *_udata)
 
 /*
  * test_object_flush_cb()
- *  
+ *
  * Verify the public routines H5Pget/set_object_flush_cb() work as specified:
  *  1) To verify the failure condition in setting object flush property
- *  2) To verify the object flush property values retrieved from a default 
+ *  2) To verify the object flush property values retrieved from a default
  *     file access property list.
  *  3) To verify the object flush property values retrieved from a non-default
  *     file access property list.
@@ -3142,9 +3142,9 @@ test_object_flush_cb(hid_t in_fapl)
     herr_t ret;                 /* Generic return value */
 
     TESTING("H5Pget/set_obj_flush_cb()");
-    
+
     /*
-     * Case (1) 
+     * Case (1)
      *  To verify the failure condition in setting object flush property
      */
     /* Should fail if the callback function is not defined but user data is defined */
@@ -3207,7 +3207,7 @@ test_object_flush_cb(hid_t in_fapl)
     ret_ct = NULL;
 
     /* Make a copy of the input parameter in_fapl */
-    if((fapl = H5Pcopy(in_fapl)) < 0) 
+    if((fapl = H5Pcopy(in_fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Set to use the latest library format */
@@ -3260,11 +3260,11 @@ test_object_flush_cb(hid_t in_fapl)
         FAIL_STACK_ERROR;
 
     /* Create a dataset */
-    if((sid = H5Screate_simple(2, dims, dims)) < 0) 
+    if((sid = H5Screate_simple(2, dims, dims)) < 0)
         FAIL_STACK_ERROR;
 
     /* Create a dataset */
-    if((did1 = H5Dcreate2(fid, "dataset1", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
+    if((did1 = H5Dcreate2(fid, "dataset1", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
         FAIL_STACK_ERROR
 
     /* Initialize data buffer */
@@ -3292,7 +3292,7 @@ test_object_flush_cb(hid_t in_fapl)
         TEST_ERROR
 
     /* Create a group */
-    if((gid = H5Gcreate2(fid, "group", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
+    if((gid = H5Gcreate2(fid, "group", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
         FAIL_STACK_ERROR
 
     /* Flush the group */
@@ -3308,7 +3308,7 @@ test_object_flush_cb(hid_t in_fapl)
         TEST_ERROR
 
     /* Create a dataset */
-    if((did2 = H5Dcreate2(gid, "dataset2", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
+    if((did2 = H5Dcreate2(gid, "dataset2", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
         FAIL_STACK_ERROR
 
     /* Flush the dataset */
@@ -3358,7 +3358,7 @@ error:
 } /* test_object_flush_cb() */
 
 /*
- * Tests for H5Pset/get_append_flush() 
+ * Tests for H5Pset/get_append_flush()
  */
 
 
@@ -3415,14 +3415,14 @@ test_append_flush_generic(void)
     TESTING("H5Fget/set_append_flush() for a generic dataset access property list");
 
 
-    /* 
+    /*
      * Case (1)
      *  To verify the retrieved append flush property values:
      *      -- zero boundary, null callback function, null user data
      */
 
     /* Create a copy of dataset access property list */
-    if((dapl = H5Pcreate(H5P_DATASET_ACCESS)) < 0) 
+    if((dapl = H5Pcreate(H5P_DATASET_ACCESS)) < 0)
         FAIL_STACK_ERROR
 
     /* Retrieve the append flush property values */
@@ -3439,7 +3439,7 @@ test_append_flush_generic(void)
     if(H5Pclose(dapl) < 0)
         FAIL_STACK_ERROR;
 
-    /* 
+    /*
      * Case (2)
      *  To verify the failure conditions in setting append flush property:
      *  -- an invalid dataset rank: <= 0, > H5S_MAX_RANK
@@ -3501,7 +3501,7 @@ test_append_flush_generic(void)
     } H5E_END_TRY;
     if(ret >= 0)
         TEST_ERROR
-    
+
     /*
      * Case (3)
      *  To verify the append flush property values retrieved from a non-default
@@ -3589,7 +3589,7 @@ test_append_flush_dataset_chunked(hid_t in_fapl)
 
     TESTING("H5Fget/set_append_flush() for a chunked dataset's access property list");
 
-    /* 
+    /*
      *  Case (1)--
      *  For a chunked dataset's access property list:
      *  --to verify the append flush property values retrieved from a default access
@@ -3598,7 +3598,7 @@ test_append_flush_dataset_chunked(hid_t in_fapl)
      */
 
     /* Get a copy of the input parameter in_fapl */
-    if((fapl = H5Pcopy(in_fapl)) < 0) 
+    if((fapl = H5Pcopy(in_fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Set to use the latest library format */
@@ -3614,13 +3614,13 @@ test_append_flush_dataset_chunked(hid_t in_fapl)
         FAIL_STACK_ERROR
 
     /* Create a chunked dataset with 1 extendible dimension */
-    if((sid = H5Screate_simple(2, dims, maxdims)) < 0) 
+    if((sid = H5Screate_simple(2, dims, maxdims)) < 0)
         FAIL_STACK_ERROR;
-    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0) 
+    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
         FAIL_STACK_ERROR
     if(H5Pset_chunk(dcpl, 2, chunk_dims) < 0)
         FAIL_STACK_ERROR;
-    if((did1 = H5Dcreate2(fid, "dataset1", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) 
+    if((did1 = H5Dcreate2(fid, "dataset1", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
         TEST_ERROR
 
     /* Get the dataset's access property list */
@@ -3630,18 +3630,18 @@ test_append_flush_dataset_chunked(hid_t in_fapl)
     /* Retrieve the append flush property values */
     if(H5Pget_append_flush(ddapl, 3, ret_boundary, &ret_cb, (void **)&ret_count) < 0)
         TEST_ERROR
-    
+
     /* Verify expected values */
     if(ret_boundary[0] != 0 || ret_boundary[1] != 0 || ret_boundary[2] != 0)
         TEST_ERROR;
-    if(ret_cb != NULL || ret_count != NULL) 
+    if(ret_cb != NULL || ret_count != NULL)
         TEST_ERROR
 
     /* Close the dataset's access property list */
     if(H5Pclose(ddapl) < 0)
         FAIL_STACK_ERROR;
 
-    /* 
+    /*
      *  Case (2)--
      *  For a chunked dataset's access property list:
      *  --to verify failure in creating the dataset when:
@@ -3651,7 +3651,7 @@ test_append_flush_dataset_chunked(hid_t in_fapl)
      *      -- boundary (non-zero) is set for a non-extendible dimension
      */
     /* Create a copy of dataset access property list */
-    if((dapl = H5Pcreate(H5P_DATASET_ACCESS)) < 0) 
+    if((dapl = H5Pcreate(H5P_DATASET_ACCESS)) < 0)
         FAIL_STACK_ERROR
 
     /* Set boundary dimension rank > the rank of dataset to be created */
@@ -3691,7 +3691,7 @@ test_append_flush_dataset_chunked(hid_t in_fapl)
     if(did2 >= 0)
         TEST_ERROR
 
-    /* 
+    /*
      *  Case (3)--
      *  For a chunked dataset's access property list:
      *  --To verify the append flush property values retrieved from a non-default
@@ -3699,7 +3699,7 @@ test_append_flush_dataset_chunked(hid_t in_fapl)
      *      -- the set callback function, the set user data
      *      -- the # of boundary sizes retrieved does not exceed MIN(input ndims, the ndims set)
      */
-     
+
     boundary[0] = 0;
     boundary[1] = 1;
     if(H5Pset_append_flush(dapl, 2, boundary, append_cb, &count) < 0)
@@ -3775,7 +3775,7 @@ error:
  * Verify H5Pget/set_append_flush() work as specified for a
  * non-chunked (fixed size) dataset's access property list:
  *  (1) To verify success in creating the dataset--whatever is set for the append flush property setting
- *  (2) To verify that default append flush property values are retrieved for both 
+ *  (2) To verify that default append flush property values are retrieved for both
  *      default or non-default access property list:
  *      -- zero boundary, null callback function, null user data
  */
@@ -3802,7 +3802,7 @@ test_append_flush_dataset_fixed(hid_t in_fapl)
 
     TESTING("H5Fget/set_append_flush() for a non-chunked dataset's access property list");
 
-    /* 
+    /*
      *  Case (1)--
      *  For a non-chunked dataset's access property list:
      *  --to verify the append flush property values retrieved from
@@ -3811,7 +3811,7 @@ test_append_flush_dataset_fixed(hid_t in_fapl)
      */
 
     /* Get a copy of the input parameter in_fapl */
-    if((fapl = H5Pcopy(in_fapl)) < 0) 
+    if((fapl = H5Pcopy(in_fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Set to use the latest library format */
@@ -3827,9 +3827,9 @@ test_append_flush_dataset_fixed(hid_t in_fapl)
         FAIL_STACK_ERROR
 
     /* Create a dataset */
-    if((sid = H5Screate_simple(1, dims, dims)) < 0) 
+    if((sid = H5Screate_simple(1, dims, dims)) < 0)
         FAIL_STACK_ERROR;
-    if((did1 = H5Dcreate2(fid, "dataset1", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
+    if((did1 = H5Dcreate2(fid, "dataset1", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
         TEST_ERROR
 
     /* Get the dataset's access property list */
@@ -3839,21 +3839,21 @@ test_append_flush_dataset_fixed(hid_t in_fapl)
     /* Retrieve the append flush property values */
     if(H5Pget_append_flush(ddapl, 3, ret_boundary, &ret_cb, (void **)&ret_count) < 0)
         TEST_ERROR
-    
+
     /* Verify expected values */
     if(ret_boundary[0] != 0 || ret_boundary[1] != 0 || ret_boundary[2] != 0)
         TEST_ERROR;
-    if(ret_cb != NULL || ret_count != NULL) 
+    if(ret_cb != NULL || ret_count != NULL)
         TEST_ERROR
 
     /* Close the dataset's access property list */
     if(H5Pclose(ddapl) < 0)
         FAIL_STACK_ERROR;
 
-    /* 
+    /*
      *  Case (2)--
      *  For a non-chunked dataset's access property list:
-     *  --to verify success in creating and opening the dataset even when append flush property 
+     *  --to verify success in creating and opening the dataset even when append flush property
      *    is setup with error conditions:
      *      --the rank set in append flush property is not the same as the dataset's rank
      *      --boundary is set
@@ -3861,7 +3861,7 @@ test_append_flush_dataset_fixed(hid_t in_fapl)
      *      zero boundary, null callback function, null user data
      */
     /* Create a copy of dataset access property list */
-    if((dapl = H5Pcreate(H5P_DATASET_ACCESS)) < 0) 
+    if((dapl = H5Pcreate(H5P_DATASET_ACCESS)) < 0)
         FAIL_STACK_ERROR
 
     boundary[0] = 1;
@@ -3913,14 +3913,14 @@ test_append_flush_dataset_fixed(hid_t in_fapl)
 
     if(H5Dclose(did2) < 0)
         FAIL_STACK_ERROR
-    /* 
+    /*
      *  Case (3)--
      *  For a non-chunked dataset's access property list:
      *  --To verify the append flush property values retrieved from a non-default
      *    access property list:
      *      zero boundary, null callback function, null user data
      */
-     
+
     HDmemset(boundary, 0, sizeof(boundary));
     if(H5Pset_append_flush(dapl, 1, boundary, append_cb, &count) < 0)
         FAIL_STACK_ERROR
@@ -3983,16 +3983,16 @@ error:
  *  (1) did1 = H5Dcreate(...dapl1...)
  *      did2 = H5Dopen2(...dapl2)
  *      H5Pget_append_flush(did1...)
- *      H5Pget_append_flush(did2...) 
+ *      H5Pget_append_flush(did2...)
  *      -- should return append flush property values set in dapl1
  *  (2) H5Dcreate(...H5P_DEFAULT...)
  *      H5Dclose()
  *      did1 = H5Dopen2(...dapl1)
- *      did2 = H5Dopen2(..dapl2) 
+ *      did2 = H5Dopen2(..dapl2)
  *      H5Pget_append_flush(did1, ...)
  *      H5Pget_append_flush(did2, ...)
  *      -- should return append flush property values set in dapl1
- *  NOTE: 
+ *  NOTE:
  *    FOR NOW: return the append flush property values of the create or the very first open
  *    LATER ON: should REJECT subsequent dataset open if append flush property values differ
  */
@@ -4025,20 +4025,20 @@ test_append_flush_dataset_multiple(hid_t in_fapl)
 
     TESTING("H5Fget/set_append_flush() for multiple opens of a chunked dataset");
 
-    /* 
-     *  Case (1) 
+    /*
+     *  Case (1)
      *  For a chunked dataset's access property list:
      *      did1 = H5Dcreate(...dapl1...)
      *          did2 = H5Dopen2(...dapl2)
      *          H5Pget_append_flush(did1...)
-     *          H5Pget_append_flush(did2...) 
+     *          H5Pget_append_flush(did2...)
      *      -- should return append flush property values set in dapl1
      */
 
     /* Create a copy of dataset access property list */
-    if((dapl1 = H5Pcreate(H5P_DATASET_ACCESS)) < 0) 
+    if((dapl1 = H5Pcreate(H5P_DATASET_ACCESS)) < 0)
         FAIL_STACK_ERROR
-    if((dapl2 = H5Pcreate(H5P_DATASET_ACCESS)) < 0) 
+    if((dapl2 = H5Pcreate(H5P_DATASET_ACCESS)) < 0)
         FAIL_STACK_ERROR
 
     boundary1[0] = 0;
@@ -4053,7 +4053,7 @@ test_append_flush_dataset_multiple(hid_t in_fapl)
         FAIL_STACK_ERROR
 
     /* Get a copy of the input parameter in_fapl */
-    if((fapl = H5Pcopy(in_fapl)) < 0) 
+    if((fapl = H5Pcopy(in_fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Set to use the latest library format */
@@ -4068,13 +4068,13 @@ test_append_flush_dataset_multiple(hid_t in_fapl)
         FAIL_STACK_ERROR
 
     /* Create a chunked dataset with 2 extendible dimensions */
-    if((sid = H5Screate_simple(2, dims, maxdims)) < 0) 
+    if((sid = H5Screate_simple(2, dims, maxdims)) < 0)
         FAIL_STACK_ERROR;
-    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0) 
+    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
         FAIL_STACK_ERROR
     if(H5Pset_chunk(dcpl, 2, chunk_dims) < 0)
         FAIL_STACK_ERROR;
-    if((did1 = H5Dcreate2(fid, "dataset1", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, dapl1)) < 0) 
+    if((did1 = H5Dcreate2(fid, "dataset1", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, dapl1)) < 0)
         FAIL_STACK_ERROR;
 
     /* Open the dataset */
@@ -4088,11 +4088,11 @@ test_append_flush_dataset_multiple(hid_t in_fapl)
     /* Retrieve the append flush property values */
     if(H5Pget_append_flush(ddapl, 3, ret_boundary, &ret_cb, (void **)&ret_count) < 0)
         TEST_ERROR
-    
+
     /* Verify expected values: should be the setting in dapl1 */
     if(ret_boundary[0] != 0 || ret_boundary[1] != 1 || ret_boundary[2] != 0)
         TEST_ERROR;
-    if(ret_cb != append_cb || ret_count != &count1) 
+    if(ret_cb != append_cb || ret_count != &count1)
         TEST_ERROR
 
     /* Close the dataset's access property list */
@@ -4106,11 +4106,11 @@ test_append_flush_dataset_multiple(hid_t in_fapl)
     /* Retrieve the append flush property values */
     if(H5Pget_append_flush(ddapl, 3, ret_boundary, &ret_cb, (void **)&ret_count) < 0)
         TEST_ERROR
-    
+
     /* Verify expected values: should be the setting in dapl1 */
     if(ret_boundary[0] != 0 || ret_boundary[1] != 1 || ret_boundary[2] != 0)
         TEST_ERROR;
-    if(ret_cb != append_cb || ret_count != &count1) 
+    if(ret_cb != append_cb || ret_count != &count1)
         TEST_ERROR
 
     /* Close the dataset's access property list */
@@ -4119,18 +4119,18 @@ test_append_flush_dataset_multiple(hid_t in_fapl)
     H5Dclose(did1);
     H5Dclose(did2);
 
-    /* 
-     * Case (2) 
+    /*
+     * Case (2)
      *  For a chunked dataset's access property list:
      *      H5Dcreate(...H5P_DEFAULT...)
      *          H5Dclose()
      *          did1 = H5Dopen2(...dapl1)
-     *          did2 = H5Dopen2(..dapl2) 
+     *          did2 = H5Dopen2(..dapl2)
      *          H5Pget_append_flush(did1, ...)
      *          H5Pget_append_flush(did2, ...)
      *      -- should return append flush property values set in dapl1
      */
-    if((did1 = H5Dcreate2(fid, "dataset2", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) 
+    if((did1 = H5Dcreate2(fid, "dataset2", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
         FAIL_STACK_ERROR;
     if(H5Dclose(did1) < 0)
         FAIL_STACK_ERROR;
@@ -4150,11 +4150,11 @@ test_append_flush_dataset_multiple(hid_t in_fapl)
     /* Retrieve the append flush property values */
     if(H5Pget_append_flush(ddapl, 3, ret_boundary, &ret_cb, (void **)&ret_count) < 0)
         TEST_ERROR
-    
+
     /* Verify expected values: should be the setting in dapl2 */
     if(ret_boundary[0] != 1 || ret_boundary[1] != 0 || ret_boundary[2] != 0)
         TEST_ERROR;
-    if(ret_cb != append_cb2 || ret_count != &count2) 
+    if(ret_cb != append_cb2 || ret_count != &count2)
         TEST_ERROR
 
     /* Close the access property list */
@@ -4169,11 +4169,11 @@ test_append_flush_dataset_multiple(hid_t in_fapl)
     /* Retrieve the append flush property values */
     if(H5Pget_append_flush(ddapl, 3, ret_boundary, &ret_cb, (void **)&ret_count) < 0)
         TEST_ERROR
-    
+
     /* Verify expected values: should be the setting in dapl2 */
     if(ret_boundary[0] != 1 || ret_boundary[1] != 0 || ret_boundary[2] != 0)
         TEST_ERROR;
-    if(ret_cb != append_cb2 || ret_count != &count2) 
+    if(ret_cb != append_cb2 || ret_count != &count2)
         TEST_ERROR
 
     /* Closing */
@@ -4243,8 +4243,8 @@ test_file_lock_same(hid_t in_fapl)
     /* Set the filename to use for this test (dependent on fapl) */
     h5_fixname(FILENAME[1], fapl, filename, sizeof(filename));
 
-    /* 
-     * Case 1: 1) RDWR 2) RDWR : should succeed 
+    /*
+     * Case 1: 1) RDWR 2) RDWR : should succeed
      */
     /* Create file */
     if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
@@ -4264,7 +4264,7 @@ test_file_lock_same(hid_t in_fapl)
     /* Get and check the intent */
     if(H5Fget_intent(fid2, &intent) < 0)
     FAIL_STACK_ERROR
-    if(intent != H5F_ACC_RDWR) 
+    if(intent != H5F_ACC_RDWR)
     TEST_ERROR
 
     /* Close file */
@@ -4275,8 +4275,8 @@ test_file_lock_same(hid_t in_fapl)
     if(H5Fclose(fid2) < 0)
     FAIL_STACK_ERROR
 
-    /* 
-     * Case 2: 1) RDWR 2) RDONLY : should succeed 
+    /*
+     * Case 2: 1) RDWR 2) RDONLY : should succeed
      */
     /* Open file with RDWR */
     if((fid = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
@@ -4306,8 +4306,8 @@ test_file_lock_same(hid_t in_fapl)
     if(H5Fclose(fid2) < 0)
     FAIL_STACK_ERROR
 
-    /* 
-     * Case 3: 1) RDONLY 2) RDWR : should fail 
+    /*
+     * Case 3: 1) RDONLY 2) RDWR : should fail
      */
     /* Open file with RDONLY */
     if((fid = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
@@ -4330,8 +4330,8 @@ test_file_lock_same(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
     FAIL_STACK_ERROR
 
-    /* 
-     * Case 4: 1) RDONLY 2) RDONLY : should succeed 
+    /*
+     * Case 4: 1) RDONLY 2) RDONLY : should succeed
      */
     /* Open file with RDONLY */
     if((fid = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
@@ -4340,7 +4340,7 @@ test_file_lock_same(hid_t in_fapl)
     /* Get and check the intent */
     if(H5Fget_intent(fid, &intent) < 0)
     FAIL_STACK_ERROR
-    if(intent != H5F_ACC_RDONLY) 
+    if(intent != H5F_ACC_RDONLY)
     TEST_ERROR
 
     /* Open file with RDONLY */
@@ -4411,17 +4411,17 @@ test_file_lock_swmr_same(hid_t in_fapl)
     /* Create a file */
     if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         FAIL_STACK_ERROR
-    
+
     /* Close file */
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
-     * Cases a, b, c, d: H5Fopen failure cases 
+    /*
+     * Cases a, b, c, d: H5Fopen failure cases
      */
 
-    /* 
-     * Case a: RDWR|SWRM_READ : should fail  
+    /*
+     * Case a: RDWR|SWRM_READ : should fail
      */
     H5E_BEGIN_TRY {
     fid = H5Fopen(filename, H5F_ACC_RDWR|H5F_ACC_SWMR_READ, fapl);
@@ -4429,8 +4429,8 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(fid >= 0)
     TEST_ERROR
 
-    /* 
-     * Case b: RDWR|SWMM_WRTE|SWMR_READ : should fail 
+    /*
+     * Case b: RDWR|SWMM_WRTE|SWMR_READ : should fail
      */
     H5E_BEGIN_TRY {
     fid = H5Fopen(filename, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE|H5F_ACC_SWMR_READ, fapl);
@@ -4438,8 +4438,8 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(fid >= 0)
     TEST_ERROR
 
-    /* 
-     * Case c: RDONLY|SWMM_WRITE : should fail 
+    /*
+     * Case c: RDONLY|SWMM_WRITE : should fail
      */
     H5E_BEGIN_TRY {
     fid = H5Fopen(filename, H5F_ACC_RDONLY|H5F_ACC_SWMR_WRITE, fapl);
@@ -4447,8 +4447,8 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(fid >= 0)
     TEST_ERROR
 
-    /* 
-     * Case d: RDONLY|SWMM_WRITE|SWMR_READ : should fail 
+    /*
+     * Case d: RDONLY|SWMM_WRITE|SWMR_READ : should fail
      */
     H5E_BEGIN_TRY {
     fid = H5Fopen(filename, H5F_ACC_RDONLY|H5F_ACC_SWMR_WRITE|H5F_ACC_SWMR_READ, fapl);
@@ -4456,12 +4456,12 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(fid >= 0)
     TEST_ERROR
 
-    /* 
-     * Cases 1 - 12: combinations of different flags for 1st and 2nd opens 
+    /*
+     * Cases 1 - 12: combinations of different flags for 1st and 2nd opens
      */
 
-    /* 
-     * Case 1: 1) RDWR 2) RDWR|SWMR_WRITE : should fail 
+    /*
+     * Case 1: 1) RDWR 2) RDWR|SWMR_WRITE : should fail
      */
     if((fid = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT)) < 0)
         FAIL_STACK_ERROR
@@ -4476,8 +4476,8 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
-     * Case 2: 1) RDWR 2) RDONLY|SWMR_READ : should succeed 
+    /*
+     * Case 2: 1) RDWR 2) RDONLY|SWMR_READ : should succeed
      */
     if((fid = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT)) < 0)
     TEST_ERROR
@@ -4490,8 +4490,8 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(H5Fclose(fid2) < 0)
         FAIL_STACK_ERROR
 
-    /* 
-     * Case 3: 1) RDWR|SWMR_WRITE 2)RDWR : should succeed 
+    /*
+     * Case 3: 1) RDWR|SWMR_WRITE 2)RDWR : should succeed
      */
     if((fid = H5Fopen(filename, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl)) < 0)
         FAIL_STACK_ERROR
@@ -4506,8 +4506,8 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(H5Fclose(fid2) < 0)
         FAIL_STACK_ERROR
 
-    /* 
-     * Case 4: 1) RDWR|SWMR_WRITE 2) RDWR|SWMR_WRITE : should succeed 
+    /*
+     * Case 4: 1) RDWR|SWMR_WRITE 2) RDWR|SWMR_WRITE : should succeed
      */
     if((fid = H5Fopen(filename, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl)) < 0)
         FAIL_STACK_ERROR
@@ -4522,8 +4522,8 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(H5Fclose(fid2) < 0)
         FAIL_STACK_ERROR
 
-    /* 
-     * Case 5: 1) RDWR|SWMR_WRITE 2) RDONLY|SWMR_READ : should succeed 
+    /*
+     * Case 5: 1) RDWR|SWMR_WRITE 2) RDONLY|SWMR_READ : should succeed
      */
     if((fid = H5Fopen(filename, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl)) < 0)
         FAIL_STACK_ERROR
@@ -4538,8 +4538,8 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(H5Fclose(fid2) < 0)
         FAIL_STACK_ERROR
 
-    /* 
-     * Case 6: 1) RDWR|SWMR_WRITE 2) RDONLY : should succeed 
+    /*
+     * Case 6: 1) RDWR|SWMR_WRITE 2) RDONLY : should succeed
      */
     if((fid = H5Fopen(filename, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl)) < 0)
         FAIL_STACK_ERROR
@@ -4554,8 +4554,8 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(H5Fclose(fid2) < 0)
         FAIL_STACK_ERROR
 
-    /* 
-     * Case 7: 1) RDONLY|SWMR_READ 2)RDWR : should fail 
+    /*
+     * Case 7: 1) RDONLY|SWMR_READ 2)RDWR : should fail
      */
     if((fid = H5Fopen(filename, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl)) < 0)
         FAIL_STACK_ERROR
@@ -4570,8 +4570,8 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
-     * Case 8: 1) RDONLY|SWMR_READ 2) RDWR|SWMR_WRITE : should fail 
+    /*
+     * Case 8: 1) RDONLY|SWMR_READ 2) RDWR|SWMR_WRITE : should fail
      */
     if((fid = H5Fopen(filename, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl)) < 0)
         FAIL_STACK_ERROR
@@ -4586,8 +4586,8 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
-     * Case 9: 1) RDONLY|SWMR_READ 2) RDONLY|SWMR_READ : should succeed 
+    /*
+     * Case 9: 1) RDONLY|SWMR_READ 2) RDONLY|SWMR_READ : should succeed
      */
     if((fid = H5Fopen(filename, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl)) < 0)
         FAIL_STACK_ERROR
@@ -4602,8 +4602,8 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(H5Fclose(fid2) < 0)
         FAIL_STACK_ERROR
 
-    /* 
-     * Case 10: 1) RDONLY|SWMR_READ 2) RDONLY : should succeed 
+    /*
+     * Case 10: 1) RDONLY|SWMR_READ 2) RDONLY : should succeed
      */
     if((fid = H5Fopen(filename, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl)) < 0)
         TEST_ERROR
@@ -4618,8 +4618,8 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(H5Fclose(fid2) < 0)
         FAIL_STACK_ERROR
 
-    /* 
-     * Case 11: 1) RDONLY 2) RDWR|SWMR_WRITE: should fail 
+    /*
+     * Case 11: 1) RDONLY 2) RDWR|SWMR_WRITE: should fail
      */
     if((fid = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0)
         FAIL_STACK_ERROR
@@ -4634,8 +4634,8 @@ test_file_lock_swmr_same(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
-     * Case 12: 1) RDONLY 2) RDONLY|SWMR_READ : should fail 
+    /*
+     * Case 12: 1) RDONLY 2) RDONLY|SWMR_READ : should fail
      */
     if((fid = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0)
         FAIL_STACK_ERROR
@@ -4684,14 +4684,14 @@ test_file_lock_concur(hid_t H5_ATTR_UNUSED in_fapl)
 {
     /* Output message about test being performed */
     TESTING("File open with different combinations of flags--concurrent access");
-	SKIPPED();
+    SKIPPED();
     HDputs("    Test skipped due to fork, waitpid, or flock not defined.");
     return 0;
 
 } /* end test_file_lock_concur() */
 
 #else
-    
+
 static int
 test_file_lock_concur(hid_t in_fapl)
 {
@@ -4712,7 +4712,7 @@ test_file_lock_concur(hid_t in_fapl)
 
     /* Set the filename to use for this test (dependent on fapl) */
     h5_fixname(FILENAME[1], fapl, filename, sizeof(filename));
-  
+
     /* Create the test file */
     if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         FAIL_STACK_ERROR
@@ -4721,7 +4721,7 @@ test_file_lock_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 1: 1) RDWR 2) RDWR : should fail
      */
 
@@ -4735,7 +4735,7 @@ test_file_lock_concur(hid_t in_fapl)
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -4753,10 +4753,10 @@ test_file_lock_concur(hid_t in_fapl)
         } H5E_END_TRY;
 
         /* Should fail */
-        if(child_fid == FAIL) 
+        if(child_fid == FAIL)
             HDexit(EXIT_SUCCESS);
 
-	/* Close the pipe */
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -4786,9 +4786,9 @@ test_file_lock_concur(hid_t in_fapl)
 
     /* Check if child terminated normally */
     if(WIFEXITED(child_status)) {
-	/* Check exit status of the child */
-	if(WEXITSTATUS(child_status) != 0)
-	    TEST_ERROR
+    /* Check exit status of the child */
+    if(WEXITSTATUS(child_status) != 0)
+        TEST_ERROR
     } else
         FAIL_STACK_ERROR
 
@@ -4796,7 +4796,7 @@ test_file_lock_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 2: 1) RDWR 2) RDONLY : should fail
      */
     /* Create 1 pipe */
@@ -4809,7 +4809,7 @@ test_file_lock_concur(hid_t in_fapl)
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -4827,10 +4827,10 @@ test_file_lock_concur(hid_t in_fapl)
         } H5E_END_TRY;
 
         /* Should fail */
-        if(child_fid == FAIL) 
+        if(child_fid == FAIL)
             HDexit(EXIT_SUCCESS);
 
-	/* Close the pipe */
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -4870,7 +4870,7 @@ test_file_lock_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 3: 1) RDONLY 2) RDWR : should fail
      */
 
@@ -4884,7 +4884,7 @@ test_file_lock_concur(hid_t in_fapl)
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -4905,7 +4905,7 @@ test_file_lock_concur(hid_t in_fapl)
         if(child_fid == FAIL)
             HDexit(EXIT_SUCCESS);
 
-	/* Close the pipe */
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -4919,7 +4919,7 @@ test_file_lock_concur(hid_t in_fapl)
     /* Opens the test file */
     if((fid = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
         FAIL_STACK_ERROR
-    
+
     /* Notify child process */
     notify = 1;
     if(HDwrite(out_pdf[1], &notify, sizeof(int)) < 0)
@@ -4945,7 +4945,7 @@ test_file_lock_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 4: 1) RDONLY 2) RDONLY : should succeed
      */
 
@@ -4959,7 +4959,7 @@ test_file_lock_concur(hid_t in_fapl)
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -4980,15 +4980,15 @@ test_file_lock_concur(hid_t in_fapl)
         if(child_fid >= 0) {
             /* Close the file */
             if(H5Fclose(child_fid) < 0)
-		HDexit(EXIT_FAILURE);
+        HDexit(EXIT_FAILURE);
 
-	    /* Close the pipe */
-	    if(HDclose(out_pdf[0]) < 0)
-		HDexit(EXIT_FAILURE);
+        /* Close the pipe */
+        if(HDclose(out_pdf[0]) < 0)
+        HDexit(EXIT_FAILURE);
 
             HDexit(EXIT_SUCCESS);
         } /* end if */
-        
+
         HDexit(EXIT_FAILURE);
     } /* end if */
 
@@ -5101,7 +5101,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 1: 1) RDWR 2) RDWR|SWMR_WRITE : should fail
      */
 
@@ -5115,7 +5115,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -5133,10 +5133,10 @@ test_file_lock_swmr_concur(hid_t in_fapl)
         } H5E_END_TRY;
 
         /* Should fail */
-        if(child_fid == FAIL) 
+        if(child_fid == FAIL)
             HDexit(EXIT_SUCCESS);
 
-	/* Close the pipe */
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -5176,7 +5176,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 2: 1) RDWR 2) RDONLY|SWMR_READ: should fail
      */
 
@@ -5186,13 +5186,13 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     /* Fork child process */
     if((childpid = HDfork()) < 0)
-	FAIL_STACK_ERROR
+    FAIL_STACK_ERROR
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
-	 /* Close unused write end for out_pdf */
+    /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -5208,10 +5208,10 @@ test_file_lock_swmr_concur(hid_t in_fapl)
         } H5E_END_TRY;
 
         /* Should fail */
-        if(child_fid == FAIL) 
+        if(child_fid == FAIL)
             HDexit(EXIT_SUCCESS);
 
-	/* Close the pipe */
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -5237,7 +5237,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     /* Wait for child process to complete */
     if(HDwaitpid(childpid, &child_status, child_wait_option) < 0)
-	FAIL_STACK_ERROR
+    FAIL_STACK_ERROR
 
     /* Check if child terminated normally */
     if(WIFEXITED(child_status)) {
@@ -5251,7 +5251,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 3: 1) RDWR|SWMR_WRITE 2) RDWR : should fail
      */
 
@@ -5265,7 +5265,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -5283,10 +5283,10 @@ test_file_lock_swmr_concur(hid_t in_fapl)
         } H5E_END_TRY;
 
         /* Should fail */
-        if(child_fid == FAIL) 
+        if(child_fid == FAIL)
             HDexit(EXIT_SUCCESS);
-    
-	/* Close the pipe */
+
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -5326,7 +5326,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 4: 1) RDWR|SWMR_WRITE 2) RDWR|SWMR_WRITE : should fail
      */
 
@@ -5339,7 +5339,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -5357,10 +5357,10 @@ test_file_lock_swmr_concur(hid_t in_fapl)
         } H5E_END_TRY;
 
         /* Should fail */
-        if(child_fid == FAIL) 
+        if(child_fid == FAIL)
             HDexit(EXIT_SUCCESS);
 
-	/* Close the pipe */
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -5373,7 +5373,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     /* Open the test file */
     if((fid = H5Fopen(filename, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl)) < 0)
-	FAIL_STACK_ERROR
+    FAIL_STACK_ERROR
 
     /* Notify child process */
     notify = 1;
@@ -5400,7 +5400,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 5: 1) RDWR|SWMR_WRITE 2) RDONLY|SWMR_READ : should succeed
      */
 
@@ -5409,11 +5409,11 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     /* Fork child process */
     if((childpid = HDfork()) < 0)
-	FAIL_STACK_ERROR
+    FAIL_STACK_ERROR
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -5437,7 +5437,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
             HDexit(EXIT_SUCCESS);
         }
 
-	/* Close the pipe */
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -5450,7 +5450,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     /* Open the test file */
     if((fid = H5Fopen(filename, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl)) < 0)
-	FAIL_STACK_ERROR
+    FAIL_STACK_ERROR
 
     /* Notify child process */
     notify = 1;
@@ -5477,7 +5477,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 6: 1) RDWR|SWMR_WRITE 2) RDONLY : should fail
      */
 
@@ -5490,7 +5490,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -5508,10 +5508,10 @@ test_file_lock_swmr_concur(hid_t in_fapl)
         } H5E_END_TRY;
 
         /* Should fail */
-        if(child_fid == FAIL) 
+        if(child_fid == FAIL)
             HDexit(EXIT_SUCCESS);
 
-	/* Close the pipe */
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -5551,7 +5551,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 7: 1) RDONLY|SWMR_READ 2) RDWR : should fail
      */
 
@@ -5565,7 +5565,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -5583,10 +5583,10 @@ test_file_lock_swmr_concur(hid_t in_fapl)
         } H5E_END_TRY;
 
         /* Should fail */
-        if(child_fid == FAIL) 
+        if(child_fid == FAIL)
             HDexit(EXIT_SUCCESS);
 
-	 /* Close the pipe */
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -5626,7 +5626,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 8: 1) RDONLY|SWMR_READ 2) RDWR|SWMR_WRITE : should fail
      */
 
@@ -5640,7 +5640,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -5658,9 +5658,9 @@ test_file_lock_swmr_concur(hid_t in_fapl)
         } H5E_END_TRY;
 
         /* Should fail */
-        if(child_fid == FAIL) 
+        if(child_fid == FAIL)
             HDexit(EXIT_SUCCESS);
-	
+
         /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
             HDexit(EXIT_FAILURE);
@@ -5701,7 +5701,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 9: 1) RDONLY|SWMR_READ 2) RDONLY|SWMR_READ : should succeed
      */
 
@@ -5715,7 +5715,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -5779,7 +5779,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 10: 1) RDONLY|SWMR_READ 2) RDONLY : should succeed
      */
 
@@ -5793,7 +5793,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -5816,7 +5816,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
             HDexit(EXIT_SUCCESS);
         }
 
-	/* Close the pipe */
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -5856,13 +5856,13 @@ test_file_lock_swmr_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 11: 1) RDONLY 2) RDWR|SWMR_WRITE : should fail
      */
 
     /* Create 1 pipe */
     if(HDpipe(out_pdf) < 0)
-	FAIL_STACK_ERROR
+    FAIL_STACK_ERROR
 
     /* Fork child process */
     if((childpid = HDfork()) < 0)
@@ -5870,7 +5870,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -5888,10 +5888,10 @@ test_file_lock_swmr_concur(hid_t in_fapl)
         } H5E_END_TRY;
 
         /* Should fail */
-        if(child_fid == FAIL) 
+        if(child_fid == FAIL)
             HDexit(EXIT_SUCCESS);
 
-	/* Close the pipe */
+    /* Close the pipe */
         if(HDclose(out_pdf[0]) < 0)
             HDexit(EXIT_FAILURE);
 
@@ -5931,7 +5931,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
     if(H5Fclose(fid) < 0)
         FAIL_STACK_ERROR
 
-    /* 
+    /*
      * Case 12: 1) RDONLY 2) RDONLY|SWMR_READ : should succeed
      */
 
@@ -5945,7 +5945,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
 
     if(childpid == 0) { /* Child process */
         hid_t child_fid;    /* File ID */
-	int child_notify = 0;
+    int child_notify = 0;
 
         /* Close unused write end for out_pdf */
         if(HDclose(out_pdf[1]) < 0)
@@ -5988,7 +5988,7 @@ test_file_lock_swmr_concur(hid_t in_fapl)
     notify = 1;
     if(HDwrite(out_pdf[1], &notify, sizeof(int)) < 0)
         FAIL_STACK_ERROR;
-	
+
     /* Close the pipe */
     if(HDclose(out_pdf[1]) < 0)
         FAIL_STACK_ERROR;
@@ -6042,6 +6042,11 @@ error:
 static int
 test_file_lock_env_var(hid_t in_fapl)
 {
+#if !(defined(H5_HAVE_FORK) && defined(H5_HAVE_WAITPID))
+    SKIPPED();
+    HDputs("    Test skipped due to fork or waitpid not defined.");
+    return 0;
+#else
     hid_t fid = -1;             /* File ID */
     hid_t fapl = -1;                    /* File access property list */
     char filename[NAME_BUF_SIZE];       /* file name */
@@ -6054,11 +6059,6 @@ test_file_lock_env_var(hid_t in_fapl)
 
     TESTING("File locking environment variable");
 
-#if !(defined(H5_HAVE_FORK) && defined(H5_HAVE_WAITPID))
-    SKIPPED();
-    HDputs("    Test skipped due to fork or waitpid not defined.");
-    return 0;
-#else
 
     /* Set the environment variable */
     if(HDsetenv("HDF5_USE_FILE_LOCKING", "FALSE", TRUE) < 0)
@@ -6069,7 +6069,7 @@ test_file_lock_env_var(hid_t in_fapl)
 
     /* Set the filename to use for this test (dependent on fapl) */
     h5_fixname(FILENAME[1], fapl, filename, sizeof(filename));
-  
+
     /* Create the test file */
     if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         TEST_ERROR
@@ -6093,7 +6093,7 @@ test_file_lock_env_var(hid_t in_fapl)
         TEST_ERROR
 
     if(childpid == 0) {
-        
+
         /* Child process */
 
         hid_t child_fid;    /* File ID */
@@ -6127,7 +6127,7 @@ test_file_lock_env_var(hid_t in_fapl)
     /* Open the test file */
     if((fid = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
         TEST_ERROR
-    
+
     /* Notify child process */
     notify = 1;
     if(HDwrite(out_pdf[1], &notify, sizeof(int)) < 0)
@@ -6183,7 +6183,7 @@ test_swmr_vfd_flag(void)
     hid_t sec2_fapl = -1;   /* fapl ID of a VFD that supports SWMR writes (sec2) */
     hid_t bad_fapl = -1;    /* fapl ID of a VFD that does not support SWMR writes (stdio) */
     char filename[NAME_BUF_SIZE];   /* file name */
-    
+
     TESTING("SWMR-enabled VFD flag functionality");
 
     /* Attempt to open a file using a SWMR-compatible VFD. */
@@ -6238,7 +6238,7 @@ error:
 } /* test_swmr_vfd_flag() */
 
 #ifdef OUT
-/* 
+/*
  * This exposes a bug for H5Orefresh while handling opened objects for H5Fstart_swmr_write().
  * The boolean to skip file truncation test when reading in superblock will fix the problem.
  * Will work to move that to test/flushrefresh.c later.
@@ -6253,7 +6253,7 @@ test_bug_refresh(hid_t in_fapl)
     char filename[NAME_BUF_SIZE];   /* File name */
 
     /* Create a copy of the input parameter in_fapl */
-    if((fapl = H5Pcopy(in_fapl)) < 0) 
+    if((fapl = H5Pcopy(in_fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Set to use the latest library format */
@@ -6294,7 +6294,7 @@ test_bug_refresh(hid_t in_fapl)
         FAIL_STACK_ERROR;
 
     if (H5Fflush(fid, H5F_SCOPE_GLOBAL) < 0)
-        TEST_ERROR 
+        TEST_ERROR
 
     if(H5Grefresh(gid1) < 0) TEST_ERROR
     if(H5Grefresh(gid2) < 0) TEST_ERROR
@@ -6364,7 +6364,7 @@ error:
  *              (5) Notify parent process #B
  *              (6) Wait for notification from parent process #C
  *              (7) Refresh the dataset
- *              (8) Verify the dataset's dimension and data are correct 
+ *              (8) Verify the dataset's dimension and data are correct
  */
 #if !(defined(H5_HAVE_FORK) && defined(H5_HAVE_WAITPID))
 
@@ -6411,7 +6411,7 @@ test_refresh_concur(hid_t in_fapl, hbool_t new_format)
     } /* end if */
 
 
-    if((fapl = H5Pcopy(in_fapl)) < 0) 
+    if((fapl = H5Pcopy(in_fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Set the filename to use for this test (dependent on fapl) */
@@ -6466,106 +6466,106 @@ test_refresh_concur(hid_t in_fapl, hbool_t new_format)
     if(childpid == 0) { /* Child process */
         hid_t child_fid1 = -1;    /* File ID */
         hid_t child_fid2 = -1;    /* File ID */
-	hid_t child_did1 = -1, child_did2 = -1;
-	hid_t child_sid = -1;
-	hsize_t tdims[1];
-	int rbuf[2] = {0, 0};
-	int child_notify = 0;
+    hid_t child_did1 = -1, child_did2 = -1;
+    hid_t child_sid = -1;
+    hsize_t tdims[1];
+    int rbuf[2] = {0, 0};
+    int child_notify = 0;
 
-	/* Close unused write end for out_pdf */
-	if(HDclose(out_pdf[1]) < 0)
-	    HDexit(EXIT_FAILURE);
+    /* Close unused write end for out_pdf */
+    if(HDclose(out_pdf[1]) < 0)
+        HDexit(EXIT_FAILURE);
 
-	/* close unused read end for in_pdf */
-	if(HDclose(in_pdf[0]) < 0)
-	    HDexit(EXIT_FAILURE);
+    /* close unused read end for in_pdf */
+    if(HDclose(in_pdf[0]) < 0)
+        HDexit(EXIT_FAILURE);
 
-	/* Wait for notification from parent process */
-	while(child_notify != 1) {
-	    if(HDread(out_pdf[0], &child_notify, sizeof(int)) < 0)
-		HDexit(EXIT_FAILURE);
-	}
-	    
-	/* Open the file 2 times */
-	if((child_fid1 = H5Fopen(filename, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl)) < 0)
-	    HDexit(EXIT_FAILURE);
+    /* Wait for notification from parent process */
+    while(child_notify != 1) {
+        if(HDread(out_pdf[0], &child_notify, sizeof(int)) < 0)
+        HDexit(EXIT_FAILURE);
+    }
 
-	if((child_fid2 = H5Fopen(filename, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl)) < 0)
-	    HDexit(EXIT_FAILURE);
+    /* Open the file 2 times */
+    if((child_fid1 = H5Fopen(filename, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl)) < 0)
+        HDexit(EXIT_FAILURE);
 
-	/* Open the dataset 2 times */
-	if((child_did1 = H5Dopen2(child_fid1, "dataset", H5P_DEFAULT)) < 0)
-	    HDexit(EXIT_FAILURE);
-	if((child_did2 = H5Dopen2(child_fid2, "dataset", H5P_DEFAULT)) < 0)
-	    HDexit(EXIT_FAILURE);
+    if((child_fid2 = H5Fopen(filename, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl)) < 0)
+        HDexit(EXIT_FAILURE);
 
-	/* Get the dataset's dataspace via did1 */
-	if((child_sid = H5Dget_space(child_did1)) < 0)
-	    HDexit(EXIT_FAILURE);
-	if(H5Sget_simple_extent_dims(child_sid, tdims, NULL) < 0)
-	    HDexit(EXIT_FAILURE);
-	if(tdims[0] != 1)
-	    HDexit(EXIT_FAILURE);
+    /* Open the dataset 2 times */
+    if((child_did1 = H5Dopen2(child_fid1, "dataset", H5P_DEFAULT)) < 0)
+        HDexit(EXIT_FAILURE);
+    if((child_did2 = H5Dopen2(child_fid2, "dataset", H5P_DEFAULT)) < 0)
+        HDexit(EXIT_FAILURE);
 
-	/* Read from the dataset via did2 */
-	if(H5Dread(child_did2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rbuf) < 0)
-	    HDexit(EXIT_FAILURE);
+    /* Get the dataset's dataspace via did1 */
+    if((child_sid = H5Dget_space(child_did1)) < 0)
+        HDexit(EXIT_FAILURE);
+    if(H5Sget_simple_extent_dims(child_sid, tdims, NULL) < 0)
+        HDexit(EXIT_FAILURE);
+    if(tdims[0] != 1)
+        HDexit(EXIT_FAILURE);
 
-	/* Verify the data is correct */
-	if(rbuf[0] != 99)
-	    HDexit(EXIT_FAILURE);
+    /* Read from the dataset via did2 */
+    if(H5Dread(child_did2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rbuf) < 0)
+        HDexit(EXIT_FAILURE);
 
-	/* Notify parent process */
-	child_notify = 2;
-	if(HDwrite(in_pdf[1], &child_notify, sizeof(int)) < 0)
-	    HDexit(EXIT_FAILURE);
+    /* Verify the data is correct */
+    if(rbuf[0] != 99)
+        HDexit(EXIT_FAILURE);
 
-	/* Wait for notification from parent process */
-	while(child_notify != 3) {
-	    if(HDread(out_pdf[0], &child_notify, sizeof(int)) < 0)
-		HDexit(EXIT_FAILURE);
-	}
+    /* Notify parent process */
+    child_notify = 2;
+    if(HDwrite(in_pdf[1], &child_notify, sizeof(int)) < 0)
+        HDexit(EXIT_FAILURE);
 
-	/* Refresh dataset via did1 */
-	if(H5Drefresh(child_did1) < 0)
-	    HDexit(EXIT_FAILURE);
+    /* Wait for notification from parent process */
+    while(child_notify != 3) {
+        if(HDread(out_pdf[0], &child_notify, sizeof(int)) < 0)
+        HDexit(EXIT_FAILURE);
+    }
 
-	/* Get the dataset's dataspace and verify */
-	if((child_sid = H5Dget_space(child_did1)) < 0)
-	    HDexit(EXIT_FAILURE);
-	if(H5Sget_simple_extent_dims(child_sid, tdims, NULL) < 0)
-	    HDexit(EXIT_FAILURE);
+    /* Refresh dataset via did1 */
+    if(H5Drefresh(child_did1) < 0)
+        HDexit(EXIT_FAILURE);
 
-	if(tdims[0] != 2)
-	    HDexit(EXIT_FAILURE);
+    /* Get the dataset's dataspace and verify */
+    if((child_sid = H5Dget_space(child_did1)) < 0)
+        HDexit(EXIT_FAILURE);
+    if(H5Sget_simple_extent_dims(child_sid, tdims, NULL) < 0)
+        HDexit(EXIT_FAILURE);
 
-	/* Read from the dataset */
-	if(H5Dread(child_did2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rbuf) < 0)
-	    HDexit(EXIT_FAILURE);
+    if(tdims[0] != 2)
+        HDexit(EXIT_FAILURE);
 
-	/* Verify the data is correct */
-	if(rbuf[0] != 100 || rbuf[1] != 100)
-	    HDexit(EXIT_FAILURE);
+    /* Read from the dataset */
+    if(H5Dread(child_did2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rbuf) < 0)
+        HDexit(EXIT_FAILURE);
 
-	/* Close the 2 datasets */
-	if(H5Dclose(child_did1) < 0)
-	    HDexit(EXIT_FAILURE);
-	if(H5Dclose(child_did2) < 0)
-	    HDexit(EXIT_FAILURE);
+    /* Verify the data is correct */
+    if(rbuf[0] != 100 || rbuf[1] != 100)
+        HDexit(EXIT_FAILURE);
 
-	/* Close the 2 files */
-	if(H5Fclose(child_fid1) < 0)
-	    HDexit(EXIT_FAILURE);
-	if(H5Fclose(child_fid2) < 0)
-	    HDexit(EXIT_FAILURE);
-	     	    
-	/* Close the pipes */
-	if(HDclose(out_pdf[0]) < 0)
-	    HDexit(EXIT_FAILURE);
-	if(HDclose(in_pdf[1]) < 0)
-	    HDexit(EXIT_FAILURE);
+    /* Close the 2 datasets */
+    if(H5Dclose(child_did1) < 0)
+        HDexit(EXIT_FAILURE);
+    if(H5Dclose(child_did2) < 0)
+        HDexit(EXIT_FAILURE);
 
-	HDexit(EXIT_SUCCESS);
+    /* Close the 2 files */
+    if(H5Fclose(child_fid1) < 0)
+        HDexit(EXIT_FAILURE);
+    if(H5Fclose(child_fid2) < 0)
+        HDexit(EXIT_FAILURE);
+
+    /* Close the pipes */
+    if(HDclose(out_pdf[0]) < 0)
+        HDexit(EXIT_FAILURE);
+    if(HDclose(in_pdf[1]) < 0)
+        HDexit(EXIT_FAILURE);
+
+    HDexit(EXIT_SUCCESS);
     }
 
     /* Close unused read end for out_pdf */
@@ -6600,8 +6600,8 @@ test_refresh_concur(hid_t in_fapl, hbool_t new_format)
 
     /* Wait for notification from child process */
     while(notify != 2) {
-	if(HDread(in_pdf[0], &notify, sizeof(int)) < 0)
-	    FAIL_STACK_ERROR;
+    if(HDread(in_pdf[0], &notify, sizeof(int)) < 0)
+        FAIL_STACK_ERROR;
     }
 
     /* Cork the metadata cache, to prevent the object header from being
@@ -6713,7 +6713,7 @@ test_multiple_same(hid_t in_fapl, hbool_t new_format)
     } /* end if */
 
 
-    if((fapl = H5Pcopy(in_fapl)) < 0) 
+    if((fapl = H5Pcopy(in_fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Set the filename to use for this test (dependent on fapl) */
@@ -7037,7 +7037,7 @@ main(void)
     if(lock_env_var && !HDstrcmp(lock_env_var, "FALSE"))
         use_file_locking = FALSE;
     else
-        use_file_locking = TRUE;    
+        use_file_locking = TRUE;
 
     /* Set up */
     h5_reset();
@@ -7058,9 +7058,9 @@ main(void)
     nerrors += test_metadata_read_retry_info(fapl);
 
     /* Tests on H5Fstart_swmr_write() */
-    /* 
+    /*
      * Modify the following routines to test for files:
-     *   H5Fcreate(write, latest format) or  H5Fcreate(SWMR write, non-latest-format) 
+     *   H5Fcreate(write, latest format) or  H5Fcreate(SWMR write, non-latest-format)
      *   --both result in v3 superblock and latest version suppport
      */
     nerrors += test_start_swmr_write(fapl, TRUE);
@@ -7081,23 +7081,23 @@ main(void)
     nerrors += test_append_flush_dataset_multiple(fapl);
 
     if(use_file_locking) {
-        /* 
+        /*
          * Tests for:
          *   file open flags--single process access
          *   file open flags--concurrent access
          */
-        nerrors += test_file_lock_same(fapl);              
-        nerrors += test_file_lock_concur(fapl);            
-        /* 
+        nerrors += test_file_lock_same(fapl);
+        nerrors += test_file_lock_concur(fapl);
+        /*
          * Tests for:
          *   file open flags+SWMR flags--single process access
-         *   file open flags+SWMR flags--concurrent access 
+         *   file open flags+SWMR flags--concurrent access
          *
          * Modify the following 2 routines to test for files:
-         *   H5Fcreate(write, latest format) or  H5Fcreate(SWMR write, non-latest-format) 
+         *   H5Fcreate(write, latest format) or  H5Fcreate(SWMR write, non-latest-format)
          *   --both result in v3 superblock and latest version suppport
          */
-        nerrors += test_file_lock_swmr_same(fapl);         
+        nerrors += test_file_lock_swmr_same(fapl);
         nerrors += test_file_lock_swmr_concur(fapl);
     } /* end if */
 
