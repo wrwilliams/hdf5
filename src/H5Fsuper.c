@@ -946,24 +946,15 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
     /* Compute the size of the driver information block */
     H5_CHECKED_ASSIGN(driver_size, size_t, H5FD_sb_size(f->shared->lf), hsize_t);
 
-    /* Quincey:  The following code sets driver_size to the valued needed 
-     *           for the driver info block, and sets the driver info block
-     *           address regardless of the version of the superblock.
+    /* The following code sets driver_size to the valued needed 
+     * for the driver info block, and sets the driver info block
+     * address regardless of the version of the superblock.
      *
-     *           Rather than alter this code to test for superblock version,
-     *           I have modified the code below that creates the file driver 
-     *		 info superblock extension message to subtract 
-     *           H5F_DRVINFOBLOCK_HDR_SIZE from driver_size to obtain the 
-     *           the correct superblock extension message size.
-     *
-     *           However, I question whether it is appropriate to set 
-     *           sblock->driver_addr in the version 2 superblock.  As it
-     *		 doesn't seem to be causing any issues at present, I have 
-     *		 left this code alone.  Per your request, I have inserted
-     *		 this comment to draw your attention to this issue on 
-     *		 review.
-     *
-     *                                           JRM -- 12/28/15
+     * Rather than alter this code to test for superblock version,
+     * I have modified the code below that creates the file driver 
+     * superblock extension message to subtract 
+     * H5F_DRVINFOBLOCK_HDR_SIZE from driver_size to obtain the 
+     * the correct superblock extension message size.
      */
     if(driver_size > 0) {
         driver_size += H5F_DRVINFOBLOCK_HDR_SIZE;

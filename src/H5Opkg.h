@@ -508,16 +508,11 @@ H5_DLLVAR const H5O_msg_class_t H5O_MSG_REFCOUNT[1];
 /* Free-space Manager Info message. (0x0017) */
 H5_DLLVAR const H5O_msg_class_t H5O_MSG_FSINFO[1];
 
-#if 0 /* original code */ /* JRM */
-/* Placeholder for unknown message. (0x0018) */
-H5_DLLVAR const H5O_msg_class_t H5O_MSG_UNKNOWN[1];
-#else /* modified code */ /* JRM */
 /* Metadata Cache Image message. (0x0018) */
 H5_DLLVAR const H5O_msg_class_t H5O_MSG_MDCI[1];
 
 /* Placeholder for unknown message. (0x0019) */
 H5_DLLVAR const H5O_msg_class_t H5O_MSG_UNKNOWN[1];
-#endif /* modified code */ /* JRM */
 
 
 /*

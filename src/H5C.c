@@ -486,10 +486,11 @@ H5C_create(size_t		      max_cache_size,
      * Initial value of image_ctl must match H5C__DEFAULT_CACHE_IMAGE_CTL
      * in H5Cprivate.h.
      */
-    cache_ptr->image_ctl.version        = H5C__CURR_CACHE_IMAGE_CTL_VER;
-    cache_ptr->image_ctl.generate_image = FALSE;
-    cache_ptr->image_ctl.max_image_size = 0;
-    cache_ptr->image_ctl.flags          = H5C_CI__ALL_FLAGS;
+    cache_ptr->image_ctl.version            = H5C__CURR_CACHE_IMAGE_CTL_VER;
+    cache_ptr->image_ctl.generate_image     = FALSE;
+    cache_ptr->image_ctl.save_resize_status = FALSE;
+    cache_ptr->image_ctl.entry_ageout       = -1;
+    cache_ptr->image_ctl.flags              = H5C_CI__ALL_FLAGS;
 
     cache_ptr->serialization_in_progress= FALSE;
     cache_ptr->close_warning_received   = FALSE;
@@ -497,6 +498,7 @@ H5C_create(size_t		      max_cache_size,
     cache_ptr->delete_image		= FALSE;
     cache_ptr->image_addr		= HADDR_UNDEF;
     cache_ptr->image_len		= 0;
+    cache_ptr->image_data_len		= 0;
 
     cache_ptr->entries_loaded_counter		= 0;
     cache_ptr->entries_inserted_counter		= 0;
@@ -506,6 +508,10 @@ H5C_create(size_t		      max_cache_size,
     cache_ptr->num_entries_in_image	= 0;
     cache_ptr->image_entries		= NULL;
     cache_ptr->image_buffer		= NULL;
+
+    /* initialize free space manager related fields: */
+    cache_ptr->rdfsm_settled		= FALSE;
+    cache_ptr->mdfsm_settled		= FALSE;
 
     if ( H5C_reset_cache_hit_rate_stats(cache_ptr) != SUCCEED ) {
 
@@ -521,11 +527,6 @@ H5C_create(size_t		      max_cache_size,
 #ifndef NDEBUG
     cache_ptr->get_entry_ptr_from_addr_counter  = 0;
 #endif /* NDEBUG */
-
-#if 1 /* test code -- delete before checkin */ /* JRM */
-    cache_ptr->rdfsm_settled		= FALSE;
-    cache_ptr->mdfsm_settled		= FALSE;
-#endif /* test code -- delete before checkin */ /* JRM */
 
     /* Set return value */
     ret_value = cache_ptr;
@@ -1134,9 +1135,6 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 			break;
 
 		    case H5C_RING_RDFSM:
-#if 0 
-			if ( cache_ptr->index_ring_len[ring] > 0 ) {
-#else 
 			/* if the cache is clean through the FSM rings,
                          * then the FSMs are clean and can't change -- 
                          * no need to run the settle routine.
@@ -1144,7 +1142,7 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 			if ( ( f->shared->fs_strategy == 
                                H5F_FILE_SPACE_ALL_PERSIST ) &&
                              ( ! cache_ptr->rdfsm_settled ) ) {
-#endif
+
 			    if ( H5MF_settle_raw_data_fsm(f, dxpl_id) < 0 )
                                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
                                             "RD FSM settle failed.")
@@ -1154,9 +1152,6 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 			break;
 
 		    case H5C_RING_MDFSM:
-#if 0 
-			if ( cache_ptr->index_ring_len[ring] > 0 ) {
-#else 
 			/* if the cache is clean through the FSM rings,
                          * then the FSMs are clean and can't change -- 
                          * no need to run the settle routine.
@@ -1164,7 +1159,7 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 			if ( ( f->shared->fs_strategy == 
                                H5F_FILE_SPACE_ALL_PERSIST ) &&
 			     ( ! cache_ptr->mdfsm_settled ) ) {
-#endif
+
 			    if ( H5MF_settle_meta_data_fsm(f, dxpl_id) < 0 )
                                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
                                             "MD FSM settle failed.")
@@ -1588,6 +1583,7 @@ H5C_insert_entry(H5F_t *             f,
     entry_ptr->image_fd_height			= 0;
     entry_ptr->prefetched			= FALSE;
     entry_ptr->prefetch_type_id			= 0;
+    entry_ptr->age				= 0;
 #ifndef NDEBUG  /* debugging field */
     entry_ptr->serialization_count		= 0;
 #endif /* NDEBUG */
@@ -3326,6 +3322,9 @@ done:
  *		Added code displaying the images created/loaded fields,
  *		and also stats on prefetched entries.
  *
+ *		JRM -- 11/2/16
+ *		Deleted the hash_bucket_scan_restarts field.
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3641,11 +3640,10 @@ H5C_stats(H5C_t * cache_ptr,
                             cache_ptr->entries_scanned_to_make_space));
 
     HDfprintf(stdout, 
-        "%s  slist/LRU/bkt/index scan restarts  = %lld / %lld / %lld / %lld.\n",
+        "%s  slist/LRU/index scan restarts  = %lld / %lld / %lld.\n",
               cache_ptr->prefix, 
               (long long)(cache_ptr->slist_scan_restarts),
               (long long)(cache_ptr->LRU_scan_restarts),
-              (long long)(cache_ptr->hash_bucket_scan_restarts),
               (long long)(cache_ptr->index_scan_restarts));
 
     HDfprintf(stdout,
@@ -3851,6 +3849,9 @@ done:
  *		Added code to initialize the images created/loaded 
  *		and prefetched entry related fields.
  *
+ *		JRM 11/2/16
+ *		Deleted the hash_bucket_scan_restarts fields.
+ *
  *-------------------------------------------------------------------------
  */
 void
@@ -3929,8 +3930,6 @@ H5C_stats__reset(H5C_t H5_ATTR_UNUSED * cache_ptr)
 
     cache_ptr->slist_scan_restarts		= 0;
     cache_ptr->LRU_scan_restarts		= 0;
-    cache_ptr->hash_bucket_scan_restarts	= 0;
-
     cache_ptr->index_scan_restarts		= 0;
 
     cache_ptr->images_created			= 0;
@@ -4619,6 +4618,89 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 
 } /* H5C_unprotect() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5C_unsettle_ring()
+ *
+ * Purpose:	Advise the metadata cache that the specified free space 
+ *		manager ring is no longer settled (if it was on entry).
+ *
+ *		If the target free space manager ring is already 
+ *		unsettled, do nothing, and return SUCCEED.
+ *
+ *		If the target free space manager ring is settled, and
+ *		we are not in the process of a file shutdown, mark 
+ *		the ring as unsettled, and return SUCCEED.
+ *
+ *		If the target free space manager is settled, and we 
+ *		are in the process of a file shutdown, post an error
+ *		message, and return FAIL.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              10/15/16
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C_unsettle_ring(H5F_t * f, H5C_ring_t ring) 
+{
+    H5C_t *		cache_ptr;
+    herr_t              ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* sanity checks */
+    HDassert(f);
+    HDassert(f->shared);
+    HDassert(f->shared->cache);
+
+    cache_ptr = f->shared->cache;
+
+    HDassert(H5C__H5C_T_MAGIC == cache_ptr->magic);
+    HDassert((H5C_RING_RDFSM == ring) || (H5C_RING_MDFSM == ring));
+
+    switch(ring) {
+
+	case H5C_RING_RDFSM:
+	    if ( cache_ptr->rdfsm_settled ) {
+
+		if ( ( cache_ptr->flush_in_progress ) ||
+                     ( cache_ptr->close_warning_received ) ) {
+
+		    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+				"unexpected rdfsm ring unsettle")
+		}
+		cache_ptr->rdfsm_settled = FALSE;
+	    }
+	    break;
+
+	case H5C_RING_MDFSM:
+	    if ( cache_ptr->mdfsm_settled ) {
+
+		if ( ( cache_ptr->flush_in_progress ) ||
+                     ( cache_ptr->close_warning_received ) ) {
+
+		    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+				"unexpected mdfsm ring unsettle")
+		}
+		cache_ptr->mdfsm_settled = FALSE;
+	    }
+	    break;
+
+	default:
+	    HDassert(FALSE); /* this should be un-reachable */
+	    break;
+    }
+
+done:
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5C_unsettle_ring() */
+
 
 
 /*-------------------------------------------------------------------------
@@ -6625,7 +6707,6 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
     int32_t		cur_ring_pel_len;
     int32_t		old_ring_pel_len;
     unsigned		cooked_flags;
-    unsigned		evict_flags;
     H5SL_node_t * 	node_ptr = NULL;
     H5C_cache_entry_t *	entry_ptr = NULL;
     H5C_cache_entry_t *	next_entry_ptr = NULL;
@@ -6657,8 +6738,6 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
     /* Filter out the flags that are not relevant to the flush/invalidate.
      */
     cooked_flags = flags & H5C__FLUSH_CLEAR_ONLY_FLAG;
-    /* TODO: this seems to be unused -- delete when convenient */
-    evict_flags = flags & H5C__EVICT_ALLOW_LAST_PINS_FLAG;
 
     /* The flush proceedure here is a bit strange.
      *
@@ -6702,7 +6781,9 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
     } /* end while */
 
     old_ring_pel_len = cur_ring_pel_len;
+
     while(cache_ptr->index_ring_len[ring] > 0) {
+
         /* first, try to flush-destroy any dirty entries.   Do this by
          * making a scan through the slist.  Note that new dirty entries
          * may be created by the flush call backs.  Thus it is possible
@@ -6997,20 +7078,15 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
                      *
                      * If this happens, and one of the target 
                      * entries happens to be the next entry in 
-                     * the hash bucket, we could find ourselves 
-                     * either find ourselves either scanning a 
-                     * non-existant entry, scanning through a 
-                     * different bucket, or skipping an entry.
+                     * the index list, we could find ourselves 
+                     * either scanning a on-existant entry, or
+                     * skipping one or more entries.
                      *
                      * Neither of these are good, so restart the 
-                     * the scan at the head of the hash bucket 
+                     * the scan at the head of the index list
                      * after the flush if *entry_ptr was dirty,
                      * on the off chance that the next entry was
                      * a target.
-                     *
-                     * This is not as inefficient at it might seem,
-                     * as hash buckets typically have at most two
-                     * or three entries.
                      */
                     hbool_t entry_was_dirty;
 
@@ -7026,13 +7102,9 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
 
 		    if(entry_was_dirty) {
 
-                        /* TODO: update stats for index list scan
-                         * restart here.
-                         *                   -- JRM 
-                         */
                         next_entry_ptr = cache_ptr->il_head;
 
-		        H5C__UPDATE_STATS_FOR_HASH_BUCKET_SCAN_RESTART(cache_ptr)
+		        H5C__UPDATE_STATS_FOR_INDEX_SCAN_RESTART(cache_ptr)
                     } /* end if */
                 } /* end if */
             } /* end if */
@@ -7086,11 +7158,6 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
 
         if((cur_ring_pel_len > 0) && (cur_ring_pel_len >= old_ring_pel_len)) {
 
-            /* TODO: this doesn't seem to be used -- delete when convenient */
-            /* Don't error if allowed to have pinned entries remaining */
-            if(evict_flags)
-                HGOTO_DONE(TRUE)
-
             /* The number of pinned entries in the ring is positive, and 
              * it is not declining.  Scream and die.
              */
@@ -7098,8 +7165,13 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
         } /* end if */
 
         HDassert(protected_entries == cache_ptr->pl_len);
-        if((protected_entries > 0) && (protected_entries == cache_ptr->index_len))
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Only protected entries left in cache, protected_entries = %d", (int)protected_entries)
+
+        if ( ( protected_entries > 0 ) && 
+             ( protected_entries == cache_ptr->index_len ) )
+
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
+               "Only protected entries left in cache, protected_entries = %d", \
+               (int)protected_entries)
     } /* main while loop */
 
     /* Invariants, after destroying all entries in the ring */
@@ -8414,6 +8486,7 @@ H5C_load_entry(H5F_t *              f,
     entry->image_fd_height		= 0;
     entry->prefetched			= FALSE;
     entry->prefetch_type_id		= 0;
+    entry->age				= 0;
 #ifndef NDEBUG  /* debugging field */
     entry->serialization_count		= 0;
 #endif /* NDEBUG */

@@ -434,6 +434,7 @@ H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr, H5AC_cache_image_co
         aux_ptr->candidate_slist_ptr = NULL;
         aux_ptr->write_done = NULL;
         aux_ptr->sync_point_done = NULL;
+	aux_ptr->p0_image_len = 0;
 
         sprintf(prefix, "%d:", mpi_rank);
 
@@ -504,9 +505,10 @@ H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr, H5AC_cache_image_co
      * Note that this not true as soon as control returns to the application
      * program, as some test code modifies f->shared->cache->image_ctl.
      */
-    int_ci_config.version        = image_config_ptr->version;
-    int_ci_config.generate_image = image_config_ptr->generate_image;
-    int_ci_config.max_image_size = image_config_ptr->max_image_size;
+    int_ci_config.version            = image_config_ptr->version;
+    int_ci_config.generate_image     = image_config_ptr->generate_image;
+    int_ci_config.save_resize_status = image_config_ptr->save_resize_status;
+    int_ci_config.entry_ageout       = image_config_ptr->entry_ageout;
 
     if(H5C_set_cache_image_config(f, f->shared->cache, &int_ci_config) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "auto resize configuration failed")
@@ -2282,9 +2284,10 @@ H5AC_validate_cache_image_config(H5AC_cache_image_config_t *config_ptr)
      * valid.
      */
 
-    internal_config.version        = config_ptr->version;
-    internal_config.generate_image = config_ptr->generate_image;
-    internal_config.max_image_size = config_ptr->max_image_size;
+    internal_config.version            = config_ptr->version;
+    internal_config.generate_image     = config_ptr->generate_image;
+    internal_config.save_resize_status = config_ptr->save_resize_status;
+    internal_config.entry_ageout       = config_ptr->entry_ageout;
 
     if(H5C_validate_cache_image_config(&internal_config) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, \
@@ -3114,6 +3117,51 @@ H5AC_reset_ring(H5P_genplist_t *dxpl, H5AC_ring_t orig_ring)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5AC_reset_ring() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5AC_unsettle_ring()
+ *
+ * Purpose:     Advise the metadata cache that the specified free space
+ *              manager ring is no longer settled (if it was on entry).
+ *
+ *              If the target free space manager ring is already
+ *              unsettled, do nothing, and return SUCCEED.
+ *
+ *              If the target free space manager ring is settled, and
+ *              we are not in the process of a file shutdown, mark
+ *              the ring as unsettled, and return SUCCEED.
+ *
+ *              If the target free space manager is settled, and we
+ *              are in the process of a file shutdown, post an error
+ *              message, and return FAIL.
+ *
+ *		Note that this function simply passes the call on to
+ *		the metadata cache proper, and returns the result.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              10/15/16
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5AC_unsettle_ring(H5F_t * f, H5C_ring_t ring)
+{
+    herr_t              ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    if ( FAIL == (ret_value = H5C_unsettle_ring(f, ring)) )
+	HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+		    "H5C_unsettle_ring() failed.");
+
+done:
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5AC_unsettle_ring() */
 
 
 /*-------------------------------------------------------------------------

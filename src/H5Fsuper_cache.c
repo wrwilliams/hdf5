@@ -477,7 +477,7 @@ H5F__cache_superblock_image_len(const void *_thing, size_t *image_len, hbool_t *
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5FS__cache_hdf_pre_serialize
+ * Function:    H5FS__cache_superblock_pre_serialize
  *
  * Purpose:	At present, this function is purely a sanity checking 
  *              call, intended to verify that the file driver info super
@@ -502,6 +502,7 @@ H5F__cache_superblock_pre_serialize(const H5F_t *f, hid_t dxpl_id,
     unsigned H5_ATTR_UNUSED *flags)
 {
     H5P_genplist_t *dxpl = NULL;        /* DXPL for setting ring */
+    hbool_t ring_modified = FALSE;
     H5AC_ring_t orig_ring = H5AC_RING_INV;      /* Original ring value */
     H5F_super_t *sblock = (H5F_super_t *)_thing; /* Pointer to the super block */
     herr_t ret_value = SUCCEED; /* Return value */
@@ -591,6 +592,8 @@ H5F__cache_superblock_pre_serialize(const H5F_t *f, hid_t dxpl_id,
                         HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, \
                                     "unable to set ring value")
 
+		    ring_modified = TRUE;
+
 
 		    /* Retrieve the 'driver info' structure */
                     if(NULL == H5O_msg_read(&ext_loc, H5O_DRVINFO_ID, 
@@ -634,8 +637,8 @@ H5F__cache_superblock_pre_serialize(const H5F_t *f, hid_t dxpl_id,
 #endif /* NDEBUG */
 
 done:
-    /* Reset the ring in the DXPL */
-    if(H5AC_reset_ring(dxpl, orig_ring) < 0)
+    /* Reset the ring in the DXPL if needed */
+    if((ring_modified) && (H5AC_reset_ring(dxpl, orig_ring) < 0))
         HDONE_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set property value")
 
     FUNC_LEAVE_NOAPI(ret_value)

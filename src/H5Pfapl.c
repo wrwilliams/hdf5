@@ -2829,8 +2829,11 @@ H5P__facc_cache_image_config_cmp(const void *_config1, const void *_config2, siz
     if(config1->generate_image < config2->generate_image) HGOTO_DONE(-1);
     if(config1->generate_image > config2->generate_image) HGOTO_DONE(1);
 
-    if(config1->max_image_size < config2->max_image_size) HGOTO_DONE(-1);
-    if(config1->max_image_size > config2->max_image_size) HGOTO_DONE(1);
+    if(config1->save_resize_status < config2->save_resize_status) HGOTO_DONE(-1);
+    if(config1->save_resize_status > config2->save_resize_status) HGOTO_DONE(1);
+
+    if(config1->entry_ageout < config2->entry_ageout) HGOTO_DONE(-1);
+    if(config1->entry_ageout > config2->entry_ageout) HGOTO_DONE(1);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2857,14 +2860,11 @@ H5P__facc_cache_image_config_enc(const void *value, void **_pp, size_t *size)
 {
     const H5AC_cache_image_config_t *config = (const H5AC_cache_image_config_t *)value; /* Create local aliases for value */
     uint8_t **pp = (uint8_t **)_pp;
-    unsigned enc_size;      /* Size of encoded property */
-    uint64_t enc_value;         /* Property to encode */
 
     FUNC_ENTER_STATIC_NOERR
 
     /* Sanity check */
     HDassert(value);
-    HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
 
     if(NULL != *pp) {
         /* Encode type sizes (as a safety check) */
@@ -2875,19 +2875,13 @@ H5P__facc_cache_image_config_enc(const void *value, void **_pp, size_t *size)
 
         H5_ENCODE_UNSIGNED(*pp, config->generate_image);
 
-        enc_value = (uint64_t)config->max_image_size;
-        enc_size = H5VM_limit_enc_size(enc_value);
-        HDassert(enc_size < 256);
-        *(*pp)++ = (uint8_t)enc_size;
-        UINT64ENCODE_VAR(*pp, enc_value, enc_size);
+        H5_ENCODE_UNSIGNED(*pp, config->save_resize_status);
+
+        INT32ENCODE(*pp, (int32_t)config->entry_ageout);
     } /* end if */
 
-    /* Compute encoded size of variably-encoded values */
-    enc_value = (uint64_t)config->max_image_size;
-    *size += 1 + H5VM_limit_enc_size(enc_value);
-
     /* Compute encoded size of fixed-size values */
-    *size += (1 + sizeof(unsigned) + sizeof(int32_t));
+    *size += (1 + (2 * sizeof(unsigned)) + (2 * sizeof(int32_t)));
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5P__facc_cache_image_config_enc() */
@@ -2914,7 +2908,6 @@ H5P__facc_cache_image_config_dec(const void **_pp, void *_value)
     H5AC_cache_image_config_t *config = (H5AC_cache_image_config_t *)_value;
     const uint8_t **pp = (const uint8_t **)_pp;
     unsigned enc_size;
-    uint64_t enc_value;
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_STATIC
@@ -2938,10 +2931,9 @@ H5P__facc_cache_image_config_dec(const void **_pp, void *_value)
 
     H5_DECODE_UNSIGNED(*pp, config->generate_image);
 
-    enc_size = *(*pp)++;
-    HDassert(enc_size < 256);
-    UINT64DECODE_VAR(*pp, enc_value, enc_size);
-    config->max_image_size = (size_t)enc_value;
+    H5_DECODE_UNSIGNED(*pp, config->save_resize_status);
+
+    INT32DECODE(*pp, config->entry_ageout);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
