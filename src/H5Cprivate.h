@@ -1559,7 +1559,7 @@ typedef int H5C_ring_t;
  *
  * Fields supporting the hash table:
  *
- * Fields in the cache are indexed by a more or less conventional hash table.
+ * Entries in the cache are indexed by a more or less conventional hash table.
  * If there are multiple entries in any hash bin, they are stored in a doubly
  * linked list.
  *
@@ -1645,6 +1645,28 @@ typedef int H5C_ring_t;
  *
  *		In either case, when there is no previous item, it should 
  *		be NULL.
+ *
+ *
+ * Fields supporting tagged entries:
+ *
+ * Entries in the cache that belong to a single object in the file are
+ * joined into a doubly-linked list, and are "tagged" with the object header
+ * address for that object's base header "chunk" (which is used as the
+ * canonical address for the object).  Global and pseudo-global entries are
+ * not tagged.  Tagged entries have a pointer to the tag info for the object,
+ * which is shared state for all the entries for that object.
+ *
+ * tl_next:	Pointer to the next entry in the tag list for an object.
+ *		NULL for the tail entry in the list, as well as untagged
+ *		entries.
+ *
+ * tl_prev:	Pointer to the previous entry in the tag list for an object.
+ *		NULL for the head entry in the list, as well as untagged
+ *		entries.
+ *
+ * tag_info:	Pointer to the common tag state for all entries belonging to
+ *              an object.  NULL for untagged entries.
+ *
  *
  * Cache entry stats collection fields:
  *

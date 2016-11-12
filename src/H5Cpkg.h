@@ -3154,13 +3154,39 @@ if ( ( (entry_ptr) == NULL ) ||                                                \
 /* Package Private Typedefs */
 /****************************/
 
-/* Info about each set of tagged entries */
+/****************************************************************************
+ *
+ * structure H5C_tag_info_t
+ *
+ * Structure about each set of tagged entries for an object in the file.
+ *
+ * Each H5C_tag_info_t struct corresponds to a particular object in the file.
+ *
+ * Each H5C_cache_entry struct in the linked list of entries for this tag
+ *      also contains a pointer back to the H5C_tag_info_t struct for the
+ *      overall object.
+ *
+ *
+ * The fields of this structure are discussed individually below:
+ *
+ * tag:	Address (i.e. "tag") of the object header for all the entries
+ *              corresponding to parts of that object.
+ *
+ * head: Head of doubly-linked list of all entries belonging to the tag.
+ *
+ * entry_cnt: Number of entries on linked list of entries for this tag.
+ *
+ * corked: Boolean flag indicating whether entries for this object can be
+ * 		evicted.
+ *
+ ****************************************************************************/
 typedef struct H5C_tag_info_t {
     haddr_t tag;                /* Tag (address) of the entries (must be first, for skiplist) */
     H5C_cache_entry_t *head;    /* Head of the list of entries for this tag */
     size_t entry_cnt;           /* Number of entries on list */
     hbool_t corked;             /* Whether this object is corked */
 } H5C_tag_info_t;
+
 
 /****************************************************************************
  *
@@ -3513,11 +3539,15 @@ typedef struct H5C_tag_info_t {
  * 		to the slist since the last time this field was set to
  * 		zero.  Note that this value can be negative.
  *
- * cork_list_ptr: A skip list to track object addresses that are corked.
- *                When an entry is inserted or protected in the cache,
- *                the entry's associated object address (tag field) is
- *                checked against this skip list.  If found, the entry
- *                is corked.
+ * tag_list: A skip list to track entries that belong to an object.
+ *                Each H5C_tag_info_t struct on the tag list corresponds to
+ *                a particular object in the file.  Tagged entries can be
+ *                flushed or evicted as a group, or corked to prevent entries
+ *                from being evicted from the cache.
+ *
+ *                "Global" entries, like the superblock and the file's
+ *                freelist, as well as psuedo-global entries like global
+ *                heaps and shared object header messages, are not tagged.
  *
  * When a cache entry is protected, it must be removed from the LRU
  * list(s) as it cannot be either flushed or evicted until it is unprotected.
