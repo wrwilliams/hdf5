@@ -3455,14 +3455,6 @@ typedef struct H5C_tag_info_t {
  *              (This functions similarly to a "dead man's switch")
  *
  *
- * With the addition of cache entry tagging, it is possible that 
- * an entry may be inserted into the cache without a tag during testing
- * and the tag's validity shouldn't be checked.
- *
- * The following field is maintained to facilitate this.
- *
- * ignore_tags:	Boolean flag to disable tag validation during entry insertion.
- *
  * When we flush the cache, we need to write entries out in increasing
  * address order.  An instance of a skip list is used to store dirty entries in
  * sorted order.  Whether it is cheaper to sort the dirty entries as needed,
@@ -3539,6 +3531,11 @@ typedef struct H5C_tag_info_t {
  * 		to the slist since the last time this field was set to
  * 		zero.  Note that this value can be negative.
  *
+ * Cache entries belonging to a particular object are "tagged" with that
+ * object's base object header address.
+ *
+ * The following fields are maintained to facilitate this.
+ *
  * tag_list: A skip list to track entries that belong to an object.
  *                Each H5C_tag_info_t struct on the tag list corresponds to
  *                a particular object in the file.  Tagged entries can be
@@ -3546,8 +3543,10 @@ typedef struct H5C_tag_info_t {
  *                from being evicted from the cache.
  *
  *                "Global" entries, like the superblock and the file's
- *                freelist, as well as psuedo-global entries like global
+ *                freelist, as well as shared entries like global
  *                heaps and shared object header messages, are not tagged.
+ *
+ * ignore_tags:	Boolean flag to disable tag validation during entry insertion.
  *
  * When a cache entry is protected, it must be removed from the LRU
  * list(s) as it cannot be either flushed or evicted until it is unprotected.
@@ -3772,19 +3771,19 @@ typedef struct H5C_tag_info_t {
  *              all the ways this can happen, we simply set this flag when
  *              we receive a new configuration.
  *
- * cache_full:	Boolean flag used to keep track of whether the cache is
- *		full, so we can refrain from increasing the size of a
- *		cache which hasn't used up the space allotted to it.
- *
- *		The field is initialized to FALSE, and then set to TRUE
- *		whenever we attempt to make space in the cache.
- *
  * resize_enabled:  This is another convenience flag which is set whenever
  *		a new set of values for resize_ctl are provided.  Very
  *		simply,
  *
  *		    resize_enabled = size_increase_possible ||
  *                                   size_decrease_possible;
+ *
+ * cache_full:	Boolean flag used to keep track of whether the cache is
+ *		full, so we can refrain from increasing the size of a
+ *		cache which hasn't used up the space allotted to it.
+ *
+ *		The field is initialized to FALSE, and then set to TRUE
+ *		whenever we attempt to make space in the cache.
  *
  * size_decreased:  Boolean flag set to TRUE whenever the maximum cache
  *		size is decreased.  The flag triggers a call to
@@ -4158,9 +4157,6 @@ struct H5C_t {
     H5C_cache_entry_t *		last_entry_removed_ptr;
     H5C_cache_entry_t *		entry_watched_for_removal;
 
-    /* Field to disable tag validation */
-    hbool_t                     ignore_tags;
-
     /* Fields for maintaining list of in-order entries, for flushing */
     hbool_t			slist_changed;
     int32_t                     slist_len;
@@ -4176,6 +4172,7 @@ struct H5C_t {
 
     /* Fields for maintaining list of tagged entries */
     H5SL_t *                    tag_list;
+    hbool_t                     ignore_tags;
 
     /* Fields for tracking protected entries */
     int32_t                     pl_len;

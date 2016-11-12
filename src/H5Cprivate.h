@@ -1652,7 +1652,7 @@ typedef int H5C_ring_t;
  * Entries in the cache that belong to a single object in the file are
  * joined into a doubly-linked list, and are "tagged" with the object header
  * address for that object's base header "chunk" (which is used as the
- * canonical address for the object).  Global and pseudo-global entries are
+ * canonical address for the object).  Global and shared entries are
  * not tagged.  Tagged entries have a pointer to the tag info for the object,
  * which is shared state for all the entries for that object.
  *
