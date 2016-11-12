@@ -364,9 +364,9 @@ H5HF__cache_hdr_get_load_size(const void *_image, void *_udata, size_t *image_le
 
 	/* Compute the 'base' size of the fractal heap header on disk */
 	*image_len = (size_t)H5HF_HEADER_SIZE(&dummy_hdr);
-
-    } else { /* compute actual_len */
-
+    } /* end if */
+    else { /* compute actual_len */
+        /* Sanity checks */
 	HDassert(actual_len);
 	HDassert(*actual_len == *image_len);
 
@@ -383,17 +383,15 @@ H5HF__cache_hdr_get_load_size(const void *_image, void *_udata, size_t *image_le
 	UINT16DECODE(image, id_len);              /* Heap ID length */
 	UINT16DECODE(image, filter_len);          /* I/O filters' encoded length */
 
+        /* Compute the size of the extra filter information */
 	if(filter_len > 0) {
-
-	    /* Compute the size of the extra filter information */
 	    filter_info_size = (size_t)(H5F_SIZEOF_SIZE(udata->f)   /* Size of size for filtered root direct block */
 				+ (unsigned)4		/* Size of filter mask for filtered root direct block */
 				+ filter_len);         	/* Size of encoded I/O filter info */
 
 	    /* Compute the heap header's size */
 	    *actual_len += filter_info_size;
-	}
-
+	} /* end if */
     } /* compute actual_len */
 
 done:
@@ -1657,25 +1655,21 @@ H5HF__cache_dblock_get_load_size(const void *_image, void *_udata, size_t *image
 
     /* Check for I/O filters on this heap */
     if(hdr->filter_len > 0) {
-
 	/* Check for root direct block */
-	if(par_info->iblock == NULL) {
+	if(par_info->iblock == NULL)
 	    /* filtered direct block */
 	    compressed_size = hdr->pline_root_direct_size;
-	} /* end if */
-	else {
+	else
 	    /* filtered direct block */
 	    compressed_size = par_info->iblock->filt_ents[par_info->entry].size;
-	} /* end else */
-    } 
+    }  /* end if */
 
     if(image == NULL) {
-
 	/* depend on I/O filters on this heap */
 	*image_len = (hdr->filter_len > 0) ? compressed_size:udata->dblock_size;
-
-    } else { 
-
+    } /* end if */
+    else { 
+        /* Sanity checks */
 	HDassert(actual_len);
 	HDassert(*actual_len == *image_len);
 	HDassert(compressed_ptr);
@@ -1684,17 +1678,18 @@ H5HF__cache_dblock_get_load_size(const void *_image, void *_udata, size_t *image
 	if(hdr->filter_len > 0) {
 	    HDassert(*image_len == compressed_size);
 	    compressed = TRUE;
-	} else {
+	} /* end if */
+        else {
 	    HDassert(*image_len == udata->dblock_size);
 	    compressed = FALSE;
 	    compressed_size = 0;
-	}
+	} /* end else */
 
 	/* decompressed size */
 	*actual_len = udata->dblock_size;
 	*compressed_ptr = compressed;
 	*compressed_image_len_ptr = compressed_size;
-    }
+    } /* end else */
     
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5HF__cache_dblock_get_load_size() */
@@ -1930,14 +1925,12 @@ H5HF__cache_dblock_deserialize(const void *_image, size_t len, void *_udata,
 	    HDassert(udata->dblk == NULL);
 
 	    /* Check for root direct block */
-	    if(par_info->iblock == NULL) {
+	    if(par_info->iblock == NULL)
 		/* Set up parameters to read filtered direct block */
 		read_size = hdr->pline_root_direct_size;
-	    } /* end if */
-	    else {
+	    else
 		/* Set up parameters to read filtered direct block */
 		read_size = par_info->iblock->filt_ents[par_info->entry].size;
-	    } /* end else */
 	    HDassert(len == read_size);
 
 	    /* Allocate buffer to perform I/O filtering on and copy image into
