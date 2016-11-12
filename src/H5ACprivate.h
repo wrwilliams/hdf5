@@ -175,7 +175,6 @@ typedef H5C_notify_action_t     H5AC_notify_action_t;
 #define H5AC__CLASS_COMPRESSED_FLAG	H5C__CLASS_COMPRESSED_FLAG
 
 /* The following flags should only appear in test code */
-/* The H5AC__CLASS_SKIP_READS & H5AC__CLASS_SKIP_WRITES flags are used in H5Oproxy.c */
 #define H5AC__CLASS_SKIP_READS		H5C__CLASS_SKIP_READS
 #define H5AC__CLASS_SKIP_WRITES		H5C__CLASS_SKIP_WRITES
 

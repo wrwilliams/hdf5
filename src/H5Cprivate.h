@@ -371,14 +371,10 @@ typedef struct H5C_t H5C_t;
  *		code.  When it is set, reads on load will be skipped,
  *		and an uninitialize buffer will be passed to the 
  *		deserialize function.
- *		This flag is used in H5Oproxy.c because this client does not
- *		exist on disk.  See description in that file.
  *
  *	H5C__CLASS_SKIP_WRITES: This flags is intended only for use in test
  *		code.  When it is set, writes of buffers prepared by the 
  *		serialize callback will be skipped.
- *		This flag is used in H5Oproxy.c because this client does not
- *		exist on disk.  See description in that file.
  *
  * GET_LOAD_SIZE: Pointer to the 'get load size' function.
  *
