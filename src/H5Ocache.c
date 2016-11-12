@@ -1340,7 +1340,6 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__cache_chk_clear() */
 
-
 
 /*-------------------------------------------------------------------------
  * Function:	H5O__add_cont_msg
