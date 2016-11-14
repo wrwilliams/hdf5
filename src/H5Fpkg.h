@@ -276,9 +276,9 @@ struct H5F_file_t {
         haddr_t	tmp_addr;       	/* Next address to use for temp. space in the file */
         hbool_t point_of_no_return;     /* flag to indicate that we can't go back and delete a freespace header when it's used up */
 
-        H5F_fs_state_t man_state[H5FD_MEM_NTYPES];  /* State of free space manager for each type */
-        haddr_t man_addr[H5FD_MEM_NTYPES];  /* Address of free space manager info for each type */
-        H5FS_t *man[H5FD_MEM_NTYPES];   /* Free space manager for each file space type */
+        H5F_fs_state_t man_state[H5F_MEM_PAGE_NTYPES];  /* State of free space manager for each type */
+        haddr_t man_addr[H5F_MEM_PAGE_NTYPES];      /* Address of free space manager info for each type */
+        H5FS_t *man[H5F_MEM_PAGE_NTYPES];           /* Free space manager for each file space type */
 
         /* Free-space aggregation info */
         unsigned aggr_merge[H5FD_MEM_NTYPES];   /* Flags for whether free space can merge with aggregator(s) */

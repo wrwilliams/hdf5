@@ -533,11 +533,6 @@
 /* For paged aggregation: drop free-space with size <= this threshold for small meta section */
 #define H5F_FILE_SPACE_PGEND_META_THRES  10    
 
-/* For paged aggregation: flags to track the EOF file space section type */
-#define H5F_FILE_SPACE_EOF_SMALL_META	0x01
-#define H5F_FILE_SPACE_EOF_SMALL_RAW	0x02
-#define H5F_FILE_SPACE_EOF_SMALL_ALL_FLAGS  	(H5F_FILE_SPACE_EOF_SMALL_META | H5F_FILE_SPACE_EOF_SMALL_RAW)
-
 /* Default for threshold for alignment (can be set via H5Pset_alignment()) */
 #define H5F_ALIGN_DEF			1
 /* Default for alignment (can be set via H5Pset_alignment()) */
@@ -548,7 +543,7 @@
 #define H5F_SDATA_BLOCK_SIZE_DEF	2048
 
 /* Check for file using paged aggregation */
-#define H5F_PAGED_AGGR(F) (f->shared->fs.strategy == H5F_FSPACE_STRATEGY_PAGE && f->shared->fs.page_size)
+#define H5F_PAGED_AGGR(F) (F->shared->fs.strategy == H5F_FSPACE_STRATEGY_PAGE && F->shared->fs.page_size)
 
 /* Macros to define signatures of all objects in the file */
 
@@ -662,14 +657,27 @@ typedef enum H5F_fs_state_t {
     H5F_FS_STATE_DELETING = 2               /* Free space manager is being deleted */
 } H5F_fs_state_t;
 
-/* File space types for paged aggregation */
+/* For paged aggregation */
+/* The values 0 to 6 is the same as H5F_mem_t */
 typedef enum H5F_mem_page_t {
-    H5F_MEM_PAGE_META = 0,     	/* Small-sized meta data */
-    H5F_MEM_PAGE_RAW = 1,     	/* Small-sized raw data */
-    H5F_MEM_PAGE_GENERIC = 2,   /* Large-sized untyped data (meta or raw data) */
-    H5F_MEM_PAGE_NTYPES         /* Sentinel value - must be last */
+    H5F_MEM_PAGE_DEFAULT = 0,       /* Not used */
+    H5F_MEM_PAGE_SUPER = 1,
+    H5F_MEM_PAGE_BTREE = 2,          
+    H5F_MEM_PAGE_DRAW = 3, 
+    H5F_MEM_PAGE_GHEAP = 4,      
+    H5F_MEM_PAGE_LHEAP = 5,      
+    H5F_MEM_PAGE_OHDR = 6,      
+    H5F_MEM_PAGE_LARGE_SUPER = 7,
+    H5F_MEM_PAGE_LARGE_BTREE = 8,
+    H5F_MEM_PAGE_LARGE_DRAW = 9,
+    H5F_MEM_PAGE_LARGE_GHEAP = 10,
+    H5F_MEM_PAGE_LARGE_LHEAP = 11,
+    H5F_MEM_PAGE_LARGE_OHDR = 12,
+    H5F_MEM_PAGE_NTYPES = 13       /* Sentinel value - must be last */
 } H5F_mem_page_t;
 
+#define H5F_MEM_PAGE_META       H5F_MEM_PAGE_SUPER          /* Small-sized meta data */
+#define H5F_MEM_PAGE_GENERIC    H5F_MEM_PAGE_LARGE_SUPER    /* Large-sized generic: meta and raw */
 
 /*****************************/
 /* Library-private Variables */

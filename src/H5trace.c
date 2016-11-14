@@ -1002,35 +1002,6 @@ H5_trace(const double *returning, const char *func, const char *type, ...)
                             else
                                 fprintf(out, "NULL");
                         } /* end if */
-                        else {
-                            H5F_fspace_type_t fs_type = (H5F_fspace_type_t)va_arg(ap, int);
-
-                            switch(fs_type) {
-                                case H5F_FSPACE_TYPE_META:
-                                    fprintf(out, "H5F_FSPACE_TYPE_META");
-                                    break;
-
-                                case H5F_FSPACE_TYPE_RAW:
-                                    fprintf(out, "H5F_FSPACE_TYPE_RAW");
-                                    break;
-
-                                case H5F_FSPACE_TYPE_GENERIC:
-                                    fprintf(out, "H5F_FSPACE_TYPE_GENERIC");
-                                    break;
-
-                                case H5F_FSPACE_TYPE_ALL:
-                                    fprintf(out, "H5F_FSPACE_TYPE_ALL");
-                                    break;
-
-                                case H5F_FSPACE_TYPE_NTYPES:
-                                    fprintf(out, "H5F_FSPACE_TYPE_NTYPES");
-                                    break;
-
-                                default:
-                                    fprintf(out, "%ld", (long)fs_type);
-                                    break;
-                            } /* end switch */
-                        } /* end else */
                         break;
 
                     case 'v':

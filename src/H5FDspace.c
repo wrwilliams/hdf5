@@ -196,8 +196,8 @@ HDfprintf(stderr, "%s: type = %u, size = %Hu\n", FUNC, (unsigned)type, size);
     } /* end if */
 
     /* Dispatch to driver `alloc' callback or extend the end-of-address marker */
-    /* For the split driver: the size passed down to the alloc routine is the original size from H5FD_alloc() */
-    /* For all other drivers: the size passed down to the alloc routine is the size + [possibly] alignment size */
+    /* For the multi/split driver: the size passed down to the alloc callback is the original size from H5FD_alloc() */
+    /* For all other drivers: the size passed down to the alloc callback is the size + [possibly] alignment size */
     if(file->cls->alloc) {
         ret_value = (file->cls->alloc)(file, type, dxpl_id, use_alloc_size ? size : size + extra);
         if(!H5F_addr_defined(ret_value))

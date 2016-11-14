@@ -48,11 +48,11 @@ static unsigned create_file(char *filename, hid_t fcpl, hid_t fapl);
 static unsigned open_file(char *filename, hid_t fapl, hsize_t page_size, size_t page_buffer_size);
 
 /* test routines */
-static unsigned test_args(hid_t fapl);
-static unsigned test_raw_data_handling(hid_t orig_fapl);
-static unsigned test_lru_processing(hid_t orig_fapl);
-static unsigned test_min_threshold(hid_t orig_fapl);
-static unsigned test_stats_collection(hid_t orig_fapl);
+static unsigned test_args(hid_t fapl, const char *env_h5_drvr);
+static unsigned test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr);
+static unsigned test_lru_processing(hid_t orig_fapl, const char *env_h5_drvr);
+static unsigned test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr);
+static unsigned test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr);
 
 const char *FILENAME[] = {
     "tfilepaged",
@@ -239,12 +239,72 @@ error:
     return(1);
 }
 
+/*
+ *
+ *  set_multi_split():
+ *      Internal routine to set up page-aligned address space for multi/split driver
+ *      when testing paged aggregation.
+ *
+ */
 static unsigned
-test_args(hid_t orig_fapl)
+set_multi_split(const char *env_h5_drvr, hid_t fapl, hsize_t pagesize)
+{
+    hbool_t split = FALSE, multi = FALSE;
+    H5FD_mem_t memb_map[H5FD_MEM_NTYPES];
+    hid_t memb_fapl_arr[H5FD_MEM_NTYPES];
+    char *memb_name[H5FD_MEM_NTYPES];
+    haddr_t memb_addr[H5FD_MEM_NTYPES];
+    hbool_t relax;
+    H5FD_mem_t  mt;
+
+    /* Check for split or multi driver */
+    if(!HDstrcmp(env_h5_drvr, "split"))
+        split = TRUE;
+    else if(!HDstrcmp(env_h5_drvr, "multi"))
+        multi = TRUE;
+
+    if(split || multi) {
+
+        HDmemset(memb_name, 0, sizeof memb_name);
+
+        /* Get current split settings */
+        if(H5Pget_fapl_multi(fapl, memb_map, memb_fapl_arr, memb_name, memb_addr, &relax) < 0)
+            TEST_ERROR
+
+        if(split) {
+            /* Set memb_addr aligned */
+            memb_addr[H5FD_MEM_SUPER] = ((memb_addr[H5FD_MEM_SUPER] + pagesize - 1) / pagesize) * pagesize;
+            memb_addr[H5FD_MEM_DRAW] = ((memb_addr[H5FD_MEM_DRAW] + pagesize - 1) / pagesize) * pagesize;
+        } else {
+            /* Set memb_addr aligned */
+            for(mt = H5FD_MEM_DEFAULT; mt < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, mt))
+                memb_addr[mt] = ((memb_addr[mt] + pagesize - 1) / pagesize) * pagesize;
+        } /* end else */
+
+        /* Set multi driver with new FAPLs */
+        if(H5Pset_fapl_multi(fapl, memb_map, memb_fapl_arr, (const char * const *)memb_name, memb_addr, relax) < 0)
+            TEST_ERROR
+
+        /* Free memb_name */
+        for(mt = H5FD_MEM_DEFAULT; mt < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, mt))
+            free(memb_name[mt]);
+
+    } /* end if */
+
+    return 0;
+
+error:
+    return(1);
+
+} /* set_multi_split() */
+
+static unsigned
+test_args(hid_t orig_fapl, const char *env_h5_drvr)
 {
     char filename[FILENAME_LEN]; /* Filename to use */
     hid_t file_id = -1;          /* File ID */
     hid_t fcpl, fapl;
+    hbool_t split = FALSE, multi = FALSE;
     herr_t ret;
 
     TESTING("Settings for Page Buffering");
@@ -285,6 +345,9 @@ test_args(hid_t orig_fapl)
     if(ret >= 0)
         TEST_ERROR;
 
+    if(set_multi_split(env_h5_drvr, fapl, 100)  != 0)
+        TEST_ERROR;
+
     /* Test setting a page buffer with a size equal to a single page size */
     if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
         TEST_ERROR;
@@ -309,6 +372,9 @@ test_args(hid_t orig_fapl)
     if(open_file(filename, fapl, 100, 100) != 0)
         TEST_ERROR;
 
+    if(set_multi_split(env_h5_drvr, fapl, 4194304)  != 0)
+        TEST_ERROR;
+
     /* Test setting a large page buffer size and page size */
     if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
         TEST_ERROR;
@@ -319,6 +385,9 @@ test_args(hid_t orig_fapl)
     if(create_file(filename, fcpl, fapl) != 0)
         TEST_ERROR;
     if(open_file(filename, fapl, 4194304, 16777216) != 0)
+        TEST_ERROR;
+
+    if(set_multi_split(env_h5_drvr, fapl, 1)  != 0)
         TEST_ERROR;
 
     /* Test setting a 1 byte page buffer size and page size */
@@ -332,7 +401,6 @@ test_args(hid_t orig_fapl)
         TEST_ERROR;
     if(open_file(filename, fapl, 1, 1) != 0)
         TEST_ERROR;
-
 
     if(H5Pclose(fcpl) < 0)
         FAIL_STACK_ERROR;
@@ -351,7 +419,7 @@ error:
 } /* test_args */
 
 static unsigned
-test_raw_data_handling(hid_t orig_fapl)
+test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
 {
     char filename[FILENAME_LEN]; /* Filename to use */
     hid_t file_id = -1;          /* File ID */
@@ -368,6 +436,9 @@ test_raw_data_handling(hid_t orig_fapl)
     h5_fixname(FILENAME[0], orig_fapl, filename, sizeof(filename));
 
     if((fapl = H5Pcopy(orig_fapl)) < 0) TEST_ERROR
+
+    if(set_multi_split(env_h5_drvr, fapl, sizeof(int)*100)  != 0)
+        TEST_ERROR;
 
     data = (int *) HDmalloc(sizeof(int)*(size_t)num_elements);
 
@@ -571,7 +642,7 @@ error:
 } /* test_raw_data_handling */
 
 static unsigned
-test_lru_processing(hid_t orig_fapl)
+test_lru_processing(hid_t orig_fapl, const char *env_h5_drvr)
 {
     char filename[FILENAME_LEN]; /* Filename to use */
     hid_t file_id = -1;          /* File ID */
@@ -587,6 +658,9 @@ test_lru_processing(hid_t orig_fapl)
     h5_fixname(FILENAME[0], orig_fapl, filename, sizeof(filename));
 
     if((fapl = H5Pcopy(orig_fapl)) < 0) TEST_ERROR
+
+    if(set_multi_split(env_h5_drvr, fapl, sizeof(int)*100)  != 0)
+        TEST_ERROR;
 
     data = (int *) HDmalloc(sizeof(int)*(size_t)num_elements);
 
@@ -740,7 +814,7 @@ error:
 } /* test_lru_processing */
 
 static unsigned
-test_min_threshold(hid_t orig_fapl)
+test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
 {
     char filename[FILENAME_LEN]; /* Filename to use */
     hid_t file_id = -1;          /* File ID */
@@ -757,6 +831,9 @@ test_min_threshold(hid_t orig_fapl)
     h5_fixname(FILENAME[0], orig_fapl, filename, sizeof(filename));
 
     if((fapl = H5Pcopy(orig_fapl)) < 0) TEST_ERROR
+
+    if(set_multi_split(env_h5_drvr, fapl, sizeof(int)*100)  != 0)
+        TEST_ERROR;
 
     data = (int *) HDmalloc(sizeof(int)*(size_t)num_elements);
 
@@ -1156,7 +1233,7 @@ error:
 } /* test_min_threshold */
 
 static unsigned
-test_stats_collection(hid_t orig_fapl)
+test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
 {
     char filename[FILENAME_LEN]; /* Filename to use */
     hid_t file_id = -1;          /* File ID */
@@ -1172,6 +1249,9 @@ test_stats_collection(hid_t orig_fapl)
     h5_fixname(FILENAME[0], orig_fapl, filename, sizeof(filename));
 
     if((fapl = H5Pcopy(orig_fapl)) < 0) TEST_ERROR
+
+    if(set_multi_split(env_h5_drvr, fapl, sizeof(int)*100)  != 0)
+        TEST_ERROR;
 
     data = (int *) HDmalloc(sizeof(int)*(size_t)num_elements);
 
@@ -1373,19 +1453,13 @@ main(void)
     if(env_h5_drvr == NULL)
         env_h5_drvr = "nomatch";
 
-    if(0 == HDstrcmp(env_h5_drvr, "multi")) {
-        SKIPPED();
-        puts("Multi VFD doesn't support page buffering");
-        return (0);
-    }
-
     fapl = h5_fileaccess();
 
-    nerrors += test_args(fapl);
-    nerrors += test_raw_data_handling(fapl);
-    nerrors += test_lru_processing(fapl);
-    nerrors += test_min_threshold(fapl);
-    nerrors += test_stats_collection(fapl);
+    nerrors += test_args(fapl, env_h5_drvr);
+    nerrors += test_raw_data_handling(fapl, env_h5_drvr);
+    nerrors += test_lru_processing(fapl, env_h5_drvr);
+    nerrors += test_min_threshold(fapl, env_h5_drvr);
+    nerrors += test_stats_collection(fapl, env_h5_drvr);
 
     h5_clean_files(FILENAME, fapl);
 

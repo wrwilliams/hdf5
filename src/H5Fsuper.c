@@ -487,7 +487,7 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
         H5O_loc_t ext_loc;      /* "Object location" for superblock extension */
         H5O_btreek_t btreek;    /* v1 B-tree 'K' value message from superblock extension */
         H5O_drvinfo_t drvinfo;  /* Driver info message from superblock extension */
-	size_t u; 		/* Local index variable */
+        size_t u;               /* Local index variable */
         htri_t status;          /* Status for message existing */
 
         /* Sanity check - superblock extension should only be defined for
@@ -508,7 +508,7 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
         } /* end if */
 
         /* Open the superblock extension */
-	if(H5F_super_ext_open(f, sblock->ext_addr, &ext_loc) < 0)
+        if(H5F_super_ext_open(f, sblock->ext_addr, &ext_loc) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTOPENOBJ, FAIL, "unable to open file's superblock extension")
 
         /* Check for the extension having a 'driver info' message */
@@ -561,72 +561,65 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
         if((status = H5O_msg_exists(&ext_loc, H5O_FSINFO_ID, dxpl_id)) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_EXISTS, FAIL, "unable to read object header")
         if(status) {
-            H5O_fsinfo_t fsinfo;    	/* File space info message from superblock extension */
-	    uint8_t flags;		/* Message flags */
+            H5O_fsinfo_t fsinfo;   /* File space info message from superblock extension */
+            uint8_t flags;          /* Message flags */
 
-	    /* Get message flags */
-	    if(H5O_msg_get_flags(&ext_loc, H5O_FSINFO_ID, dxpl_id, &flags) < 0)
+            /* Get message flags */
+            if(H5O_msg_get_flags(&ext_loc, H5O_FSINFO_ID, dxpl_id, &flags) < 0)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to message flags for free-space manager info message")
 
-	    /* If message is NOT marked "unknown"--set up file space info  */
-	    if(!(flags & H5O_MSG_FLAG_WAS_UNKNOWN)) {
+            /* If message is NOT marked "unknown"--set up file space info  */
+            if(!(flags & H5O_MSG_FLAG_WAS_UNKNOWN)) {
 
-		/* Retrieve the 'file space info' structure */
-		if(NULL == H5O_msg_read(&ext_loc, H5O_FSINFO_ID, &fsinfo, dxpl_id))
-		    HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to get free-space manager info message")
+                /* Retrieve the 'file space info' structure */
+                if(NULL == H5O_msg_read(&ext_loc, H5O_FSINFO_ID, &fsinfo, dxpl_id))
+                    HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to get free-space manager info message")
 
                 /* Update changed values */
-		if(f->shared->fs.strategy != fsinfo.strategy) {
-		    f->shared->fs.strategy = fsinfo.strategy;
+                if(f->shared->fs.strategy != fsinfo.strategy) {
+                    f->shared->fs.strategy = fsinfo.strategy;
 
-		    /* Set non-default strategy in the property list */
-		    if(H5P_set(c_plist, H5F_CRT_FILE_SPACE_STRATEGY_NAME, &fsinfo.strategy) < 0)
-			HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space strategy")
-		} /* end if */
-		if(f->shared->fs.persist != fsinfo.persist) {
-		    f->shared->fs.persist = fsinfo.persist;
+                    /* Set non-default strategy in the property list */
+                    if(H5P_set(c_plist, H5F_CRT_FILE_SPACE_STRATEGY_NAME, &fsinfo.strategy) < 0)
+                        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space strategy")
+                } /* end if */
+                if(f->shared->fs.persist != fsinfo.persist) {
+                    f->shared->fs.persist = fsinfo.persist;
 
-		    /* Set non-default strategy in the property list */
-		    if(H5P_set(c_plist, H5F_CRT_FREE_SPACE_PERSIST_NAME, &fsinfo.persist) < 0)
-			HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space strategy")
-		} /* end if */
-		if(f->shared->fs.threshold != fsinfo.threshold) {
-		    f->shared->fs.threshold = fsinfo.threshold;
+                    /* Set non-default strategy in the property list */
+                    if(H5P_set(c_plist, H5F_CRT_FREE_SPACE_PERSIST_NAME, &fsinfo.persist) < 0)
+                        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space strategy")
+                } /* end if */
+                if(f->shared->fs.threshold != fsinfo.threshold) {
+                    f->shared->fs.threshold = fsinfo.threshold;
 
-		    /* Set non-default threshold in the property list */
-		    if(H5P_set(c_plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, &fsinfo.threshold) < 0)
-			HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space strategy")
-		} /* end if */
-		if(f->shared->fs.page_size != fsinfo.page_size) {
-		    f->shared->fs.page_size = fsinfo.page_size;
+                    /* Set non-default threshold in the property list */
+                    if(H5P_set(c_plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, &fsinfo.threshold) < 0)
+                        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space strategy")
+                } /* end if */
+                if(f->shared->fs.page_size != fsinfo.page_size) {
+                    f->shared->fs.page_size = fsinfo.page_size;
 
-		    /* Set file space page size in the property list */
-		    if(H5P_set(c_plist, H5F_CRT_FILE_SPACE_PAGE_SIZE_NAME, &fsinfo.page_size) < 0)
-			HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space page size")
-		} /* end if */
-		if(f->shared->fs.last_small != fsinfo.last_small)
-		    /* Initialize the tracking of last section at EOF */
-		    f->shared->fs.last_small = f->shared->fs.track_last_small = fsinfo.last_small;
-		if(f->shared->fs.pgend_meta_thres != fsinfo.pgend_meta_thres)
-		    /* Initialize page end meta threshold */
-		    f->shared->fs.pgend_meta_thres = fsinfo.pgend_meta_thres;
+                    /* Set file space page size in the property list */
+                    if(H5P_set(c_plist, H5F_CRT_FILE_SPACE_PAGE_SIZE_NAME, &fsinfo.page_size) < 0)
+                        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space page size")
+                } /* end if */
+                if(f->shared->fs.last_small != fsinfo.last_small)
+                    /* Initialize the tracking of last section at EOF */
+                    f->shared->fs.last_small = f->shared->fs.track_last_small = fsinfo.last_small;
+                if(f->shared->fs.pgend_meta_thres != fsinfo.pgend_meta_thres)
+                    /* Initialize page end meta threshold */
+                    f->shared->fs.pgend_meta_thres = fsinfo.pgend_meta_thres;
 
-		/* set free-space manager addresses */
-		if(fsinfo.strategy == H5F_FSPACE_STRATEGY_PAGE && fsinfo.page_size) {
-		    for(u = 0; u < (NELMTS(f->shared->fs.man_addr) - 1); u++)
-			f->shared->fs.man_addr[u] = fsinfo.fs_addr[u];
-		} /* end if */
-                else {
-		    f->shared->fs.man_addr[0] = HADDR_UNDEF;
-		    for(u = 1; u < NELMTS(f->shared->fs.man_addr); u++)
-			f->shared->fs.man_addr[u] = fsinfo.fs_addr[u - 1];
-		} /* end else */
-	    } /* end if not marked "unknown" */
+                f->shared->fs.man_addr[0] = HADDR_UNDEF;
+                for(u = 1; u < NELMTS(f->shared->fs.man_addr); u++)
+                    f->shared->fs.man_addr[u] = fsinfo.fs_addr[u - 1];
+            } /* end if not marked "unknown" */
         } /* end if */
 
         /* Close superblock extension */
         if(H5F_super_ext_close(f, &ext_loc, dxpl_id, FALSE) < 0)
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEOBJ, FAIL, "unable to close file's superblock extension")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEOBJ, FAIL, "unable to close file's superblock extension")
     } /* end if */
 
     /* Update the driver info if VFD indicated to do so */
@@ -691,12 +684,13 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
         } /* end if */
     } /* end if */
 
-    /* Set the page aggregation mode */
-    if(H5F__set_paged_aggr(f, (hbool_t)H5F_PAGED_AGGR(f)) < 0)
-	HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "failed to set paged_aggr status for file driver")
 
     /* Set the pointer to the pinned superblock */
     f->shared->sblock = sblock;
+
+    /* Set the page aggregation mode */
+    if(H5F__set_paged_aggr(f, (hbool_t)H5F_PAGED_AGGR(f)) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "failed to set paged_aggr status for file driver")
 
 done:
     /* Reset the ring in the DXPL */
@@ -837,7 +831,7 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
     } /* end if */
 
     if(H5FD_set_paged_aggr(f->shared->lf, (hbool_t)H5F_PAGED_AGGR(f)) < 0)
-	HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "failed to set paged_aggr status for file driver")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "failed to set paged_aggr status for file driver")
 
     /*
      * The superblock starts immediately after the user-defined
@@ -968,7 +962,7 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
          * be tuned if more information is added to the superblock
          * extension.
          */
-	if(H5F_super_ext_create(f, dxpl_id, &ext_loc) < 0)
+        if(H5F_super_ext_create(f, dxpl_id, &ext_loc) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTCREATE, FAIL, "unable to create superblock extension")
         ext_created = TRUE;
 
@@ -1016,24 +1010,24 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
         } /* end if */
 
         /* Check for non-default free-space info settings */
-	if(non_default_fs_settings) {
-	    H5FD_mem_t   type; 		/* Free-space types for iteration */
-            H5O_fsinfo_t fsinfo;	/* Free space manager info message */
+        if(non_default_fs_settings) {
+            H5F_mem_page_t ptype;
+            H5O_fsinfo_t fsinfo;    /* Free space manager info message */
 
-	    /* Write free-space manager info message to superblock extension object header if needed */
-	    fsinfo.strategy = f->shared->fs.strategy;
-	    fsinfo.persist = f->shared->fs.persist;
-	    fsinfo.threshold = f->shared->fs.threshold;
-	    fsinfo.page_size = f->shared->fs.page_size;
-	    fsinfo.last_small = f->shared->fs.last_small;
-	    fsinfo.pgend_meta_thres = f->shared->fs.pgend_meta_thres;
+            /* Write free-space manager info message to superblock extension object header if needed */
+            fsinfo.strategy = f->shared->fs.strategy;
+            fsinfo.persist = f->shared->fs.persist;
+            fsinfo.threshold = f->shared->fs.threshold;
+            fsinfo.page_size = f->shared->fs.page_size;
+            fsinfo.last_small = f->shared->fs.last_small;
+            fsinfo.pgend_meta_thres = f->shared->fs.pgend_meta_thres;
 
-	    for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
-		fsinfo.fs_addr[type - 1] = HADDR_UNDEF;
+            for(ptype = H5F_MEM_PAGE_SUPER; ptype < H5F_MEM_PAGE_NTYPES; H5_INC_ENUM(H5F_mem_page_t, ptype))
+                fsinfo.fs_addr[ptype - 1] = HADDR_UNDEF;
 
-	    if(H5O_msg_create(&ext_loc, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE, H5O_UPDATE_TIME, &fsinfo, dxpl_id) < 0)
+            if(H5O_msg_create(&ext_loc, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE, H5O_UPDATE_TIME, &fsinfo, dxpl_id) < 0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to update free-space info header message")
-	} /* end if */
+        } /* end if */
     } /* end if */
     else {
         /* Check for creating an "old-style" driver info block */
