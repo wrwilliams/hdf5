@@ -207,10 +207,6 @@ H5_DLL herr_t H5FS_sect_query_last_sect(const H5FS_t *fspace, haddr_t *sect_addr
 H5_DLL herr_t H5FS_stat_info(const H5F_t *f, const H5FS_t *frsp, H5FS_stat_t *stats);
 
 /* free space manager settling routines */
-#if 0 /* delete eventually */ /* JRM */
-H5_DLL herr_t H5FS_float_section_info_if_mis_allocated(H5F_t *f, hid_t dxpl_id,
-                                                       H5FS_t *fspace);
-#endif /* delete eventually */ /* JRM */
 H5_DLL herr_t H5FS_vfd_alloc_hdr_and_section_info_if_needed(H5F_t *f, 
                                                           hid_t dxpl_id, 
                                                           H5FS_t *fspace,

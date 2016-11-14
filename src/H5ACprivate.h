@@ -296,11 +296,12 @@ H5_DLLVAR hid_t H5AC_rawdata_dxpl_id;
 }
 #endif /* H5_HAVE_PARALLEL */
 
-#define H5AC__DEFAULT_CACHE_IMAGE_CONFIG                                    \
-{                                                                           \
-   /* int32_t    version        = */ H5AC__CURR_CACHE_IMAGE_CONFIG_VERSION, \
-   /* hbool_t    generate_image = */ FALSE,                                 \
-   /* size_t     max_image_size = */ 0                                      \
+#define H5AC__DEFAULT_CACHE_IMAGE_CONFIG                                     \
+{                                                                            \
+   /* int32_t version            = */ H5AC__CURR_CACHE_IMAGE_CONFIG_VERSION, \
+   /* hbool_t generate_image     = */ FALSE,                                 \
+   /* hbool_t save_resize_status = */ FALSE,                                 \
+   /* int32_t entry_ageout       = */ H5AC__CACHE_IMAGE__ENTRY_AGEOUT__NONE  \
 }
 /*
  * Library prototypes.
@@ -326,7 +327,6 @@ H5_DLLVAR hid_t H5AC_rawdata_dxpl_id;
 #define H5AC__TAKE_OWNERSHIP_FLAG         H5C__TAKE_OWNERSHIP_FLAG
 #define H5AC__FLUSH_LAST_FLAG		  H5C__FLUSH_LAST_FLAG
 #define H5AC__FLUSH_COLLECTIVELY_FLAG	  H5C__FLUSH_COLLECTIVELY_FLAG
-#define H5AC__EVICT_ALLOW_LAST_PINS_FLAG  H5C__EVICT_ALLOW_LAST_PINS_FLAG
 
 
 /* #defines of flags used to report entry status in the
@@ -340,7 +340,7 @@ H5_DLLVAR hid_t H5AC_rawdata_dxpl_id;
 #define H5AC_ES__IS_FLUSH_DEP_PARENT	0x0010
 #define H5AC_ES__IS_FLUSH_DEP_CHILD	0x0020
 #define H5AC_ES__IMAGE_IS_UP_TO_DATE	0x0040
-#define H5AC_ES__IS_CORKED		0x0040
+#define H5AC_ES__IS_CORKED		0x0080
 
 
 /* external function declarations: */
@@ -401,6 +401,7 @@ H5_DLL herr_t H5AC_get_entry_ring(const H5F_t *f, haddr_t addr, H5AC_ring_t *rin
 H5_DLL herr_t H5AC_set_ring(hid_t dxpl_id, H5AC_ring_t ring, H5P_genplist_t **dxpl,
     H5AC_ring_t *orig_ring);
 H5_DLL herr_t H5AC_reset_ring(H5P_genplist_t *dxpl, H5AC_ring_t orig_ring);
+H5_DLL herr_t H5AC_unsettle_ring(H5F_t * f, H5C_ring_t ring);
 H5_DLL herr_t H5AC_expunge_tag_type_metadata(H5F_t *f, hid_t dxpl_id, haddr_t tag, int type_id, unsigned flags);
 
 #ifdef H5_HAVE_PARALLEL

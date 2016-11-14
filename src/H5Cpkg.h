@@ -711,8 +711,8 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
 #define H5C__UPDATE_STATS_FOR_LRU_SCAN_RESTART(cache_ptr) \
 	((cache_ptr)->LRU_scan_restarts)++;
 
-#define H5C__UPDATE_STATS_FOR_HASH_BUCKET_SCAN_RESTART(cache_ptr) \
-	((cache_ptr)->hash_bucket_scan_restarts)++;
+#define H5C__UPDATE_STATS_FOR_INDEX_SCAN_RESTART(cache_ptr) \
+	((cache_ptr)->index_scan_restarts)++;
 
 #define H5C__UPDATE_STATS_FOR_CACHE_IMAGE_CREATE(cache_ptr) \
 {                                                           \
@@ -960,7 +960,7 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
 #define H5C__UPDATE_STATS_FOR_UNPIN(cache_ptr, entry_ptr)
 #define H5C__UPDATE_STATS_FOR_SLIST_SCAN_RESTART(cache_ptr)
 #define H5C__UPDATE_STATS_FOR_LRU_SCAN_RESTART(cache_ptr)
-#define H5C__UPDATE_STATS_FOR_HASH_BUCKET_SCAN_RESTART(cache_ptr)
+#define H5C__UPDATE_STATS_FOR_INDEX_SCAN_RESTART(cache_ptr)
 #define H5C__UPDATE_STATS_FOR_CACHE_IMAGE_CREATE(cache_ptr)
 #define H5C__UPDATE_STATS_FOR_CACHE_IMAGE_LOAD(cache_ptr)
 #define H5C__UPDATE_STATS_FOR_PREFETCH(cache_ptr, dirty)
@@ -4202,6 +4202,15 @@ if ( ( (entry_ptr) == NULL ) ||                                                \
  *		field is used both in the construction and write, and the 
  *		read and decode of metadata cache image blocks.
  *
+ * image_data_len:  size_t containing the number of bytes of data in the 
+ *		on disk metadata cache image, or zero if that value is 
+ *		undefined.
+ *
+ *		In most cases, this value is the same as the image_len
+ *		above.  It exists to allow for metadata cache image blocks
+ *		that are larger than the actual image.  Thus in all 
+ *		cases image_data_len <= image_len.
+ *
  * To create the metadata cache image, we must first serialize all the
  * entries in the metadata cache.  This is done by a scan of the index.
  * As entries must be serialized in increasing flush dependency height
@@ -4256,6 +4265,43 @@ if ( ( (entry_ptr) == NULL ) ||                                                \
  * image_buffer: Pointer to the dynamically allocated buffer of length
  *		image_len in which the metadata cache image is assembled, 
  *		or NULL if that	buffer does not exist.
+ *
+ *
+ * Free Space Manager Related fields:
+ *
+ * The free space managers must be informed when we are about to close 
+ * or flush the file so that they order themselves accordingly.  This used
+ * to be done much later in the close process, but with cache image and 
+ * page buffering, this is no longer viable, as we must finalize the on 
+ * disk image of all metadata much sooner.
+ *
+ * This is handled by the H5MF_settle_raw_data_fsm() and 
+ * H5MF_settle_meta_data_FSM() routines.  As these calls are expensive,
+ * the following fields are used to track whether the target free space
+ * managers are clean.  
+ *
+ * They are also used in sanity checking, as once a free space manager is
+ * settled, it should not become unsettled (i.e. be asked to allocate or
+ * free file space) either ever (in the case of a file close) or until the
+ * flush is complete.
+ *
+ * rdfsm_settled:  Boolean flag indicating whether the raw data free space
+ *		manager is settled -- i.e. whether the correct space has 
+ *		been allocated for it in the file.
+ *
+ *		Note that the name of this field is deceptive.  In the 
+ *		multi file case, the flag applies to all free space 
+ *		managers that are not involved in allocating space for
+ *		free space manager metadata.
+ *
+ * mdfsm_settled:  Boolean flag indicating whether the meta data free space
+ *              manager is settled -- i.e. whether the correct space has 
+ *              been allocated for it in the file.
+ *
+ *              Note that the name of this field is deceptive.  In the 
+ *              multi file case, the flag applies only to free space 
+ *		managers that are involved in allocating space for free 
+ *		space managers.
  *
  *
  * Statistics collection fields:
@@ -4512,15 +4558,6 @@ if ( ( (entry_ptr) == NULL ) ||                                                \
  *              avoid potential issues with change of status of the next 
  *              entry in the scan.
  *
- * hash_bucket_scan_restarts: Number of times a scan of a hash bucket list
- *		(that contains calls to H5C_flush_single_entry()) has been 
- *		restarted to avoid potential issues with change of status 
- *		of the next entry in the scan.
- *
- *		Update: this condition can also be triggered by the change
- *		of location of the target entry in 
- *		H5C_serialize_single_entry().
- *
  * index_scan_restarts: Number of times a scan of the index has been 
  *		restarted to avoid potential issues with load, insertion
  *		or change in flush dependency height of an entry other 
@@ -4698,6 +4735,7 @@ struct H5C_t {
     hbool_t			delete_image;
     haddr_t 			image_addr;
     size_t			image_len;
+    size_t			image_data_len;
     int64_t			entries_loaded_counter;
     int64_t			entries_inserted_counter;
     int64_t			entries_relocated_counter;
@@ -4705,6 +4743,10 @@ struct H5C_t {
     int32_t			num_entries_in_image;
     H5C_image_entry_t *		image_entries;
     void *                      image_buffer;
+
+    /* Free Space Manager Related fields */
+    hbool_t 			rdfsm_settled;
+    hbool_t			mdfsm_settled;
 
 #if H5C_COLLECT_CACHE_STATS
     /* stats fields */
@@ -4768,7 +4810,6 @@ struct H5C_t {
     /* Fields for tracking list scan restarts */
     int64_t			slist_scan_restarts;
     int64_t			LRU_scan_restarts;
-    int64_t			hash_bucket_scan_restarts;
     int64_t			index_scan_restarts;
 
 
@@ -4798,11 +4839,6 @@ struct H5C_t {
 #ifndef NDEBUG
     int64_t                     get_entry_ptr_from_addr_counter;
 #endif /* NDEBUG */
-
-#if 1 /* test code -- delete before checkin */ /* JRM */
-    hbool_t 			rdfsm_settled;
-    hbool_t			mdfsm_settled;
-#endif /* test code -- delete before checkin */ /* JRM */
 };
 
 #ifdef H5_HAVE_PARALLEL

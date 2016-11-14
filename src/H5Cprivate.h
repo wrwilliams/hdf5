@@ -205,8 +205,7 @@
 #define H5C__TAKE_OWNERSHIP_FLAG		0x0800
 #define H5C__FLUSH_LAST_FLAG			0x1000
 #define H5C__FLUSH_COLLECTIVELY_FLAG		0x2000
-#define H5C__EVICT_ALLOW_LAST_PINS_FLAG         0x4000
-#define H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG     0x8000
+#define H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG     0x4000
 
 /* Definitions for cache "tag" property */
 #define H5C_TAG_NAME           "H5C_tag"
@@ -1193,7 +1192,7 @@ typedef herr_t (*H5C_log_flush_func_t)(H5C_t *cache_ptr, haddr_t addr,
 #define H5C_RING_SB		5 /* innermost ring */
 #define H5C_RING_NTYPES		6 
 
-#define H5C_MAX_RING_IN_IMAGE	1
+#define H5C_MAX_RING_IN_IMAGE	3
 
 typedef int H5C_ring_t;
 
@@ -1796,6 +1795,14 @@ typedef int H5C_ring_t;
  *
  *		The value of this field is undefined in prefetched is FALSE.
  *
+ * age:		Number of times a prefetched entry has appeared in 
+ *		subsequent cache images. The field exists to allow 
+ *		imposition of a limit on how many times a prefetched 
+ *		entry can appear in subsequent cache images without being
+ *		converted to a regular entry.
+ *
+ *		This field must be zero if prefetched is FALSE.  
+ *
  * serialization_count:  Integer field used to maintain a count of the 
  *		number of times each entry is serialized during cache 
  *		serialization.  While no entry should be serialized more than
@@ -1898,6 +1905,7 @@ typedef struct H5C_cache_entry_t {
     uint32_t			image_fd_height;
     hbool_t			prefetched;
     int				prefetch_type_id;
+    int32_t			age;
 
 #ifndef NDEBUG	/* debugging field */
     int				serialization_count;
@@ -1938,6 +1946,17 @@ typedef struct H5C_cache_entry_t {
  *
  * ring:	Instance of H5C_ring_t indicating the flush ordering ring 
  *		to which this entry is assigned.
+ *
+ * age:		Number of times this prefetech entry has appeared in 
+ *		the current sequence of cache images.  This field is 
+ *		initialized to 0 if the instance of H5C_image_entry_t
+ *		is constructed from a regular entry.  
+ *
+ *		If the instance is constructed from a prefetched entry 
+ *		currently residing in the metadata cache, the field is
+ *		set to 1 + the age of the prefetched entry, or to 
+ *		H5AC__CACHE_IMAGE__ENTRY_AGEOUT__MAX if that sum exceeds
+ *		H5AC__CACHE_IMAGE__ENTRY_AGEOUT__MAX.
  *
  * type_id:	Integer field containing the type ID of the entry.
  *
@@ -2056,6 +2075,7 @@ typedef struct H5C_image_entry_t {
     haddr_t			addr;
     size_t			size;
     H5C_ring_t			ring;
+    int32_t			age;
     int32_t			type_id;
     int32_t			image_index;
     int32_t			lru_rank;
@@ -2377,8 +2397,34 @@ typedef struct H5C_auto_size_ctl_t {
  * generate_image:  Boolean flag indicating whether a cache image should 
  *	be created on file close.
  *
- * max_image_size: size_t containing the maximum size of the cache image,
- *	or 0 if no limit on cache image size.
+ * save_resize_status:  Boolean flag indicating whether the cache image 
+ *      should include the adaptive cache resize configuration and status.
+ *      Note that this field is ignored at present.
+ *
+ * entry_ageout:        Integer field indicating the maximum number of
+ *      times a prefetched entry can appear in subsequent cache images.
+ *      This field exists to allow the user to avoid the buildup of 
+ *      infrequently used entries in long sequences of cache images.
+ *
+ *      The value of this field must lie in the range
+ *      H5AC__CACHE_IMAGE__ENTRY_AGEOUT__NONE (-1) to 
+ *      H5AC__CACHE_IMAGE__ENTRY_AGEOUT__MAX (100).
+ *
+ *      H5AC__CACHE_IMAGE__ENTRY_AGEOUT__NONE means that no limit  
+ *      is imposed on number of times a prefeteched entry can appear
+ *      in subsequent cache images.
+ *
+ *      A value of 0 prevents prefetched entries from being included 
+ *      in cache images.
+ *
+ *      Positive integers restrict prefetched entries to the specified
+ *      number of appearances.
+ *      
+ *      Note that the number of subsequent cache images that a prefetched
+ *      entry has appeared in is tracked in an 8 bit field.  Thus, while
+ *      H5AC__CACHE_IMAGE__ENTRY_AGEOUT__MAX can be increased from its  
+ *      current value, any value in excess of 255 will be the functional 
+ *      equivalent of H5AC__CACHE_IMAGE__ENTRY_AGEOUT__NONE.
  *
  * flags: Unsigned integer containing flags controling which aspects of the
  *	cache image functinality is actually executed.  The primary impetus 
@@ -2400,12 +2446,13 @@ typedef struct H5C_auto_size_ctl_t {
  */
 #define H5C_CI__ALL_FLAGS		((unsigned)0x000F)
 
-#define H5C__DEFAULT_CACHE_IMAGE_CTL                      \
-{                                                         \
-    /* version        = */ H5C__CURR_CACHE_IMAGE_CTL_VER, \
-    /* generate_image = */ FALSE,                         \
-    /* max_image_size = */ 0,                             \
-    /* flags          = */ H5C_CI__ALL_FLAGS              \
+#define H5C__DEFAULT_CACHE_IMAGE_CTL                                  \
+{                                                                     \
+    /* version            = */ H5C__CURR_CACHE_IMAGE_CTL_VER,         \
+    /* generate_image     = */ FALSE,                                 \
+    /* save_resize_status = */ FALSE,                                 \
+    /* entry_ageout       = */ H5AC__CACHE_IMAGE__ENTRY_AGEOUT__NONE, \
+    /* flags              = */ H5C_CI__ALL_FLAGS                      \
 }
 
 typedef struct H5C_cache_image_ctl_t {
@@ -2414,7 +2461,9 @@ typedef struct H5C_cache_image_ctl_t {
 
     hbool_t				generate_image;
 
-    size_t				max_image_size;
+    hbool_t                             save_resize_status;
+
+    int32_t                             entry_ageout;
 
     unsigned				flags;
 
@@ -2498,6 +2547,7 @@ H5_DLL hbool_t H5C_get_ignore_tags(const H5C_t *cache_ptr);
 H5_DLL herr_t H5C_retag_entries(H5C_t * cache_ptr, haddr_t src_tag, haddr_t dest_tag);
 H5_DLL herr_t H5C_cork(H5C_t *cache_ptr, haddr_t obj_addr, unsigned action, hbool_t *corked);
 H5_DLL herr_t H5C_get_entry_ring(const H5F_t *f, haddr_t addr, H5C_ring_t *ring);
+H5_DLL herr_t H5C_unsettle_ring(H5F_t * f, H5C_ring_t ring);
 
 #ifdef H5_HAVE_PARALLEL
 H5_DLL herr_t H5C_apply_candidate_list(H5F_t *f, hid_t dxpl_id,

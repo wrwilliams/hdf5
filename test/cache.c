@@ -15889,13 +15889,11 @@ check_destroy_pinned_err(void)
         protect_entry(file_ptr, 0, 0);
 	unprotect_entry(file_ptr, 0, 0, H5C__PIN_ENTRY_FLAG);
 
-#if 1 /* new code */ /* JRM */
         if ( H5C_prep_for_file_close(file_ptr, H5P_DATASET_XFER_DEFAULT) < 0 ) {
    
             pass = FALSE;
             failure_mssg = "unexpected failure of prep for file close.\n";
         } 
-#endif /* new code */ /* JRM */
 
         if ( H5C_dest(file_ptr, H5AC_ind_read_dxpl_id) >= 0 ) {
 
@@ -15981,7 +15979,6 @@ check_destroy_protected_err(void)
         file_ptr = setup_cache((size_t)(2 * 1024),
                                 (size_t)(1 * 1024));
 
-#if 1 /* new code */ /* JRM */
         /* Note: normally this call would go just before the series of 
 	 * flushes prior to file close -- in particular, all entries 
          * should be unprotected when this call is made.
@@ -15996,7 +15993,6 @@ check_destroy_protected_err(void)
             pass = FALSE;
             failure_mssg = "unexpected failure of prep for file close.\n";
         } 
-#endif /* new code */ /* JRM */
 
         protect_entry(file_ptr, 0, 0);
 
@@ -34532,7 +34528,7 @@ cedds__expunge_dirty_entry_in_flush_test(H5F_t * file_ptr)
 
 	if ( ( cache_ptr->slist_scan_restarts != 1 ) ||
              ( cache_ptr->LRU_scan_restarts != 0 ) ||
-             ( cache_ptr->hash_bucket_scan_restarts != 0 ) ) {
+             ( cache_ptr->index_scan_restarts != 0 ) ) {
 
             pass = FALSE;
             failure_mssg = "unexpected scan restart stats in cedds__expunge_dirty_entry_in_flush_test().";
@@ -34920,7 +34916,7 @@ cedds__H5C_make_space_in_cache(H5F_t * file_ptr)
 
 	if ( ( cache_ptr->slist_scan_restarts != 0 ) ||
              ( cache_ptr->LRU_scan_restarts != 1 ) ||
-             ( cache_ptr->hash_bucket_scan_restarts != 0 ) ) {
+             ( cache_ptr->index_scan_restarts != 0 ) ) {
 
             pass = FALSE;
             failure_mssg = "unexpected scan restart stats in cedds__H5C_make_space_in_cache().";
@@ -35337,7 +35333,7 @@ cedds__H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * file_ptr)
 
 	if ( ( cache_ptr->slist_scan_restarts != 0 ) ||
              ( cache_ptr->LRU_scan_restarts != 1 ) ||
-             ( cache_ptr->hash_bucket_scan_restarts != 0 ) ) {
+             ( cache_ptr->index_scan_restarts != 0 ) ) {
 
             pass = FALSE;
             failure_mssg = "unexpected scan restart stats in cedds__H5C__autoadjust__ageout__evict_aged_out_entries().";
@@ -35364,7 +35360,26 @@ cedds__H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * file_ptr)
 /*-------------------------------------------------------------------------
  * Function:	cedds__H5C_flush_invalidate_cache__bucket_scan()
  *
- * Purpose:	Verify that H5C_flush_invalidate_cache() can handle
+ * Purpose:	Note:  	We now use the index list when we scan the 
+ *			contents of the metadata cache, so in principal,
+ *			this test is obsolete.  However, even using the
+ *			index list, restarts are possible, and must be 
+ *			handled gracefully.
+ *
+ *			As it turns out, this test triggers index list
+ *			scan restarts, and thus with minor changes is 
+ *			still a useful test.
+ * 
+ *			For this reason, with the exception of changing
+ *			to check the index_scan_restart stat instead of 
+ *			hash bucket restarts, I'm leaving the test 
+ *			alone.  If and when it starts to fail due to
+ *			other changes, we can re-work it to test 
+ *			index list scan restarts explicitly.
+ *
+ *						JRM -- 11/2/16
+ *
+ *		Verify that H5C_flush_invalidate_cache() can handle
  *		the removal from the cache of the next item in 
  *		its scans of hash buckets.
  *
@@ -35466,20 +35481,20 @@ cedds__H5C_flush_invalidate_cache__bucket_scan(H5F_t * file_ptr)
          if ( cache_ptr == NULL ) {
 
             pass = FALSE;
-            failure_mssg = "cache_ptr NULL on entry to cedds for H5C__autoadjust__ageout__evict_aged_out_entries() test.";
+            failure_mssg = "cache_ptr NULL on entry to cedds for cedds__H5C_flush_invalidate_cache__bucket_scan() test.";
         }
         else if ( ( cache_ptr->index_len != 0 ) ||
                   ( cache_ptr->index_size != 0 ) ) {
 
             pass = FALSE;
-            failure_mssg = "cache not empty at start cedds for H5C__autoadjust__ageout__evict_aged_out_entries() test.";
+            failure_mssg = "cache not empty at start cedds for cedds__H5C_flush_invalidate_cache__bucket_scan() test.";
         }
         else if ( ( cache_ptr->max_cache_size != (2 * 1024 * 1024 ) ) ||
                   ( cache_ptr->min_clean_size != (1 * 1024 * 1024 ) ) ) {
 
 	    pass = FALSE;
 	    failure_mssg =
-	        "unexpected cache config at start of cedds H5C__autoadjust__ageout__evict_aged_out_entries() test.";
+	        "unexpected cache config at start of cedds cedds__H5C_flush_invalidate_cache__bucket_scan() test.";
 
         } else {
 
@@ -35710,9 +35725,14 @@ cedds__H5C_flush_invalidate_cache__bucket_scan(H5F_t * file_ptr)
 
     if ( pass ) {
 
+	/* as this test is now checking for index list scan restarts,
+         * the following has been modified to check this instead of 
+         * hash bucket scan restarts.
+         */
+
 	if ( ( cache_ptr->slist_scan_restarts != 0 ) ||
              ( cache_ptr->LRU_scan_restarts != 0 ) ||
-             ( cache_ptr->hash_bucket_scan_restarts != 1 ) ) {
+             ( cache_ptr->index_scan_restarts != 1 ) ) {
 
             pass = FALSE;
             failure_mssg = "unexpected scan restart stats in cedds__H5C_flush_invalidate_cache__bucket_scan().";
@@ -35941,7 +35961,7 @@ check_stats__smoke_check_1(H5F_t * file_ptr)
              ( cache_ptr->entries_scanned_to_make_space != 0 ) ||
              ( cache_ptr->slist_scan_restarts != 0 ) ||
              ( cache_ptr->LRU_scan_restarts != 0 ) ||
-             ( cache_ptr->hash_bucket_scan_restarts != 0 ) ) {
+             ( cache_ptr->index_scan_restarts != 0 ) ) {
 
             pass = FALSE;
             failure_mssg = "Unexpected cache stats in check_stats__smoke_check_1(1).";
@@ -36037,7 +36057,7 @@ check_stats__smoke_check_1(H5F_t * file_ptr)
              ( cache_ptr->entries_scanned_to_make_space != 0 ) ||
              ( cache_ptr->slist_scan_restarts != 0 ) ||
              ( cache_ptr->LRU_scan_restarts != 0 ) ||
-             ( cache_ptr->hash_bucket_scan_restarts != 0 ) ) {
+             ( cache_ptr->index_scan_restarts != 0 ) ) {
 
             pass = FALSE;
             failure_mssg = "Unexpected cache stats in check_stats__smoke_check_1(2).";
@@ -36130,7 +36150,7 @@ check_stats__smoke_check_1(H5F_t * file_ptr)
              ( cache_ptr->entries_scanned_to_make_space != 33 ) ||
              ( cache_ptr->slist_scan_restarts != 0 ) ||
              ( cache_ptr->LRU_scan_restarts != 0 ) ||
-             ( cache_ptr->hash_bucket_scan_restarts != 0 ) ) {
+             ( cache_ptr->index_scan_restarts != 0 ) ) {
 
             pass = FALSE;
             failure_mssg = "Unexpected cache stats in check_stats__smoke_check_1(3).";
@@ -36241,7 +36261,7 @@ check_stats__smoke_check_1(H5F_t * file_ptr)
              ( cache_ptr->entries_scanned_to_make_space != 33 ) ||
              ( cache_ptr->slist_scan_restarts != 0 ) ||
              ( cache_ptr->LRU_scan_restarts != 0 ) ||
-             ( cache_ptr->hash_bucket_scan_restarts != 0 ) ) {
+             ( cache_ptr->index_scan_restarts != 0 ) ) {
 
             pass = FALSE;
             failure_mssg = "Unexpected cache stats in check_stats__smoke_check_1(4).";
