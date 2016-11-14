@@ -602,25 +602,25 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
         f->shared->accum.loc = HADDR_UNDEF;
         f->shared->lf = lf;
 
-	/* Initialization for handling file space */
+        /* Initialization for handling file space */
         for(u = 0; u < NELMTS(f->shared->fs.man_addr); u++) {
             f->shared->fs.man_state[u] = H5F_FS_STATE_CLOSED;
             f->shared->fs.man_addr[u] = HADDR_UNDEF;
             f->shared->fs.man[u] = NULL;
-	} /* end for */
+        } /* end for */
 
-	/* Initialization for handling file space (for paged aggregation) */
-	f->shared->fs.last_small = f->shared->fs.track_last_small = 0;
-	f->shared->fs.pgend_meta_thres = H5F_FILE_SPACE_PGEND_META_THRES;
+        /* Initialization for handling file space (for paged aggregation) */
+        f->shared->fs.last_small = f->shared->fs.track_last_small = 0;
+        f->shared->fs.pgend_meta_thres = H5F_FILE_SPACE_PGEND_META_THRES;
 
         /* intialize point of no return */
         f->shared->fs.point_of_no_return = FALSE;
 
-	/*
-	 * Copy the file creation and file access property lists into the
-	 * new file handle.  We do this early because some values might need
-	 * to change as the file is being opened.
-	 */
+        /*
+         * Copy the file creation and file access property lists into the
+         * new file handle.  We do this early because some values might need
+         * to change as the file is being opened.
+         */
         if(NULL == (plist = (H5P_genplist_t *)H5I_object(fcpl_id)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not property list")
         f->shared->fcpl_id = H5P_copy_plist(plist, FALSE);
@@ -1015,29 +1015,29 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
      * way for us to detect it here anyway).
      */
     if(drvr->cmp)
-	tent_flags = flags & ~(H5F_ACC_CREAT|H5F_ACC_TRUNC|H5F_ACC_EXCL);
+        tent_flags = flags & ~(H5F_ACC_CREAT|H5F_ACC_TRUNC|H5F_ACC_EXCL);
     else
-	tent_flags = flags;
+        tent_flags = flags;
 
     if(NULL == (lf = H5FD_open(name, tent_flags, fapl_id, HADDR_UNDEF))) {
-	if(tent_flags == flags) {
+        if(tent_flags == flags) {
 #ifndef H5_USING_MEMCHECKER
             time_t mytime = HDtime(NULL);
 
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: time = %s, name = '%s', tent_flags = %x", HDctime(&mytime), name, tent_flags)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: time = %s, name = '%s', tent_flags = %x", HDctime(&mytime), name, tent_flags)
 #else /* H5_USING_MEMCHECKER */
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: name = '%s', tent_flags = %x", name, tent_flags)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: name = '%s', tent_flags = %x", name, tent_flags)
 #endif /* H5_USING_MEMCHECKER */
         } /* end if */
         H5E_clear_stack(NULL);
-	tent_flags = flags;
-	if(NULL == (lf = H5FD_open(name, tent_flags, fapl_id, HADDR_UNDEF))) {
+        tent_flags = flags;
+        if(NULL == (lf = H5FD_open(name, tent_flags, fapl_id, HADDR_UNDEF))) {
 #ifndef H5_USING_MEMCHECKER
             time_t mytime = HDtime(NULL);
 
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: time = %s, name = '%s', tent_flags = %x", HDctime(&mytime), name, tent_flags)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: time = %s, name = '%s', tent_flags = %x", HDctime(&mytime), name, tent_flags)
 #else /* H5_USING_MEMCHECKER */
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: name = '%s', tent_flags = %x", name, tent_flags)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: name = '%s', tent_flags = %x", name, tent_flags)
 #endif /* H5_USING_MEMCHECKER */
         } /* end if */
     } /* end if */
@@ -1145,18 +1145,18 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
             HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to create/open root group")
     } else if (1 == shared->nrefs) {
 
-	/* Read the superblock if it hasn't been read before. */
+        /* Read the superblock if it hasn't been read before. */
         if(H5F__super_read(file, dxpl_id, TRUE) < 0)
-	    HGOTO_ERROR(H5E_FILE, H5E_READERROR, NULL, "unable to read superblock")
+            HGOTO_ERROR(H5E_FILE, H5E_READERROR, NULL, "unable to read superblock")
 
         /* create the page buffer after reading the superblock */
         if(page_buf_size)
             if(H5PB_create(file, page_buf_size, page_buf_min_meta_perc, page_buf_min_raw_perc) < 0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to create page buffer")
 
-	/* Open the root group */
-	if(H5G_mkroot(file, dxpl_id, FALSE) < 0)
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to read root group")
+        /* Open the root group */
+        if(H5G_mkroot(file, dxpl_id, FALSE) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to read root group")
     } /* end if */
 
     /*
@@ -1197,19 +1197,29 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
 
     /* Formulate the absolute path for later search of target file for external links */
     if(H5_build_extpath(name, &file->extpath) < 0)
-	HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to build extpath")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to build extpath")
 
     /* Formulate the actual file name, after following symlinks, etc. */
     if(H5F_build_actual_name(file, a_plist, name, &file->actual_name) < 0)
-	HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to build actual name")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to build actual name")
+
+    if(flags & H5F_ACC_RDWR) {
+        /* For paged aggregation */
+        /* If there is a small section at EOF, put the mis-aligned fragment to free-space manager */
+        if((H5F_PAGED_AGGR(file)) && (shared->fs.last_small)) {
+            if(H5MF_eof_fragment_fsm(file, dxpl_id))
+                HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to H5MF_eof_fragment_fsm")
+            shared->fs.last_small = 0;
+        }
+    }
 
     /* Success */
     ret_value = file;
 
 done:
     if(!ret_value && file)
-	if(H5F_dest(file, dxpl_id, FALSE) < 0)
-	    HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, NULL, "problems closing file")
+        if(H5F_dest(file, dxpl_id, FALSE) < 0)
+            HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, NULL, "problems closing file")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F_open() */
@@ -1248,6 +1258,7 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to settle metadata cache")
 
+
     /* Release any space allocated to space aggregators, so that the eoa value
      *  corresponds to the end of the space written to in the file.
      */
@@ -1262,6 +1273,7 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
     if(H5AC_flush(f, dxpl_id) < 0)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush metadata cache")
+
 
     /* Truncate the file to the current allocated size */
     if(H5FD_truncate(f->shared->lf, dxpl_id, closing) < 0)

@@ -104,15 +104,15 @@
 #define USERBLOCK_SIZE      ((hsize_t) 512)
 
 /* Declarations for test_filespace_*() */
-#define FILENAME_LEN    	1024		/* length of file name */
-#define DSETNAME 		"dset"		/* Name of dataset */
-#define NELMTS(X)               (sizeof(X)/sizeof(X[0]))	/* # of elements */
-#define READ_OLD_BUFSIZE	1024		/* Buffer for holding file data */
-#define FILE5			"tfile5.h5"	/* Test file */
-#define TEST_THRESHOLD10        10		/* Free space section threshold */
-#define FSP_SIZE_SET		1		/* Setting for file space page size */
-#define FSP_SIZE_DEF		4096		/* File space page size default */
-#define FSP_SIZE512		512		/* File space page size */
+#define FILENAME_LEN        1024                        /* length of file name */
+#define DSETNAME            "dset"                      /* Name of dataset */
+#define NELMTS(X)           (sizeof(X)/sizeof(X[0]))    /* # of elements */
+#define READ_OLD_BUFSIZE    1024                        /* Buffer for holding file data */
+#define FILE5               "tfile5.h5"                 /* Test file */
+#define TEST_THRESHOLD10    10                          /* Free space section threshold */
+#define FSP_SIZE_SET        1                           /* Setting for file space page size */
+#define FSP_SIZE_DEF        4096                        /* File space page size default */
+#define FSP_SIZE512         512                         /* File space page size */
 
 /* Declaration for test_libver_macros2() */
 #define FILE6			"tfile6.h5"	/* Test file */
@@ -3066,7 +3066,7 @@ test_userblock_alignment(void)
 **
 **  test_userblock_alignment_paged(): low-level file test routine.
 **      This test checks to ensure that files with both a userblock and
-**	alignment interact properly:
+**      alignment interact properly:
 **		-- alignment via H5Pset_alignment  
 **		-- alignment via paged aggregation
 **
@@ -3089,7 +3089,6 @@ test_userblock_alignment_paged(void)
      *  Userblock size = 0
      *  Alignment in use = 4096
      *    Strategy = H5F_FILE_SPACE_PAGE; fsp_size = alignment = 4096
-     *	  (via latest format)
      * Outcome:
      *  Should succeed: 
      *	  userblock is 0 and alignment != 0
@@ -3107,6 +3106,9 @@ test_userblock_alignment_paged(void)
     /* Set the "use the latest version of the format" bounds */
     ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
     CHECK(ret, FAIL, "H5Pset_libver_bounds");
+
+    ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, FALSE, (hsize_t)1);
+    CHECK(ret, FAIL, "H5Pset_file_space_strategy");
 
     /* Call helper routines to perform file manipulations */
     ret = test_userblock_alignment_helper1(fcpl, fapl);
@@ -3483,26 +3485,22 @@ test_userblock_alignment_paged(void)
 **
 ****************************************************************/
 static void
-test_filespace_info(const char *env_h5_drvr)
+test_filespace_info(void)
 {
-    hid_t fid; 				/* File IDs	*/
-    hid_t fapl, new_fapl;		/* File access property lists */
-    hid_t fcpl, fcpl1, fcpl2;		/* File creation property lists */
-    H5F_fspace_strategy_t strategy;		/* File space strategy */
-    hbool_t persist;			/* Persist free-space or not */
-    hsize_t threshold;			/* Free-space section threshold */
-    unsigned new_format;			/* New or old format */
-    H5F_fspace_strategy_t fs_strategy;	/* File space strategy--iteration variable */
-    unsigned fs_persist;		/* Persist free-space or not--iteration variable */
-    hsize_t fs_threshold;		/* Free-space section threshold--iteration variable */
-    int pp;				/* Iteration variable for setting file space page size */
-    hsize_t fsp_size;			/* File space page size */
-    char filename[FILENAME_LEN]; 	/* Filename to use */
-    hbool_t  contig_addr_vfd;           /* Whether VFD used has a contigous address space */
-    herr_t ret;				/* Return value	*/
-
-    /* Current VFD that does not support contigous address space */
-    contig_addr_vfd = (hbool_t)(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi"));
+    hid_t fid;                          /* File IDs	*/
+    hid_t fapl, new_fapl;               /* File access property lists */
+    hid_t fcpl, fcpl1, fcpl2;           /* File creation property lists */
+    H5F_fspace_strategy_t strategy;     /* File space strategy */
+    hbool_t persist;                    /* Persist free-space or not */
+    hsize_t threshold;                  /* Free-space section threshold */
+    unsigned new_format;                /* New or old format */
+    H5F_fspace_strategy_t fs_strategy;  /* File space strategy--iteration variable */
+    unsigned fs_persist;                /* Persist free-space or not--iteration variable */
+    hsize_t fs_threshold;               /* Free-space section threshold--iteration variable */
+    int pp;                             /* Iteration variable for setting file space page size */
+    hsize_t fsp_size;                   /* File space page size */
+    char filename[FILENAME_LEN];        /* Filename to use */
+    herr_t ret;                         /* Return value	*/
 
     /* Output message about test being performed */
     MESSAGE(5, ("Testing file creation public routines: H5Pget/set_file_space_strategy & H5Pget/set_file_space_page_size\n"));
@@ -3636,127 +3634,126 @@ test_filespace_info(const char *env_h5_drvr)
      *  
      */
     for(new_format = FALSE; new_format <= TRUE; new_format++) {
-	hid_t my_fapl; 
+        hid_t my_fapl; 
 
         /* Set the FAPL for the type of format */
         if(new_format) {
-	    MESSAGE(5, ("Testing with new group format\n"));
+            MESSAGE(5, ("Testing with new group format\n"));
             my_fapl = new_fapl;
         } /* end if */
         else {
-	    MESSAGE(5, ("Testing with old group format\n"));
+            MESSAGE(5, ("Testing with old group format\n"));
             my_fapl = fapl;
         } /* end else */
 
-	/* Test with TRUE or FALSE for persisting free-space */
-	for(fs_persist = FALSE; fs_persist <= TRUE; fs_persist++) {
+        /* Test with TRUE or FALSE for persisting free-space */
+        for(fs_persist = FALSE; fs_persist <= TRUE; fs_persist++) {
 
-	    /* Test with free-space section threshold size: 0 to 10 */
-	    for(fs_threshold = 0; fs_threshold <= TEST_THRESHOLD10; fs_threshold++) {
+            /* Test with free-space section threshold size: 0 to 10 */
+            for(fs_threshold = 0; fs_threshold <= TEST_THRESHOLD10; fs_threshold++) {
 
-		/* Test with 3 file space strategies */
-		for(fs_strategy = H5F_FSPACE_STRATEGY_AGGR; fs_strategy < H5F_FSPACE_STRATEGY_NTYPES; H5_INC_ENUM(H5F_fspace_strategy_t, fs_strategy)) {
+                /* Test with 3 file space strategies */
+                for(fs_strategy = H5F_FSPACE_STRATEGY_AGGR; fs_strategy < H5F_FSPACE_STRATEGY_NTYPES; H5_INC_ENUM(H5F_fspace_strategy_t, fs_strategy)) {
 
-		    /* Test with file space page size: not set, set to 0, set to 512 */
-		    for(pp = -1; pp <= FSP_SIZE_SET; pp++) {
+                    /* Test with file space page size: not set, set to 0, set to 512 */
+                    for(pp = -1; pp <= FSP_SIZE_SET; pp++) {
 
-			if(pp && fs_strategy == H5F_FSPACE_STRATEGY_PAGE && !contig_addr_vfd)
-			    continue;
+                        if(pp && fs_strategy == H5F_FSPACE_STRATEGY_PAGE)
+                            continue;
 
-			/* Create file creation property list template */
-			fcpl = H5Pcreate(H5P_FILE_CREATE);
-			CHECK(fcpl, FAIL, "H5Pcreate");
+                        /* Create file creation property list template */
+                        fcpl = H5Pcreate(H5P_FILE_CREATE);
+                        CHECK(fcpl, FAIL, "H5Pcreate");
 
-			/* Set file space information */
-			ret = H5Pset_file_space_strategy(fcpl, fs_strategy, (hbool_t)fs_persist, fs_threshold);
-			CHECK(ret, FAIL, "H5Pset_file_space_strategy");
+                        /* Set file space information */
+                        ret = H5Pset_file_space_strategy(fcpl, fs_strategy, (hbool_t)fs_persist, fs_threshold);
+                        CHECK(ret, FAIL, "H5Pset_file_space_strategy");
 
-			/* Do not set file space page size if pp is negative */
-			if(pp >= 0) {
-			    ret = H5Pset_file_space_page_size(fcpl, (hsize_t)(pp > 0 ? FSP_SIZE512 : 0));
-			    CHECK(ret, FAIL, "H5Pset_file_space_strategy");
-			}
+                        /* Do not set file space page size if pp is negative */
+                        if(pp >= 0) {
+                            ret = H5Pset_file_space_page_size(fcpl, (hsize_t)(pp > 0 ? FSP_SIZE512 : 0));
+                            CHECK(ret, FAIL, "H5Pset_file_space_strategy");
+                        }
 			
-			/* Retrieve file space information */
-			ret = H5Pget_file_space_strategy(fcpl, &strategy, &persist, &threshold);
-			CHECK(ret, FAIL, "H5Pget_file_space_strategy");
+                        /* Retrieve file space information */
+                        ret = H5Pget_file_space_strategy(fcpl, &strategy, &persist, &threshold);
+                        CHECK(ret, FAIL, "H5Pget_file_space_strategy");
 
-			/* Verify file space information */
-			VERIFY(strategy, fs_strategy, "H5Pget_file_space_strategy");
-			VERIFY(persist, (hbool_t)fs_persist, "H5Pget_file_space_strategy");
-			VERIFY(threshold, fs_threshold, "H5Pget_file_space_strategy");
+                        /* Verify file space information */
+                        VERIFY(strategy, fs_strategy, "H5Pget_file_space_strategy");
+                        VERIFY(persist, (hbool_t)fs_persist, "H5Pget_file_space_strategy");
+                        VERIFY(threshold, fs_threshold, "H5Pget_file_space_strategy");
 
-			/* Retrieve and verify file space page size */
-			ret = H5Pget_file_space_page_size(fcpl, &fsp_size);
-			CHECK(ret, FAIL, "H5Pget_file_space_page_size");
-			VERIFY(fsp_size, pp > 0 ? FSP_SIZE512 : (pp == 0 ? 0 : FSP_SIZE_DEF), "H5Pget_file_space_page_size");
+                        /* Retrieve and verify file space page size */
+                        ret = H5Pget_file_space_page_size(fcpl, &fsp_size);
+                        CHECK(ret, FAIL, "H5Pget_file_space_page_size");
+                        VERIFY(fsp_size, pp > 0 ? FSP_SIZE512 : (pp == 0 ? 0 : FSP_SIZE_DEF), "H5Pget_file_space_page_size");
 
-			/* Create the file with the specified file space info */
-			fid = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, my_fapl);
-			CHECK(ret, FAIL, "H5Fcreate");
+                        /* Create the file with the specified file space info */
+                        fid = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, my_fapl);
+                        CHECK(ret, FAIL, "H5Fcreate");
 
-			/* Get the file's creation property */
-			fcpl1 = H5Fget_create_plist(fid);
-			CHECK(fcpl1, FAIL, "H5Fget_create_plist");
+                        /* Get the file's creation property */
+                        fcpl1 = H5Fget_create_plist(fid);
+                        CHECK(fcpl1, FAIL, "H5Fget_create_plist");
 
-			/* Retrieve file space information */
-			ret = H5Pget_file_space_strategy(fcpl1, &strategy, &persist, &threshold);
-			CHECK(ret, FAIL, "H5Pget_file_space_strategy");
+                        /* Retrieve file space information */
+                        ret = H5Pget_file_space_strategy(fcpl1, &strategy, &persist, &threshold);
+                        CHECK(ret, FAIL, "H5Pget_file_space_strategy");
 
-			/* Verify file space information */
-			VERIFY(strategy, fs_strategy, "H5Pget_file_space_strategy");
-			VERIFY(persist, fs_persist, "H5Pget_file_space_strategy");
-			VERIFY(threshold, fs_threshold, "H5Pget_file_space_strategy");
+                        /* Verify file space information */
+                        VERIFY(strategy, fs_strategy, "H5Pget_file_space_strategy");
+                        VERIFY(persist, fs_persist, "H5Pget_file_space_strategy");
+                        VERIFY(threshold, fs_threshold, "H5Pget_file_space_strategy");
 
-			/* Retrieve and verify file space page size */
-			ret = H5Pget_file_space_page_size(fcpl1, &fsp_size);
-			CHECK(ret, FAIL, "H5Pget_file_space_page_size");
-			VERIFY(fsp_size, pp > 0 ? FSP_SIZE512 : (pp == 0 ? 0 : FSP_SIZE_DEF), "H5Pget_file_space_page_size");
+                        /* Retrieve and verify file space page size */
+                        ret = H5Pget_file_space_page_size(fcpl1, &fsp_size);
+                        CHECK(ret, FAIL, "H5Pget_file_space_page_size");
+                        VERIFY(fsp_size, pp > 0 ? FSP_SIZE512 : (pp == 0 ? 0 : FSP_SIZE_DEF), "H5Pget_file_space_page_size");
 
-			/* Close the file */
-			ret = H5Fclose(fid);
-			CHECK(ret, FAIL, "H5Fclose");
+                        /* Close the file */
+                        ret = H5Fclose(fid);
+                        CHECK(ret, FAIL, "H5Fclose");
 
-			/* Re-open the file */
-			fid = H5Fopen(filename, H5F_ACC_RDWR, my_fapl);
-			CHECK(ret, FAIL, "H5Fopen");
+                        /* Re-open the file */
+                        fid = H5Fopen(filename, H5F_ACC_RDWR, my_fapl);
+                        CHECK(ret, FAIL, "H5Fopen");
 
-			/* Get the file's creation property */
-			fcpl2 = H5Fget_create_plist(fid);
-			CHECK(fcpl2, FAIL, "H5Fget_create_plist");
+                        /* Get the file's creation property */
+                        fcpl2 = H5Fget_create_plist(fid);
+                        CHECK(fcpl2, FAIL, "H5Fget_create_plist");
 
-			/* Retrieve file space information */
-			ret = H5Pget_file_space_strategy(fcpl2, &strategy, &persist, &threshold);
-			CHECK(ret, FAIL, "H5Pget_file_space_strategy");
+                        /* Retrieve file space information */
+                        ret = H5Pget_file_space_strategy(fcpl2, &strategy, &persist, &threshold);
+                        CHECK(ret, FAIL, "H5Pget_file_space_strategy");
 
-			/* Verify file space information */
-			VERIFY(strategy, fs_strategy, "H5Pget_file_space_strategy");
-			VERIFY(persist, fs_persist, "H5Pget_file_space_strategy");
-			VERIFY(threshold, fs_threshold, "H5Pget_file_space_strategy");
+                        /* Verify file space information */
+                        VERIFY(strategy, fs_strategy, "H5Pget_file_space_strategy");
+                        VERIFY(persist, fs_persist, "H5Pget_file_space_strategy");
+                        VERIFY(threshold, fs_threshold, "H5Pget_file_space_strategy");
 
-			/* Retrieve and verify file space page size */
-			ret = H5Pget_file_space_page_size(fcpl2, &fsp_size);
-			CHECK(ret, FAIL, "H5Pget_file_space_page_size");
-			VERIFY(fsp_size, pp > 0 ? FSP_SIZE512 : (pp == 0 ? 0 : FSP_SIZE_DEF), "H5Pget_file_space_page_size");
+                        /* Retrieve and verify file space page size */
+                        ret = H5Pget_file_space_page_size(fcpl2, &fsp_size);
+                        CHECK(ret, FAIL, "H5Pget_file_space_page_size");
+                        VERIFY(fsp_size, pp > 0 ? FSP_SIZE512 : (pp == 0 ? 0 : FSP_SIZE_DEF), "H5Pget_file_space_page_size");
 
-			/* Close the file */
-			ret = H5Fclose(fid);
-			CHECK(ret, FAIL, "H5Fclose");
+                        /* Close the file */
+                        ret = H5Fclose(fid);
+                        CHECK(ret, FAIL, "H5Fclose");
 
-			/* Release file creation property lists */
-			ret = H5Pclose(fcpl);
-			CHECK(ret, FAIL, "H5Pclose");
-			ret = H5Pclose(fcpl1);
-			CHECK(ret, FAIL, "H5Pclose");
-			ret = H5Pclose(fcpl2);
-			CHECK(ret, FAIL, "H5Pclose");
+                        /* Release file creation property lists */
+                        ret = H5Pclose(fcpl);
+                        CHECK(ret, FAIL, "H5Pclose");
+                        ret = H5Pclose(fcpl1);
+                        CHECK(ret, FAIL, "H5Pclose");
+                        ret = H5Pclose(fcpl2);
+                        CHECK(ret, FAIL, "H5Pclose");
 
-		    } /* end for pp */
+                    } /* end for pp */
 
-		} /* end for file space strategy type */
-
-	    } /* end for free-space section threshold */
-	} /* end for fs_persist */
+                } /* end for file space strategy type */
+            } /* end for free-space section threshold */
+        } /* end for fs_persist */
 
         /* close fapl_ and remove the file */
         h5_clean_files(FILESPACE_NAME, my_fapl);
@@ -3764,6 +3761,56 @@ test_filespace_info(const char *env_h5_drvr)
 
 }  /* test_filespace_info() */
 
+/****************************************************************
+**
+** set_multi_split():
+**  Internal routine to set up page-aligned address space for multi/split driver
+**  when testing paged aggregation.
+**  This is used by test_file_freespace() and test_sects_freespace().
+**
+*****************************************************************/
+static int
+set_multi_split(hid_t fapl, hsize_t pagesize, hbool_t multi, hbool_t split)
+{
+    H5FD_mem_t memb_map[H5FD_MEM_NTYPES];
+    hid_t memb_fapl_arr[H5FD_MEM_NTYPES];
+    char *memb_name[H5FD_MEM_NTYPES];
+    haddr_t memb_addr[H5FD_MEM_NTYPES];
+    hbool_t relax;
+    H5FD_mem_t  mt;
+
+    HDassert(split || multi);
+
+    HDmemset(memb_name, 0, sizeof memb_name);
+
+    /* Get current split settings */
+    if(H5Pget_fapl_multi(fapl, memb_map, memb_fapl_arr, memb_name, memb_addr, &relax) < 0)
+        TEST_ERROR
+
+    if(split) {
+        /* Set memb_addr aligned */
+        memb_addr[H5FD_MEM_SUPER] = ((memb_addr[H5FD_MEM_SUPER] + pagesize - 1) / pagesize) * pagesize;
+        memb_addr[H5FD_MEM_DRAW] = ((memb_addr[H5FD_MEM_DRAW] + pagesize - 1) / pagesize) * pagesize;
+    } else {
+        /* Set memb_addr aligned */
+        for(mt = H5FD_MEM_DEFAULT; mt < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, mt))
+            memb_addr[mt] = ((memb_addr[mt] + pagesize - 1) / pagesize) * pagesize;
+    } /* end else */
+
+    /* Set multi driver with new FAPLs */
+    if(H5Pset_fapl_multi(fapl, memb_map, memb_fapl_arr, (const char * const *)memb_name, memb_addr, relax) < 0)
+        TEST_ERROR
+
+    /* Free memb_name */
+    for(mt = H5FD_MEM_DEFAULT; mt < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, mt))
+        free(memb_name[mt]);
+
+    return 0;
+
+error:
+    return(-1);
+
+} /* set_multi_split() */
 
 /****************************************************************
 **
@@ -3784,25 +3831,27 @@ test_filespace_info(const char *env_h5_drvr)
 static void
 test_file_freespace(const char *env_h5_drvr)
 {
-    hid_t    file;      		/* File opened with read-write permission */
+    hid_t    file;                      /* File opened with read-write permission */
     h5_stat_size_t empty_filesize;      /* Size of file when empty */
     h5_stat_size_t mod_filesize;        /* Size of file after being modified */
-    hssize_t free_space;        	/* Amount of free space in file */
-    hid_t    fcpl;			/* File creation property list */
-    hid_t    fapl, new_fapl;		/* File access property list IDs */
-    hid_t    dspace;    /* Dataspace ID */
-    hid_t    dset;      /* Dataset ID */
-    hid_t    dcpl;      /* Dataset creation property list */
-    int k;		/* Local index variable */
-    unsigned u;         /* Local index variable */
-    char     filename[FILENAME_LEN]; 	/* Filename to use */
-    char     name[32];  		/* Dataset name */
-    unsigned new_format;		/* To use old or new format */
-    hbool_t  contig_addr_vfd; 		/* Whether VFD used has a contigous address space */
-    herr_t   ret;
+    hssize_t free_space;                /* Amount of free space in file */
+    hid_t    fcpl;                      /* File creation property list */
+    hid_t    fapl, new_fapl;            /* File access property list IDs */
+    hid_t    dspace;                    /* Dataspace ID */
+    hid_t    dset;                      /* Dataset ID */
+    hid_t    dcpl;                      /* Dataset creation property list */
+    int k;                              /* Local index variable */
+    unsigned u;                         /* Local index variable */
+    char     filename[FILENAME_LEN];    /* Filename to use */
+    char     name[32];                  /* Dataset name */
+    unsigned new_format;                /* To use old or new format */
+    hbool_t family_vfd, split_vfd, multi_vfd;   /* Indicate family/multi/split driver */
+    hsize_t expected_freespace;         /* Freespace expected */
+    herr_t   ret;                       /* Return value */
 
-    /* Current VFD that does not support contigous address space */
-    contig_addr_vfd = (hbool_t)(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi") && HDstrcmp(env_h5_drvr, "family"));
+    family_vfd = !HDstrcmp(env_h5_drvr, "family");
+    split_vfd = !HDstrcmp(env_h5_drvr, "split");
+    multi_vfd = !HDstrcmp(env_h5_drvr, "multi");
 
     fapl = h5_fileaccess();
     h5_fixname(FILESPACE_NAME[0], fapl, filename, sizeof filename);
@@ -3819,104 +3868,112 @@ test_file_freespace(const char *env_h5_drvr)
 
     /* Test with old & new format */
     for(new_format = FALSE; new_format <= TRUE; new_format++) {
-	hid_t my_fapl;
-	hsize_t expected_freespace = 2360;
+        hid_t my_fapl;
 
         /* Set the FAPL for the type of format */
         if(new_format) {
             MESSAGE(5, ("Testing with new group format\n"));
+
             my_fapl = new_fapl;
 
-	    /* Latest format with contiguous VFD: paged aggregation, non-persistent free-space */
-	    /* Latest format with non-contiguous VFD: aggregation, non-persistent free-space */
-	    if(contig_addr_vfd) {
-		H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, FALSE, (hsize_t)1);
-		expected_freespace = 350;
-	    } else
-		H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, FALSE, (hsize_t)1);
+            if(multi_vfd || split_vfd) {
+                ret = set_multi_split(new_fapl, FSP_SIZE_DEF, multi_vfd, split_vfd);
+                CHECK(ret, FAIL, "set_multi_split");
+            }
 
+            ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, FALSE, (hsize_t)1);
+            CHECK(ret, FAIL, "H5P_set_file_space_strategy");
+
+            expected_freespace = 4570;
+            if(family_vfd) expected_freespace = 4531;
+            if(split_vfd) expected_freespace = 427;
+            if(multi_vfd) expected_freespace = 248;
         } /* end if */
         else {
             MESSAGE(5, ("Testing with old group format\n"));
-	    /* Default: non-paged aggreation, non-persistent free-space */
+            /* Default: non-paged aggregation, non-persistent free-space */
             my_fapl = fapl;
+            expected_freespace = 2360;
+            if(split_vfd) expected_freespace = 264;
+            if(multi_vfd) expected_freespace = 0;
+
         } /* end else */
 
-	/* Create an "empty" file */
-	file = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, my_fapl);
-	CHECK(file, FAIL, "H5Fcreate");
+        /* Create an "empty" file */
+        file = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, my_fapl);
+        CHECK(file, FAIL, "H5Fcreate");
 
-	ret = H5Fclose(file);
-	CHECK_I(ret, "H5Fclose");
+        ret = H5Fclose(file);
+        CHECK_I(ret, "H5Fclose");
 
-	/* Get the "empty" file size */
-	empty_filesize = h5_get_file_size(filename, H5P_DEFAULT);
+        /* Get the "empty" file size */
+        empty_filesize = h5_get_file_size(filename, H5P_DEFAULT);
 
-	/* Re-open the file (with read-write permission) */
-	file = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
-	CHECK_I(file, "H5Fopen");
+        /* Re-open the file (with read-write permission) */
+        file = H5Fopen(filename, H5F_ACC_RDWR, my_fapl);
+        CHECK_I(file, "H5Fopen");
 
-	/* Check that the free space is 0 */
-	free_space = H5Fget_freespace(file);
-	CHECK(free_space, FAIL, "H5Fget_freespace");
-	VERIFY(free_space, 0, "H5Fget_freespace");
+        /* Check that the free space is 0 */
+        free_space = H5Fget_freespace(file);
+        CHECK(free_space, FAIL, "H5Fget_freespace");
+        VERIFY(free_space, 0, "H5Fget_freespace");
 
-	/* Create dataspace for datasets */
-	dspace = H5Screate(H5S_SCALAR);
-	CHECK(dspace, FAIL, "H5Screate");
+        /* Create dataspace for datasets */
+        dspace = H5Screate(H5S_SCALAR);
+        CHECK(dspace, FAIL, "H5Screate");
 
-	/* Create a dataset creation property list */
-	dcpl = H5Pcreate(H5P_DATASET_CREATE);
-	CHECK(dcpl, FAIL, "H5Pcreate");
+        /* Create a dataset creation property list */
+        dcpl = H5Pcreate(H5P_DATASET_CREATE);
+        CHECK(dcpl, FAIL, "H5Pcreate");
 
-	/* Set the space allocation time to early */
-	ret = H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY);
-	CHECK(ret, FAIL, "H5Pset_alloc_time");
+        /* Set the space allocation time to early */
+        ret = H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY);
+        CHECK(ret, FAIL, "H5Pset_alloc_time");
 
-	/* Create datasets in file */
-	for(u = 0; u < 10; u++) {
-	    sprintf(name, "Dataset %u", u);
-	    dset = H5Dcreate2(file, name, H5T_STD_U32LE, dspace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
-	    CHECK(dset, FAIL, "H5Dcreate2");
+        /* Create datasets in file */
+        for(u = 0; u < 10; u++) {
+            sprintf(name, "Dataset %u", u);
+            dset = H5Dcreate2(file, name, H5T_STD_U32LE, dspace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+            CHECK(dset, FAIL, "H5Dcreate2");
 
-	    ret = H5Dclose(dset);
-	    CHECK(ret, FAIL, "H5Dclose");
-	} /* end for */
+            ret = H5Dclose(dset);
+            CHECK(ret, FAIL, "H5Dclose");
+        } /* end for */
 
-	/* Close dataspace */
-	ret = H5Sclose(dspace);
-	CHECK(ret, FAIL, "H5Sclose");
+        /* Close dataspace */
+        ret = H5Sclose(dspace);
+        CHECK(ret, FAIL, "H5Sclose");
 
-	/* Close dataset creation property list */
-	ret = H5Pclose(dcpl);
-	CHECK(ret, FAIL, "H5Pclose");
+        /* Close dataset creation property list */
+        ret = H5Pclose(dcpl);
+        CHECK(ret, FAIL, "H5Pclose");
 
-	/* Check that there is the right amount of free space in the file */
-	free_space = H5Fget_freespace(file);
-	CHECK(free_space, FAIL, "H5Fget_freespace");
-	VERIFY(free_space, expected_freespace, "H5Fget_freespace");
+        /* Check that there is the right amount of free space in the file */
+        free_space = H5Fget_freespace(file);
+        CHECK(free_space, FAIL, "H5Fget_freespace");
+        VERIFY(free_space, expected_freespace, "H5Fget_freespace");
 
-	/* Delete datasets in file */
-	for(k = 9; k >= 0; k--) {
-	    sprintf(name, "Dataset %u", (unsigned)k);
-	    ret = H5Ldelete(file, name, H5P_DEFAULT);
-	    CHECK(ret, FAIL, "H5Ldelete");
-	} /* end for */
+        /* Delete datasets in file */
+        for(k = 9; k >= 0; k--) {
+            sprintf(name, "Dataset %u", (unsigned)k);
+            ret = H5Ldelete(file, name, H5P_DEFAULT);
+            CHECK(ret, FAIL, "H5Ldelete");
+        } /* end for */
 
-	/* Check that there is the right amount of free space in the file */
-	free_space = H5Fget_freespace(file);
-	CHECK(free_space, FAIL, "H5Fget_freespace");
-	VERIFY(free_space, 0, "H5Fget_freespace");
+        /* Check that there is the right amount of free space in the file */
+        free_space = H5Fget_freespace(file);
+        CHECK(free_space, FAIL, "H5Fget_freespace");
+        VERIFY(free_space, 0, "H5Fget_freespace");
 
-	/* Close file */
-	ret = H5Fclose(file);
-	CHECK(ret, FAIL, "H5Fclose");
+        /* Close file */
+        ret = H5Fclose(file);
+        CHECK(ret, FAIL, "H5Fclose");
 
-	/* Get the file size after modifications*/
-	mod_filesize = h5_get_file_size(filename, H5P_DEFAULT);
+        /* Get the file size after modifications*/
+        mod_filesize = h5_get_file_size(filename, H5P_DEFAULT);
 
-	/* Check that the file reverted to empty size */
-	VERIFY(mod_filesize, empty_filesize, "H5Fget_freespace");
+        /* Check that the file reverted to empty size */
+        VERIFY(mod_filesize, empty_filesize, "H5Fget_freespace");
 
         h5_clean_files(FILESPACE_NAME, my_fapl);
 
@@ -3934,36 +3991,36 @@ test_file_freespace(const char *env_h5_drvr)
 static void
 test_sects_freespace(const char *env_h5_drvr, hbool_t new_format)
 {
-    char     filename[FILENAME_LEN];	/* Filename to use */
-    hid_t    file;      	/* File ID */
-    hid_t    fcpl;		/* File creation property list template */
-    hid_t    fapl;		/* File access property list template */
-    hssize_t free_space;        /* Amount of free-space in the file */
-    hid_t    dspace;    	/* Dataspace ID */
-    hid_t    dset;      	/* Dataset ID */
-    hid_t    dcpl;      	/* Dataset creation property list */
-    char     name[32];  	/* Dataset name */
-    hssize_t nsects;        			/* # of free-space sections */
-    hssize_t nall;				/* # of free-space sections for all types of data */
-    hssize_t nmeta, nraw, ngeneric;		/* # of free-space sections for meta/raw/generic data */
-    H5F_sect_info_t sect_info[15];		/* Array to hold free-space information */
-    H5F_sect_info_t all_sect_info[15];		/* Array to hold free-space information for all types of data */
-    H5F_sect_info_t meta_sect_info[15];		/* Array to hold free-space information for metadata */
-    H5F_sect_info_t raw_sect_info[15];		/* Array to hold free-space information for raw data */
-    H5F_sect_info_t generic_sect_info[15];	/* Array to hold free-space information for generic data */
-    hsize_t  total = 0;        	/* sum of the free-space section sizes */
-    hsize_t  tmp_tot = 0;       /* Sum of the free-space section sizes */
-    hsize_t  last_size;        	/* Size of last free-space section */
-    hsize_t  dims[1];		/* Dimension sizes */
-    unsigned u;         	/* Local index variable */
-    hbool_t contig_addr_vfd; 	/* Whether VFD used has a contigous address space */
-    herr_t   ret;		/* Return value */
+    char     filename[FILENAME_LEN];    /* Filename to use */
+    hid_t    file;                      /* File ID */
+    hid_t    fcpl;                      /* File creation property list template */
+    hid_t    fapl;                      /* File access property list template */
+    hssize_t free_space;                /* Amount of free-space in the file */
+    hid_t    dspace;                    /* Dataspace ID */
+    hid_t    dset;                      /* Dataset ID */
+    hid_t    dcpl;                      /* Dataset creation property list */
+    char     name[32];                  /* Dataset name */
+    hssize_t nsects = 0;                /* # of free-space sections */
+    hssize_t nall;                      /* # of free-space sections for all types of data */
+    hssize_t nmeta = 0, nraw = 0;       /* # of free-space sections for meta/raw/generic data */
+    H5F_sect_info_t sect_info[15];      /* Array to hold free-space information */
+    H5F_sect_info_t all_sect_info[15];  /* Array to hold free-space information for all types of data */
+    H5F_sect_info_t meta_sect_info[15]; /* Array to hold free-space information for metadata */
+    H5F_sect_info_t raw_sect_info[15];  /* Array to hold free-space information for raw data */
+    hsize_t  total = 0;        	        /* sum of the free-space section sizes */
+    hsize_t  tmp_tot = 0;               /* Sum of the free-space section sizes */
+    hsize_t  last_size;        	        /* Size of last free-space section */
+    hsize_t  dims[1];                   /* Dimension sizes */
+    unsigned u;                         /* Local index variable */
+    H5FD_mem_t type;
+    hbool_t split_vfd = FALSE, multi_vfd = FALSE;
+    herr_t   ret;                   /* Return value */
 
     /* Output message about test being performed */
     MESSAGE(5, ("Testing H5Fget_free_sections()--free-space section info in the file\n"));
 
-    /* Current VFD that does not support contigous address space */
-    contig_addr_vfd = (hbool_t)(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi"));
+    split_vfd = !HDstrcmp(env_h5_drvr, "split");
+    multi_vfd = !HDstrcmp(env_h5_drvr, "multi");
 
     fapl = h5_fileaccess();
     h5_fixname(FILESPACE_NAME[0], fapl, filename, sizeof filename);
@@ -3972,19 +4029,24 @@ test_sects_freespace(const char *env_h5_drvr, hbool_t new_format)
     fcpl = H5Pcreate(H5P_FILE_CREATE);
     CHECK(fcpl, FAIL, "H5Pcreate");
 
-    if(!new_format || (new_format && !contig_addr_vfd)) {
-	/* Old format or latest format with non-contiguous vfd: set to aggregation and persistent free-space */
-	ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, TRUE, (hsize_t)1);
-	CHECK(ret, FAIL, "H5Pget_file_space_strategy");
-    } else {
-	/* Latest format with contiguous vfd (default setting) */
-	ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
-	CHECK(ret, FAIL, "H5Pset_libver_bounds");
+    if(new_format) {
+        ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+        CHECK(ret, FAIL, "H5Pset_libver_bounds");
 
-	/* Set to paged aggregation and persistent free-space */
-	ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, TRUE, (hsize_t)1);
-	CHECK(ret, FAIL, "H5Pget_file_space_strategy");
-    }
+        /* Set to paged aggregation and persistent free-space */
+        ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, TRUE, (hsize_t)1);
+        CHECK(ret, FAIL, "H5Pget_file_space_strategy");
+
+        /* Set up paged aligned address space for multi/split driver */
+        if(multi_vfd || split_vfd) {
+            ret = set_multi_split(fapl, FSP_SIZE_DEF, multi_vfd, split_vfd);
+            CHECK(ret, FAIL, "set_multi_split");
+        }
+
+    } else {
+        ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, TRUE, (hsize_t)1);
+        CHECK(ret, FAIL, "H5Pget_file_space_strategy");
+    } 
 
     /* Create the file */
     file = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl);
@@ -4037,10 +4099,10 @@ test_sects_freespace(const char *env_h5_drvr, hbool_t new_format)
     /* Delete odd-numbered datasets in file */
     for(u = 0; u < 10; u++) {
         sprintf(name, "Dataset %u", u);
-	if(u % 2) {
-	    ret = H5Ldelete(file, name, H5P_DEFAULT);
-	    CHECK(ret, FAIL, "H5Ldelete");
-	} /* end if */
+        if(u % 2) {
+            ret = H5Ldelete(file, name, H5P_DEFAULT);
+            CHECK(ret, FAIL, "H5Ldelete");
+        } /* end if */
     } /* end for */
 
     /* Close file */
@@ -4056,21 +4118,21 @@ test_sects_freespace(const char *env_h5_drvr, hbool_t new_format)
     CHECK(free_space, FAIL, "H5Fget_freespace");
 
     /* Get the total # of free-space sections in the file */
-    nall = H5Fget_free_sections(file, H5F_FSPACE_TYPE_ALL, (size_t)0, NULL);
+    nall = H5Fget_free_sections(file, H5FD_MEM_DEFAULT, (size_t)0, NULL);
     CHECK(nall, FAIL, "H5Fget_free_sections");
 
     /* Should return failure when nsects is 0 with a nonnull sect_info */
-    nsects = H5Fget_free_sections(file, H5F_FSPACE_TYPE_ALL, (size_t)0, all_sect_info);
+    nsects = H5Fget_free_sections(file, H5FD_MEM_DEFAULT, (size_t)0, all_sect_info);
     VERIFY(nsects, FAIL, "H5Fget_free_sections");
 
     /* Retrieve and verify free space info for all the sections */
     HDmemset(all_sect_info, 0,  sizeof(all_sect_info));
-    nsects = H5Fget_free_sections(file, H5F_FSPACE_TYPE_ALL, (size_t)nall, all_sect_info);
+    nsects = H5Fget_free_sections(file, H5FD_MEM_DEFAULT, (size_t)nall, all_sect_info);
     VERIFY(nsects, nall, "H5Fget_free_sections");
 
     /* Verify the amount of free-space is correct */
     for(u = 0; u < nall; u++)
-	total += all_sect_info[u].size;
+        total += all_sect_info[u].size;
     VERIFY(free_space, total, "H5Fget_free_sections");
 
     /* Save the last section's size */
@@ -4078,79 +4140,79 @@ test_sects_freespace(const char *env_h5_drvr, hbool_t new_format)
 
     /* Retrieve and verify free space info for -1 sections */
     HDmemset(sect_info, 0,  sizeof(sect_info));
-    nsects = H5Fget_free_sections(file, H5F_FSPACE_TYPE_ALL, (size_t)(nall - 1), sect_info);
+    nsects = H5Fget_free_sections(file, H5FD_MEM_DEFAULT, (size_t)(nall - 1), sect_info);
     VERIFY(nsects, nall, "H5Fget_free_sections");
 
     /* Verify the amount of free-space is correct */
     total = 0;
     for(u = 0; u < (nall - 1); u++) {
-	VERIFY(sect_info[u].addr, all_sect_info[u].addr, "H5Fget_free_sections");
-	VERIFY(sect_info[u].size, all_sect_info[u].size, "H5Fget_free_sections");
-	total += sect_info[u].size;
+        VERIFY(sect_info[u].addr, all_sect_info[u].addr, "H5Fget_free_sections");
+        VERIFY(sect_info[u].size, all_sect_info[u].size, "H5Fget_free_sections");
+        total += sect_info[u].size;
     }
     VERIFY(((hsize_t)free_space - last_size), total, "H5Fget_free_sections");
 
     /* Retrieve and verify free-space info for +1 sections */
     HDmemset(sect_info, 0,  sizeof(sect_info));
-    nsects = H5Fget_free_sections(file, H5F_FSPACE_TYPE_ALL, (size_t)(nall + 1), sect_info);
+    nsects = H5Fget_free_sections(file, H5FD_MEM_DEFAULT, (size_t)(nall + 1), sect_info);
     VERIFY(nsects, nall, "H5Fget_free_sections");
 
     /* Verify amount of free-space is correct */
     total = 0;
     for(u = 0; u < nall; u++) {
-	VERIFY(sect_info[u].addr, all_sect_info[u].addr, "H5Fget_free_sections");
-	VERIFY(sect_info[u].size, all_sect_info[u].size, "H5Fget_free_sections");
-	total += sect_info[u].size;
+        VERIFY(sect_info[u].addr, all_sect_info[u].addr, "H5Fget_free_sections");
+        VERIFY(sect_info[u].size, all_sect_info[u].size, "H5Fget_free_sections");
+        total += sect_info[u].size;
     }
     VERIFY(sect_info[nall].addr, 0, "H5Fget_free_sections");
     VERIFY(sect_info[nall].size, 0, "H5Fget_free_sections");
     VERIFY(free_space, total, "H5Fget_free_sections");
 
-    /* Get the # of free-space sections in the file for metadata */
-    nmeta = H5Fget_free_sections(file, H5F_FSPACE_TYPE_META, (size_t)0, NULL);
-    CHECK(nmeta, FAIL, "H5Fget_free_sections");
-
-    /* Retrieve and verify free-space sections for metadata */
     HDmemset(meta_sect_info, 0,  sizeof(meta_sect_info));
-    nsects = H5Fget_free_sections(file, H5F_FSPACE_TYPE_META, (size_t)nmeta, meta_sect_info);
-    VERIFY(nsects, nmeta, "H5Fget_free_sections");
+    if(multi_vfd) {
+        hssize_t ntmp;       
+
+        for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type)) {
+            if(type == H5FD_MEM_DRAW || type == H5FD_MEM_GHEAP)
+                continue;
+            /* Get the # of free-space sections in the file for metadata */
+            ntmp = H5Fget_free_sections(file, type, (size_t)0, NULL);
+            CHECK(ntmp, FAIL, "H5Fget_free_sections");
+
+            if(ntmp > 0) {
+                nsects = H5Fget_free_sections(file, type, (size_t)ntmp, &meta_sect_info[nmeta]);
+                VERIFY(nsects, ntmp, "H5Fget_free_sections");
+                nmeta += ntmp;
+            }
+        }
+    } else {
+        /* Get the # of free-space sections in the file for metadata */
+        nmeta = H5Fget_free_sections(file, H5FD_MEM_SUPER, (size_t)0, NULL);
+        CHECK(nmeta, FAIL, "H5Fget_free_sections");
+
+        /* Retrieve and verify free-space sections for metadata */
+        nsects = H5Fget_free_sections(file, H5FD_MEM_SUPER, (size_t)nmeta, meta_sect_info);
+        VERIFY(nsects, nmeta, "H5Fget_free_sections");
+    }
 
     /* Get the # of free-space sections in the file for raw data */
-    nraw = H5Fget_free_sections(file, H5F_FSPACE_TYPE_RAW, (size_t)0, NULL);
+    nraw = H5Fget_free_sections(file, H5FD_MEM_DRAW, (size_t)0, NULL);
     CHECK(nraw, FAIL, "H5Fget_free_sections");
 
     /* Retrieve and verify free-space sections for raw data */
     HDmemset(raw_sect_info, 0,  sizeof(raw_sect_info));
-    nsects = H5Fget_free_sections(file, H5F_FSPACE_TYPE_RAW, (size_t)nraw, raw_sect_info);
+    nsects = H5Fget_free_sections(file, H5FD_MEM_DRAW, (size_t)nraw, raw_sect_info);
     VERIFY(nsects, nraw, "H5Fget_free_sections");
-
-    /* Get the # of free-space sections in the file for generic data */
-    ngeneric = H5Fget_free_sections(file, H5F_FSPACE_TYPE_GENERIC, (size_t)0, NULL);
-    CHECK(ngeneric, FAIL, "H5Fget_free_sections");
-
-    if(new_format && contig_addr_vfd) {
-	/* There is 1 free-space section for generic data */
-	/* Retrieve and verify free-space sections for generic data */
-	VERIFY(ngeneric, 1, "H5Fget_free_sections");
-	HDmemset(generic_sect_info, 0,  sizeof(sect_info));
-	nsects = H5Fget_free_sections(file, H5F_FSPACE_TYPE_GENERIC, (size_t)ngeneric, generic_sect_info);
-	VERIFY(nsects, ngeneric, "H5Fget_free_sections");
-    } else
-	/* There is no free-space section for generic data  */
-	VERIFY(ngeneric, 0, "H5Fget_free_sections");
 
     /* Sum all the free-space sections */
     for(u = 0; u < nmeta; u++)
-	tmp_tot += meta_sect_info[u].size;
+        tmp_tot += meta_sect_info[u].size;
 
     for(u = 0; u < nraw; u++)
-	tmp_tot += raw_sect_info[u].size;
-
-    for(u = 0; u < ngeneric; u++)
-	tmp_tot += generic_sect_info[u].size;
+        tmp_tot += raw_sect_info[u].size;
 
     /* Verify free-space info */
-    VERIFY(nmeta+nraw+ngeneric, nall, "H5Fget_free_sections");
+    VERIFY(nmeta+nraw, nall, "H5Fget_free_sections");
     VERIFY(tmp_tot, total, "H5Fget_free_sections");
 
     /* Closing */
@@ -4274,7 +4336,6 @@ test_filespace_compatible(void)
 	/* The dataset should not be there */
 	did = H5Dopen2(fid, DSETNAME, H5P_DEFAULT);
 	VERIFY(did, FAIL, "H5Dopen");
-
 	/* There should not be any free space in the file */
 	free_space = H5Fget_freespace(fid);
 	CHECK(free_space, FAIL, "H5Fget_freespace");
@@ -4689,7 +4750,7 @@ hsize_t align;
     /* Get the file's version information */
     ret = H5Fget_info1(file, &finfo);
     CHECK(ret, FAIL, "H5Fget_info1");
-    VERIFY(finfo.super_ext_size, 96,"H5Fget_info1");
+    VERIFY(finfo.super_ext_size, 144,"H5Fget_info1");
     VERIFY(finfo.sohm.hdr_size, 0,"H5Fget_info1");
     VERIFY(finfo.sohm.msgs_info.index_size, 0,"H5Fget_info1");
     VERIFY(finfo.sohm.msgs_info.heap_size, 0,"H5Fget_info1");
@@ -4721,7 +4782,7 @@ hsize_t align;
     /* Get the file's version information */
     ret = H5Fget_info1(file, &finfo);
     CHECK(ret, FAIL, "H5Fget_info1");
-    VERIFY(finfo.super_ext_size, 96,"H5Fget_info1");
+    VERIFY(finfo.super_ext_size, 144,"H5Fget_info1");
     VERIFY(finfo.sohm.hdr_size, 0,"H5Fget_info1");
     VERIFY(finfo.sohm.msgs_info.index_size, 0,"H5Fget_info1");
     VERIFY(finfo.sohm.msgs_info.heap_size, 0,"H5Fget_info1");
@@ -4766,44 +4827,44 @@ test_file(void)
     if(env_h5_drvr == NULL)
         env_h5_drvr = "nomatch";
 
-    test_file_create();		/* Test file creation(also creation templates)*/
-    test_file_open();		/* Test file opening */
-    test_file_reopen();         /* Test file reopening */
-    test_file_close();          /* Test file close behavior */
-    test_get_file_id();         /* Test H5Iget_file_id */
-    test_get_obj_ids();         /* Test H5Fget_obj_ids for Jira Issue 8528 */
-    test_file_perm();           /* Test file access permissions */
-    test_file_perm2();          /* Test file access permission again */
-    test_file_ishdf5();         /* Test detecting HDF5 files correctly */
-    test_file_open_dot();       /* Test opening objects with "." for a name */
-    test_file_open_overlap();   /* Test opening files in an overlapping manner */
-    test_file_getname();        /* Test basic H5Fget_name() functionality */
-    test_file_double_root_open();       /* Test opening root group from two files works properly */
-    test_file_double_group_open();      /* Test opening same group from two files works properly */
-    test_file_double_dataset_open();    /* Test opening same dataset from two files works properly */
-    test_file_double_datatype_open();   /* Test opening same named datatype from two files works properly */
+    test_file_create();                         /* Test file creation(also creation templates)*/
+    test_file_open();                           /* Test file opening */
+    test_file_reopen();                         /* Test file reopening */
+    test_file_close();                          /* Test file close behavior */
+    test_get_file_id();                         /* Test H5Iget_file_id */
+    test_get_obj_ids();                         /* Test H5Fget_obj_ids for Jira Issue 8528 */
+    test_file_perm();                           /* Test file access permissions */
+    test_file_perm2();                          /* Test file access permission again */
+    test_file_ishdf5();                         /* Test detecting HDF5 files correctly */
+    test_file_open_dot();                       /* Test opening objects with "." for a name */
+    test_file_open_overlap();                   /* Test opening files in an overlapping manner */
+    test_file_getname();                        /* Test basic H5Fget_name() functionality */
+    test_file_double_root_open();               /* Test opening root group from two files works properly */
+    test_file_double_group_open();              /* Test opening same group from two files works properly */
+    test_file_double_dataset_open();            /* Test opening same dataset from two files works properly */
+    test_file_double_datatype_open();           /* Test opening same named datatype from two files works properly */
     test_file_double_file_dataset_open(TRUE);
     test_file_double_file_dataset_open(FALSE);
-    test_userblock_file_size(); /* Tests that files created with a userblock have the correct size */
-    test_cached_stab_info();    /* Tests that files are created with cached stab info in the superblock */
-    test_rw_noupdate();         /* Test to ensure that RW permissions don't write the file unless dirtied */
+    test_userblock_file_size();                 /* Tests that files created with a userblock have the correct size */
+    test_cached_stab_info();                    /* Tests that files are created with cached stab info in the superblock */
+    test_rw_noupdate();                         /* Test to ensure that RW permissions don't write the file unless dirtied */
 
-    test_userblock_alignment(); 	/* Tests that files created with a userblock and alignment interact properly */
-    test_userblock_alignment_paged(); 	/* Tests files created with a userblock and alignment (via paged aggregation) interact properly */
-    test_filespace_info(env_h5_drvr);	/* Test file creation public routines: */
-					/* H5Pget/set_file_space_strategy() & H5Pget/set_file_space_page_size() */
-    test_file_freespace(env_h5_drvr);      	/* Test file public routine H5Fget_freespace() */
-    test_sects_freespace(env_h5_drvr, FALSE); 	/* Test file public routine H5Fget_free_sections() */
-    test_sects_freespace(env_h5_drvr, TRUE); 	/* Test file public routine H5Fget_free_sections() for new format */
+    test_userblock_alignment();                 /* Tests that files created with a userblock and alignment interact properly */
+    test_userblock_alignment_paged();           /* Tests files created with a userblock and alignment (via paged aggregation) interact properly */
+    test_filespace_info();                      /* Test file creation public routines: */
+                                                /* H5Pget/set_file_space_strategy() & H5Pget/set_file_space_page_size() */
+    test_file_freespace(env_h5_drvr);           /* Test file public routine H5Fget_freespace() */
+    test_sects_freespace(env_h5_drvr, FALSE);   /* Test file public routine H5Fget_free_sections() */
+    test_sects_freespace(env_h5_drvr, TRUE);    /* Test file public routine H5Fget_free_sections() for new format */
 
-    test_filespace_compatible();	/* Test compatibility for file space management */
-    test_filespace_round_compatible(); 	/* Testing file space compatibility for files from trunk to 1_8 to trunk */
+    test_filespace_compatible();                /* Test compatibility for file space management */
+    test_filespace_round_compatible();          /* Testing file space compatibility for files from trunk to 1_8 to trunk */
 
-    test_libver_bounds();       /* Test compatibility for file space management */
-    test_libver_macros();       /* Test the macros for library version comparison */
-    test_libver_macros2();      /* Test the macros for library version comparison */
+    test_libver_bounds();                       /* Test compatibility for file space management */
+    test_libver_macros();                       /* Test the macros for library version comparison */
+    test_libver_macros2();                      /* Test the macros for library version comparison */
 #ifndef H5_NO_DEPRECATED_SYMBOLS
-    test_deprec();              /* Test deprecated routines */
+    test_deprec();                              /* Test deprecated routines */
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
 } /* test_file() */
 

@@ -684,11 +684,11 @@ HDfprintf(stderr, "%s: Entering, section {%a, %Hu}\n", FUNC, (*sect)->sect_info.
 
     /* Drop the section if it is at page end and its size is <= pgend threshold */
     if(!rem && (*sect)->sect_info.size <= H5F_PGEND_META_THRES(udata->f) && (*flags & H5FS_ADD_RETURNED_SPACE)) {
-	if(H5MF_sect_free((H5FS_section_info_t *)(*sect)) < 0)
-	    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free section node")
-	*sect = NULL;
-	*flags &= (unsigned)~H5FS_ADD_RETURNED_SPACE;
-	*flags |= H5FS_PAGE_END_NO_ADD;
+        if(H5MF_sect_free((H5FS_section_info_t *)(*sect)) < 0)
+            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free section node")
+        *sect = NULL;
+        *flags &= (unsigned)~H5FS_ADD_RETURNED_SPACE;
+        *flags |= H5FS_PAGE_END_NO_ADD;
 #ifdef H5MF_ALLOC_DEBUG_MORE
 HDfprintf(stderr, "%s: section is dropped\n", FUNC);
 #endif /* H5MF_ALLOC_DEBUG_MORE */
@@ -746,15 +746,17 @@ H5MF_sect_small_can_shrink(const H5FS_section_info_t *_sect, void *_udata)
     end = sect->sect_info.addr + sect->sect_info.size;
 
     /* Check if the section is exactly at the end of the allocated space in the file */
-    if(H5F_addr_eq(end, eoa) && udata->allow_small_shrink) {
-        /* Set the shrinking type */
-        udata->shrink = H5MF_SHRINK_EOA;
+    if(H5F_addr_eq(end, eoa)) {
+        if(udata->allow_small_shrink || eoa % udata->f->shared->fs.page_size) {
+            /* Set the shrinking type */
+            udata->shrink = H5MF_SHRINK_EOA;
 #ifdef H5MF_ALLOC_DEBUG_MORE
 HDfprintf(stderr, "%s: section {%a, %Hu}, shrinks file, eoa = %a\n", FUNC, sect->sect_info.addr, sect->sect_info.size, eoa);
 #endif /* H5MF_ALLOC_DEBUG_MORE */
 
-        /* Indicate shrinking can occur */
-        HGOTO_DONE(TRUE)
+            /* Indicate shrinking can occur */
+            HGOTO_DONE(TRUE)
+        }
     } /* end if */
 
 done:

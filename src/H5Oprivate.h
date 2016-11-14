@@ -781,14 +781,14 @@ typedef unsigned H5O_unknown_t;         /* Original message type ID */
  * (Data structure in memory)
  */
 typedef struct H5O_fsinfo_t {
-    H5F_fspace_strategy_t 	strategy;	/* File space strategy */
-    hbool_t			persist;	/* Persisting free-space or not */
-    hsize_t	  		threshold;	/* Free-space section threshold */
-    hsize_t	  		page_size;	/* For paged aggregation: file space page size */
-    size_t			pgend_meta_thres;	/* For paged aggregation: page end metadata threshold */
-    unsigned char		last_small;		/* For paged aggregation: EOF file space section type */
-    haddr_t			fs_addr[H5FD_MEM_NTYPES - 1];	/* For non-paged aggregation: 6 addresses of free-space managers */
-							/* For paged aggregation: 3 address of free-space managers, remaining 3 should be undefined */
+    H5F_fspace_strategy_t   strategy;       /* File space strategy */
+    hbool_t persist;                        /* Persisting free-space or not */
+    hsize_t threshold;                      /* Free-space section threshold */
+    hsize_t page_size;                      /* For paged aggregation: file space page size */
+    size_t pgend_meta_thres;                /* For paged aggregation: page end metadata threshold */
+    unsigned char last_small;               /* For paged aggregation: EOF file space section type */
+    haddr_t fs_addr[H5F_MEM_PAGE_NTYPES - 1];   /* 13 addresses of free-space managers */
+                                                /* For non-paged aggregation: only 6 addresses are used */
 } H5O_fsinfo_t;
 
 /* Typedef for "application" iteration operations */

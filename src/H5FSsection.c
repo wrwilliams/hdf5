@@ -2393,25 +2393,25 @@ H5FS_sect_try_shrink_eoa(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, void *op_data)
             /* Get the pointer to the last section, from the last node */
             tmp_sect = (H5FS_section_info_t *)H5SL_item(last_node);
             HDassert(tmp_sect);
-	    tmp_sect_cls = &fspace->sect_cls[tmp_sect->type];
-	    if(tmp_sect_cls->can_shrink) {
+            tmp_sect_cls = &fspace->sect_cls[tmp_sect->type];
+            if(tmp_sect_cls->can_shrink) {
                 /* Check if the section can be shrunk away */
-		if((ret_value = (*tmp_sect_cls->can_shrink)(tmp_sect, op_data)) < 0)
-		    HGOTO_ERROR(H5E_FSPACE, H5E_CANTSHRINK, FAIL, "can't check for shrinking container")
-		else if(ret_value > 0) {
-		    HDassert(tmp_sect_cls->shrink);
+                if((ret_value = (*tmp_sect_cls->can_shrink)(tmp_sect, op_data)) < 0)
+                    HGOTO_ERROR(H5E_FSPACE, H5E_CANTSHRINK, FAIL, "can't check for shrinking container")
+                else if(ret_value > 0) {
+                    HDassert(tmp_sect_cls->shrink);
                     //fprintf(stdout, "%s removing section addr %llu size %llu\n", FUNC, tmp_sect->addr, tmp_sect->size);
                     /* Remove section from free space manager */
-		    if(H5FS_sect_remove_real(fspace, tmp_sect) < 0)
-			HGOTO_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't remove section from internal data structures")
+                    if(H5FS_sect_remove_real(fspace, tmp_sect) < 0)
+                        HGOTO_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't remove section from internal data structures")
                     section_removed = TRUE;
 
                     /* Shrink away section */
-		    if((*tmp_sect_cls->shrink)(&tmp_sect, op_data) < 0)
-			HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't shrink free space container")
-		} /* end if */
-	    } /* end if */
-	} /* end if */
+                    if((*tmp_sect_cls->shrink)(&tmp_sect, op_data) < 0)
+                        HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't shrink free space container")
+                } /* end if */
+            } /* end if */
+        } /* end if */
     } /* end if */
 
 done:

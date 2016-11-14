@@ -448,10 +448,7 @@ H5PB_add_new_page(H5F_t *f, H5FD_mem_t type, haddr_t page_addr)
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
 
     page_entry->addr = page_addr;
-    if(H5FD_MEM_DRAW == type)
-        page_entry->type = H5F_MEM_PAGE_RAW;
-    else
-        page_entry->type = H5F_MEM_PAGE_META;
+    page_entry->type = (H5F_mem_page_t)type;
     page_entry->is_dirty = FALSE;
 
     /* insert entry in skip list */
@@ -796,10 +793,7 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
 
             page_entry->page_buf_ptr = new_page_buf;
             page_entry->addr = search_addr;
-            if(H5FD_MEM_DRAW == type)
-            page_entry->type = H5F_MEM_PAGE_RAW;
-            else
-                page_entry->type = H5F_MEM_PAGE_META;
+            page_entry->type = (H5F_mem_page_t)type;
             page_entry->is_dirty = FALSE;
 
             /* insert page into PB */
@@ -977,7 +971,7 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
                     /* remove from LRU list */
                     H5PB__REMOVE_LRU(page_buf, page_entry)
 
-                    if(H5F_MEM_PAGE_RAW == page_entry->type)
+                    if(H5F_MEM_PAGE_DRAW == page_entry->type || H5F_MEM_PAGE_GHEAP == page_entry->type)
                         page_buf->raw_count --;
                     else
                         page_buf->meta_count --;
@@ -1084,9 +1078,6 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
                 HDmemset(new_page_buf, 0, (size_t)offset);
                 HDmemset((uint8_t *)new_page_buf+offset+access_size , 0, page_size-((size_t)offset+access_size));
 
-                (H5FD_MEM_DRAW == type ? HDassert(H5F_MEM_PAGE_RAW == page_entry->type) :
-                 HDassert(H5F_MEM_PAGE_META == page_entry->type));
-
                 page_entry->page_buf_ptr = new_page_buf;
             }
             /* Otherwise read page through the VFD layer, but make sure we don't read past the EOA. */
@@ -1105,10 +1096,7 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
 
                 page_entry->page_buf_ptr = new_page_buf;
                 page_entry->addr = search_addr;
-                if(H5FD_MEM_DRAW == type)
-                    page_entry->type = H5F_MEM_PAGE_RAW;
-                else
-                    page_entry->type = H5F_MEM_PAGE_META;
+                page_entry->type = (H5F_mem_page_t)type;
 
                 /* Retrieve the 'eoa' for the file */
                 if(HADDR_UNDEF == (eoa = H5F_get_eoa(f, type)))
@@ -1168,7 +1156,7 @@ H5PB__insert_entry(H5PB_t *page_buf, H5PB_entry_t *page_entry)
         HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Can't insert entry in skip list")
     HDassert(H5SL_count(page_buf->slist_ptr) * page_buf->page_size <= page_buf->max_size);
 
-    if(H5F_MEM_PAGE_RAW == page_entry->type)
+    if(H5F_MEM_PAGE_DRAW == page_entry->type ||H5F_MEM_PAGE_GHEAP == page_entry->type)
         page_buf->raw_count ++;
     else
         page_buf->meta_count ++;
@@ -1216,7 +1204,7 @@ H5PB__make_space(const H5F_t *f, H5PB_t *page_buf, H5P_genplist_t *dxpl, H5FD_me
 
         /* check the raw data threshold before evicting raw data items */
         while (1) {
-            if(page_entry->prev && H5F_MEM_PAGE_RAW == page_entry->type && 
+            if(page_entry->prev && (H5F_MEM_PAGE_DRAW == page_entry->type || H5F_MEM_PAGE_GHEAP == page_entry->type) && 
                page_buf->min_raw_count >= page_buf->raw_count)
                 page_entry = page_entry->prev;
             else
@@ -1231,7 +1219,7 @@ H5PB__make_space(const H5F_t *f, H5PB_t *page_buf, H5P_genplist_t *dxpl, H5FD_me
     H5PB__REMOVE_LRU(page_buf, page_entry)
     HDassert(H5SL_count(page_buf->slist_ptr) == page_buf->LRU_list_len);
 
-    if(H5F_MEM_PAGE_RAW == page_entry->type)
+    if(H5F_MEM_PAGE_DRAW == page_entry->type || H5F_MEM_PAGE_GHEAP == page_entry->type)
         page_buf->raw_count --;
     else
         page_buf->meta_count --;
@@ -1241,7 +1229,7 @@ H5PB__make_space(const H5F_t *f, H5PB_t *page_buf, H5P_genplist_t *dxpl, H5FD_me
             HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "file write failed")
 
 #if H5PB_COLLECT_STATS
-    if(page_entry->type == H5F_MEM_PAGE_RAW)
+    if(page_entry->type == H5F_MEM_PAGE_DRAW || H5F_MEM_PAGE_GHEAP == page_entry->type)
         page_buf->evictions[1] ++;
     else
         page_buf->evictions[0] ++;
@@ -1267,10 +1255,10 @@ H5PB__write_entry(const H5F_t *f, H5PB_entry_t *page_entry, H5P_genplist_t *dxpl
 
     HDassert(page_entry);
 
-    type = (H5F_MEM_PAGE_RAW == page_entry->type ? H5FD_MEM_DRAW : H5FD_MEM_SUPER);
+    type = (H5FD_mem_t)page_entry->type;
 
 #ifdef H5_DEBUG_BUILD
-    if(H5FD_MEM_DRAW == type) {
+    if(H5FD_MEM_DRAW == type || H5FD_MEM_GHEAP == type) {
         if(NULL == (my_dxpl = (H5P_genplist_t *)H5I_object(H5AC_rawdata_dxpl_id)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
     } else {
