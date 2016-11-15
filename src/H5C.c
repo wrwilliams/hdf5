@@ -6491,6 +6491,7 @@ H5C_load_entry(H5F_t *              f,
         size_t actual_len = len;        /* The actual length, after decompression and speculative reads have been resolved */
         uint64_t nanosec = 1;           /* # of nanoseconds to sleep between retries */
         void *new_image;                /* Pointer to image                     */
+        hbool_t len_changed = TRUE;     /* Whether to re-check compressed & speculative entries */
 
         /* Get the # of read attempts */
         max_tries = tries = H5F_GET_READ_ATTEMPTS(f);
@@ -6534,76 +6535,93 @@ H5C_load_entry(H5F_t *              f,
                     HMPI_GOTO_ERROR(NULL, "MPI_Bcast failed", mpi_code)
             } /* end if */
 #endif /* H5_HAVE_PARALLEL */
-            actual_len = len;
 
-            if(type->get_load_size(image, udata, &len, &actual_len, &compressed, &compressed_size) < 0)
-                continue;   /* Transfer control to while() and count towards retries */
+            /* If the entry could be compressed or read speculatively and the length
+             *  is still changing, check for updating the actual and/or compressed
+             *  sizes */
+            if(((type->flags & H5C__CLASS_COMPRESSED_FLAG) ||
+                        (type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG)) &&
+                    len_changed) {
 
-            HDassert(((type->flags & H5C__CLASS_COMPRESSED_FLAG) != 0) ||
-                     ((compressed == FALSE) && (compressed_size == 0)));
-            HDassert((compressed == TRUE) || (compressed_size == 0));
+                /* Assume that the length will be the same */
+                len_changed = FALSE;
 
-            if(actual_len != len) {
-                if(type->flags & H5C__CLASS_COMPRESSED_FLAG) {
-                    /* if actual_len != len, then compression must be enabled on the entry.  
-                     * In this case, the get_load_size callback should have set compressed to TRUE,
-                     * compressed_size to the compressed size (which must equal to len),
-                     * and actual_len to the uncompressed size of the entry,
-                     * We can't verify the uncompressed size, but we can verify the rest
-                     * with the following assertions.
-                     */
-                    HDassert(compressed);
-                    HDassert(compressed_size == len);
-                } /* end if */
-                else if(type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG) {
-                    size_t temp_len = actual_len;
+                /* Retrieve the actual and/or compressed lengths */
+                actual_len = len;
+                if(type->get_load_size(image, udata, &len, &actual_len, &compressed, &compressed_size) < 0)
+                    continue;   /* Transfer control to while() and count towards retries */
 
-                    /* compressed must be FALSE, and compressed_size
-                     * must be zero.
-                     */
-                    HDassert(!compressed);
-                    HDassert(compressed_size == 0);
+                /* Sanity check compression fields */
+                HDassert(((type->flags & H5C__CLASS_COMPRESSED_FLAG) != 0) ||
+                         ((compressed == FALSE) && (compressed_size == 0)));
+                HDassert((compressed == TRUE) || (compressed_size == 0));
 
-                    if(H5C__verify_len_eoa(f, type, addr, &temp_len, TRUE) < 0)
-                        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, NULL, "actual_len exceeds EOA.")
-                    HDassert(temp_len == actual_len);
+                /* Check for the length changing */
+                if(actual_len != len) {
+                    /* Indicate that the length changed */
+                    len_changed = TRUE;
 
-                    /* Expand buffer to new size */
-                    if(NULL == (new_image = H5MM_realloc(image, actual_len + H5C_IMAGE_EXTRA_SPACE)))
-                        HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, NULL, "image null after H5MM_realloc()")
-                    image = (uint8_t *)new_image;
+                    if(type->flags & H5C__CLASS_COMPRESSED_FLAG) {
+                        /* if actual_len != len, then compression must be enabled on the entry.  
+                         * In this case, the get_load_size callback should have set compressed to TRUE,
+                         * compressed_size to the compressed size (which must equal to len),
+                         * and actual_len to the uncompressed size of the entry,
+                         * We can't verify the uncompressed size, but we can verify the rest
+                         * with the following assertions.
+                         */
+                        HDassert(compressed);
+                        HDassert(compressed_size == len);
+                    } /* end if */
+                    else {
+                        size_t temp_len = actual_len;
+
+                        /* Must be speculative */
+                        HDassert(type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG);
+
+                        /* compressed must be FALSE, and compressed_size
+                         * must be zero.
+                         */
+                        HDassert(!compressed);
+                        HDassert(compressed_size == 0);
+
+                        if(H5C__verify_len_eoa(f, type, addr, &temp_len, TRUE) < 0)
+                            HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, NULL, "actual_len exceeds EOA.")
+                        HDassert(temp_len == actual_len);
+
+                        /* Expand buffer to new size */
+                        if(NULL == (new_image = H5MM_realloc(image, actual_len + H5C_IMAGE_EXTRA_SPACE)))
+                            HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, NULL, "image null after H5MM_realloc()")
+                        image = (uint8_t *)new_image;
 #if H5C_DO_MEMORY_SANITY_CHECKS
-                    HDmemcpy(image + actual_len, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
+                        HDmemcpy(image + actual_len, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
 #endif /* H5C_DO_MEMORY_SANITY_CHECKS */
 
-                    if(actual_len > len) {
+                        if(actual_len > len) {
 #ifdef H5_HAVE_PARALLEL
-                        if(!coll_access || 0 == mpi_rank) {
+                            if(!coll_access || 0 == mpi_rank) {
 #endif /* H5_HAVE_PARALLEL */
-                            /* If the thing's image needs to be bigger for a speculatively
-                             * loaded thing, go get the on-disk image again (the extra portion).
-                             */
-                            if(H5F_block_read(f, type->mem_type, addr + len, actual_len - len, dxpl_id, image + len) < 0)
-                                HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, NULL, "Can't read image")
+                                /* If the thing's image needs to be bigger for a speculatively
+                                 * loaded thing, go get the on-disk image again (the extra portion).
+                                 */
+                                if(H5F_block_read(f, type->mem_type, addr + len, actual_len - len, dxpl_id, image + len) < 0)
+                                    HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, NULL, "Can't read image")
 #ifdef H5_HAVE_PARALLEL
-                        }
-                        /* if the collective metadata read optimization is turned on,
-                           bcast the metadata read from process 0 to all ranks in the file
-                           communicator */
-                        if(coll_access) {
-                            int buf_size;
+                            }
+                            /* if the collective metadata read optimization is turned on,
+                               bcast the metadata read from process 0 to all ranks in the file
+                               communicator */
+                            if(coll_access) {
+                                int buf_size;
 
-                            H5_CHECKED_ASSIGN(buf_size, int, actual_len - len, size_t);
-                            if(MPI_SUCCESS != (mpi_code = MPI_Bcast(image + len, buf_size, MPI_BYTE, 0, comm)))
-                                HMPI_GOTO_ERROR(NULL, "MPI_Bcast failed", mpi_code)
-                        } /* end if */
+                                H5_CHECKED_ASSIGN(buf_size, int, actual_len - len, size_t);
+                                if(MPI_SUCCESS != (mpi_code = MPI_Bcast(image + len, buf_size, MPI_BYTE, 0, comm)))
+                                    HMPI_GOTO_ERROR(NULL, "MPI_Bcast failed", mpi_code)
+                            } /* end if */
 #endif /* H5_HAVE_PARALLEL */
-                    } /* end if */
-                } /* end else-if */
-                else
-                    /* Throw an error */
-                    HGOTO_ERROR(H5E_CACHE, H5E_UNSUPPORTED, NULL, "size of non-speculative, non-compressed object changed")
-            } /* end if (actual_len != len) */
+                        } /* end if */
+                    } /* end else */
+                } /* end if (actual_len != len) */
+            } /* end if */
 
             if(type->verify_chksum == NULL)
                 break;
