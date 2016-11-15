@@ -167,11 +167,8 @@ static herr_t H5C__mark_flush_dep_dirty(H5C_cache_entry_t * entry);
 
 static herr_t H5C__mark_flush_dep_clean(H5C_cache_entry_t * entry);
 
-static herr_t H5C_verify_len_eoa (H5F_t *f, 
-				  const H5C_class_t * type, 
-				  haddr_t addr, 
-				  size_t *len, 
-				  htri_t actual);
+static herr_t H5C__verify_len_eoa(H5F_t *f, const H5C_class_t * type,
+    haddr_t addr, size_t *len, hbool_t actual);
 
 static herr_t H5C__generate_image(const H5F_t *f, H5C_t * cache_ptr, H5C_cache_entry_t *entry_ptr, 
                                   hid_t dxpl_id);
@@ -6324,7 +6321,7 @@ done:
 
 /*-------------------------------------------------------------------------
  *
- * Function:    H5C_verify_len_eoa
+ * Function:    H5C__verify_len_eoa
  *
  * Purpose:     Verify that 'len' does not exceed eoa when 'actual' is
  *              false i.e. 'len" is the initial speculative length from
@@ -6346,54 +6343,46 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5C_verify_len_eoa (H5F_t *             f,
-               	    const H5C_class_t * type,
-               	    haddr_t             addr,
-		    size_t              *len,
-               	    htri_t		actual)
+H5C__verify_len_eoa(H5F_t *f, const H5C_class_t *type, haddr_t addr,
+    size_t *len, hbool_t actual)
 {
+    H5FD_mem_t cooked_type;             /* Modified type, accounting for switching global heaps */
     haddr_t eoa;                	/* End-of-allocation in the file */
-    H5FD_mem_t cooked_type;
     herr_t ret_value = SUCCEED;      	/* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT
+    FUNC_ENTER_STATIC
 
     /* if type == H5FD_MEM_GHEAP, H5F_block_read() forces 
      * type to H5FD_MEM_DRAW via its call to H5F__accum_read().
-     * Thus we do the same for purposes of computing the eoa
+     * Thus we do the same for purposes of computing the EOA
      * for sanity checks.
      */
     cooked_type = (type->mem_type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type->mem_type;
 
     /* Get the file's end-of-allocation value */
     eoa = H5F_get_eoa(f, cooked_type);
-
-    HDassert(H5F_addr_defined(eoa));
+    if(!H5F_addr_defined(eoa))
+	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "invalid EOA address for file")
 
     /* Check for bad address in general */
-    if ( H5F_addr_gt(addr, eoa) )
+    if(H5F_addr_gt(addr, eoa))
 	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "address of object past end of allocation")
 
-    /* Check if the amount of data to read will be past the eoa */
-    if( H5F_addr_gt((addr + *len), eoa) ) {
-
+    /* Check if the amount of data to read will be past the EOA */
+    if(H5F_addr_gt((addr + *len), eoa)) {
 	if(actual)
 	    HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "actual len exceeds EOA.")
 	else
 	    /* Trim down the length of the metadata */
-	    /* Note that for some cache clients, this will cause an 
-	     * assertion failure.		JRM -- 8/29/14
-	     */
 	    *len = (size_t)(eoa - addr);
-    }
+    } /* end if */
 
-    if ( *len <= 0 )
+    if(*len <= 0)
 	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "len not positive after adjustment for EOA.")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-
-} /* H5C_verify_len_eoa() */
+} /* H5C__verify_len_eoa() */
 
 
 /*-------------------------------------------------------------------------
@@ -6446,6 +6435,7 @@ H5C_load_entry(H5F_t *              f,
 
     FUNC_ENTER_NOAPI_NOINIT
 
+    /* Sanity checks */
     HDassert(f);
     HDassert(f->shared);
     HDassert(f->shared->cache);
@@ -6467,23 +6457,19 @@ H5C_load_entry(H5F_t *              f,
     HDassert(type->get_load_size);
     HDassert(type->deserialize);
 
-    /* Call the get_load_size callback, to retrieve the initial 
-     * size of image 
-     */
+    /* Call the get_load_size callback, to retrieve the initial size of image */
     if(type->get_load_size(NULL, udata, &len, NULL, NULL, NULL) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTGET, NULL, "can't retrieve image size")
-
     HDassert(len > 0);
 
     /* Check for possible speculative read off the end of the file */
     if(type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG)
-        if(H5C_verify_len_eoa(f, type, addr, &len, FALSE) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, NULL, "invalid len with respect to EOA.")
+        if(H5C__verify_len_eoa(f, type, addr, &len, FALSE) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, NULL, "invalid len with respect to EOA")
 
     /* Allocate the buffer for reading the on-disk entry image */
     if(NULL == (image = (uint8_t *)H5MM_malloc(len + H5C_IMAGE_EXTRA_SPACE)))
         HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, NULL, "memory allocation failed for on disk image buffer.")
-
 #if H5C_DO_MEMORY_SANITY_CHECKS
     HDmemcpy(image + len, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
 #endif /* H5C_DO_MEMORY_SANITY_CHECKS */
@@ -6502,16 +6488,16 @@ H5C_load_entry(H5F_t *              f,
         unsigned tries, max_tries;      /* The # of read attempts               */
         unsigned retries;               /* The # of retries                     */
         htri_t chk_ret;                 /* return from verify_chksum callback   */
-        size_t actual_len = len;
+        size_t actual_len = len;        /* The actual length, after decompression and speculative reads have been resolved */
         uint64_t nanosec = 1;           /* # of nanoseconds to sleep between retries */
-        void *new_image = NULL;         /* Pointer to image                     */
+        void *new_image;                /* Pointer to image                     */
 
         /* Get the # of read attempts */
         max_tries = tries = H5F_GET_READ_ATTEMPTS(f);
 
         /* 
-         * This do/while loop performs the following till the metadata checksum is correct or the
-         * file's allowed read attempts are reached.
+         * This do/while loop performs the following till the metadata checksum
+         * is correct or the file's number of allowed read attempts are reached.
          *   --read the metadata
          *   --determine the actual size of the metadata
          *   --perform checksum verification
@@ -6524,6 +6510,9 @@ H5C_load_entry(H5F_t *              f,
                 if(NULL == (new_image = H5MM_realloc(image, len + H5C_IMAGE_EXTRA_SPACE)))
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, NULL, "image null after H5MM_realloc()")
                 image = (uint8_t *)new_image;
+#if H5C_DO_MEMORY_SANITY_CHECKS
+                HDmemcpy(image + len, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
+#endif /* H5C_DO_MEMORY_SANITY_CHECKS */
             } /* end if */
 
 #ifdef H5_HAVE_PARALLEL
@@ -6555,7 +6544,6 @@ H5C_load_entry(H5F_t *              f,
             HDassert((compressed == TRUE) || (compressed_size == 0));
 
             if(actual_len != len) {
-
                 if(type->flags & H5C__CLASS_COMPRESSED_FLAG) {
                     /* if actual_len != len, then compression must be enabled on the entry.  
                      * In this case, the get_load_size callback should have set compressed to TRUE,
@@ -6566,7 +6554,8 @@ H5C_load_entry(H5F_t *              f,
                      */
                     HDassert(compressed);
                     HDassert(compressed_size == len);
-                } else if(type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG) {
+                } /* end if */
+                else if(type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG) {
                     size_t temp_len = actual_len;
 
                     /* compressed must be FALSE, and compressed_size
@@ -6575,14 +6564,14 @@ H5C_load_entry(H5F_t *              f,
                     HDassert(!compressed);
                     HDassert(compressed_size == 0);
 
-                    if(H5C_verify_len_eoa(f, type, addr, &temp_len, TRUE) < 0)
+                    if(H5C__verify_len_eoa(f, type, addr, &temp_len, TRUE) < 0)
                         HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, NULL, "actual_len exceeds EOA.")
                     HDassert(temp_len == actual_len);
 
+                    /* Expand buffer to new size */
                     if(NULL == (new_image = H5MM_realloc(image, actual_len + H5C_IMAGE_EXTRA_SPACE)))
                         HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, NULL, "image null after H5MM_realloc()")
                     image = (uint8_t *)new_image;
-
 #if H5C_DO_MEMORY_SANITY_CHECKS
                     HDmemcpy(image + actual_len, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
 #endif /* H5C_DO_MEMORY_SANITY_CHECKS */
@@ -6594,7 +6583,7 @@ H5C_load_entry(H5F_t *              f,
                             /* If the thing's image needs to be bigger for a speculatively
                              * loaded thing, go get the on-disk image again (the extra portion).
                              */
-                            if(H5F_block_read(f, type->mem_type, addr+len, actual_len-len, dxpl_id, image+len) < 0)
+                            if(H5F_block_read(f, type->mem_type, addr + len, actual_len - len, dxpl_id, image + len) < 0)
                                 HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, NULL, "Can't read image")
 #ifdef H5_HAVE_PARALLEL
                         }
@@ -6604,16 +6593,16 @@ H5C_load_entry(H5F_t *              f,
                         if(coll_access) {
                             int buf_size;
 
-                            H5_CHECKED_ASSIGN(buf_size, int, actual_len-len, size_t);
-                            if(MPI_SUCCESS != (mpi_code = MPI_Bcast(image+len, buf_size, MPI_BYTE, 0, comm)))
+                            H5_CHECKED_ASSIGN(buf_size, int, actual_len - len, size_t);
+                            if(MPI_SUCCESS != (mpi_code = MPI_Bcast(image + len, buf_size, MPI_BYTE, 0, comm)))
                                 HMPI_GOTO_ERROR(NULL, "MPI_Bcast failed", mpi_code)
                         } /* end if */
 #endif /* H5_HAVE_PARALLEL */
-                    }
-                } else {
-                    /* throw an error */
+                    } /* end if */
+                } /* end else-if */
+                else
+                    /* Throw an error */
                     HGOTO_ERROR(H5E_CACHE, H5E_UNSUPPORTED, NULL, "size of non-speculative, non-compressed object changed")
-                } /* end else */
             } /* end if (actual_len != len) */
 
             if(type->verify_chksum == NULL)
@@ -6640,7 +6629,6 @@ H5C_load_entry(H5F_t *              f,
                 HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, NULL, "cannot track read tries = %u ", retries)
         }  /* end if */
         len = actual_len;
-
     } /* end if !H5C__CLASS_SKIP_READS */
 
     /* Deserialize the on-disk image into the native memory form */

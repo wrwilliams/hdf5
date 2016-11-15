@@ -183,7 +183,7 @@ const H5AC_class_t H5AC_FHEAP_DBLOCK[1] = {{
     H5AC_FHEAP_DBLOCK_ID,               /* Metadata client ID */
     "fractal heap direct block",        /* Metadata client name (for debugging) */
     H5FD_MEM_FHEAP_DBLOCK,              /* File space memory type for client */
-    H5C__CLASS_COMPRESSED_FLAG,         /* Client class behavior flags */
+    H5AC__CLASS_COMPRESSED_FLAG,         /* Client class behavior flags */
     H5HF__cache_dblock_get_load_size,   /* 'get_load_size' callback */
     H5HF__cache_dblock_verify_chksum,	/* 'verify_chksum' callback */
     H5HF__cache_dblock_deserialize,     /* 'deserialize' callback */
@@ -1666,7 +1666,7 @@ H5HF__cache_dblock_get_load_size(const void *_image, void *_udata, size_t *image
 
     if(image == NULL) {
 	/* depend on I/O filters on this heap */
-	*image_len = (hdr->filter_len > 0) ? compressed_size:udata->dblock_size;
+	*image_len = (hdr->filter_len > 0) ? compressed_size : udata->dblock_size;
     } /* end if */
     else { 
         /* Sanity checks */
@@ -2134,7 +2134,7 @@ H5HF__cache_dblock_image_len(const void *_thing, size_t *image_len, hbool_t *com
  * Purpose:	In principle, the purpose of this function is to determine
  *		the size and location of the disk image of the target direct 
  *		block.  In this case, the uncompressed size of the block is
- *		fixed, but sined the H5C__CLASS_COMPRESSED_FLAG is set, 
+ *		fixed, but sined the H5AC__CLASS_COMPRESSED_FLAG is set, 
  *		we may need to compute and report the compressed size.
  *
  *		This is a bit sticky in the case of a direct block when I/O 
