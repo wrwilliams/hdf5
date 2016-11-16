@@ -273,6 +273,10 @@ struct H5F_file_t {
                                 /* close option.  This structure is     */
                                 /* fixed at creation time and should    */
                                 /* not change thereafter.               */
+    hbool_t     use_mdc_logging; /* Set when metadata logging is desired */
+    hbool_t     start_mdc_log_on_access; /* set when mdc logging should  */
+                                /* begin on file access/create          */
+    char        *mdc_log_location; /* location of mdc log               */
     hid_t       fcpl_id;	/* File creation property list ID 	*/
     H5F_close_degree_t fc_degree;   /* File close behavior degree	*/
     hbool_t evict_on_close; /* If the file's objects should be evicted from the metadata cache on close */
@@ -415,6 +419,7 @@ H5_DLL herr_t H5F_get_sohm_mesg_count_test(hid_t fid, unsigned type_id,
     size_t *mesg_count);
 H5_DLL herr_t H5F_check_cached_stab_test(hid_t file_id);
 H5_DLL herr_t H5F_get_maxaddr_test(hid_t file_id, haddr_t *maxaddr);
+H5_DLL herr_t H5F_get_sbe_addr_test(hid_t file_id, haddr_t *sbe_addr);
 #endif /* H5F_TESTING */
 
 #endif /* _H5Fpkg_H */

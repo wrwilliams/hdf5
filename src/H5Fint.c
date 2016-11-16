@@ -646,6 +646,10 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
         /* For latest format, activate all latest version support */
         if(latest_format)
             f->shared->latest_flags |= H5F_LATEST_ALL_FLAGS;
+        if(H5P_get(plist, H5F_ACS_USE_MDC_LOGGING_NAME, &(f->shared->use_mdc_logging)) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get 'use mdc logging' flag")
+        if(H5P_get(plist, H5F_ACS_START_MDC_LOG_ON_ACCESS_NAME, &(f->shared->start_mdc_log_on_access)) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get 'start mdc log on access' flag")
         if(H5P_get(plist, H5F_ACS_META_BLOCK_SIZE_NAME, &(f->shared->meta_aggr.alloc_size)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get metadata cache size")
         f->shared->meta_aggr.feature_flag = H5FD_FEAT_AGGREGATE_METADATA;
@@ -686,13 +690,29 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
          */
         f->shared->use_tmp_space = !H5F_HAS_FEATURE(f, H5FD_FEAT_HAS_MPI);
 
-	/*
-	 * Create a metadata cache with the specified number of elements.
-	 * The cache might be created with a different number of elements and
-	 * the access property list should be updated to reflect that.
-	 */
-	if(H5AC_create(f, &(f->shared->mdc_initCacheCfg), &(f->shared->mdc_initCacheImageCfg)) < 0)
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to create metadata cache")
+        /*
+         * Create a metadata cache with the specified number of elements.
+         * The cache might be created with a different number of elements and
+         * the access property list should be updated to reflect that.
+         */
+        if(H5AC_create(f, &(f->shared->mdc_initCacheCfg), &(f->shared->mdc_initCacheImageCfg)) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to create metadata cache")
+
+        /* Get the metadata cache log location (if we're logging) */
+        {
+            char *mdc_log_location = NULL;      /* location of metadata cache log location */
+
+            if(H5P_get(plist, H5F_ACS_MDC_LOG_LOCATION_NAME, &mdc_log_location) < 0)
+                HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get mdc log location")
+            if(mdc_log_location != NULL) {
+                size_t len = HDstrlen(mdc_log_location);
+                if(NULL == (f->shared->mdc_log_location = (char *)H5MM_calloc((len + 1) * sizeof(char))))
+                    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, NULL, "can't allocate memory for mdc log file name")
+                HDstrncpy(f->shared->mdc_log_location, mdc_log_location, len);
+            }
+            else
+                f->shared->mdc_log_location = NULL;
+        } /* end block */
 
         /* Get object flush callback information */
         if(H5P_get(plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &(f->shared->object_flush)) < 0)
@@ -892,6 +912,10 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
         if(H5AC_dest(f, dxpl_id))
             /* Push error, but keep going*/
             HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "problems closing file")
+
+        /* Clean up the metadata cache log location string */
+        if(f->shared->mdc_log_location)
+            f->shared->mdc_log_location = (char *)H5MM_xfree(f->shared->mdc_log_location);
 
         /*
          * Do not close the root group since we didn't count it, but free
@@ -1107,16 +1131,12 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
              * open it are different than the desired flags. Close the tentative
              * file and open it for real.
              */
-            if(H5FD_close(lf) < 0) {
-                file = NULL; /*to prevent destruction of wrong file*/
+            if(H5FD_close(lf) < 0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
-            } /* end if */
-            if(NULL == (lf = H5FD_open(name, flags, fapl_id, HADDR_UNDEF))) {
-                file = NULL; /*to prevent destruction of wrong file*/
-                HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file")
-            } /* end if */
-        } /* end if */
 
+            if(NULL == (lf = H5FD_open(name, flags, fapl_id, HADDR_UNDEF)))
+                HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file")
+        } /* end if */
         if(NULL == (file = H5F_new(NULL, flags, fcpl_id, fapl_id, lf)))
             HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to create new file object")
     } /* end else */
