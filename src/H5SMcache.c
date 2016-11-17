@@ -302,7 +302,6 @@ H5SM__cache_table_deserialize(const void *_image, size_t len, void *_udata,
 
 	/* Compute the size of a list index for this SOHM index */
         table->indexes[u].list_size = H5SM_LIST_SIZE(f, table->indexes[u].list_max);
-	table->indexes[u].list_size = H5SM_LIST_SIZE(f, table->indexes[u].list_max);
     } /* end for */
 
     /* checksum verification already done in verify_chksum cb */
