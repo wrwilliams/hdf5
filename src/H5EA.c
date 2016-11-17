@@ -254,7 +254,6 @@ H5EA_open(H5F_t *f, hid_t dxpl_id, haddr_t ea_addr, void *ctx_udata))
 
     /* Local variables */
     H5EA_t *ea = NULL;          /* Pointer to new extensible array wrapper */
-    H5EA_hdr_t *hdr = NULL;     /* The extensible array header information */
 
     /*
      * Check arguments.

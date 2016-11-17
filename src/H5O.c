@@ -2135,7 +2135,6 @@ done:
 herr_t
 H5O_unprotect(const H5O_loc_t *loc, hid_t dxpl_id, H5O_t *oh, unsigned oh_flags)
 {
-    unsigned u;                         /* Local index variable */
     herr_t ret_value = SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
