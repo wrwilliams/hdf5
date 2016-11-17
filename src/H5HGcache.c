@@ -63,12 +63,10 @@
 
 /* Metadata cache callbacks */
 static herr_t H5HG__cache_heap_get_load_size(const void *_image, void *udata, 
-    size_t *image_len, size_t *actual_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+    size_t *image_len, size_t *actual_len);
 static void *H5HG__cache_heap_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty); 
-static herr_t H5HG__cache_heap_image_len(const void *thing, size_t *image_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+static herr_t H5HG__cache_heap_image_len(const void *thing, size_t *image_len);
 static herr_t H5HG__cache_heap_serialize(const H5F_t *f, void *image,
     size_t len, void *thing); 
 static herr_t H5HG__cache_heap_free_icr(void *thing);
@@ -92,7 +90,6 @@ const H5AC_class_t H5AC_GHEAP[1] = {{
     H5HG__cache_heap_serialize,         /* 'serialize' callback */
     NULL,                               /* 'notify' callback */
     H5HG__cache_heap_free_icr,          /* 'free_icr' callback */
-    NULL,                               /* 'clear' callback */
     NULL,                               /* 'fsf_size' callback */
 }};
 
@@ -126,22 +123,23 @@ const H5AC_class_t H5AC_GHEAP[1] = {{
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5HG__cache_heap_get_load_size(const void *_image, void *_udata, size_t *image_len, size_t *actual_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr)
+H5HG__cache_heap_get_load_size(const void *_image, void *_udata, size_t *image_len,
+    size_t *actual_len)
 {
     const uint8_t *image = (const uint8_t *)_image;   	/* Pointer into raw data buffer */
     H5F_t *f = (H5F_t *)_udata;                         /* File pointer -- obtained from user data */
-    size_t heap_size;                                   /* Total size of collection      */
     htri_t ret_value = SUCCEED;                         /* Return value */
 
     FUNC_ENTER_STATIC
 
+    /* Sanity check */
     HDassert(image_len);
 
-    if(image == NULL) {
+    if(image == NULL)
 	*image_len = (size_t)H5HG_MINSIZE;
+    else { /* compute actual_len */
+        size_t heap_size = 0;   /* Total size of collection      */
 
-    } else { /* compute actual_len */
 	HDassert(f);
 	HDassert(actual_len);
 	HDassert(*actual_len == *image_len);
@@ -164,7 +162,7 @@ H5HG__cache_heap_get_load_size(const void *_image, void *_udata, size_t *image_l
 	HDassert(*image_len == H5HG_MINSIZE);
 
 	*actual_len = heap_size;
-    }
+    } /* end else */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -367,8 +365,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5HG__cache_heap_image_len(const void *_thing, size_t *image_len, 
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr)
+H5HG__cache_heap_image_len(const void *_thing, size_t *image_len)
 {
     const H5HG_heap_t *heap = (const H5HG_heap_t *)_thing;
 

@@ -54,12 +54,11 @@
 /********************/
 
 /* Metadata cache callbacks */
-static herr_t H5B__get_load_size(const void *image, void *udata, size_t *image_len, size_t *actual_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+static herr_t H5B__get_load_size(const void *image, void *udata,
+    size_t *image_len, size_t *actual_len);
 static void *H5B__deserialize(const void *image, size_t len, void *udata,
     hbool_t *dirty);
-static herr_t H5B__image_len(const void *thing, size_t *image_len, 
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+static herr_t H5B__image_len(const void *thing, size_t *image_len);
 static herr_t H5B__serialize(const H5F_t *f, void *image, size_t len,
     void *thing);
 static herr_t H5B__free_icr(void *thing);
@@ -83,7 +82,6 @@ const H5AC_class_t H5AC_BT[1] = {{
     H5B__serialize,                     /* 'serialize' callback */
     NULL,                               /* 'notify' callback */
     H5B__free_icr,                      /* 'free_icr' callback */
-    NULL,				/* 'clear" callback */
     NULL,                               /* 'fsf_size' callback */
 }};
 
@@ -107,8 +105,8 @@ const H5AC_class_t H5AC_BT[1] = {{
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B__get_load_size(const void *_image, void *_udata, size_t *image_len, size_t *actual_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr)
+H5B__get_load_size(const void *_image, void *_udata, size_t *image_len,
+    size_t *actual_len)
 {
     const uint8_t *image = (const uint8_t *)_image;     		/* Pointer into image buffer */
     H5B_cache_ud_t *udata = (H5B_cache_ud_t *)_udata;       /* User data for callback */
@@ -257,8 +255,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B__image_len(const void *_thing, size_t *image_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr)
+H5B__image_len(const void *_thing, size_t *image_len)
 {
     const H5B_t *bt = (const H5B_t *)_thing;        /* Pointer to the B-tree node */
     H5B_shared_t *shared;       /* Pointer to shared B-tree info */

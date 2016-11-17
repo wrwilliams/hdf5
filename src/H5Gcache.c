@@ -64,12 +64,10 @@
 
 /* Metadata cache (H5AC) callbacks */
 static herr_t H5G__cache_node_get_load_size(const void *image, void *udata, 
-    size_t *image_len, size_t *actual_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+    size_t *image_len, size_t *actual_len);
 static void *H5G__cache_node_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
-static herr_t H5G__cache_node_image_len(const void *thing, size_t *image_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+static herr_t H5G__cache_node_image_len(const void *thing, size_t *image_len);
 static herr_t H5G__cache_node_serialize(const H5F_t *f, void *image,
     size_t len, void *thing);
 static herr_t H5G__cache_node_free_icr(void *thing);
@@ -103,7 +101,6 @@ const H5AC_class_t H5AC_SNODE[1] = {{
     H5G__cache_node_serialize,          /* 'serialize' callback */
     NULL,                               /* 'notify' callback */
     H5G__cache_node_free_icr,           /* 'free_icr' callback */
-    NULL,			        /* 'clear' callback */
     NULL,                               /* 'fsf_size' callback */
 }};
 
@@ -136,8 +133,8 @@ H5FL_SEQ_EXTERN(H5G_entry_t);
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5G__cache_node_get_load_size(const void *_image, void *_udata, size_t *image_len, size_t *actual_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr)
+H5G__cache_node_get_load_size(const void *_image, void *_udata, size_t *image_len,
+    size_t *actual_len)
 {
     const uint8_t *image = (const uint8_t *)_image;    	/* Pointer to image to deserialize */
     H5F_t *f = (H5F_t *)_udata;   		/* User data for callback */
@@ -148,15 +145,13 @@ H5G__cache_node_get_load_size(const void *_image, void *_udata, size_t *image_le
     HDassert(f);
     HDassert(image_len);
 
-    if(image == NULL) {
+    if(image == NULL)
 	/* report image length */
 	*image_len = (size_t)(H5G_NODE_SIZE(f));
-    } else {
+    else {
         HDassert(actual_len);
         HDassert(*image_len == *actual_len);
-    }
-
-    /* Nothing to do for non-NULL image : no need to compute actual_len */
+    } /* end else */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5G__cache_node_get_load_size() */
@@ -253,8 +248,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5G__cache_node_image_len(const void *_thing, size_t *image_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr)
+H5G__cache_node_image_len(const void *_thing, size_t *image_len)
 {
     const H5G_node_t *sym = (const H5G_node_t *)_thing; /* Pointer to object */
 

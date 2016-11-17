@@ -58,8 +58,7 @@
 /********************/
 
 /* Metadata cache (H5AC) callbacks */
-static herr_t H5AC__proxy_entry_image_len(const void *thing, size_t *image_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+static herr_t H5AC__proxy_entry_image_len(const void *thing, size_t *image_len);
 static herr_t H5AC__proxy_entry_serialize(const H5F_t *f, void *image_ptr,
     size_t len, void *thing);
 static herr_t H5AC__proxy_entry_notify(H5AC_notify_action_t action, void *thing);
@@ -83,7 +82,6 @@ const H5AC_class_t H5AC_PROXY_ENTRY[1] = {{
     H5AC__proxy_entry_serialize,	/* 'serialize' callback */
     H5AC__proxy_entry_notify,		/* 'notify' callback */
     H5AC__proxy_entry_free_icr,        	/* 'free_icr' callback */
-    NULL,                              	/* 'clear' callback */
     NULL,                              	/* 'fsf_size' callback */
 }};
 
@@ -461,8 +459,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5AC__proxy_entry_image_len(const void H5_ATTR_UNUSED *thing, size_t *image_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr)
+H5AC__proxy_entry_image_len(const void H5_ATTR_UNUSED *thing, size_t *image_len)
 {
     FUNC_ENTER_STATIC_NOERR
 

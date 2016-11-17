@@ -69,32 +69,26 @@
 
 /* Metadata cache callbacks */
 static herr_t H5O__cache_get_load_size(const void *image_ptr, void *udata, 
-    size_t *image_len, size_t *actual_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+    size_t *image_len, size_t *actual_len);
 static htri_t H5O__cache_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5O__cache_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty); 
-static herr_t H5O__cache_image_len(const void *thing, size_t *image_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+static herr_t H5O__cache_image_len(const void *thing, size_t *image_len);
 static herr_t H5O__cache_serialize(const H5F_t *f, void *image, size_t len,
     void *thing); 
 static herr_t H5O__cache_notify(H5AC_notify_action_t action, void *_thing);
 static herr_t H5O__cache_free_icr(void *thing);
-static herr_t H5O__cache_clear(const H5F_t *f, void *thing, hbool_t about_to_destroy);
 
 static herr_t H5O__cache_chk_get_load_size(const void *image_ptr, void *udata, 
-    size_t *image_len, size_t *actual_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+    size_t *image_len, size_t *actual_len);
 static htri_t H5O__cache_chk_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5O__cache_chk_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty); 
-static herr_t H5O__cache_chk_image_len(const void *thing, size_t *image_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+static herr_t H5O__cache_chk_image_len(const void *thing, size_t *image_len);
 static herr_t H5O__cache_chk_serialize(const H5F_t *f, void *image, size_t len,
     void *thing);
 static herr_t H5O__cache_chk_notify(H5AC_notify_action_t action, void *_thing);
 static herr_t H5O__cache_chk_free_icr(void *thing);
-static herr_t H5O__cache_chk_clear(const H5F_t *f, void *thing, hbool_t about_to_destroy);
 
 /* Chunk routines */
 static herr_t H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len,
@@ -125,7 +119,6 @@ const H5AC_class_t H5AC_OHDR[1] = {{
     H5O__cache_serialize,               /* 'serialize' callback */
     H5O__cache_notify,                  /* 'notify' callback */
     H5O__cache_free_icr,                /* 'free_icr' callback */
-    H5O__cache_clear,                   /* 'clear' callback */
     NULL,                               /* 'fsf_size' callback */
 }};
 
@@ -143,7 +136,6 @@ const H5AC_class_t H5AC_OHDR_CHK[1] = {{
     H5O__cache_chk_serialize,           /* 'serialize' callback */
     H5O__cache_chk_notify,              /* 'notify' callback */
     H5O__cache_chk_free_icr,            /* 'free_icr' callback */
-    H5O__cache_chk_clear,               /* 'clear' callback */
     NULL,                               /* 'fsf_size' callback */
 }};
 
@@ -175,7 +167,8 @@ H5FL_SEQ_DEFINE(H5O_cont_t);
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; Aug 2015
+ * Programmer:	Vailin Choi
+ *              Aug 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -184,7 +177,6 @@ H5O_decode_prefix(H5F_t *f, H5O_t *oh, const uint8_t *buf, void *_udata)
 {
     H5O_cache_ud_t *udata = (H5O_cache_ud_t *)_udata;       /* User data for callback */
     const uint8_t *p = buf;   	/* Pointer into buffer to decode */
-    size_t prefix_size;    	/* Size of object header prefix */
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -302,8 +294,7 @@ H5O_decode_prefix(H5F_t *f, H5O_t *oh, const uint8_t *buf, void *_udata)
     } /* end else */
 
     /* Determine object header prefix length */
-    prefix_size = (size_t)(p - buf);
-    HDassert((size_t)prefix_size == (size_t)(H5O_SIZEOF_HDR(oh) - H5O_SIZEOF_CHKSUM_OH(oh)));
+    HDassert((size_t)(p - buf) == (size_t)(H5O_SIZEOF_HDR(oh) - H5O_SIZEOF_CHKSUM_OH(oh)));
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -327,8 +318,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__cache_get_load_size(const void *_image, void *_udata, size_t *image_len, size_t *actual_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr)
+H5O__cache_get_load_size(const void *_image, void *_udata, size_t *image_len,
+    size_t *actual_len)
 {
     const uint8_t *image = (const uint8_t *)_image;   	/* Pointer into raw data buffer */
     H5O_cache_ud_t *udata = (H5O_cache_ud_t *)_udata;   /* User data for callback */
@@ -342,7 +333,6 @@ H5O__cache_get_load_size(const void *_image, void *_udata, size_t *image_len, si
 
     if(image == NULL)
 	*image_len = H5O_SPEC_READ_SIZE;
-
     else { /* compute actual_len */
 	HDassert(udata);
 	HDassert(actual_len);
@@ -355,7 +345,7 @@ H5O__cache_get_load_size(const void *_image, void *_udata, size_t *image_len, si
 	/* Save the version to be used in verify_chksum callback */
 	udata->version = oh.version;
 	*actual_len = oh.chunk0_size + (size_t)H5O_SIZEOF_HDR(&oh);
-    }
+    } /* end else */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -515,8 +505,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__cache_image_len(const void *_thing, size_t *image_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr)
+H5O__cache_image_len(const void *_thing, size_t *image_len)
 {
     const H5O_t *oh = (const H5O_t *)_thing;    /* Object header to query */
 
@@ -536,10 +525,6 @@ H5O__cache_image_len(const void *_thing, size_t *image_len,
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O__cache_image_len() */
-
-/********************************/
-/* no H5O_cache_pre_serialize() */
-/********************************/
 
 
 /*-------------------------------------------------------------------------
@@ -710,40 +695,59 @@ H5O__cache_notify(H5AC_notify_action_t action, void *_thing)
      */
     HDassert(oh);
 
-    if(oh->swmr_write) {
-        switch(action) {
-            case H5AC_NOTIFY_ACTION_AFTER_INSERT:
-	    case H5AC_NOTIFY_ACTION_AFTER_LOAD:
+    switch(action) {
+        case H5AC_NOTIFY_ACTION_AFTER_INSERT:
+        case H5AC_NOTIFY_ACTION_AFTER_LOAD:
+            if(oh->swmr_write) {
                 /* Sanity check */
                 HDassert(oh->proxy);
 
                 /* Register the object header as a parent of the virtual entry */
                 if(H5AC_proxy_entry_add_parent(oh->proxy, oh) < 0)
                     HGOTO_ERROR(H5E_OHDR, H5E_CANTSET, FAIL, "can't add object header as parent of proxy")
-                break;
+            } /* end if */
+            break;
 
-	    case H5AC_NOTIFY_ACTION_AFTER_FLUSH:
-	    case H5AC_NOTIFY_ACTION_ENTRY_DIRTIED:
-	    case H5AC_NOTIFY_ACTION_ENTRY_CLEANED:
-	    case H5AC_NOTIFY_ACTION_CHILD_DIRTIED:
-	    case H5AC_NOTIFY_ACTION_CHILD_CLEANED:
-                /* do nothing */
-                break;
+        case H5AC_NOTIFY_ACTION_AFTER_FLUSH:
+        case H5AC_NOTIFY_ACTION_ENTRY_DIRTIED:
+            /* do nothing */
+            break;
 
-            case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
+        case H5AC_NOTIFY_ACTION_ENTRY_CLEANED:
+            {
+                unsigned            u;                      /* Local index variable */
+
+                /* Mark messages stored with the object header (i.e. messages in chunk 0) as clean */
+                for(u = 0; u < oh->nmesgs; u++)
+                    if(oh->mesg[u].chunkno == 0)
+                        oh->mesg[u].dirty = FALSE;
+#ifndef NDEBUG
+                /* Reset the number of messages dirtied by decoding */
+                oh->ndecode_dirtied = 0;
+#endif /* NDEBUG */
+            }
+            break;
+
+        case H5AC_NOTIFY_ACTION_CHILD_DIRTIED:
+        case H5AC_NOTIFY_ACTION_CHILD_CLEANED:
+            /* do nothing */
+            break;
+
+        case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
+            if(oh->swmr_write) {
                 /* Unregister the object header as a parent of the virtual entry */
                 if(H5AC_proxy_entry_remove_parent(oh->proxy, oh) < 0)
                     HGOTO_ERROR(H5E_OHDR, H5E_CANTSET, FAIL, "can't remove object header as parent of proxy")
-                break;
+            } /* end if */
+            break;
 
-            default:
+        default:
 #ifdef NDEBUG
-                HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, FAIL, "unknown action from metadata cache")
+            HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, FAIL, "unknown action from metadata cache")
 #else /* NDEBUG */
-                HDassert(0 && "Unknown action?!?");
+            HDassert(0 && "Unknown action?!?");
 #endif /* NDEBUG */
-        } /* end switch */
-    } /* end if */
+    } /* end switch */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -790,81 +794,6 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5O__cache_clear
- *
- * Purpose: 	Clear all dirty bits associated with this cache entry.
- *
- *		This is ncessary as the object header cache client maintains 
- *		its own dirty bits on individual messages.  These dirty bits 
- *		used to be cleared by the old V2 metadata cache flush callback,
- *		but now the metadata cache must clear them explicitly, as 
- *		the serialize callback does not imply that the data has been
- *		written to disk.
- *
- *		This callback is also necessary for the parallel case.
- *
- * Return:      Success:        SUCCEED
- *              Failure:        FAIL
- *
- * Programmer:  John Mainzer
- *              9/22/14
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-#ifdef H5_HAVE_PARALLEL
-H5O__cache_clear(const H5F_t *f, void *_thing, hbool_t H5_ATTR_UNUSED about_to_destroy)
-#else
-H5O__cache_clear(const H5F_t H5_ATTR_UNUSED *f, void *_thing, hbool_t H5_ATTR_UNUSED about_to_destroy)
-#endif /* H5_HAVE_PARALLEL */
-{ 
-    H5O_t      *oh = (H5O_t *)_thing;   /* Object header to reset */
-    unsigned    u;                      /* Local index variable */
-    herr_t      ret_value = SUCCEED;    /* Return value */
-
-#ifdef H5_HAVE_PARALLEL
-    FUNC_ENTER_STATIC
-#else
-    FUNC_ENTER_STATIC_NOERR
-#endif /* H5_HAVE_PARALLEL */
-
-    /* Check arguments */
-    HDassert(oh);
-    HDassert(oh->cache_info.magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
-    HDassert(oh->cache_info.type == H5AC_OHDR);
-
-#ifdef H5_HAVE_PARALLEL
-    if((oh->nchunks > 0) && (!about_to_destroy)) {
-        /* Scan through chunk 0 (the chunk stored contiguously with this 
-         * object header) and cause it to update its image of all entries 
-         * currently marked dirty.  Must do this in the parallel case, as 
-         * it is possible that this processor may clear this object header 
-         * several times before flushing it -- thus causing undefined 
-         * sections of the image to be written to disk overwriting valid data.
-         */
-        if(H5O__chunk_serialize(f, oh, 0) < 0)
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTSERIALIZE, FAIL, "unable to serialize object header chunk")
-    } /* end if */
-#endif /* H5_HAVE_PARALLEL */
-
-    /* Mark messages stored with the object header (i.e. messages in chunk 0) as clean */
-    for(u = 0; u < oh->nmesgs; u++)
-        if(oh->mesg[u].chunkno == 0)
-            oh->mesg[u].dirty = FALSE;
-
-#ifndef NDEBUG
-    /* Reset the number of messages dirtied by decoding */
-    oh->ndecode_dirtied = 0;
-#endif /* NDEBUG */
-
-#ifdef H5_HAVE_PARALLEL
-done:
-#endif /* H5_HAVE_PARALLEL */
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5O__cache_clear() */
-
-
-/*-------------------------------------------------------------------------
  * Function:    H5O__cache_chk_get_load_size()
  *
  * Purpose:	Tell the metadata cache how large the on disk image of the 
@@ -881,9 +810,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__cache_chk_get_load_size(const void *_image, void *_udata, 
-    size_t *image_len, size_t *actual_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr)
+H5O__cache_chk_get_load_size(const void *_image, void *_udata, size_t *image_len,
+    size_t *actual_len)
 {
     const uint8_t *image = (const uint8_t *)_image;       		  /* Pointer into raw data buffer */
     const H5O_chk_cache_ud_t *udata = (const H5O_chk_cache_ud_t *)_udata; /* User data for callback */
@@ -900,7 +828,7 @@ H5O__cache_chk_get_load_size(const void *_image, void *_udata,
     else {
 	HDassert(actual_len);
         HDassert(*actual_len == *image_len);
-    }
+    } /* end else */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O__cache_chk_get_load_size() */
@@ -1046,8 +974,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__cache_chk_image_len(const void *_thing, size_t *image_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr)
+H5O__cache_chk_image_len(const void *_thing, size_t *image_len)
 {
     const H5O_chunk_proxy_t * chk_proxy = (const H5O_chunk_proxy_t *)_thing;    /* Chunk proxy to query */
 
@@ -1064,10 +991,6 @@ H5O__cache_chk_image_len(const void *_thing, size_t *image_len,
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O__cache_chk_image_len() */
-
-/************************************/
-/* no H5O_cache_chk_pre_serialize() */
-/************************************/
 
 
 /*-------------------------------------------------------------------------
@@ -1145,10 +1068,10 @@ H5O__cache_chk_notify(H5AC_notify_action_t action, void *_thing)
     HDassert(chk_proxy);
     HDassert(chk_proxy->oh);
 
-    if(chk_proxy->oh->swmr_write) {
-        switch(action) {
-            case H5AC_NOTIFY_ACTION_AFTER_INSERT:
-	    case H5AC_NOTIFY_ACTION_AFTER_LOAD:
+    switch(action) {
+        case H5AC_NOTIFY_ACTION_AFTER_INSERT:
+        case H5AC_NOTIFY_ACTION_AFTER_LOAD:
+            if(chk_proxy->oh->swmr_write) {
                 /* Add flush dependency on chunk parent */
                 {
                     /* Determine the parent of the chunk */
@@ -1188,17 +1111,32 @@ H5O__cache_chk_notify(H5AC_notify_action_t action, void *_thing)
                     if(H5AC_proxy_entry_add_parent(chk_proxy->oh->proxy, chk_proxy) < 0)
                         HGOTO_ERROR(H5E_OHDR, H5E_CANTSET, FAIL, "can't add object header chunk as parent of proxy")
                 }
-                break;
+            } /* end if */
+            break;
 
-	    case H5AC_NOTIFY_ACTION_AFTER_FLUSH:
-	    case H5AC_NOTIFY_ACTION_ENTRY_DIRTIED:
-	    case H5AC_NOTIFY_ACTION_ENTRY_CLEANED:
-	    case H5AC_NOTIFY_ACTION_CHILD_DIRTIED:
-	    case H5AC_NOTIFY_ACTION_CHILD_CLEANED:
-                /* do nothing */
-                break;
+        case H5AC_NOTIFY_ACTION_AFTER_FLUSH:
+        case H5AC_NOTIFY_ACTION_ENTRY_DIRTIED:
+            /* do nothing */
+            break;
 
-            case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
+        case H5AC_NOTIFY_ACTION_ENTRY_CLEANED:
+            {
+                unsigned            u;                      /* Local index variable */
+
+                /* Mark messages in chunk as clean */
+                for(u = 0; u < chk_proxy->oh->nmesgs; u++)
+                    if(chk_proxy->oh->mesg[u].chunkno == chk_proxy->chunkno)
+                        chk_proxy->oh->mesg[u].dirty = FALSE;
+            }
+            break;
+
+        case H5AC_NOTIFY_ACTION_CHILD_DIRTIED:
+        case H5AC_NOTIFY_ACTION_CHILD_CLEANED:
+            /* do nothing */
+            break;
+
+        case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
+            if(chk_proxy->oh->swmr_write) {
                 /* Remove flush dependency on parent object header chunk */
                 {
                     /* Sanity checks */
@@ -1214,16 +1152,16 @@ H5O__cache_chk_notify(H5AC_notify_action_t action, void *_thing)
                 /* Unregister the object header chunk as a parent of the virtual entry */
                 if(H5AC_proxy_entry_remove_parent(chk_proxy->oh->proxy, chk_proxy) < 0)
                     HGOTO_ERROR(H5E_OHDR, H5E_CANTSET, FAIL, "can't remove object header chunk as parent of proxy")
-                break;
+            } /* end if */
+            break;
 
-            default:
+        default:
 #ifdef NDEBUG
-                HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, FAIL, "unknown action from metadata cache")
+            HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, FAIL, "unknown action from metadata cache")
 #else /* NDEBUG */
-                HDassert(0 && "Unknown action?!?");
+            HDassert(0 && "Unknown action?!?");
 #endif /* NDEBUG */
-        } /* end switch */
-    } /* end if */
+    } /* end switch */
 
 done:
     if(cont_chk_proxy)
@@ -1272,73 +1210,6 @@ H5O__cache_chk_free_icr(void *_thing)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__cache_chk_free_icr() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5O__cache_chk_clear
- *
- * Purpose: 	Clear all dirty bits associated with this cache entry.
- *
- *		This is ncessary as the object header cache client maintains 
- *		its own dirty bits on individual messages.  These dirty bits 
- *		used to be cleared by the old V2 metadata cache flush callback,
- *		but now the metadata cache must clear them explicitly, as 
- *		the serialize callback does not imply that the data has been
- *		written to disk.
- *
- *		This callback is also necessary for the parallel case.
- *
- * Return:      Success:        SUCCEED
- *              Failure:        FAIL
- *
- * Programmer:  John Mainzer
- *              9/22/14
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-#ifdef H5_HAVE_PARALLEL
-H5O__cache_chk_clear(const H5F_t *f, void *_thing, hbool_t about_to_destroy)
-#else
-H5O__cache_chk_clear(const H5F_t H5_ATTR_UNUSED *f, void *_thing, hbool_t H5_ATTR_UNUSED about_to_destroy)
-#endif /* H5_HAVE_PARALLEL */
-{ 
-    H5O_chunk_proxy_t  *chk_proxy = (H5O_chunk_proxy_t *)_thing;        /* Object header chunk to reset */
-    H5O_t              *oh;                     /* Object header for chunk */
-    unsigned            u;                      /* Local index variable */
-    herr_t              ret_value = SUCCEED;    /* Return value */
-
-#ifdef H5_HAVE_PARALLEL
-    FUNC_ENTER_STATIC
-#else
-    FUNC_ENTER_STATIC_NOERR
-#endif /* H5_HAVE_PARALLEL */
-
-    /* Check arguments */
-    HDassert(chk_proxy);
-    HDassert(chk_proxy->cache_info.magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
-    HDassert(chk_proxy->cache_info.type == H5AC_OHDR_CHK);
-    oh = chk_proxy->oh;
-    HDassert(oh);
-    HDassert(oh->cache_info.magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
-    HDassert(oh->cache_info.type == H5AC_OHDR);
-
-#ifdef H5_HAVE_PARALLEL
-    if((chk_proxy->oh->cache_info.is_dirty) && (!about_to_destroy))
-        if(H5O__chunk_serialize(f, chk_proxy->oh, chk_proxy->chunkno) < 0)
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTSERIALIZE, FAIL, "unable to serialize object header chunk")
-#endif /* H5_HAVE_PARALLEL */
-
-    /* Mark messages in chunk as clean */
-    for(u = 0; u < chk_proxy->oh->nmesgs; u++)
-        if(chk_proxy->oh->mesg[u].chunkno == chk_proxy->chunkno)
-            chk_proxy->oh->mesg[u].dirty = FALSE;
-
-#ifdef H5_HAVE_PARALLEL
-done:
-#endif /* H5_HAVE_PARALLEL */
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5O__cache_chk_clear() */
 
 
 /*-------------------------------------------------------------------------

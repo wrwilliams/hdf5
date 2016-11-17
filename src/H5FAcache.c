@@ -72,27 +72,22 @@
 
 /* Metadata cache (H5AC) callbacks */
 static herr_t H5FA__cache_hdr_get_load_size(const void *image_ptr, void *udata, 
-    size_t *image_len, size_t *actual_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+    size_t *image_len, size_t *actual_len);
 static htri_t H5FA__cache_hdr_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5FA__cache_hdr_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
-static herr_t H5FA__cache_hdr_image_len(const void *thing, size_t *image_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+static herr_t H5FA__cache_hdr_image_len(const void *thing, size_t *image_len);
 static herr_t H5FA__cache_hdr_serialize(const H5F_t *f, void *image, size_t len,
     void *thing);
 static herr_t H5FA__cache_hdr_notify(H5AC_notify_action_t action, void *thing);
 static herr_t H5FA__cache_hdr_free_icr(void *thing);
 
 static herr_t H5FA__cache_dblock_get_load_size(const void *image_ptr, void *udata, 
-    size_t *image_len, size_t *actual_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+    size_t *image_len, size_t *actual_len);
 static htri_t H5FA__cache_dblock_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5FA__cache_dblock_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
-static herr_t H5FA__cache_dblock_image_len(const void *thing, 
-    size_t *image_len, hbool_t *compressed_ptr, 
-    size_t *compressed_image_len_ptr);
+static herr_t H5FA__cache_dblock_image_len(const void *thing, size_t *image_len);
 static herr_t H5FA__cache_dblock_serialize(const H5F_t *f, void *image, size_t len,
     void *thing);
 static herr_t H5FA__cache_dblock_notify(H5AC_notify_action_t action, void *thing);
@@ -100,14 +95,11 @@ static herr_t H5FA__cache_dblock_free_icr(void *thing);
 static herr_t H5FA__cache_dblock_fsf_size(const void *thing, size_t *fsf_size);
 
 static herr_t H5FA__cache_dblk_page_get_load_size(const void *image_ptr, void *udata, 
-    size_t *image_len, size_t *actual_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+    size_t *image_len, size_t *actual_len);
 static htri_t H5FA__cache_dblk_page_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5FA__cache_dblk_page_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
-static herr_t H5FA__cache_dblk_page_image_len(const void *thing, 
-    size_t *image_len, hbool_t *compressed_ptr, 
-    size_t *compressed_image_len_ptr);
+static herr_t H5FA__cache_dblk_page_image_len(const void *thing, size_t *image_len);
 static herr_t H5FA__cache_dblk_page_serialize(const H5F_t *f, void *image, size_t len,
     void *thing);
 static herr_t H5FA__cache_dblk_page_notify(H5AC_notify_action_t action, void *thing);
@@ -132,7 +124,6 @@ const H5AC_class_t H5AC_FARRAY_HDR[1] = {{
     H5FA__cache_hdr_serialize,          /* 'serialize' callback */
     H5FA__cache_hdr_notify,             /* 'notify' callback */
     H5FA__cache_hdr_free_icr,           /* 'free_icr' callback */
-    NULL,				/* 'clear' callback */
     NULL,                               /* 'fsf_size' callback */
 }};
 
@@ -150,7 +141,6 @@ const H5AC_class_t H5AC_FARRAY_DBLOCK[1] = {{
     H5FA__cache_dblock_serialize,       /* 'serialize' callback */
     H5FA__cache_dblock_notify,		/* 'notify' callback */
     H5FA__cache_dblock_free_icr,        /* 'free_icr' callback */
-    NULL,				/* 'clear' callback */
     H5FA__cache_dblock_fsf_size,        /* 'fsf_size' callback */
 }};
 
@@ -168,7 +158,6 @@ const H5AC_class_t H5AC_FARRAY_DBLK_PAGE[1] = {{
     H5FA__cache_dblk_page_serialize,    /* 'serialize' callback */
     H5FA__cache_dblk_page_notify,	/* 'notify' callback */
     H5FA__cache_dblk_page_free_icr,     /* 'free_icr' callback */
-    NULL,				/* 'clear' callback */
     NULL,                               /* 'fsf_size' callback */
 }};
 
@@ -200,8 +189,7 @@ const H5AC_class_t H5AC_FARRAY_DBLK_PAGE[1] = {{
 BEGIN_FUNC(STATIC, NOERR,
 herr_t, SUCCEED, -,
 H5FA__cache_hdr_get_load_size(const void *_image, void *_udata, 
-    size_t *image_len, size_t *actual_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr))
+    size_t *image_len, size_t *actual_len))
 
     /* Local variables */
     const uint8_t *image = (const uint8_t *)_image;       /* Pointer into raw data buffer */
@@ -212,13 +200,13 @@ H5FA__cache_hdr_get_load_size(const void *_image, void *_udata,
     HDassert(udata->f);
     HDassert(image_len);
 
-    if(image == NULL) {
+    if(image == NULL)
 	/* Set the image length size */
 	*image_len = (size_t)H5FA_HEADER_SIZE_FILE(udata->f);
-    } else {
+    else {
         HDassert(actual_len);
         HDassert(*actual_len == *image_len);
-    }
+    } /* end else */
 
 END_FUNC(STATIC)   /* end H5FA__cache_hdr_get_load_size() */
 
@@ -386,8 +374,7 @@ END_FUNC(STATIC)   /* end H5FA__cache_hdr_deserialize() */
  */
 BEGIN_FUNC(STATIC, NOERR,
 herr_t, SUCCEED, -,
-H5FA__cache_hdr_image_len(const void *_thing, size_t *image_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr))
+H5FA__cache_hdr_image_len(const void *_thing, size_t *image_len))
 
     /* Local variables */
     const H5FA_hdr_t *hdr = (const H5FA_hdr_t *)_thing;      /* Pointer to the object */
@@ -580,9 +567,8 @@ END_FUNC(STATIC)   /* end H5FA__cache_hdr_free_icr() */
  */
 BEGIN_FUNC(STATIC, NOERR,
 herr_t, SUCCEED, -,
-H5FA__cache_dblock_get_load_size(const void *_image, void *_udata, 
-    size_t *image_len, size_t *actual_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr))
+H5FA__cache_dblock_get_load_size(const void *_image, void *_udata, size_t *image_len,
+    size_t *actual_len))
 
     /* Local variables */
     const uint8_t *image = (const uint8_t *)_image;    	/* Pointer into raw data buffer */
@@ -620,10 +606,11 @@ H5FA__cache_dblock_get_load_size(const void *_image, void *_udata,
 	    *image_len = (size_t)H5FA_DBLOCK_SIZE(&dblock);
 	else
 	    *image_len = (size_t)H5FA_DBLOCK_PREFIX_SIZE(&dblock);
-    } else {
+    } /* end if */
+    else {
         HDassert(actual_len);
         HDassert(*actual_len == *image_len);
-    }
+    } /* end else */
 
 END_FUNC(STATIC)   /* end H5FA__cache_dblock_get_load_size() */
 
@@ -778,8 +765,7 @@ END_FUNC(STATIC)   /* end H5FA__cache_dblock_deserialize() */
  */
 BEGIN_FUNC(STATIC, NOERR,
 herr_t, SUCCEED, -,
-H5FA__cache_dblock_image_len(const void *_thing, size_t *image_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr))
+H5FA__cache_dblock_image_len(const void *_thing, size_t *image_len))
 
     /* Local variables */
     const H5FA_dblock_t *dblock = (const H5FA_dblock_t *)_thing;      /* Pointer to the object */
@@ -1034,9 +1020,8 @@ END_FUNC(STATIC)   /* end H5FA__cache_dblock_fsf_size() */
  */
 BEGIN_FUNC(STATIC, NOERR,
 herr_t, SUCCEED, -,
-H5FA__cache_dblk_page_get_load_size(const void *_image, void *_udata, 
-    size_t *image_len, size_t *actual_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr))
+H5FA__cache_dblk_page_get_load_size(const void *_image, void *_udata, size_t *image_len,
+    size_t *actual_len))
 
     /* Local variables */
     const uint8_t *image = (const uint8_t *)_image;       /* Pointer into raw data buffer */
@@ -1053,7 +1038,7 @@ H5FA__cache_dblk_page_get_load_size(const void *_image, void *_udata,
     else {
         HDassert(actual_len);
         HDassert(*actual_len == *image_len);
-    }
+    } /* end else */
 
 END_FUNC(STATIC)   /* end H5FA__cache_dblk_page_get_load_size() */
 
@@ -1181,8 +1166,7 @@ END_FUNC(STATIC)   /* end H5FA__cache_dblk_page_deserialize() */
  */
 BEGIN_FUNC(STATIC, NOERR,
 herr_t, SUCCEED, -,
-H5FA__cache_dblk_page_image_len(const void *_thing, size_t *image_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr))
+H5FA__cache_dblk_page_image_len(const void *_thing, size_t *image_len))
 
     /* Local variables */
     const H5FA_dblk_page_t *dblk_page = (const H5FA_dblk_page_t *)_thing;      /* Pointer to the object */
