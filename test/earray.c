@@ -160,25 +160,13 @@ typedef struct earray_test_t {
 /* Local prototypes */
 
 /* Metadata cache (H5AC) callbacks */
-
-static herr_t earray_cache_test_get_load_size(const void *udata_ptr,
-                                              size_t *image_len_ptr);
-
-static void *earray_cache_test_deserialize(const void *image_ptr,
-                                           size_t len,
-                                           void *udata_ptr,
-                                           hbool_t *dirty_ptr);
-
-static herr_t earray_cache_test_image_len(const void *thing,
-                                          size_t *image_len_ptr,
-                                          hbool_t *compressed_ptr,
-                                          size_t * compressed_len_ptr);
-
-static herr_t earray_cache_test_serialize(const H5F_t *f,
-                                          void *image_ptr,
-                                          size_t len,
-                                          void *thing);
-
+static herr_t earray_cache_test_get_load_size(const void *image, void *udata,
+    size_t *image_len, size_t *actual_len);
+static void *earray_cache_test_deserialize(const void *image_ptr, size_t len,
+    void *udata_ptr, hbool_t *dirty_ptr);
+static herr_t earray_cache_test_image_len(const void *thing, size_t *image_len_ptr);
+static herr_t earray_cache_test_serialize(const H5F_t *f, void *image_ptr,
+    size_t len, void *thing);
 static herr_t earray_cache_test_free_icr(void *thing);
 
 
@@ -201,14 +189,14 @@ const H5AC_class_t H5AC_EARRAY_TEST[1] = {{
     /* name          */ "earray test",
     /* mem_type      */ H5FD_MEM_DEFAULT,
     /* flags         */ H5AC__CLASS_SKIP_READS | H5AC__CLASS_SKIP_WRITES,
-    /* get_load_size */ (H5AC_get_load_size_func_t)earray_cache_test_get_load_size,
-    /* verify_chksum */ (H5AC_verify_chksum_func_t)NULL,
-    /* deserialize   */ (H5AC_deserialize_func_t)earray_cache_test_deserialize,
-    /* image_len     */ (H5AC_image_len_func_t)earray_cache_test_image_len,
-    /* pre_serialize */ (H5AC_pre_serialize_func_t)NULL,
-    /* serialize     */ (H5AC_serialize_func_t)earray_cache_test_serialize,
-    /* notify        */ (H5AC_notify_func_t)NULL,
-    /* free_icr      */ (H5AC_free_icr_func_t)earray_cache_test_free_icr,
+    /* get_load_size */ earray_cache_test_get_load_size,
+    /* verify_chksum */ NULL,
+    /* deserialize   */ earray_cache_test_deserialize,
+    /* image_len     */ earray_cache_test_image_len,
+    /* pre_serialize */ NULL,
+    /* serialize     */ earray_cache_test_serialize,
+    /* notify        */ NULL,
+    /* free_icr      */ earray_cache_test_free_icr,
     /* fsf_size      */ NULL,
 }};
 
@@ -648,18 +636,18 @@ error:
  *-------------------------------------------------------------------------
  */
 static herr_t
-earray_cache_test_get_load_size(const void *udata_ptr, size_t *image_len_ptr)
+earray_cache_test_get_load_size(const void H5_ATTR_UNUSED *image, void *udata,
+    size_t *image_len, size_t H5_ATTR_UNUSED *actual_len)
 {
-    HDassert(udata_ptr);
-    HDassert(image_len_ptr);
+    HDassert(udata);
+    HDassert(image_len);
 
     /* Should never be called */
     HDassert(0 && "Can't be called!");
 
-    *image_len_ptr = 0;
+    *image_len = 0;
 
     return(SUCCEED);
-
 } /* end earray_cache_test_get_load_size() */
 
 
@@ -691,12 +679,10 @@ earray_cache_test_deserialize(const void *image_ptr,
     HDassert(udata_ptr);
     HDassert(dirty_ptr);
 
-
     /* Should never be called */
     HDassert(0 && "Can't be called!");
 
     return(NULL);
-
 } /* end earray_cache_test_deserialize() */
 
 
@@ -719,10 +705,8 @@ earray_cache_test_deserialize(const void *image_ptr,
  *-------------------------------------------------------------------------
  */
 static herr_t
-earray_cache_test_image_len(const void *thing, size_t *image_len_ptr,
-    hbool_t H5_ATTR_UNUSED * compressed_ptr, size_t H5_ATTR_UNUSED * compressed_len_ptr)
+earray_cache_test_image_len(const void *thing, size_t *image_len_ptr)
 {
-
     HDassert(thing);
     HDassert(image_len_ptr);
 
@@ -731,13 +715,8 @@ earray_cache_test_image_len(const void *thing, size_t *image_len_ptr,
     *image_len_ptr = 1;
 
     return(SUCCEED);
-
 } /* end earray_cache_test_image_len() */
 
-
-/********************************/
-/* no H5O_cache_pre_serialize() */
-/********************************/
 
 
 /*-------------------------------------------------------------------------
@@ -764,14 +743,12 @@ earray_cache_test_serialize(const H5F_t *f,
                             H5_ATTR_UNUSED size_t len,
                             void *thing)
 {
-    earray_test_t *test = NULL;
+    earray_test_t *test;
 
     HDassert(f);
     HDassert(image_ptr);
     HDassert(thing);
-
     test = (earray_test_t *)thing;
-
     HDassert(test);
     HDassert(test->cache_info.magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
     HDassert((const H5AC_class_t *)(test->cache_info.type) == 
@@ -814,15 +791,9 @@ earray_cache_test_serialize(const H5F_t *f,
     return(SUCCEED);
 
 error:
-
     return(FAIL);
-
 } /* end earray_cache_test_serialize() */
 
-
-/******************************************/
-/* no earray_cache_test_notify() function */
-/******************************************/
 
 
 /*-------------------------------------------------------------------------
@@ -846,12 +817,10 @@ error:
 static herr_t
 earray_cache_test_free_icr(void *thing)
 {
-    earray_test_t *test = NULL;
+    earray_test_t *test;
 
     HDassert(thing);
-
     test = (earray_test_t *)thing;
-
     HDassert(test);
 
     /* the metadata cache sets cache_info.magic to
@@ -867,7 +836,6 @@ earray_cache_test_free_icr(void *thing)
     HDfree(test);
 
     return(SUCCEED);
-
 } /* end earray_cache_test_free_icr() */
 
 
