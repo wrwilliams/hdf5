@@ -209,7 +209,6 @@ const H5AC_class_t H5AC_EARRAY_TEST[1] = {{
     /* serialize     */ (H5AC_serialize_func_t)earray_cache_test_serialize,
     /* notify        */ (H5AC_notify_func_t)NULL,
     /* free_icr      */ (H5AC_free_icr_func_t)earray_cache_test_free_icr,
-    /* clear         */ NULL,
     /* fsf_size      */ NULL,
 }};
 
