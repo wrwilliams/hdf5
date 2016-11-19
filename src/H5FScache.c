@@ -78,8 +78,7 @@ static herr_t H5FS__sinfo_serialize_sect_cb(void *_item, void H5_ATTR_UNUSED *ke
 static herr_t H5FS__sinfo_serialize_node_cb(void *_item, void H5_ATTR_UNUSED *key, void *_udata);
 
 /* Metadata cache callbacks */
-static herr_t H5FS__cache_hdr_get_load_size(const void *image_ptr, void *udata, 
-    size_t *image_len, size_t *actual_len);
+static herr_t H5FS__cache_hdr_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5FS__cache_hdr_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5FS__cache_hdr_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
@@ -91,8 +90,7 @@ static herr_t H5FS__cache_hdr_serialize(const H5F_t *f, void *image,
     size_t len, void *thing);
 static herr_t H5FS__cache_hdr_free_icr(void *thing);
 
-static herr_t H5FS__cache_sinfo_get_load_size(const void *image_ptr, void *udata, 
-    size_t *image_len, size_t *actual_len);
+static herr_t H5FS__cache_sinfo_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5FS__cache_sinfo_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5FS__cache_sinfo_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
@@ -116,7 +114,8 @@ const H5AC_class_t H5AC_FSPACE_HDR[1] = {{
     "Free Space Header",                /* Metadata client name (for debugging) */
     H5FD_MEM_FSPACE_HDR,                /* File space memory type for client */
     H5AC__CLASS_NO_FLAGS_SET,           /* Client class behavior flags */
-    H5FS__cache_hdr_get_load_size,      /* 'get_load_size' callback */
+    H5FS__cache_hdr_get_initial_load_size,      /* 'get_initial_load_size' callback */
+    NULL,				/* 'get_final_load_size' callback */
     H5FS__cache_hdr_verify_chksum,	/* 'verify_chksum' callback */
     H5FS__cache_hdr_deserialize,        /* 'deserialize' callback */
     H5FS__cache_hdr_image_len,          /* 'image_len' callback */
@@ -133,7 +132,8 @@ const H5AC_class_t H5AC_FSPACE_SINFO[1] = {{
     "Free Space Section Info",          /* Metadata client name (for debugging) */
     H5FD_MEM_FSPACE_SINFO,              /* File space memory type for client */
     H5AC__CLASS_NO_FLAGS_SET,           /* Client class behavior flags */
-    H5FS__cache_sinfo_get_load_size,    /* 'get_load_size' callback */
+    H5FS__cache_sinfo_get_initial_load_size,    /* 'get_initial_load_size' callback */
+    NULL,				/* 'get_final_load_size' callback */
     H5FS__cache_sinfo_verify_chksum,	/* 'verify_chksum' callback */
     H5FS__cache_sinfo_deserialize,      /* 'deserialize' callback */
     H5FS__cache_sinfo_image_len,        /* 'image_len' callback */
@@ -157,7 +157,7 @@ const H5AC_class_t H5AC_FSPACE_SINFO[1] = {{
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5FS__cache_hdr_get_load_size
+ * Function:    H5FS__cache_hdr_get_initial_load_size
  *
  * Purpose:     Compute the size of the data structure on disk.
  *
@@ -170,10 +170,8 @@ const H5AC_class_t H5AC_FSPACE_SINFO[1] = {{
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FS__cache_hdr_get_load_size(const void *_image, void *_udata, size_t *image_len,
-    size_t *actual_len)
+H5FS__cache_hdr_get_initial_load_size(void *_udata, size_t *image_len)
 {
-    const uint8_t *image = (const uint8_t *)_image;       /* Pointer into raw data buffer */
     H5FS_hdr_cache_ud_t *udata = (H5FS_hdr_cache_ud_t *)_udata; /* User-data for metadata cache callback */
 
     FUNC_ENTER_STATIC_NOERR
@@ -183,16 +181,11 @@ H5FS__cache_hdr_get_load_size(const void *_image, void *_udata, size_t *image_le
     HDassert(udata->f);
     HDassert(image_len);
 
-    if(image == NULL)
-	/* Set the image length size */
-	*image_len = (size_t)H5FS_HEADER_SIZE(udata->f);
-    else {
-        HDassert(actual_len);
-        HDassert(*actual_len == *image_len);
-    } /* end else */
+    /* Set the image length size */
+    *image_len = (size_t)H5FS_HEADER_SIZE(udata->f);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5FS__cache_hdr_get_load_size() */
+} /* end H5FS__cache_hdr_get_initial_load_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -765,10 +758,6 @@ H5FS__cache_hdr_serialize(const H5F_t *f, void *_image, size_t len,
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS__cache_hdr_serialize() */
 
-/***************************************/
-/* no H5FS__cache_hdr_notify() function */
-/***************************************/
-
 
 /*-------------------------------------------------------------------------
  * Function:	H5FS__cache_hdr_free_icr
@@ -812,13 +801,9 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FS__cache_hdr_free_icr() */
 
-/********************************************************/
-/* metadata cache callback definitions for section info */
-/********************************************************/
-
 
 /*-------------------------------------------------------------------------
- * Function:	H5FS__cache_sinfo_get_load_size()
+ * Function:	H5FS__cache_sinfo_get_initial_load_size()
  *
  * Purpose:	Compute the size of the on disk image of the free space 
  *		manager section info, and place this value in *image_len.
@@ -832,10 +817,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5FS__cache_sinfo_get_load_size(const void *_image, void  *_udata, size_t *image_len,
-    size_t *actual_len)
+H5FS__cache_sinfo_get_initial_load_size(void  *_udata, size_t *image_len)
 {
-    const uint8_t *image = (const uint8_t *)_image;     /* Pointer into raw data buffer */
     const H5FS_t *fspace;        			/* free space manager */
     H5FS_sinfo_cache_ud_t *udata = (H5FS_sinfo_cache_ud_t *)_udata; /* User data for callback */
 
@@ -848,15 +831,11 @@ H5FS__cache_sinfo_get_load_size(const void *_image, void  *_udata, size_t *image
     HDassert(fspace->sect_size > 0);
     HDassert(image_len);
 
-    if(image == NULL)
-	*image_len = (size_t)(fspace->sect_size);
-    else {
-        HDassert(actual_len);
-        HDassert(*actual_len == *image_len);
-    } /* end else */
+    /* Set the image length size */
+    *image_len = (size_t)(fspace->sect_size);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5FS__cache_sinfo_get_load_size() */
+} /* end H5FS__cache_sinfo_get_initial_load_size() */
 
 
 /*-------------------------------------------------------------------------

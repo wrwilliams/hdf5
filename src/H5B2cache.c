@@ -65,8 +65,7 @@
 /********************/
 
 /* Metadata cache callbacks */
-static herr_t H5B2__cache_hdr_get_load_size(const void *image_ptr, void *udata, 
-    size_t *image_len, size_t *actual_len);
+static herr_t H5B2__cache_hdr_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5B2__cache_hdr_verify_chksum(const void *image_ptr, size_t len, void *udata);
 static void *H5B2__cache_hdr_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
@@ -76,8 +75,7 @@ static herr_t H5B2__cache_hdr_serialize(const H5F_t *f, void *image, size_t len,
 static herr_t H5B2__cache_hdr_notify(H5AC_notify_action_t action, void *thing);
 static herr_t H5B2__cache_hdr_free_icr(void *thing);
 
-static herr_t H5B2__cache_int_get_load_size(const void *image_ptr, void *udata, 
-    size_t *image_len, size_t *actual_len);
+static herr_t H5B2__cache_int_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5B2__cache_int_verify_chksum(const void *image_ptr, size_t len, void *udata);
 static void *H5B2__cache_int_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
@@ -87,8 +85,7 @@ static herr_t H5B2__cache_int_serialize(const H5F_t *f, void *image, size_t len,
 static herr_t H5B2__cache_int_notify(H5AC_notify_action_t action, void *thing);
 static herr_t H5B2__cache_int_free_icr(void *thing);
 
-static herr_t H5B2__cache_leaf_get_load_size(const void * mage_ptr, void *udata, 
-    size_t *image_len, size_t *actual_len);
+static herr_t H5B2__cache_leaf_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5B2__cache_leaf_verify_chksum(const void *image_ptr, size_t len, void *udata);
 static void *H5B2__cache_leaf_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
@@ -108,8 +105,9 @@ const H5AC_class_t H5AC_BT2_HDR[1] = {{
     "v2 B-tree header",                 /* Metadata client name (for debugging) */
     H5FD_MEM_BTREE,                     /* File space memory type for client */
     H5AC__CLASS_NO_FLAGS_SET,           /* Client class behavior flags */
-    H5B2__cache_hdr_get_load_size,      /* 'get_load_size' callback */
-    H5B2__cache_hdr_verify_chksum,
+    H5B2__cache_hdr_get_initial_load_size, /* 'get_initial_load_size' callback */
+    NULL,				/* 'get_final_load_size' callback */
+    H5B2__cache_hdr_verify_chksum,      /* 'verify_chksum' callback */
     H5B2__cache_hdr_deserialize,        /* 'deserialize' callback */
     H5B2__cache_hdr_image_len,          /* 'image_len' callback */
     NULL,                               /* 'pre_serialize' callback */
@@ -125,7 +123,8 @@ const H5AC_class_t H5AC_BT2_INT[1] = {{
     "v2 B-tree internal node",          /* Metadata client name (for debugging) */
     H5FD_MEM_BTREE,                     /* File space memory type for client */
     H5AC__CLASS_NO_FLAGS_SET,           /* Client class behavior flags */
-    H5B2__cache_int_get_load_size,      /* 'get_load_size' callback */
+    H5B2__cache_int_get_initial_load_size, /* 'get_initial_load_size' callback */
+    NULL,				/* 'get_final_load_size' callback */
     H5B2__cache_int_verify_chksum,	/* 'verify_chksum' callback */
     H5B2__cache_int_deserialize,        /* 'deserialize' callback */
     H5B2__cache_int_image_len,          /* 'image_len' callback */
@@ -142,7 +141,8 @@ const H5AC_class_t H5AC_BT2_LEAF[1] = {{
     "v2 B-tree leaf node",              /* Metadata client name (for debugging) */
     H5FD_MEM_BTREE,                     /* File space memory type for client */
     H5AC__CLASS_NO_FLAGS_SET,           /* Client class behavior flags */
-    H5B2__cache_leaf_get_load_size,     /* 'get_load_size' callback */
+    H5B2__cache_leaf_get_initial_load_size, /* 'get_initial_load_size' callback */
+    NULL,				/* 'get_final_load_size' callback */
     H5B2__cache_leaf_verify_chksum,	/* 'verify_chksum' callback */
     H5B2__cache_leaf_deserialize,       /* 'deserialize' callback */
     H5B2__cache_leaf_image_len,         /* 'image_len' callback */
@@ -166,7 +166,7 @@ const H5AC_class_t H5AC_BT2_LEAF[1] = {{
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5B2__cache_hdr_get_load_size
+ * Function:    H5B2__cache_hdr_get_initial_load_size
  *
  * Purpose:     Compute the size of the data structure on disk.
  *
@@ -179,10 +179,8 @@ const H5AC_class_t H5AC_BT2_LEAF[1] = {{
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B2__cache_hdr_get_load_size(const void *_image, void *_udata, size_t *image_len,
-    size_t *actual_len)
+H5B2__cache_hdr_get_initial_load_size(void *_udata, size_t *image_len)
 {
-    const uint8_t *image = (const uint8_t *)_image;       		    /* Pointer into raw data buffer */
     H5B2_hdr_cache_ud_t *udata = (H5B2_hdr_cache_ud_t *)_udata; /* User data for callback */
 
     FUNC_ENTER_STATIC_NOERR
@@ -192,16 +190,11 @@ H5B2__cache_hdr_get_load_size(const void *_image, void *_udata, size_t *image_le
     HDassert(udata->f);
     HDassert(image_len);
 
-    if(image == NULL) {
-	/* Set the image length size */
-	*image_len = H5B2_HEADER_SIZE_FILE(udata->f);
-    } else {
-	HDassert(actual_len);
-	HDassert(*actual_len == *image_len);
-    }
+    /* Set the image length size */
+    *image_len = H5B2_HEADER_SIZE_FILE(udata->f);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5B2__cache_hdr_get_load_size() */
+} /* end H5B2__cache_hdr_get_initial_load_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -564,7 +557,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5B2__cache_int_get_load_size
+ * Function:    H5B2__cache_int_get_initial_load_size
  *
  * Purpose:     Compute the size of the data structure on disk.
  *
@@ -577,10 +570,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B2__cache_int_get_load_size(const void *_image, void *_udata, size_t *image_len,
-    size_t *actual_len)
+H5B2__cache_int_get_initial_load_size(void *_udata, size_t *image_len)
 {
-    const uint8_t *image = (const uint8_t *)_image;       /* Pointer into raw data buffer */
     H5B2_internal_cache_ud_t *udata = (H5B2_internal_cache_ud_t *)_udata; /* User data for callback */
 
     FUNC_ENTER_STATIC_NOERR
@@ -590,17 +581,13 @@ H5B2__cache_int_get_load_size(const void *_image, void *_udata, size_t *image_le
     HDassert(udata->hdr);
     HDassert(image_len);
 
-    if(image == NULL) {
-	/* Set the image length size */
-	*image_len = udata->hdr->node_size;
-    } else {
-	HDassert(actual_len);
-	HDassert(*actual_len == *image_len);
-    }
+    /* Set the image length size */
+    *image_len = udata->hdr->node_size;
 
     FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5B2__cache_int_get_load_size() */
+} /* end H5B2__cache_int_get_initial_load_size() */
 
+
 /*-------------------------------------------------------------------------
  * Function:	H5B2__cache_int_verify_chksum
  *
@@ -1006,7 +993,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5B2__cache_leaf_get_load_size
+ * Function:    H5B2__cache_leaf_get_initial_load_size
  *
  * Purpose:     Compute the size of the data structure on disk.
  *
@@ -1019,10 +1006,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B2__cache_leaf_get_load_size(const void *_image, void *_udata, size_t *image_len,
-    size_t *actual_len)
+H5B2__cache_leaf_get_initial_load_size(void *_udata, size_t *image_len)
 {
-    const uint8_t *image = (const uint8_t *)_image;       		      /* Pointer into raw data buffer */
     H5B2_leaf_cache_ud_t *udata = (H5B2_leaf_cache_ud_t *)_udata; /* User data for callback */
 
     FUNC_ENTER_STATIC_NOERR
@@ -1032,17 +1017,13 @@ H5B2__cache_leaf_get_load_size(const void *_image, void *_udata, size_t *image_l
     HDassert(udata->hdr);
     HDassert(image_len);
 
-    if(image == NULL) {
-	/* Set the image length size */
-	*image_len = udata->hdr->node_size;
-    } else {
-	HDassert(actual_len);
-	HDassert(*actual_len == *image_len);
-    }
+    /* Set the image length size */
+    *image_len = udata->hdr->node_size;
 
     FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5B2__cache_leaf_get_load_size() */
+} /* end H5B2__cache_leaf_get_initial_load_size() */
 
+
 /*-------------------------------------------------------------------------
  * Function:	H5B2__cache_leaf_verify_chksum
  *

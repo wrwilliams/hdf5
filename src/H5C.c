@@ -6268,8 +6268,6 @@ done:
  *              callback with non-null image pointer.
  *              If exceed, return error.
  *
- *              The coding is copied and moved from H5C_load_entry().
- *
  * Return:      FAIL if error is detected, SUCCEED otherwise.
  *
  * Programmer:  Vailin Choi
@@ -6368,7 +6366,11 @@ H5C_load_entry(H5F_t *              f,
     HDassert(f->shared->cache);
     HDassert(type);
     HDassert(H5F_addr_defined(addr));
-    HDassert(type->get_load_size);
+    HDassert(type->get_initial_load_size);
+    if(type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG)
+        HDassert(type->get_final_load_size);
+    else
+        HDassert(NULL == type->get_final_load_size);
     HDassert(type->deserialize);
 
     /* Can't see how skip reads could be usefully combined with
@@ -6377,8 +6379,8 @@ H5C_load_entry(H5F_t *              f,
     HDassert(!((type->flags & H5C__CLASS_SKIP_READS) &&
                (type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG)));
 
-    /* Call the get_load_size callback, to retrieve the initial size of image */
-    if(type->get_load_size(NULL, udata, &len, NULL) < 0)
+    /* Call the get_initial_load_size callback, to retrieve the initial size of image */
+    if(type->get_initial_load_size(udata, &len) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTGET, NULL, "can't retrieve image size")
     HDassert(len > 0);
 
@@ -6459,7 +6461,7 @@ H5C_load_entry(H5F_t *              f,
             if((type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG) && len_changed) {
                 /* Retrieve the actual length */
                 actual_len = len;
-                if(type->get_load_size(image, udata, &len, &actual_len) < 0)
+                if(type->get_final_load_size(image, len, udata, &actual_len) < 0)
                     continue;   /* Transfer control to while() and count towards retries */
 
                 /* Check for the length changing */

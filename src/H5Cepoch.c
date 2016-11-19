@@ -63,8 +63,10 @@
  * epochs so that they can be evicted from the cache.
  *
  ****************************************************************************/
-static herr_t H5C__epoch_marker_get_load_size(const void *image_ptr,
-    void *udata_ptr, size_t *image_len_ptr, size_t *actual_len);
+static herr_t H5C__epoch_marker_get_initial_load_size(void *udata_ptr,
+    size_t *image_len_ptr);
+static herr_t H5C__epoch_marker_get_final_load_size(const void *image_ptr,
+    size_t *image_len_ptr, void *udata_ptr, size_t *actual_len);
 static htri_t H5C__epoch_marker_verify_chksum(const void *image_ptr, 
     size_t len, void *udata_ptr);
 static void * H5C__epoch_marker_deserialize(const void * image_ptr,
@@ -103,7 +105,8 @@ const H5C_class_t H5C__epoch_marker_class =
     /* name             = */ "epoch marker",
     /* mem_type         = */ H5FD_MEM_DEFAULT, /* value doesn't matter */
     /* flags		= */ H5C__CLASS_NO_FLAGS_SET,
-    /* get_load_size    = */ H5C__epoch_marker_get_load_size,
+    /* get_initial_load_size = */ H5C__epoch_marker_get_initial_load_size,
+    /* get_final_load_size = */ H5C__epoch_marker_get_final_load_size,
     /* verify_chksum    = */ H5C__epoch_marker_verify_chksum,
     /* deserialize      = */ H5C__epoch_marker_deserialize,
     /* image_len        = */ H5C__epoch_marker_image_len,
@@ -126,15 +129,28 @@ const H5C_class_t H5C__epoch_marker_class =
 
 
 static herr_t
-H5C__epoch_marker_get_load_size(const void H5_ATTR_UNUSED *image_ptr, void H5_ATTR_UNUSED *udata_ptr,
-    size_t H5_ATTR_UNUSED *image_len_ptr, size_t H5_ATTR_UNUSED *actual_len)
+H5C__epoch_marker_get_initial_load_size(void H5_ATTR_UNUSED *udata_ptr,
+    size_t H5_ATTR_UNUSED *image_len_ptr)
 {
     FUNC_ENTER_STATIC_NOERR /* Yes, even though this pushes an error on the stack */
 
     HERROR(H5E_CACHE, H5E_SYSTEM, "called unreachable fcn.");
 
     FUNC_LEAVE_NOAPI(FAIL)
-} /* end H5C__epoch_marker_get_load_size() */
+} /* end H5C__epoch_marker_get_initial_load_size() */
+
+
+static herr_t
+H5C__epoch_marker_get_final_load_size(const void H5_ATTR_UNUSED *image_ptr,
+    size_t H5_ATTR_UNUSED *image_len_ptr, void H5_ATTR_UNUSED *udata_ptr,
+    size_t H5_ATTR_UNUSED *actual_len)
+{
+    FUNC_ENTER_STATIC_NOERR /* Yes, even though this pushes an error on the stack */
+
+    HERROR(H5E_CACHE, H5E_SYSTEM, "called unreachable fcn.");
+
+    FUNC_LEAVE_NOAPI(FAIL)
+} /* end H5C__epoch_marker_final_get_load_size() */
 
 
 static htri_t 

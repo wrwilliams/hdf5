@@ -67,8 +67,9 @@
 /********************/
 
 /* Metadata cache (H5AC) callbacks */
-static herr_t H5F__cache_superblock_get_load_size(const void *image_ptr, void *udata, 
-    size_t *image_len, size_t *actual_len);
+static herr_t H5F__cache_superblock_get_initial_load_size(void *udata, size_t *image_len);
+static herr_t H5F__cache_superblock_get_final_load_size(const void *image_ptr,
+    size_t image_len, void *udata, size_t *actual_len);
 static htri_t H5F__cache_superblock_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5F__cache_superblock_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
@@ -80,8 +81,9 @@ static herr_t H5F__cache_superblock_serialize(const H5F_t *f, void *image, size_
     void *thing);
 static herr_t H5F__cache_superblock_free_icr(void *thing);
 
-static herr_t H5F__cache_drvrinfo_get_load_size(const void *image_ptr, void *udata, 
-    size_t *image_len, size_t *actual_len);
+static herr_t H5F__cache_drvrinfo_get_initial_load_size(void *udata, size_t *image_len);
+static herr_t H5F__cache_drvrinfo_get_final_load_size(const void *image_ptr,
+    size_t image_len, void *udata, size_t *actual_len);
 static void *H5F__cache_drvrinfo_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
 static herr_t H5F__cache_drvrinfo_image_len(const void *thing, size_t *image_len);
@@ -100,7 +102,8 @@ const H5AC_class_t H5AC_SUPERBLOCK[1] = {{
     "Superblock",                       /* Metadata client name (for debugging) */
     H5FD_MEM_SUPER,                     /* File space memory type for client */
     H5AC__CLASS_SPECULATIVE_LOAD_FLAG,  /* Client class behavior flags */
-    H5F__cache_superblock_get_load_size,/* 'get_load_size' callback */
+    H5F__cache_superblock_get_initial_load_size,/* 'get_initial_load_size' callback */
+    H5F__cache_superblock_get_final_load_size, /* 'get_final_load_size' callback */
     H5F__cache_superblock_verify_chksum, /* 'verify_chksum' callback */
     H5F__cache_superblock_deserialize,  /* 'deserialize' callback */
     H5F__cache_superblock_image_len,    /* 'image_len' callback */
@@ -117,7 +120,8 @@ const H5AC_class_t H5AC_DRVRINFO[1] = {{
     "Driver info block",                /* Metadata client name (for debugging) */
     H5FD_MEM_SUPER,                     /* File space memory type for client */
     H5AC__CLASS_SPECULATIVE_LOAD_FLAG,  /* Client class behavior flags */
-    H5F__cache_drvrinfo_get_load_size,  /* 'get_load_size' callback */
+    H5F__cache_drvrinfo_get_initial_load_size,  /* 'get_initial_load_size' callback */
+    H5F__cache_drvrinfo_get_final_load_size, /* 'get_final_load_size' callback */
     NULL,				/* 'verify_chksum' callback */
     H5F__cache_drvrinfo_deserialize,    /* 'deserialize' callback */
     H5F__cache_drvrinfo_image_len,      /* 'image_len' callback */
@@ -144,7 +148,7 @@ H5FL_EXTERN(H5F_super_t);
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5F__cache_superblock_get_load_size
+ * Function:    H5F__cache_superblock_get_initial_load_size
  *
  * Purpose:     Compute the size of the data structure on disk.
  *
@@ -157,8 +161,37 @@ H5FL_EXTERN(H5F_super_t);
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5F__cache_superblock_get_load_size(const void *_image, void *_udata, size_t *image_len,
-    size_t *actual_len)
+H5F__cache_superblock_get_initial_load_size(void H5_ATTR_UNUSED *_udata, size_t *image_len)
+{
+    FUNC_ENTER_STATIC_NOERR
+
+    /* Check arguments */
+    HDassert(image_len);
+
+    /* Set the initial image length size */
+    *image_len = H5F_SUPERBLOCK_FIXED_SIZE +    /* Fixed size of superblock */
+                 H5F_SUPERBLOCK_MINIMAL_VARLEN_SIZE;
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+} /* end H5F__cache_superblock_get_initial_load_size() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5F__cache_superblock_get_final_load_size
+ *
+ * Purpose:     Compute the final size of the data structure on disk.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Quincey Koziol
+ *              koziol@lbl.gov
+ *              November 17, 2016
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5F__cache_superblock_get_final_load_size(const void *_image, size_t image_len,
+    void *_udata, size_t *actual_len)
 {
     const uint8_t *image = (const uint8_t *)_image;   			    /* Pointer into raw data buffer */
     H5F_superblock_cache_ud_t *udata = (H5F_superblock_cache_ud_t *)_udata; /* User data */
@@ -171,74 +204,62 @@ H5F__cache_superblock_get_load_size(const void *_image, void *_udata, size_t *im
     FUNC_ENTER_STATIC
 
     /* Check arguments */
-    HDassert(image_len);
+    HDassert(image);
+    HDassert(udata);
+    HDassert(udata->f);
+    HDassert(actual_len);
+    HDassert(*actual_len == image_len);
 
-    if(image == NULL) {
-	HDassert(actual_len == NULL);
+    /* Skip over file signature */
+    image += H5F_SIGNATURE_LEN;
 
-	/* Set the initial image length size */
-	*image_len = H5F_SUPERBLOCK_FIXED_SIZE +    /* Fixed size of superblock */
-	    	     H5F_SUPERBLOCK_MINIMAL_VARLEN_SIZE;
+    /* Superblock version */
+    super_vers = *image++;
+    if(super_vers > HDF5_SUPERBLOCK_VERSION_LATEST)
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "bad superblock version number")
+
+    /* Save the version to be used in verify_chksum callback */
+    udata->super_vers = super_vers;
+
+    /* Sanity check */
+    HDassert(((size_t)(image - (const uint8_t *)_image)) == H5F_SUPERBLOCK_FIXED_SIZE);
+    HDassert(image_len >= H5F_SUPERBLOCK_FIXED_SIZE + 6);
+
+    /* Determine the size of addresses & size of offsets, for computing the
+     * variable-sized portion of the superblock.
+     */
+    if(super_vers < HDF5_SUPERBLOCK_VERSION_2) {
+        sizeof_addr = image[4];
+        sizeof_size = image[5];
     } /* end if */
-    else { /* compute actual_len */
-	HDassert(udata);
-	HDassert(udata->f);
-	HDassert(actual_len);
-	HDassert(*actual_len == *image_len);
-
-	image += H5F_SIGNATURE_LEN;
-
-	/* Superblock version */
-	super_vers = *image++;
-	if(super_vers > HDF5_SUPERBLOCK_VERSION_LATEST)
-	    HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "bad superblock version number")
-
-	/* Save the version to be used in verify_chksum callback */
-	udata->super_vers = super_vers;
-
-	/* Sanity check */
-	HDassert(((size_t)(image - (const uint8_t *)_image)) == H5F_SUPERBLOCK_FIXED_SIZE);
-	HDassert(*image_len >= H5F_SUPERBLOCK_FIXED_SIZE + 6);
-
-	/* Determine the size of addresses & size of offsets, for computing the
-	 * variable-sized portion of the superblock.
-	 */
-	if(super_vers < HDF5_SUPERBLOCK_VERSION_2) {
-	    sizeof_addr = image[4];
-	    sizeof_size = image[5];
-	} /* end if */
-	else {
-	    sizeof_addr = image[0];
-	    sizeof_size = image[1];
-	} /* end else */
-	if(sizeof_addr != 2 && sizeof_addr != 4 &&
-                sizeof_addr != 8 && sizeof_addr != 16 && sizeof_addr != 32)
-	    HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "bad byte number in an address")
-	if(sizeof_size != 2 && sizeof_size != 4 &&
-                sizeof_size != 8 && sizeof_size != 16 && sizeof_size != 32)
-	    HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "bad byte number for object size")
-
-	/* Determine the size of the variable-length part of the superblock */
-	variable_size = (size_t)H5F_SUPERBLOCK_VARLEN_SIZE(super_vers, sizeof_addr, sizeof_size);
-	HDassert(variable_size > 0);
-
-	/* Handle metadata cache retry for variable-sized portion of the superblock */
-	if(*image_len != (H5F_SUPERBLOCK_FIXED_SIZE + variable_size)) {
-
-	    /* Sanity check */
-	    HDassert(*image_len == (H5F_SUPERBLOCK_FIXED_SIZE + H5F_SUPERBLOCK_MINIMAL_VARLEN_SIZE));
-
-	    /* Make certain we can read the variabled-sized portion of the superblock */
-	    if(H5F__set_eoa(udata->f, H5FD_MEM_SUPER, (haddr_t)(H5F_SUPERBLOCK_FIXED_SIZE + variable_size)) < 0)
-		HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "set end of space allocation request failed")
-
-	    *actual_len = H5F_SUPERBLOCK_FIXED_SIZE + variable_size;
-	} /* end if */
+    else {
+        sizeof_addr = image[0];
+        sizeof_size = image[1];
     } /* end else */
+    if(sizeof_addr != 2 && sizeof_addr != 4 &&
+            sizeof_addr != 8 && sizeof_addr != 16 && sizeof_addr != 32)
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "bad byte number in an address")
+    if(sizeof_size != 2 && sizeof_size != 4 &&
+            sizeof_size != 8 && sizeof_size != 16 && sizeof_size != 32)
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "bad byte number for object size")
+
+    /* Determine the size of the variable-length part of the superblock */
+    variable_size = (size_t)H5F_SUPERBLOCK_VARLEN_SIZE(super_vers, sizeof_addr, sizeof_size);
+    HDassert(variable_size > 0);
+
+    /* Sanity check */
+    HDassert(image_len == (H5F_SUPERBLOCK_FIXED_SIZE + H5F_SUPERBLOCK_MINIMAL_VARLEN_SIZE));
+
+    /* Make certain we can read the variabled-sized portion of the superblock */
+    if(H5F__set_eoa(udata->f, H5FD_MEM_SUPER, (haddr_t)(H5F_SUPERBLOCK_FIXED_SIZE + variable_size)) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "set end of space allocation request failed")
+
+    /* Set the final size for the cache image */
+    *actual_len = H5F_SUPERBLOCK_FIXED_SIZE + variable_size;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5F__cache_superblock_get_load_size() */
+} /* end H5F__cache_superblock_get_final_load_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -860,9 +881,9 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5F__cache_drvrinfo_get_load_size
+ * Function:    H5F__cache_drvrinfo_get_initial_load_size
  *
- * Purpose:     Compute the size of the data structure on disk.
+ * Purpose:     Compute the intiial size of the data structure on disk.
  *
  * Return:      Non-negative on success/Negative on failure
  *
@@ -873,73 +894,87 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5F__cache_drvrinfo_get_load_size(const void *_image, void *_udata, size_t *image_len,
-    size_t *actual_len)
+H5F__cache_drvrinfo_get_initial_load_size(void H5_ATTR_UNUSED *_udata, size_t *image_len)
+{
+    FUNC_ENTER_STATIC_NOERR
+
+    /* Check arguments */
+    HDassert(image_len);
+
+    /* Set the initial image length size */
+    *image_len = H5F_DRVINFOBLOCK_HDR_SIZE;     /* Fixed size portion of driver info block */
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+} /* end H5F__cache_drvrinfo_get_initial_load_size() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5F__cache_drvrinfo_get_final_load_size
+ *
+ * Purpose:     Compute the final size of the data structure on disk.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Quincey Koziol
+ *              koziol@lbl.gov
+ *              November 17, 2016
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5F__cache_drvrinfo_get_final_load_size(const void *_image, size_t image_len,
+    void *_udata, size_t *actual_len)
 {
     const uint8_t *image = (const uint8_t *)_image;   			/* Pointer into raw data buffer */
     H5F_drvrinfo_cache_ud_t *udata = (H5F_drvrinfo_cache_ud_t *)_udata;	/* User data */
     unsigned drv_vers;          /* Version of driver info block */
     size_t drvinfo_len;         /* Length of encoded buffer */
+    haddr_t eoa;                /* Current EOA for the file */
+    haddr_t min_eoa;            /* Minimum EOA needed for reading the driver info */
     htri_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_STATIC
 
     /* Check arguments */
-    HDassert(image_len);
+    HDassert(image);
+    HDassert(udata);
+    HDassert(udata->f);
+    HDassert(actual_len);
+    HDassert(*actual_len == image_len);
 
-    if(image == NULL) {
-	HDassert(actual_len == NULL);
+    /* Version number */
+    drv_vers = *image++;
+    if(drv_vers != HDF5_DRIVERINFO_VERSION_0)
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "bad driver information block version number")
 
-	/* Set the initial image length size */
-	*image_len = H5F_DRVINFOBLOCK_HDR_SIZE;     /* Fixed size portion of driver info block */
+    image += 3; /* reserved bytes */
 
-    } /* end if */
-    else { /* compute actual_len */
-        /* Sanity checks */
-	HDassert(udata);
-	HDassert(udata->f);
-	HDassert(actual_len);
-	HDassert(*actual_len == *image_len);
+    /* Driver info size */
+    UINT32DECODE(image, drvinfo_len);
 
-	/* Version number */
-	drv_vers = *image++;
-	if(drv_vers != HDF5_DRIVERINFO_VERSION_0)
-	    HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "bad driver information block version number")
+    /* Sanity check */
+    HDassert(image_len == H5F_DRVINFOBLOCK_HDR_SIZE);
 
-	image += 3; /* reserved bytes */
+    /* Extend the EOA if required so that we can read the complete driver info block */
 
-	/* Driver info size */
-	UINT32DECODE(image, drvinfo_len);
+    /* Get current EOA... */
+    if((eoa = H5FD_get_eoa(udata->f->shared->lf, H5FD_MEM_SUPER)) == HADDR_UNDEF)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "driver get_eoa request failed")
 
-	/* Handle metadata cache retry for variable-sized portion of the driver info block */
-	if(*image_len != (H5F_DRVINFOBLOCK_HDR_SIZE + drvinfo_len)) {
-            haddr_t eoa;
-            haddr_t min_eoa;
+    /* ... if it is too small, extend it. */
+    min_eoa = udata->driver_addr + H5F_DRVINFOBLOCK_HDR_SIZE + drvinfo_len;
 
-	    /* Sanity check */
-	    HDassert(*image_len == H5F_DRVINFOBLOCK_HDR_SIZE);
+    /* If it grew, set it */
+    if(H5F_addr_gt(min_eoa, eoa))
+        if(H5FD_set_eoa(udata->f->shared->lf, H5FD_MEM_SUPER, min_eoa) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "set end of space allocation request failed")
 
-	    /* Extend the EOA if required so that we can read the complete driver info block */
-
-            /* Get current EOA... */
-            if((eoa = H5FD_get_eoa(udata->f->shared->lf, H5FD_MEM_SUPER)) == HADDR_UNDEF)
-                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "driver get_eoa request failed")
-
-            /* ... if it is too small, extend it. */
-            min_eoa = udata->driver_addr + H5F_DRVINFOBLOCK_HDR_SIZE + drvinfo_len;
-
-            /* If it grew, set it */
-            if(H5F_addr_gt(min_eoa, eoa))
-                if(H5FD_set_eoa(udata->f->shared->lf, H5FD_MEM_SUPER, min_eoa) < 0)
-                    HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "set end of space allocation request failed")
-
-	    *actual_len = H5F_DRVINFOBLOCK_HDR_SIZE + drvinfo_len;
-	} /* end if */
-    } /* compute actual_len */
+    /* Set the final size for the cache image */
+    *actual_len = H5F_DRVINFOBLOCK_HDR_SIZE + drvinfo_len;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5F__cache_drvrinfo_get_load_size() */
+} /* end H5F__cache_drvrinfo_get_final_load_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -1043,7 +1078,7 @@ H5F__cache_drvrinfo_image_len(const void *_thing, size_t *image_len)
 
     /* Set the image length size */
     *image_len = (size_t)(H5F_DRVINFOBLOCK_HDR_SIZE +   /* Fixed-size portion of driver info block */
-        drvinfo->len);                                  /* Variable-size portion of driver info block */
+            drvinfo->len);                              /* Variable-size portion of driver info block */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5F__cache_drvrinfo_image_len() */

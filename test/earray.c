@@ -160,8 +160,7 @@ typedef struct earray_test_t {
 /* Local prototypes */
 
 /* Metadata cache (H5AC) callbacks */
-static herr_t earray_cache_test_get_load_size(const void *image, void *udata,
-    size_t *image_len, size_t *actual_len);
+static herr_t earray_cache_test_get_initial_load_size(void *udata, size_t *image_len);
 static void *earray_cache_test_deserialize(const void *image_ptr, size_t len,
     void *udata_ptr, hbool_t *dirty_ptr);
 static herr_t earray_cache_test_image_len(const void *thing, size_t *image_len_ptr);
@@ -189,7 +188,8 @@ const H5AC_class_t H5AC_EARRAY_TEST[1] = {{
     /* name          */ "earray test",
     /* mem_type      */ H5FD_MEM_DEFAULT,
     /* flags         */ H5AC__CLASS_SKIP_READS | H5AC__CLASS_SKIP_WRITES,
-    /* get_load_size */ earray_cache_test_get_load_size,
+    /* get_initial_load_size */ earray_cache_test_get_initial_load_size,
+    /* get_final_load_size */ NULL,
     /* verify_chksum */ NULL,
     /* deserialize   */ earray_cache_test_deserialize,
     /* image_len     */ earray_cache_test_image_len,
@@ -619,13 +619,12 @@ error:
 
 
 /*-------------------------------------------------------------------------
- * Function:    earray_cache_test_get_load_size()
+ * Function:    earray_cache_test_get_initial_load_size()
  *
  * Purpose: place holder function -- should never be called
  *
- *
  *      A generic discussion of metadata cache callbacks of this type
- *      may be found in H5Cprivate.h:
+ *      may be found in H5Cprivate.h.
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
@@ -636,8 +635,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static herr_t
-earray_cache_test_get_load_size(const void H5_ATTR_UNUSED *image, void *udata,
-    size_t *image_len, size_t H5_ATTR_UNUSED *actual_len)
+earray_cache_test_get_initial_load_size( void *udata, size_t *image_len)
 {
     HDassert(udata);
     HDassert(image_len);
@@ -648,7 +646,7 @@ earray_cache_test_get_load_size(const void H5_ATTR_UNUSED *image, void *udata,
     *image_len = 0;
 
     return(SUCCEED);
-} /* end earray_cache_test_get_load_size() */
+} /* end earray_cache_test_get_initial_load_size() */
 
 
 /*-------------------------------------------------------------------------

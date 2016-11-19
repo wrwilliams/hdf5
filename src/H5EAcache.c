@@ -73,8 +73,7 @@
 /********************/
 
 /* Metadata cache (H5AC) callbacks */
-static herr_t H5EA__cache_hdr_get_load_size(const void *image, void *udata, 
-    size_t *image_len, size_t *actual_len);
+static herr_t H5EA__cache_hdr_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5EA__cache_hdr_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5EA__cache_hdr_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
@@ -84,8 +83,7 @@ static herr_t H5EA__cache_hdr_serialize(const H5F_t *f, void *image, size_t len,
 static herr_t H5EA__cache_hdr_notify(H5AC_notify_action_t action, void *thing);
 static herr_t H5EA__cache_hdr_free_icr(void *thing);
 
-static herr_t H5EA__cache_iblock_get_load_size(const void *image, void *udata, 
-    size_t *image_len, size_t *actual_len);
+static herr_t H5EA__cache_iblock_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5EA__cache_iblock_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5EA__cache_iblock_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
@@ -95,8 +93,7 @@ static herr_t H5EA__cache_iblock_serialize(const H5F_t *f, void *image, size_t l
 static herr_t H5EA__cache_iblock_notify(H5AC_notify_action_t action, void *thing);
 static herr_t H5EA__cache_iblock_free_icr(void *thing);
 
-static herr_t H5EA__cache_sblock_get_load_size(const void *image, void *udata, 
-    size_t *image_len, size_t *actual_len);
+static herr_t H5EA__cache_sblock_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5EA__cache_sblock_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5EA__cache_sblock_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
@@ -106,8 +103,7 @@ static herr_t H5EA__cache_sblock_serialize(const H5F_t *f, void *image, size_t l
 static herr_t H5EA__cache_sblock_notify(H5AC_notify_action_t action, void *thing);
 static herr_t H5EA__cache_sblock_free_icr(void *thing);
 
-static herr_t H5EA__cache_dblock_get_load_size(const void *image, void *udata, 
-    size_t *image_len, size_t *actual_len);
+static herr_t H5EA__cache_dblock_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5EA__cache_dblock_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5EA__cache_dblock_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
@@ -118,8 +114,7 @@ static herr_t H5EA__cache_dblock_notify(H5AC_notify_action_t action, void *thing
 static herr_t H5EA__cache_dblock_free_icr(void *thing);
 static herr_t H5EA__cache_dblock_fsf_size(const void *thing, size_t *fsf_size);
 
-static herr_t H5EA__cache_dblk_page_get_load_size(const void *image, void *udata, 
-    size_t *image_len, size_t *actual_len);
+static herr_t H5EA__cache_dblk_page_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5EA__cache_dblk_page_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5EA__cache_dblk_page_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
@@ -141,7 +136,8 @@ const H5AC_class_t H5AC_EARRAY_HDR[1] = {{
     "Extensible Array Header",          /* Metadata client name (for debugging) */
     H5FD_MEM_EARRAY_HDR,                /* File space memory type for client */
     H5AC__CLASS_NO_FLAGS_SET,           /* Client class behavior flags */
-    H5EA__cache_hdr_get_load_size,      /* 'get_load_size' callback */
+    H5EA__cache_hdr_get_initial_load_size,      /* 'get_initial_load_size' callback */
+    NULL,				/* 'get_final_load_size' callback */
     H5EA__cache_hdr_verify_chksum,	/* 'verify_chksum' callback */
     H5EA__cache_hdr_deserialize,        /* 'deserialize' callback */
     H5EA__cache_hdr_image_len,          /* 'image_len' callback */
@@ -158,7 +154,8 @@ const H5AC_class_t H5AC_EARRAY_IBLOCK[1] = {{
     "Extensible Array Index Block",     /* Metadata client name (for debugging) */
     H5FD_MEM_EARRAY_IBLOCK,             /* File space memory type for client */
     H5AC__CLASS_NO_FLAGS_SET,           /* Client class behavior flags */
-    H5EA__cache_iblock_get_load_size,   /* 'get_load_size' callback */
+    H5EA__cache_iblock_get_initial_load_size,   /* 'get_initial_load_size' callback */
+    NULL,				/* 'get_final_load_size' callback */
     H5EA__cache_iblock_verify_chksum,	/* 'verify_chksum' callback */
     H5EA__cache_iblock_deserialize,     /* 'deserialize' callback */
     H5EA__cache_iblock_image_len,       /* 'image_len' callback */
@@ -175,7 +172,8 @@ const H5AC_class_t H5AC_EARRAY_SBLOCK[1] = {{
     "Extensible Array Super Block",     /* Metadata client name (for debugging) */
     H5FD_MEM_EARRAY_SBLOCK,             /* File space memory type for client */
     H5AC__CLASS_NO_FLAGS_SET,           /* Client class behavior flags */
-    H5EA__cache_sblock_get_load_size,   /* 'get_load_size' callback */
+    H5EA__cache_sblock_get_initial_load_size,   /* 'get_initial_load_size' callback */
+    NULL,				/* 'get_final_load_size' callback */
     H5EA__cache_sblock_verify_chksum,	/* 'verify_chksum' callback */
     H5EA__cache_sblock_deserialize,     /* 'deserialize' callback */
     H5EA__cache_sblock_image_len,       /* 'image_len' callback */
@@ -192,7 +190,8 @@ const H5AC_class_t H5AC_EARRAY_DBLOCK[1] = {{
     "Extensible Array Data Block",      /* Metadata client name (for debugging) */
     H5FD_MEM_EARRAY_DBLOCK,             /* File space memory type for client */
     H5AC__CLASS_NO_FLAGS_SET,           /* Client class behavior flags */
-    H5EA__cache_dblock_get_load_size,   /* 'get_load_size' callback */
+    H5EA__cache_dblock_get_initial_load_size,   /* 'get_initial_load_size' callback */
+    NULL,				/* 'get_final_load_size' callback */
     H5EA__cache_dblock_verify_chksum,	/* 'verify_chksum' callback */
     H5EA__cache_dblock_deserialize,     /* 'deserialize' callback */
     H5EA__cache_dblock_image_len,       /* 'image_len' callback */
@@ -209,7 +208,8 @@ const H5AC_class_t H5AC_EARRAY_DBLK_PAGE[1] = {{
     "Extensible Array Data Block Page", /* Metadata client name (for debugging) */
     H5FD_MEM_EARRAY_DBLK_PAGE,          /* File space memory type for client */
     H5AC__CLASS_NO_FLAGS_SET,           /* Client class behavior flags */
-    H5EA__cache_dblk_page_get_load_size, /* 'get_load_size' callback */
+    H5EA__cache_dblk_page_get_initial_load_size, /* 'get_initial_load_size' callback */
+    NULL,				/* 'get_final_load_size' callback */
     H5EA__cache_dblk_page_verify_chksum, /* 'verify_chksum' callback */
     H5EA__cache_dblk_page_deserialize,  /* 'deserialize' callback */
     H5EA__cache_dblk_page_image_len,    /* 'image_len' callback */
@@ -233,7 +233,7 @@ const H5AC_class_t H5AC_EARRAY_DBLK_PAGE[1] = {{
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5EA__cache_hdr_get_load_size
+ * Function:    H5EA__cache_hdr_get_initial_load_size
  *
  * Purpose:     Compute the size of the data structure on disk.
  *
@@ -247,10 +247,9 @@ const H5AC_class_t H5AC_EARRAY_DBLK_PAGE[1] = {{
  */
 BEGIN_FUNC(STATIC, NOERR,
 herr_t, SUCCEED, -,
-H5EA__cache_hdr_get_load_size(const void *_image, void *_udata, size_t *image_len, size_t *actual_len))
+H5EA__cache_hdr_get_initial_load_size(void *_udata, size_t *image_len))
 
     /* Local variables */
-    const uint8_t *image = (const uint8_t *)_image;       		    /* Pointer into raw data buffer */
     H5EA_hdr_cache_ud_t *udata = (H5EA_hdr_cache_ud_t *)_udata; /* User data for callback */
 
     /* Check arguments */
@@ -258,15 +257,10 @@ H5EA__cache_hdr_get_load_size(const void *_image, void *_udata, size_t *image_le
     HDassert(udata->f);
     HDassert(image_len);
 
-    if(image == NULL)
-	/* Set the image length size */
-	*image_len = (size_t)H5EA_HEADER_SIZE_FILE(udata->f);
-    else {
-        HDassert(actual_len);
-        HDassert(*actual_len == *image_len);
-    } /* end else */
+    /* Set the image length size */
+    *image_len = (size_t)H5EA_HEADER_SIZE_FILE(udata->f);
 
-END_FUNC(STATIC)   /* end H5EA__cache_hdr_get_load_size() */
+END_FUNC(STATIC)   /* end H5EA__cache_hdr_get_initial_load_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -631,7 +625,7 @@ END_FUNC(STATIC)   /* end H5EA__cache_hdr_free_icr() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5EA__cache_iblock_get_load_size
+ * Function:    H5EA__cache_iblock_get_initial_load_size
  *
  * Purpose:     Compute the size of the data structure on disk.
  *
@@ -645,11 +639,9 @@ END_FUNC(STATIC)   /* end H5EA__cache_hdr_free_icr() */
  */
 BEGIN_FUNC(STATIC, NOERR,
 herr_t, SUCCEED, -,
-H5EA__cache_iblock_get_load_size(const void *_image, void *_udata, size_t *image_len,
-    size_t *actual_len))
+H5EA__cache_iblock_get_initial_load_size(void *_udata, size_t *image_len))
 
     /* Local variables */
-    const uint8_t *image = (const uint8_t *)_image;    	/* Pointer into raw data buffer */
     H5EA_hdr_t *hdr = (H5EA_hdr_t *)_udata;   		/* User data for callback */
     H5EA_iblock_t iblock;           			/* Fake index block for computing size */
 
@@ -657,23 +649,17 @@ H5EA__cache_iblock_get_load_size(const void *_image, void *_udata, size_t *image
     HDassert(hdr);
     HDassert(image_len);
 
-    if(image == NULL) {
-	/* Set up fake index block for computing size on disk */
-	HDmemset(&iblock, 0, sizeof(iblock));
-	iblock.hdr = (H5EA_hdr_t *)hdr;     /* Casting away 'const' OK - QAK */
-	iblock.nsblks = H5EA_SBLK_FIRST_IDX(hdr->cparam.sup_blk_min_data_ptrs);
-	iblock.ndblk_addrs = 2 * ((size_t)hdr->cparam.sup_blk_min_data_ptrs - 1);
-	iblock.nsblk_addrs = hdr->nsblks - iblock.nsblks;
+    /* Set up fake index block for computing size on disk */
+    HDmemset(&iblock, 0, sizeof(iblock));
+    iblock.hdr = (H5EA_hdr_t *)hdr;     /* Casting away 'const' OK - QAK */
+    iblock.nsblks = H5EA_SBLK_FIRST_IDX(hdr->cparam.sup_blk_min_data_ptrs);
+    iblock.ndblk_addrs = 2 * ((size_t)hdr->cparam.sup_blk_min_data_ptrs - 1);
+    iblock.nsblk_addrs = hdr->nsblks - iblock.nsblks;
 
-	/* Set the image length size */
-	*image_len = (size_t)H5EA_IBLOCK_SIZE(&iblock);
-    } /* end if */
-    else {
-        HDassert(actual_len);
-        HDassert(*actual_len == *image_len);
-    } /* end else */
+    /* Set the image length size */
+    *image_len = (size_t)H5EA_IBLOCK_SIZE(&iblock);
 
-END_FUNC(STATIC)   /* end H5EA__cache_iblock_get_load_size() */
+END_FUNC(STATIC)   /* end H5EA__cache_iblock_get_initial_load_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -1031,7 +1017,7 @@ END_FUNC(STATIC)   /* end H5EA__cache_iblock_free_icr() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5EA__cache_sblock_get_load_size
+ * Function:    H5EA__cache_sblock_get_initial_load_size
  *
  * Purpose:     Compute the size of the data structure on disk.
  *
@@ -1045,11 +1031,9 @@ END_FUNC(STATIC)   /* end H5EA__cache_iblock_free_icr() */
  */
 BEGIN_FUNC(STATIC, NOERR,
 herr_t, SUCCEED, -,
-H5EA__cache_sblock_get_load_size(const void *_image, void *_udata, size_t *image_len,
-    size_t *actual_len))
+H5EA__cache_sblock_get_initial_load_size(void *_udata, size_t *image_len))
 
     /* Local variables */
-    const uint8_t *image = (const uint8_t *)_image;   	/* Pointer into raw data buffer */
     H5EA_sblock_cache_ud_t *udata = (H5EA_sblock_cache_ud_t *)_udata;      /* User data */
     H5EA_sblock_t sblock;           			/* Fake super block for computing size */
 
@@ -1060,40 +1044,33 @@ H5EA__cache_sblock_get_load_size(const void *_image, void *_udata, size_t *image
     HDassert(H5F_addr_defined(udata->sblk_addr));
     HDassert(image_len);
 
-    if(image == NULL) {
-	/* Set up fake super block for computing size on disk */
-	/* (Note: extracted from H5EA__sblock_alloc) */
-	HDmemset(&sblock, 0, sizeof(sblock));
-	sblock.hdr = udata->hdr;
-	sblock.ndblks = udata->hdr->sblk_info[udata->sblk_idx].ndblks;
-	sblock.dblk_nelmts = udata->hdr->sblk_info[udata->sblk_idx].dblk_nelmts;
+    /* Set up fake super block for computing size on disk */
+    /* (Note: extracted from H5EA__sblock_alloc) */
+    HDmemset(&sblock, 0, sizeof(sblock));
+    sblock.hdr = udata->hdr;
+    sblock.ndblks = udata->hdr->sblk_info[udata->sblk_idx].ndblks;
+    sblock.dblk_nelmts = udata->hdr->sblk_info[udata->sblk_idx].dblk_nelmts;
 
-	/* Check if # of elements in data blocks requires paging */
-	if(sblock.dblk_nelmts > udata->hdr->dblk_page_nelmts) {
-	    /* Compute # of pages in each data block from this super block */
-	    sblock.dblk_npages = sblock.dblk_nelmts / udata->hdr->dblk_page_nelmts;
+    /* Check if # of elements in data blocks requires paging */
+    if(sblock.dblk_nelmts > udata->hdr->dblk_page_nelmts) {
+        /* Compute # of pages in each data block from this super block */
+        sblock.dblk_npages = sblock.dblk_nelmts / udata->hdr->dblk_page_nelmts;
 
-	    /* Sanity check that we have at least 2 pages in data block */
-	    HDassert(sblock.dblk_npages > 1);
+        /* Sanity check that we have at least 2 pages in data block */
+        HDassert(sblock.dblk_npages > 1);
 
-	    /* Sanity check for integer truncation */
-	    HDassert((sblock.dblk_npages * udata->hdr->dblk_page_nelmts) == sblock.dblk_nelmts);
+        /* Sanity check for integer truncation */
+        HDassert((sblock.dblk_npages * udata->hdr->dblk_page_nelmts) == sblock.dblk_nelmts);
 
-	    /* Compute size of buffer for each data block's 'page init' bitmask */
-	    sblock.dblk_page_init_size = ((sblock.dblk_npages) + 7) / 8;
-	    HDassert(sblock.dblk_page_init_size > 0);
-	} /* end if */
-
-	/* Set the image length size */
-	*image_len = (size_t)H5EA_SBLOCK_SIZE(&sblock);
-
+        /* Compute size of buffer for each data block's 'page init' bitmask */
+        sblock.dblk_page_init_size = ((sblock.dblk_npages) + 7) / 8;
+        HDassert(sblock.dblk_page_init_size > 0);
     } /* end if */
-    else {
-        HDassert(actual_len);
-        HDassert(*actual_len == *image_len);
-    } /* end else */
 
-END_FUNC(STATIC)   /* end H5EA__cache_sblock_get_load_size() */
+    /* Set the image length size */
+    *image_len = (size_t)H5EA_SBLOCK_SIZE(&sblock);
+
+END_FUNC(STATIC)   /* end H5EA__cache_sblock_get_initial_load_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -1450,7 +1427,7 @@ END_FUNC(STATIC)   /* end H5EA__cache_sblock_free_icr() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5EA__cache_dblock_get_load_size
+ * Function:    H5EA__cache_dblock_get_initial_load_size
  *
  * Purpose:     Compute the size of the data structure on disk.
  *
@@ -1464,11 +1441,9 @@ END_FUNC(STATIC)   /* end H5EA__cache_sblock_free_icr() */
  */
 BEGIN_FUNC(STATIC, NOERR,
 herr_t, SUCCEED, -,
-H5EA__cache_dblock_get_load_size(const void *_image, void *_udata, 
-    size_t *image_len, size_t *actual_len))
+H5EA__cache_dblock_get_initial_load_size(void *_udata, size_t *image_len))
 
     /* Local variables */
-    const uint8_t *image = (const uint8_t *)_image;  	/* Pointer into raw data buffer */
     H5EA_dblock_cache_ud_t *udata = (H5EA_dblock_cache_ud_t *)_udata;      /* User data */
     H5EA_dblock_t dblock;           			/* Fake data block for computing size */
 
@@ -1478,41 +1453,35 @@ H5EA__cache_dblock_get_load_size(const void *_image, void *_udata,
     HDassert(udata->nelmts > 0);
     HDassert(image_len);
 
-    if(image == NULL) {
-	/* Set up fake data block for computing size on disk */
-	/* (Note: extracted from H5EA__dblock_alloc) */
-	HDmemset(&dblock, 0, sizeof(dblock));
+    /* Set up fake data block for computing size on disk */
+    /* (Note: extracted from H5EA__dblock_alloc) */
+    HDmemset(&dblock, 0, sizeof(dblock));
 
-	/* need to set:
-	 * 
-	 *    dblock.hdr
-	 *    dblock.npages
-	 *    dblock.nelmts
-	 *
-	 * before we invoke either H5EA_DBLOCK_PREFIX_SIZE() or 
-	 * H5EA_DBLOCK_SIZE().
-	 */
-	dblock.hdr = udata->hdr;
-	dblock.nelmts = udata->nelmts;
+    /* need to set:
+     * 
+     *    dblock.hdr
+     *    dblock.npages
+     *    dblock.nelmts
+     *
+     * before we invoke either H5EA_DBLOCK_PREFIX_SIZE() or 
+     * H5EA_DBLOCK_SIZE().
+     */
+    dblock.hdr = udata->hdr;
+    dblock.nelmts = udata->nelmts;
 
-	if(udata->nelmts > udata->hdr->dblk_page_nelmts) {
-	    /* Set the # of pages in the direct block */
-	    dblock.npages = udata->nelmts / udata->hdr->dblk_page_nelmts;
-	    HDassert(udata->nelmts==(dblock.npages * udata->hdr->dblk_page_nelmts));
-	} /* end if */
-
-	/* Set the image length size */
-	if(!dblock.npages)
-	    *image_len = H5EA_DBLOCK_SIZE(&dblock);
-	else
-	    *image_len = H5EA_DBLOCK_PREFIX_SIZE(&dblock);
+    if(udata->nelmts > udata->hdr->dblk_page_nelmts) {
+        /* Set the # of pages in the direct block */
+        dblock.npages = udata->nelmts / udata->hdr->dblk_page_nelmts;
+        HDassert(udata->nelmts==(dblock.npages * udata->hdr->dblk_page_nelmts));
     } /* end if */
-    else {
-        HDassert(actual_len);
-        HDassert(*actual_len == *image_len);
-    } /* end else */
 
-END_FUNC(STATIC)   /* end H5EA__cache_dblock_get_load_size() */
+    /* Set the image length size */
+    if(!dblock.npages)
+        *image_len = H5EA_DBLOCK_SIZE(&dblock);
+    else
+        *image_len = H5EA_DBLOCK_PREFIX_SIZE(&dblock);
+
+END_FUNC(STATIC)   /* end H5EA__cache_dblock_get_initial_load_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -1916,7 +1885,7 @@ END_FUNC(STATIC)   /* end H5EA__cache_dblock_fsf_size() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5EA__cache_dblk_page_get_load_size
+ * Function:    H5EA__cache_dblk_page_get_initial_load_size
  *
  * Purpose:     Compute the size of the data structure on disk.
  *
@@ -1930,11 +1899,9 @@ END_FUNC(STATIC)   /* end H5EA__cache_dblock_fsf_size() */
  */
 BEGIN_FUNC(STATIC, NOERR,
 herr_t, SUCCEED, -,
-H5EA__cache_dblk_page_get_load_size(const void *_image, void *_udata, size_t *image_len,
-    size_t *actual_len))
+H5EA__cache_dblk_page_get_initial_load_size(void *_udata, size_t *image_len))
 
     /* Local variables */
-    const uint8_t *image = (const uint8_t *)_image;       /* Pointer into raw data buffer */
     H5EA_dblk_page_cache_ud_t *udata = (H5EA_dblk_page_cache_ud_t *)_udata;      /* User data */
 
     /* Check arguments */
@@ -1942,14 +1909,10 @@ H5EA__cache_dblk_page_get_load_size(const void *_image, void *_udata, size_t *im
     HDassert(udata->hdr);
     HDassert(image_len);
 
-    if(image == NULL)
-	*image_len = (size_t)H5EA_DBLK_PAGE_SIZE(udata->hdr);
-    else {
-        HDassert(actual_len);
-        HDassert(*actual_len == *image_len);
-    } /* end if */
+    /* Set the image length size */
+    *image_len = (size_t)H5EA_DBLK_PAGE_SIZE(udata->hdr);
 
-END_FUNC(STATIC)   /* end H5EA__cache_dblk_page_get_load_size() */
+END_FUNC(STATIC)   /* end H5EA__cache_dblk_page_get_initial_load_size() */
 
 
 /*-------------------------------------------------------------------------

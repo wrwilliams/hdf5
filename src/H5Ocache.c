@@ -68,8 +68,9 @@
 /********************/
 
 /* Metadata cache callbacks */
-static herr_t H5O__cache_get_load_size(const void *image_ptr, void *udata, 
-    size_t *image_len, size_t *actual_len);
+static herr_t H5O__cache_get_initial_load_size(void *udata, size_t *image_len);
+static herr_t H5O__cache_get_final_load_size(const void *image_ptr, size_t image_len,
+    void *udata, size_t *actual_len);
 static htri_t H5O__cache_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5O__cache_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty); 
@@ -79,8 +80,7 @@ static herr_t H5O__cache_serialize(const H5F_t *f, void *image, size_t len,
 static herr_t H5O__cache_notify(H5AC_notify_action_t action, void *_thing);
 static herr_t H5O__cache_free_icr(void *thing);
 
-static herr_t H5O__cache_chk_get_load_size(const void *image_ptr, void *udata, 
-    size_t *image_len, size_t *actual_len);
+static herr_t H5O__cache_chk_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5O__cache_chk_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void *H5O__cache_chk_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty); 
@@ -111,7 +111,8 @@ const H5AC_class_t H5AC_OHDR[1] = {{
     "object header",                    /* Metadata client name (for debugging) */
     H5FD_MEM_OHDR,                      /* File space memory type for client */
     H5AC__CLASS_SPECULATIVE_LOAD_FLAG,  /* Client class behavior flags */
-    H5O__cache_get_load_size,           /* 'get_load_size' callback */
+    H5O__cache_get_initial_load_size,   /* 'get_initial_load_size' callback */
+    H5O__cache_get_final_load_size,     /* 'get_final_load_size' callback */
     H5O__cache_verify_chksum, 		/* 'verify_chksum' callback */
     H5O__cache_deserialize,             /* 'deserialize' callback */
     H5O__cache_image_len,               /* 'image_len' callback */
@@ -128,7 +129,8 @@ const H5AC_class_t H5AC_OHDR_CHK[1] = {{
     "object header continuation chunk", /* Metadata client name (for debugging) */
     H5FD_MEM_OHDR,                      /* File space memory type for client */
     H5AC__CLASS_NO_FLAGS_SET,           /* Client class behavior flags */
-    H5O__cache_chk_get_load_size,       /* 'get_load_size' callback */
+    H5O__cache_chk_get_initial_load_size, /* 'get_initial_load_size' callback */
+    NULL,				/* 'get_final_load_size' callback */
     H5O__cache_chk_verify_chksum,	/* 'verify_chksum' callback */
     H5O__cache_chk_deserialize,         /* 'deserialize' callback */
     H5O__cache_chk_image_len,           /* 'image_len' callback */
@@ -302,12 +304,10 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5O__cache_get_load_size()
+ * Function:    H5O__cache_get_initial_load_size()
  *
  * Purpose:	Tell the metadata cache how much data to read from file in 
- *		the first speculative read for the object header.  Note that we do 
- *		not have to be concerned about reading past the end of file, as the 
- *		cache will clamp the read to avoid this if needed.
+ *		the first speculative read for the object header.
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
@@ -318,38 +318,63 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__cache_get_load_size(const void *_image, void *_udata, size_t *image_len,
-    size_t *actual_len)
+H5O__cache_get_initial_load_size(void H5_ATTR_UNUSED *_udata, size_t *image_len)
+{
+    FUNC_ENTER_STATIC_NOERR
+
+    /* Check arguments */
+    HDassert(image_len);
+
+    /* Set the image length size */
+    *image_len = H5O_SPEC_READ_SIZE;
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+} /* end H5O__cache_get_initial_load_size() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5O__cache_get_final_load_size()
+ *
+ * Purpose:	Tell the metadata cache the final size of an object header.
+ *
+ * Return:      Success:        SUCCEED
+ *              Failure:        FAIL
+ *
+ * Programmer:  Quincey Koziol
+ *              November 18, 2016
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5O__cache_get_final_load_size(const void *_image, size_t image_len,
+    void *_udata, size_t *actual_len)
 {
     const uint8_t *image = (const uint8_t *)_image;   	/* Pointer into raw data buffer */
     H5O_cache_ud_t *udata = (H5O_cache_ud_t *)_udata;   /* User data for callback */
     H5O_t oh;                                           /* Object header read in */
     htri_t ret_value = SUCCEED;                         /* Return value */
 
-    FUNC_ENTER_STATIC_NOERR
+    FUNC_ENTER_STATIC
 
     /* Check arguments */
-    HDassert(image_len);
+    HDassert(image);
+    HDassert(udata);
+    HDassert(actual_len);
+    HDassert(*actual_len == image_len);
 
-    if(image == NULL)
-	*image_len = H5O_SPEC_READ_SIZE;
-    else { /* compute actual_len */
-	HDassert(udata);
-	HDassert(actual_len);
-	HDassert(*actual_len == *image_len);
+    /* Decode header prefix */
+    if(H5O_decode_prefix(udata->common.f, &oh, image, udata) < 0)
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTDECODE, FAIL, "can't decode object header prefix")
 
-	/* Decode header prefix */
-	if(H5O_decode_prefix(udata->common.f, &oh, image, udata) < 0)
-	    HGOTO_DONE(FAIL)
+    /* Save the version to be used in verify_chksum callback */
+    udata->version = oh.version;
 
-	/* Save the version to be used in verify_chksum callback */
-	udata->version = oh.version;
-	*actual_len = oh.chunk0_size + (size_t)H5O_SIZEOF_HDR(&oh);
-    } /* end else */
+    /* Set the final size for the cache image */
+    *actual_len = oh.chunk0_size + (size_t)H5O_SIZEOF_HDR(&oh);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5O__cache_get_load_size() */
+} /* end H5O__cache_get_final_load_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -370,8 +395,6 @@ H5O__cache_verify_chksum(const void *_image, size_t len, void *_udata)
 {
     const uint8_t *image = (const uint8_t *)_image;    	/* Pointer into raw data buffer */
     H5O_cache_ud_t *udata = (H5O_cache_ud_t *)_udata;  	/* User data for callback */
-    uint32_t stored_chksum;     /* Stored metadata checksum value */
-    uint32_t computed_chksum;   /* Computed metadata checksum value */
     htri_t ret_value = TRUE;	/* Return value */
 
     FUNC_ENTER_STATIC_NOERR
@@ -382,13 +405,15 @@ H5O__cache_verify_chksum(const void *_image, size_t len, void *_udata)
 
     /* There is no checksum for version 1 */
     if(udata->version != H5O_VERSION_1) {
+        uint32_t stored_chksum;     /* Stored metadata checksum value */
+        uint32_t computed_chksum;   /* Computed metadata checksum value */
 
 	/* Get stored and computed checksums */
 	H5F_get_checksums(image, len, &stored_chksum, &computed_chksum);
 
 	if(stored_chksum != computed_chksum)
 	    ret_value = FALSE;
-    }
+    } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__cache_verify_chksum() */
@@ -444,7 +469,7 @@ H5O__cache_deserialize(const void *_image, size_t len, void *_udata,
 
     /* Decode header prefix */
     if(H5O_decode_prefix(udata->common.f, oh, image, udata) < 0)
-	HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "can't deserialize object header prefix")
+	HGOTO_ERROR(H5E_OHDR, H5E_CANTDECODE, NULL, "can't deserialize object header prefix")
 
     /* Compute the size of the buffer used */
     buf_size = oh->chunk0_size + (size_t)H5O_SIZEOF_HDR(oh);
@@ -794,12 +819,11 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5O__cache_chk_get_load_size()
+ * Function:    H5O__cache_chk_get_initial_load_size()
  *
  * Purpose:	Tell the metadata cache how large the on disk image of the 
  *		chunk proxy is, so it can load the image into a buffer for the 
- *		deserialize call.  In this case, we simply look up the size in 
- *		the user data, and return it in *image_len,
+ *		deserialize call.
  *
  * Return:      Success:        SUCCEED
  *              Failure:        FAIL
@@ -810,10 +834,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__cache_chk_get_load_size(const void *_image, void *_udata, size_t *image_len,
-    size_t *actual_len)
+H5O__cache_chk_get_initial_load_size(void *_udata, size_t *image_len)
 {
-    const uint8_t *image = (const uint8_t *)_image;       		  /* Pointer into raw data buffer */
     const H5O_chk_cache_ud_t *udata = (const H5O_chk_cache_ud_t *)_udata; /* User data for callback */
 
     FUNC_ENTER_STATIC_NOERR
@@ -823,16 +845,13 @@ H5O__cache_chk_get_load_size(const void *_image, void *_udata, size_t *image_len
     HDassert(udata->oh);
     HDassert(image_len);
 
-    if(image == NULL)
-	*image_len = udata->size;
-    else {
-	HDassert(actual_len);
-        HDassert(*actual_len == *image_len);
-    } /* end else */
+    /* Set the image length size */
+    *image_len = udata->size;
 
     FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5O__cache_chk_get_load_size() */
+} /* end H5O__cache_chk_get_initial_load_size() */
 
+
 /*-------------------------------------------------------------------------
  * Function:    H5B2__cache_chk_verify_chksum
  *
@@ -851,8 +870,6 @@ H5O__cache_chk_verify_chksum(const void *_image, size_t len, void *_udata)
 {
     const uint8_t *image = (const uint8_t *)_image;       	/* Pointer into raw data buffer */
     H5O_chk_cache_ud_t *udata = (H5O_chk_cache_ud_t *)_udata;   /* User data for callback */
-    uint32_t stored_chksum;     /* Stored metadata checksum value */
-    uint32_t computed_chksum;   /* Computed metadata checksum value */
     htri_t ret_value = TRUE;	/* Return value */
 
     FUNC_ENTER_STATIC_NOERR
@@ -862,13 +879,15 @@ H5O__cache_chk_verify_chksum(const void *_image, size_t len, void *_udata)
 
     /* There is no checksum for version 1 */
     if(udata->oh->version != H5O_VERSION_1) {
+        uint32_t stored_chksum;     /* Stored metadata checksum value */
+        uint32_t computed_chksum;   /* Computed metadata checksum value */
 
 	/* Get stored and computed checksums */
 	H5F_get_checksums(image, len, &stored_chksum, &computed_chksum);
 
 	if(stored_chksum != computed_chksum)
 	    ret_value = FALSE;
-    }
+    } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__cache_chk_verify_chksum() */

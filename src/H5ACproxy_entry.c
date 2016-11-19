@@ -74,7 +74,8 @@ const H5AC_class_t H5AC_PROXY_ENTRY[1] = {{
     "Proxy entry",           		/* Metadata client name (for debugging) */
     H5FD_MEM_SUPER,                     /* File space memory type for client */
     0,					/* Client class behavior flags */
-    NULL,    				/* 'get_load_size' callback */
+    NULL,    				/* 'get_initial_load_size' callback */
+    NULL,    				/* 'get_final_load_size' callback */
     NULL,				/* 'verify_chksum' callback */
     NULL,    				/* 'deserialize' callback */
     H5AC__proxy_entry_image_len,	/* 'image_len' callback */
