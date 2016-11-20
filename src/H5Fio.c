@@ -288,8 +288,6 @@ done:
 herr_t
 H5F__evict_cache_entries(H5F_t *f, hid_t dxpl_id)
 {
-    unsigned status = 0;
-    int32_t    cur_num_entries;
     herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_PACKAGE
@@ -300,6 +298,11 @@ H5F__evict_cache_entries(H5F_t *f, hid_t dxpl_id)
     /* Evict all except pinned entries in the cache */
     if(H5AC_evict(f, dxpl_id) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTEXPUNGE, FAIL, "unable to evict all except pinned entries")
+
+#ifndef NDEBUG
+{
+    unsigned status = 0;
+    int32_t    cur_num_entries;
 
     /* Retrieve status of the superblock */
     if(H5AC_get_entry_status(f, (haddr_t)0, &status) < 0)
@@ -313,9 +316,11 @@ H5F__evict_cache_entries(H5F_t *f, hid_t dxpl_id)
     if(H5AC_get_cache_size(f->shared->cache, NULL, NULL, NULL, &cur_num_entries) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5AC_get_cache_size() failed.")
 
-    /* Should be the only one left in the cache */
+    /* Should be the only one left in the cache (the superblock) */
     if(cur_num_entries != 1)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "number of cache entries is not correct")
+}
+#endif /* NDEBUG */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
@@ -332,7 +337,8 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; Sept 2013
+ * Programmer:	Vailin Choi
+ *		Sept 2013
  *
  *-------------------------------------------------------------------------
  */
@@ -362,70 +368,4 @@ H5F_get_checksums(const uint8_t *buf, size_t buf_size, uint32_t *s_chksum/*out*/
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5F_get_chksums() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5F_read_check_meatadata
- *
- * Purpose:   	Attempts to read and validate a piece of meatadata that has
- *		checksum as follows:
- * 		  a) read the piece of metadata
- * 		  b) calculate checksum for the buffer of metadata
- * 		  c) decode the checksum stored in the buffer of metadata
- *		  d) compare the computed checksum with its stored checksum
- *
- *	       	The library will perform (a) to (d) above for "f->read_attempts"
- *		times or until the checksum comparison in (d) passes.
- *		This routine also records the # of retries via 
- *		H5F_track_metadata_read_retries()
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:	Vailin Choi; Sept 2013
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5F_read_check_metadata(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type,
-    unsigned actype, haddr_t addr, size_t read_size, size_t chk_size,
-    uint8_t *buf/*out*/)
-{
-    unsigned tries, max_tries;	/* The # of read attempts */
-    unsigned retries;		/* The # of retries */
-    uint32_t stored_chksum;  	/* Stored metadata checksum value */
-    uint32_t computed_chksum; 	/* Computed metadata checksum value */
-    herr_t ret_value = SUCCEED;	/* Return value */
-
-    FUNC_ENTER_NOAPI(FAIL)
-
-    /* Get the # of read attempts */
-    max_tries = tries = H5F_GET_READ_ATTEMPTS(f);
-
-    do {
-        /* Read header from disk */
-        if(H5F_block_read(f, type, addr, read_size, dxpl_id, buf) < 0)
-            HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "unable to read metadata")
-
-        /* Get stored and computed checksums */
-        H5F_get_checksums(buf, chk_size, &stored_chksum, &computed_chksum);
-
-        /* Verify checksum */
-        if(stored_chksum == computed_chksum)
-            break;
-    } while(--tries);
-
-    /* Check for too many tries */
-    if(tries == 0)
-        HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "incorrect metadatda checksum after all read attempts (%u) for %lu bytes:c_chksum=%u, s_chkum=%u", 
-	    max_tries, chk_size, computed_chksum, stored_chksum)
-
-    /* Calculate and track the # of retries */
-    retries = max_tries - tries;
-    if(retries)         /* Does not track 0 retry */
-        if(H5F_track_metadata_read_retries(f, actype, retries) < 0)
-            HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, FAIL, "cannot track read tries = %u ", retries)
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-} /* end H5F_read_check_metadata */
 
