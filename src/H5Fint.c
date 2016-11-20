@@ -713,8 +713,11 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
             if(H5FD_set_feature_flags(f->shared->lf, f->shared->feature_flags) < 0)
                  HGOTO_ERROR(H5E_FILE, H5E_CANTSET, NULL, "can't set feature_flags in VFD")
         } /* end if */
-        else
-            f->shared->read_attempts = H5F_METADATA_READ_ATTEMPTS;
+        else {
+            /* If no value for read attempts has been set, use the default */
+            if(!f->shared->read_attempts)
+                f->shared->read_attempts = H5F_METADATA_READ_ATTEMPTS;
+        } /* end else */
 
         /* Determine the # of bins for metdata read retries */
         if(H5F_set_retries(f) < 0)
@@ -1100,9 +1103,9 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
      * way for us to detect it here anyway).
      */
     if(drvr->cmp)
-	    tent_flags = flags & ~(H5F_ACC_CREAT|H5F_ACC_TRUNC|H5F_ACC_EXCL);
+        tent_flags = flags & ~(H5F_ACC_CREAT|H5F_ACC_TRUNC|H5F_ACC_EXCL);
     else
-	    tent_flags = flags;
+        tent_flags = flags;
 
     if(NULL == (lf = H5FD_open(name, tent_flags, fapl_id, HADDR_UNDEF))) {
         if(tent_flags == flags) {
@@ -1185,9 +1188,9 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
         if(NULL == (file = H5F_new(NULL, flags, fcpl_id, fapl_id, lf)))
             HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to initialize file structure")
 
-	    /* Need to set status_flags in the superblock if the driver has a 'lock' method */
-	    if(drvr->lock)
-	        set_flag = TRUE;
+        /* Need to set status_flags in the superblock if the driver has a 'lock' method */
+        if(drvr->lock)
+            set_flag = TRUE;
     } /* end else */
 
     /* Retain the name the file was opened with */
