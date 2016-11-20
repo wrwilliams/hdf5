@@ -155,17 +155,6 @@
 /* Size of file consistency flags (status_flags) in the superblock */
 #define H5F_SUPER_STATUS_FLAGS_SIZE(v)        (v >= 2 ? 1 : 4)
 
-/* 
- * User data for superblock protect in H5F_super_read: 
- *   dirtied: the superblock is modifed or not
- *   initial read: superlock read upon the file's initial open--
- *		   whether to skip the check for truncated file in H5F_sblock_load()
- */
-typedef struct H5F_super_ud_t {
-    hbool_t dirtied;
-    hbool_t initial_read;
-} H5F_super_ud_t;
-
 /* Forward declaration external file cache struct used below (defined in
  * H5Fefc.c) */
 typedef struct H5F_efc_t H5F_efc_t;
@@ -334,6 +323,8 @@ struct H5F_file_t {
     unsigned 		read_attempts;	/* The # of reads to try when reading metadata with checksum */
     unsigned		retries_nbins;		/* # of bins for each retries[] */
     uint32_t		*retries[H5AC_NTYPES];  /* Track # of read retries for metdata items with checksum */
+
+    /* Object flush info */
     H5F_object_flush_t 	object_flush;		/* Information for object flush callback */
 };
 
