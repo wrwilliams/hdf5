@@ -452,10 +452,10 @@ test_metadata_read_attempts(hid_t in_fapl)
     if((file_fapl = H5Fget_access_plist(fid)) < 0)
         FAIL_STACK_ERROR
 
-    /* Retrieve the # of read attempts from file's fapl -- should be H5F_METADATA_READ_ATTEMPTS */
+    /* Retrieve the # of read attempts from file's fapl -- should be 9 */
     if(H5Pget_metadata_read_attempts(file_fapl, &attempts) < 0)
         FAIL_STACK_ERROR
-    if(attempts != H5F_METADATA_READ_ATTEMPTS)
+    if(attempts != 9)
         TEST_ERROR
 
     /* Close the file */
