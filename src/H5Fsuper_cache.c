@@ -250,7 +250,7 @@ H5F__cache_superblock_get_final_load_size(const void *_image, size_t image_len,
     /* Sanity check */
     HDassert(image_len == (H5F_SUPERBLOCK_FIXED_SIZE + H5F_SUPERBLOCK_MINIMAL_VARLEN_SIZE));
 
-    /* Make certain we can read the variabled-sized portion of the superblock */
+    /* Make certain we can read the variable-sized portion of the superblock */
     if(H5F__set_eoa(udata->f, H5FD_MEM_SUPER, (haddr_t)(H5F_SUPERBLOCK_FIXED_SIZE + variable_size)) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "set end of space allocation request failed")
 

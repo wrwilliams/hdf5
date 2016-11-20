@@ -839,7 +839,6 @@ CATCH
 
 END_FUNC(STATIC)   /* end H5FA__cache_dblock_serialize() */
 
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5FA__cache_dblock_notify

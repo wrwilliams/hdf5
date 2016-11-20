@@ -239,7 +239,6 @@ H5FA_open(H5F_t *f, hid_t dxpl_id, haddr_t fa_addr, void *ctx_udata))
 
     /* Local variables */
     H5FA_t *fa = NULL;          /* Pointer to new fixed array wrapper */
-    H5FA_hdr_t *hdr = NULL;     /* The fixed array header information */
 
     /*
      * Check arguments.

@@ -252,7 +252,6 @@ H5G__cache_node_image_len(const void *_thing, size_t *image_len)
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5G__cache_node_image_len() */
 
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5G__cache_node_serialize
@@ -311,7 +310,6 @@ H5G__cache_node_serialize(const H5F_t *f, void *_image, size_t len,
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G__cache_node_serialize() */
-
 
 
 /*-------------------------------------------------------------------------
