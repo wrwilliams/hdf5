@@ -35,12 +35,9 @@
 #include "H5Alltypes.h"
 #include "H5private.h"		// for HDmemset
 
-#ifndef H5_NO_NAMESPACE
 namespace H5 {
-#endif
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-
 //--------------------------------------------------------------------------
 // Function:	H5Location default constructor (protected)
 // Programmer	Binh-Minh Ribler - 2000
@@ -1972,6 +1969,4 @@ H5Location::~H5Location() {}
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
-#ifndef H5_NO_NAMESPACE
 } // end namespace
-#endif

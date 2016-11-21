@@ -30,8 +30,6 @@
 /****************/
 
 #include "H5Cmodule.h"          /* This source code file is part of the H5C module */
-#define H5AC_FRIEND		/*suppress error about including H5ACpkg  */
-#define H5F_FRIEND		/*suppress error about including H5Fpkg	  */
 
 
 /***********/
@@ -39,10 +37,12 @@
 /***********/
 #include "H5private.h"		/* Generic Functions			*/
 #ifdef H5_HAVE_PARALLEL
+#define H5AC_FRIEND		/*suppress error about including H5ACpkg  */
 #include "H5ACpkg.h"            /* Metadata cache                       */
 #endif /* H5_HAVE_PARALLEL */
 #include "H5Cpkg.h"		/* Cache				*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
+#define H5F_FRIEND		/*suppress error about including H5Fpkg	  */
 #include "H5Fpkg.h"		/* Files				*/
 #include "H5FDprivate.h"	/* File drivers				*/
 #include "H5FLprivate.h"	/* Free Lists                           */
@@ -527,7 +527,7 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
     HDassert(type->mem_type == class_mem_types[type->id]);
 
     /* verify absence of prohibited or unsupported type flag combinations */
-    HDassert(!(type->flags & H5C__CLASS_NO_IO_FLAG));
+    HDassert(!(type->flags & H5C__CLASS_SKIP_READS));
  
     /* for now, we do not combine the speculative load and compressed flags */
     HDassert(!((type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG) &&
@@ -550,25 +550,21 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
      * the deserialized entry if appropriate.
      */
     //HDassert(pf_entry_ptr->fd_parent_count == pf_entry_ptr->flush_dep_nparents);
-    for ( i = (int)(pf_entry_ptr->fd_parent_count) - 1; i >= 0; i--) {
-
-	HDassert(pf_entry_ptr->flush_dep_parent);
-	HDassert(pf_entry_ptr->flush_dep_parent[i]);
-	HDassert(pf_entry_ptr->flush_dep_parent[i]->magic == 
-		 H5C__H5C_CACHE_ENTRY_T_MAGIC);
-	HDassert(pf_entry_ptr->flush_dep_parent[i]->flush_dep_nchildren > 0);
-        HDassert(pf_entry_ptr->fd_parent_addrs);
-	HDassert(pf_entry_ptr->flush_dep_parent[i]->addr ==
-                 pf_entry_ptr->fd_parent_addrs[i]);
-	
-        if ( H5C_destroy_flush_dependency(pf_entry_ptr->flush_dep_parent[i],
-                                          pf_entry_ptr) < 0 )
-
-	    HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL,
-                        "can't destroy pf entry parent flush dependency.");
+    for(i = (int)(pf_entry_ptr->fd_parent_count) - 1; i >= 0; i--) {
+        HDassert(pf_entry_ptr->flush_dep_parent);
+        HDassert(pf_entry_ptr->flush_dep_parent[i]);
+        HDassert(pf_entry_ptr->flush_dep_parent[i]->magic == 
+             H5C__H5C_CACHE_ENTRY_T_MAGIC);
+        HDassert(pf_entry_ptr->flush_dep_parent[i]->flush_dep_nchildren > 0);
+            HDassert(pf_entry_ptr->fd_parent_addrs);
+        HDassert(pf_entry_ptr->flush_dep_parent[i]->addr ==
+                     pf_entry_ptr->fd_parent_addrs[i]);
+        
+        if ( H5C_destroy_flush_dependency(pf_entry_ptr->flush_dep_parent[i], pf_entry_ptr) < 0 )
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL, "can't destroy pf entry parent flush dependency.");
 
         pf_entry_ptr->fd_parent_addrs[i] = HADDR_UNDEF;
-    }
+    } /* end for */
 
     HDassert(pf_entry_ptr->flush_dep_nparents == 0);
 
@@ -585,21 +581,15 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
      */
     if ( pf_entry_ptr->fd_child_count > 0 ) {
 
-	fd_children = (H5C_cache_entry_t **)
-		H5MM_calloc(sizeof(H5C_cache_entry_t **) * 
+        fd_children = (H5C_cache_entry_t **) H5MM_calloc(sizeof(H5C_cache_entry_t **) * 
                              (size_t)(pf_entry_ptr->fd_child_count + 1));
 
         if ( NULL == fd_children )
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for fd child ptr array");
 
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, \
-                            "memory allocation failed for fd child ptr array");
-
-        if ( H5C_destroy_pf_entry_child_flush_deps(cache_ptr, pf_entry_ptr,
-                                                   fd_children) < 0)
-
-	    HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL,
-                        "can't destroy pf entry child flush dependency(s).");
-    }
+        if ( H5C_destroy_pf_entry_child_flush_deps(cache_ptr, pf_entry_ptr, fd_children) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL, "can't destroy pf entry child flush dependency(s).");
+    } /* end if */
 
 
     /* Since the size of the on disk image is known exactly, there is 
@@ -614,9 +604,7 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
     /* Deserialize the prefetched on-disk image of the entry into the 
      * native memory form 
      */
-    if ( NULL == (thing = type->deserialize(pf_entry_ptr->image_ptr, 
-                                            len, udata, &dirty)) )
-
+    if(NULL == (thing = type->deserialize(pf_entry_ptr->image_ptr, len, udata, &dirty)))
         HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, FAIL, "Can't deserialize image")
 
     /* If the client's cache has an image_len callback, check it.  As 
@@ -628,7 +616,7 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
 
         size_t	new_len;        /* New size of on-disk image */
 
-	/* set magic and type field in *ds_entry_ptr.  While the image_len 
+        /* set magic and type field in *ds_entry_ptr.  While the image_len 
          * callback shouldn't touch the cache specific fields, it may check 
          * these fields to ensure that it it has received the expected 
          * value.
@@ -637,7 +625,7 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
         ds_entry_ptr->magic = H5C__H5C_CACHE_ENTRY_T_MAGIC;
         ds_entry_ptr->type  = type;
 
-	/* verify that compressed and compressed_len are initialized */
+        /* verify that compressed and compressed_len are initialized */
         HDassert(compressed == FALSE);
         HDassert(compressed_size == 0);
 
@@ -648,18 +636,17 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
 	    HGOTO_ERROR(H5E_CACHE, H5E_CANTGET, FAIL, \
                         "can't retrieve image length")
 
-	if(new_len == 0)
-
-	    HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "image length is 0")
+        if(new_len == 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "image length is 0")
 
         HDassert(((type->flags & H5C__CLASS_COMPRESSED_FLAG) != 0) ||
                  ((compressed == FALSE) && (compressed_size == 0)));
 
         HDassert((compressed == TRUE) || (compressed_size == 0));
 
-	if(new_len != len) {
+        if(new_len != len) {
 
-            if ( type->flags & H5C__CLASS_COMPRESSED_FLAG ) {
+            if(type->flags & H5C__CLASS_COMPRESSED_FLAG) {
 
                 /* if new_len != len, then compression must be 
                  * enabled on the entry.  In this case, the image_len
@@ -669,28 +656,25 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
                  * size -- which must equal len.
                  *
                  * We can't verify the uncompressed size, but we can 
-		 * verify the rest with the following assertions.
+                 * verify the rest with the following assertions.
                  */
-		HDassert(compressed);
+                HDassert(compressed);
                 HDassert(compressed_size == len);
 
-		/* new_len should contain the uncompressed size.  Set len
+                /* new_len should contain the uncompressed size.  Set len
                  * equal to new_len, so that the cache will use the 
                  * uncompressed size for purposes of space allocation, etc.
                  */
                 len = new_len;
 
-            } else if (type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG) {
-
-                HGOTO_ERROR(H5E_CACHE, H5E_UNSUPPORTED, FAIL, \
-                     "size of prefetched speculative object changed")
-
-            } else { /* throw an error */
-
-                HGOTO_ERROR(H5E_CACHE, H5E_UNSUPPORTED, FAIL, \
-                     "size of non-speculative, non-compressed object changed")
-            }
-	} /* end if (new_len != len) */
+            } /* end if */
+            else if (type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG) {
+                HGOTO_ERROR(H5E_CACHE, H5E_UNSUPPORTED, FAIL, "size of prefetched speculative object changed")
+            } /* end else-if */
+            else { /* throw an error */
+                HGOTO_ERROR(H5E_CACHE, H5E_UNSUPPORTED, FAIL, "size of non-speculative, non-compressed object changed")
+            } /* end else */
+        } /* end if (new_len != len) */
     } /* end if */
 
     ds_entry_ptr = (H5C_cache_entry_t *)thing;
@@ -794,8 +778,7 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
 
 
     /* apply to to the newly deserialized entry */
-    if ( H5C__tag_entry(cache_ptr, ds_entry_ptr, dxpl_id) < 0 )
-
+    if(H5C__tag_entry(cache_ptr, ds_entry_ptr, dxpl_id) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "Cannot tag metadata entry")
 
 
@@ -824,15 +807,12 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
 
     if ( pf_entry_ptr->is_dirty ) {
 
-	HDassert(pf_entry_ptr->in_slist);
+        HDassert(pf_entry_ptr->in_slist);
         flush_flags |= H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG;
     }
 
-    if ( H5C__flush_single_entry(f, dxpl_id, pf_entry_ptr, 
-                                 flush_flags, NULL, NULL) < 0 )
-
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTEXPUNGE, FAIL, \
-                    "can't expunge prefetched entry")
+    if(H5C__flush_single_entry(f, dxpl_id, pf_entry_ptr, flush_flags, NULL) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTEXPUNGE, FAIL, "can't expunge prefetched entry")
 
 #ifndef NDEGUG /* verify deletion */
     H5C__SEARCH_INDEX(cache_ptr, addr, pf_entry_ptr, FAIL);
@@ -849,10 +829,10 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
      * that the deserialized entry is larger than its prefetched cognate.
      * Check for space only in this case.
      */
-    if ( ( ds_entry_ptr->compressed ) &&
-         ( ds_entry_ptr->size > ds_entry_ptr->compressed_size ) ) {
+    if((ds_entry_ptr->compressed ) &&
+         (ds_entry_ptr->size > ds_entry_ptr->compressed_size)) {
 
-	/* Given the relatively small sizes of compressed entries in 
+        /* Given the relatively small sizes of compressed entries in 
          * the cache (fractal heap direct blocks, which top out at 64 K
          * at present), I don't think it is possible for the size increase
          * to be large enough to trigger a flash cache size increase.
@@ -865,84 +845,64 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
         size_t empty_space;
         size_t space_needed;
 
-	HDassert(ds_entry_ptr->size <= H5C_MAX_ENTRY_SIZE);
+        HDassert(ds_entry_ptr->size <= H5C_MAX_ENTRY_SIZE);
 
-	size_increase = ds_entry_ptr->size - ds_entry_ptr->compressed_size;
+        size_increase = ds_entry_ptr->size - ds_entry_ptr->compressed_size;
 
-	HDassert(size_increase > 0);
+        HDassert(size_increase > 0);
 
-        if ( ( cache_ptr->flash_size_increase_possible ) &&
-             ( size_increase > cache_ptr->flash_size_increase_threshold ) ) {
+        if((cache_ptr->flash_size_increase_possible) &&
+             (size_increase > cache_ptr->flash_size_increase_threshold)) {
+            if ( H5C__flash_increase_cache_size(cache_ptr, 0, size_increase) < 0 )
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, FAIL, "H5C__flash_increase_cache_size failed.")
+        } /* end if */
 
-            if ( H5C__flash_increase_cache_size(cache_ptr, 0, 
-                                                size_increase) < 0 ) {
-
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, FAIL, \
-                            "H5C__flash_increase_cache_size failed.")
-             }
-        }
-
-        if ( cache_ptr->index_size >= cache_ptr->max_cache_size )
+        if(cache_ptr->index_size >= cache_ptr->max_cache_size)
            empty_space = 0;
         else
            empty_space = cache_ptr->max_cache_size - cache_ptr->index_size;
 
-        if ( empty_space >= ds_entry_ptr->size ) {
-	   space_needed = 0;
-        } else {
+        if(empty_space >= ds_entry_ptr->size) {
+            space_needed = 0;
+        } /* end if */
+        else {
            cache_ptr->cache_full = TRUE;
            space_needed = ds_entry_ptr->size - empty_space;
-        }
+        } /* end else */
 
-	if ( space_needed > 0 ) {
-
-	    if ( cache_ptr->check_write_permitted != NULL ) {
-
-		if((cache_ptr->check_write_permitted)(f, &write_permitted) < 0){
-
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, FAIL, \
-                               "Can't get write_permitted")
-
-                }
-            } else {
-
+        if(space_needed > 0) {
+            if(cache_ptr->check_write_permitted != NULL) {
+                if((cache_ptr->check_write_permitted)(f, &write_permitted) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, FAIL, "Can't get write_permitted")
+            } /* end if */
+            else {
                 write_permitted = cache_ptr->write_permitted;
-            }
+            } /* end else */
 
-	    if ( H5C_make_space_in_cache(f, dxpl_id, space_needed, 
-                                         write_permitted) < 0 )
-
-		HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, FAIL, \
-                            "H5C_make_space_in_cache failed.")
-        }
-    }
+            if(H5C_make_space_in_cache(f, dxpl_id, space_needed, write_permitted) < 0 )
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, FAIL, "H5C_make_space_in_cache failed.")
+        } /* end if */
+    } /* end if */
 
 
     /* Insert the deserialized entry into the cache.  */
-
     H5C__INSERT_IN_INDEX(cache_ptr, ds_entry_ptr, FAIL)
 
     HDassert(!ds_entry_ptr->in_slist);
 
-    if ( ds_entry_ptr->is_dirty ) {
-
-	H5C__INSERT_ENTRY_IN_SLIST(cache_ptr, ds_entry_ptr, FAIL)
-    }
+    if(ds_entry_ptr->is_dirty)
+        H5C__INSERT_ENTRY_IN_SLIST(cache_ptr, ds_entry_ptr, FAIL)
 
     H5C__UPDATE_RP_FOR_INSERTION(cache_ptr, ds_entry_ptr, FAIL)
-
 
     /* Deserializing a prefetched entry is the conceptual equivalent of 
      * loading it from file.  If the deserialized entry has a notify callback,
      * send an "after load" notice now that the deserialized entry is fully
      * integrated into the cache.
      */
-    if ( ( ds_entry_ptr->type->notify ) &&
-         ( (ds_entry_ptr->type->notify)(H5C_NOTIFY_ACTION_AFTER_LOAD, 
-                                        ds_entry_ptr) < 0 ) )
-
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, 
-	    "can't notify client about entry loaded into cache")
+    if((ds_entry_ptr->type->notify) &&
+         ((ds_entry_ptr->type->notify)(H5C_NOTIFY_ACTION_AFTER_LOAD, ds_entry_ptr) < 0 ))
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry loaded into cache")
 
     /* restore flush dependencies with the flush dependency children of 
      * of the prefetched entry.  Note that we must protect *ds_entry_ptr 
@@ -950,48 +910,44 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
      * then unprotect it afterwards.
      */
     i = 0;
-    if ( fd_children != NULL ) {
+    if(fd_children != NULL) {
 
         int j;
-	hbool_t found;
+        hbool_t found;
 
-	H5C__UPDATE_RP_FOR_PROTECT(cache_ptr, ds_entry_ptr, FAIL)
+        H5C__UPDATE_RP_FOR_PROTECT(cache_ptr, ds_entry_ptr, FAIL)
 
         ds_entry_ptr->is_protected = TRUE;
 
         while ( fd_children[i] != NULL ) {
 
-	    HDassert((fd_children[i])->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
-	    HDassert((fd_children[i])->prefetched);
-	    HDassert((fd_children[i])->fd_parent_count > 0);
-	    HDassert((fd_children[i])->fd_parent_addrs);
+            HDassert((fd_children[i])->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+            HDassert((fd_children[i])->prefetched);
+            HDassert((fd_children[i])->fd_parent_count > 0);
+            HDassert((fd_children[i])->fd_parent_addrs);
 
-	    j = 0;
+            j = 0;
             found = FALSE;
-	    while ( ( j < (int)((fd_children[i])->fd_parent_count) ) && 
-                    ( ! found ) ) {
 
-		if ( (fd_children[i])->fd_parent_addrs[j] ==
-		     ds_entry_ptr->addr ) {
+            while((j < (int)((fd_children[i])->fd_parent_count)) && (!found)) {
 
-		    found = TRUE;
-		}
-		j++;
-	    }
-	    HDassert(found);
+                if((fd_children[i])->fd_parent_addrs[j] == ds_entry_ptr->addr)
+                    found = TRUE;
 
-	    if (H5C_create_flush_dependency(ds_entry_ptr, fd_children[i]) < 0) {
+                j++;
+            } /* end while */
 
-	        HGOTO_ERROR(H5E_CACHE, H5E_CANTDEPEND, FAIL, \
-                            "Can't restore child flush dependency.");
-	    }
+            HDassert(found);
 
-	    i++;
+            if(H5C_create_flush_dependency(ds_entry_ptr, fd_children[i]) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTDEPEND, FAIL, "Can't restore child flush dependency.");
+
+            i++;
         } /* end while */
 
         H5C__UPDATE_RP_FOR_UNPROTECT(cache_ptr, ds_entry_ptr, FAIL);
 
-	ds_entry_ptr->is_protected = FALSE;
+        ds_entry_ptr->is_protected = FALSE;
 
     } /* end if ( fd_children != NULL ) */
 
@@ -999,30 +955,20 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
 
     ds_entry_ptr->fd_child_count = 0;
 
-
     H5C__UPDATE_STATS_FOR_PREFETCH_HIT(cache_ptr)
 
-
     /* finally, pass ds_entry_ptr back to the caller */
-
     *entry_ptr_ptr = ds_entry_ptr;
 
 done:
 
-    if ( fd_children )
+    if(fd_children)
+        fd_children = (H5C_cache_entry_t **)H5MM_xfree((void *)fd_children);
 
-	fd_children = (H5C_cache_entry_t **)H5MM_xfree((void *)fd_children);
-
-    /* Cleanup on error */
-    if ( FAIL == ret_value ) {
-
-        /* Release resources */
-        if ( thing && type->free_icr(thing) < 0 )
-
-            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                        "free_icr callback failed")
-
-    } /* end if */
+    /* Release resources on error */
+    if(FAIL == ret_value)
+        if(thing && type->free_icr(thing) < 0)
+            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "free_icr callback failed")
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -2087,48 +2033,48 @@ H5C__prefetched_entry_notify(H5C_notify_action_t action, void * thing)
     HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
     HDassert(entry_ptr->prefetched);
 
-    switch ( action ) {
+    switch(action) {
 
-        case H5AC_NOTIFY_ACTION_AFTER_INSERT:
-        case H5AC_NOTIFY_ACTION_AFTER_LOAD:
-        case H5AC_NOTIFY_ACTION_AFTER_FLUSH:
+        case H5C_NOTIFY_ACTION_AFTER_INSERT:
+        case H5C_NOTIFY_ACTION_AFTER_LOAD:
+        case H5C_NOTIFY_ACTION_AFTER_FLUSH:
+        case H5C_NOTIFY_ACTION_ENTRY_DIRTIED: 
+        case H5C_NOTIFY_ACTION_ENTRY_CLEANED: 
+        case H5C_NOTIFY_ACTION_CHILD_DIRTIED: 
+        case H5C_NOTIFY_ACTION_CHILD_CLEANED: 
             /* do nothing */
             break;
 
-        case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
-	    for ( i = 0; i < (int)(entry_ptr->flush_dep_nparents); i++ ) {
+        case H5C_NOTIFY_ACTION_BEFORE_EVICT:
+	        for ( i = 0; i < (int)(entry_ptr->flush_dep_nparents); i++ ) {
 
-		HDassert(entry_ptr->flush_dep_parent);
+                HDassert(entry_ptr->flush_dep_parent);
 
-		parent_ptr = entry_ptr->flush_dep_parent[i];
+                parent_ptr = entry_ptr->flush_dep_parent[i];
 
-		HDassert(parent_ptr);
-		HDassert(parent_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
-		HDassert(parent_ptr->flush_dep_nchildren > 0);
+                HDassert(parent_ptr);
+                HDassert(parent_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+                HDassert(parent_ptr->flush_dep_nchildren > 0);
 
                 /* destroy flush dependency with flush dependency parent */
-                if ( H5C_destroy_flush_dependency(parent_ptr, entry_ptr) < 0) {
+                if ( H5C_destroy_flush_dependency(parent_ptr, entry_ptr) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL, "unable to destroy prefetched entry flush dependency")
 
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL, \
-			"unable to destroy prefetched entry flush dependency")
-                }
+                if ( parent_ptr->prefetched ) {
 
-		if ( parent_ptr->prefetched ) {
-
-		    /* In prefetchec entries, the fd_child_count field is 
-		     * used in sanity checks elsewhere.  Thus update this 
-		     * field to reflect the destruction of the flush 
-		     * dependency relationship.
-                     */
-		    HDassert(parent_ptr->fd_child_count > 0);
-		    (parent_ptr->fd_child_count)--;
-		}
-	    }
+                    /* In prefetchec entries, the fd_child_count field is 
+                     * used in sanity checks elsewhere.  Thus update this 
+                     * field to reflect the destruction of the flush 
+                     * dependency relationship.
+                             */
+                    HDassert(parent_ptr->fd_child_count > 0);
+                    (parent_ptr->fd_child_count)--;
+                } /* end if */
+            } /* end for */
             break;
 
         default:
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, \
-                        "unknown action from metadata cache")
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown action from metadata cache")
             break;
     } /* end switch */
 
@@ -4569,7 +4515,7 @@ H5C_reconstruct_cache_entry(H5C_t * cache_ptr, int i)
     pf_entry_ptr->image_ptr			= ie_ptr->image_ptr;
     pf_entry_ptr->image_up_to_date		= TRUE;
     pf_entry_ptr->type				= &prefetched_entry_class;
-    pf_entry_ptr->tag				= H5AC__IGNORE_TAG;
+    pf_entry_ptr->tag_info          = NULL;
 
     /* force dirty entries to clean if the file read only -- must do 
      * this as otherwise the cache will attempt to write them on file
@@ -5298,13 +5244,6 @@ H5C_serialize_single_entry(const H5F_t *f,
         HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
                     "unable to pre-serialize entry")
 
-     /* set cache_ptr->slist_change_in_pre_serialize if the slist 
-      * was modified.
-      */
-     if(cache_ptr->slist_changed)
-
-         cache_ptr->slist_change_in_pre_serialize = TRUE;
-
      /* Check for any flags set in the pre-serialize callback */
      if ( serialize_flags != H5C__SERIALIZE_NO_FLAGS_SET ) {
 
@@ -5456,7 +5395,7 @@ H5C_serialize_single_entry(const H5F_t *f,
 		if ( was_dirty ) {
 
 	            HDassert(entry_ptr->in_slist);
-                    H5C__REMOVE_ENTRY_FROM_SLIST(cache_ptr, entry_ptr)
+                    H5C__REMOVE_ENTRY_FROM_SLIST(cache_ptr, entry_ptr, FALSE)
 
                 } else {
 
@@ -5529,13 +5468,6 @@ H5C_serialize_single_entry(const H5F_t *f,
 
             HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
                         "unable to serialize entry")
-
-        /* set cache_ptr->slist_change_in_serialize if the 
-         * slist was modified.
-         */
-        if(cache_ptr->slist_changed)
-
-            cache_ptr->slist_change_in_serialize = TRUE;
 
 #if H5C_DO_MEMORY_SANITY_CHECKS
         HDassert(0 == HDmemcmp(((uint8_t *)entry_ptr->image_ptr) + image_len, 
