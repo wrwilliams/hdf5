@@ -690,14 +690,6 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
          */
         f->shared->use_tmp_space = !H5F_HAS_FEATURE(f, H5FD_FEAT_HAS_MPI);
 
-        /*
-         * Create a metadata cache with the specified number of elements.
-         * The cache might be created with a different number of elements and
-         * the access property list should be updated to reflect that.
-         */
-        if(H5AC_create(f, &(f->shared->mdc_initCacheCfg), &(f->shared->mdc_initCacheImageCfg)) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to create metadata cache")
-
         /* Get the metadata cache log location (if we're logging) */
         {
             char *mdc_log_location = NULL;      /* location of metadata cache log location */
@@ -713,6 +705,14 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
             else
                 f->shared->mdc_log_location = NULL;
         } /* end block */
+
+        /*
+         * Create a metadata cache with the specified number of elements.
+         * The cache might be created with a different number of elements and
+         * the access property list should be updated to reflect that.
+         */
+        if(H5AC_create(f, &(f->shared->mdc_initCacheCfg), &(f->shared->mdc_initCacheImageCfg)) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to create metadata cache")
 
         /* Get object flush callback information */
         if(H5P_get(plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &(f->shared->object_flush)) < 0)
