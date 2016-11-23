@@ -135,7 +135,7 @@ static const char *H5AC_entry_type_names[H5AC_NTYPES] =
     "fixed array data block pages",
     "superblock",
     "driver info",
-    "virtual entry",
+    "proxy entry",
     "test entry"	/* for testing only -- not used for actual files */
 };
 
@@ -552,6 +552,11 @@ H5AC_dest(H5F_t *f, hid_t dxpl_id)
     /* Dump debugging info */
     H5AC_stats(f);
 #endif /* H5AC_DUMP_STATS_ON_CLOSE */
+
+#if H5AC__TRACE_FILE_ENABLED
+    if(H5AC__close_trace_file(f->shared->cache) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5AC__close_trace_file() failed.")
+#endif /* H5AC__TRACE_FILE_ENABLED */
 
     if(H5F_USE_MDC_LOGGING(f)) {
         /* Write the log footer regardless of current logging status */

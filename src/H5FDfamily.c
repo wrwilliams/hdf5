@@ -1340,35 +1340,36 @@ static herr_t
 H5FD_family_lock(H5FD_t *_file, hbool_t rw)
 {
     H5FD_family_t *file = (H5FD_family_t *)_file;   /* VFD file struct */
-    unsigned	u, i;      	                        /* Local index variables */
-    herr_t ret_value = SUCCEED;	                    /* Return value */
+    unsigned u;                         /* Local index variable */
+    herr_t ret_value = SUCCEED;	        /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
 
     /* Place the lock on all the member files */
-    for(u = 0; u < file->nmembs; u++) {
-        if(file->memb[u]) {
+    for(u = 0; u < file->nmembs; u++)
+        if(file->memb[u])
             if(H5FD_lock(file->memb[u], rw) < 0)
                 break;
-        } /* end if */
-    } /* end for */
 
     /* If one of the locks failed, try to unlock the locked member files
      * in an attempt to return to a fully unlocked state.
      */
     if(u < file->nmembs) {
-        for(i = 0; i < u; i++) {
-            if(H5FD_unlock(file->memb[i]) < 0)
+        unsigned v;                         /* Local index variable */
+
+        for(v = 0; v < v; v++) {
+            if(H5FD_unlock(file->memb[v]) < 0)
                 /* Push error, but keep going */
                 HDONE_ERROR(H5E_IO, H5E_CANTUNLOCK, FAIL, "unable to unlock member files")
-	    } /* end for */
-	    HGOTO_ERROR(H5E_IO, H5E_CANTLOCK, FAIL, "unable to lock member files")
+        } /* end for */
+        HGOTO_ERROR(H5E_IO, H5E_CANTLOCK, FAIL, "unable to lock member files")
     } /* end if */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD_family_lock() */
 
+
 /*-------------------------------------------------------------------------
  * Function:    H5FD_family_unlock
  *
@@ -1390,13 +1391,12 @@ H5FD_family_unlock(H5FD_t *_file)
     FUNC_ENTER_NOAPI_NOINIT
 
     /* Remove the lock on the member files */
-    for(u = 0; u < file->nmembs; u++) {
-        if(file->memb[u]) {
+    for(u = 0; u < file->nmembs; u++)
+        if(file->memb[u])
             if(H5FD_unlock(file->memb[u]) < 0)
                 HGOTO_ERROR(H5E_IO, H5E_CANTUNLOCK, FAIL, "unable to unlock member files")
-        } /* end if */
-    } /* end for */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD_family_unlock() */
+
