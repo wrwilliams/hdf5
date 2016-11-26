@@ -161,11 +161,11 @@ H5F_get_access_plist(H5F_t *f, hbool_t app_ref)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set alignment")
     if(H5P_set(new_plist, H5F_ACS_GARBG_COLCT_REF_NAME, &(f->shared->gc_ref)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set garbage collect reference")
-    if(H5P_set(new_plist, H5F_ACS_META_BLOCK_SIZE_NAME, &(f->shared->fs.meta_aggr.alloc_size)) < 0)
+    if(H5P_set(new_plist, H5F_ACS_META_BLOCK_SIZE_NAME, &(f->shared->meta_aggr.alloc_size)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set metadata cache size")
     if(H5P_set(new_plist, H5F_ACS_SIEVE_BUF_SIZE_NAME, &(f->shared->sieve_buf_size)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't sieve buffer size")
-    if(H5P_set(new_plist, H5F_ACS_SDATA_BLOCK_SIZE_NAME, &(f->shared->fs.sdata_aggr.alloc_size)) < 0)
+    if(H5P_set(new_plist, H5F_ACS_SDATA_BLOCK_SIZE_NAME, &(f->shared->sdata_aggr.alloc_size)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'small data' cache size")
     if(f->shared->latest_flags > 0)
         latest_format = TRUE;
@@ -603,18 +603,18 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
         f->shared->lf = lf;
 
         /* Initialization for handling file space */
-        for(u = 0; u < NELMTS(f->shared->fs.man_addr); u++) {
-            f->shared->fs.man_state[u] = H5F_FS_STATE_CLOSED;
-            f->shared->fs.man_addr[u] = HADDR_UNDEF;
-            f->shared->fs.man[u] = NULL;
+        for(u = 0; u < NELMTS(f->shared->fs_addr); u++) {
+            f->shared->fs_state[u] = H5F_FS_STATE_CLOSED;
+            f->shared->fs_addr[u] = HADDR_UNDEF;
+            f->shared->fs_man[u] = NULL;
         } /* end for */
 
         /* Initialization for handling file space (for paged aggregation) */
-        f->shared->fs.last_small = f->shared->fs.track_last_small = 0;
-        f->shared->fs.pgend_meta_thres = H5F_FILE_SPACE_PGEND_META_THRES;
+        f->shared->last_small = f->shared->track_last_small = 0;
+        f->shared->pgend_meta_thres = H5F_FILE_SPACE_PGEND_META_THRES;
 
         /* intialize point of no return */
-        f->shared->fs.point_of_no_return = FALSE;
+        f->shared->point_of_no_return = FALSE;
 
         /*
          * Copy the file creation and file access property lists into the
@@ -633,13 +633,13 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
         if(H5P_get(plist, H5F_CRT_SHMSG_NINDEXES_NAME, &f->shared->sohm_nindexes) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get number of SOHM indexes")
         HDassert(f->shared->sohm_nindexes < 255);
-        if(H5P_get(plist, H5F_CRT_FILE_SPACE_STRATEGY_NAME, &f->shared->fs.strategy) < 0)
+        if(H5P_get(plist, H5F_CRT_FILE_SPACE_STRATEGY_NAME, &f->shared->fs_strategy) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get file space strategy")
-        if(H5P_get(plist, H5F_CRT_FREE_SPACE_PERSIST_NAME, &f->shared->fs.persist) < 0)
+        if(H5P_get(plist, H5F_CRT_FREE_SPACE_PERSIST_NAME, &f->shared->fs_persist) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get file space persisting status")
-        if(H5P_get(plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, &f->shared->fs.threshold) < 0)
+        if(H5P_get(plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, &f->shared->fs_threshold) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get free-space section threshold")
-        if(H5P_get(plist, H5F_CRT_FILE_SPACE_PAGE_SIZE_NAME, &f->shared->fs.page_size) < 0)
+        if(H5P_get(plist, H5F_CRT_FILE_SPACE_PAGE_SIZE_NAME, &f->shared->fs_page_size) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get file space page size")
 
         /* Get the FAPL values to cache */
@@ -666,12 +666,12 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
         /* For latest format, activate all latest version support */
         if(latest_format)
             f->shared->latest_flags |= H5F_LATEST_ALL_FLAGS;
-        if(H5P_get(plist, H5F_ACS_META_BLOCK_SIZE_NAME, &(f->shared->fs.meta_aggr.alloc_size)) < 0)
+        if(H5P_get(plist, H5F_ACS_META_BLOCK_SIZE_NAME, &(f->shared->meta_aggr.alloc_size)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get metadata cache size")
-        f->shared->fs.meta_aggr.feature_flag = H5FD_FEAT_AGGREGATE_METADATA;
-        if(H5P_get(plist, H5F_ACS_SDATA_BLOCK_SIZE_NAME, &(f->shared->fs.sdata_aggr.alloc_size)) < 0)
+        f->shared->meta_aggr.feature_flag = H5FD_FEAT_AGGREGATE_METADATA;
+        if(H5P_get(plist, H5F_ACS_SDATA_BLOCK_SIZE_NAME, &(f->shared->sdata_aggr.alloc_size)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get 'small data' cache size")
-        f->shared->fs.sdata_aggr.feature_flag = H5FD_FEAT_AGGREGATE_SMALLDATA;
+        f->shared->sdata_aggr.feature_flag = H5FD_FEAT_AGGREGATE_SMALLDATA;
         if(H5P_get(plist, H5F_ACS_EFC_SIZE_NAME, &efc_size) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get elink file cache size")
         if(efc_size > 0)
@@ -690,11 +690,11 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
             HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, NULL, "bad maximum address from VFD")
         if(H5FD_get_feature_flags(lf, &f->shared->feature_flags) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "can't get feature flags from VFD")
-        if(H5FD_get_fs_type_map(lf, f->shared->fs.type_map) < 0)
+        if(H5FD_get_fs_type_map(lf, f->shared->fs_type_map) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "can't get free space type mapping from VFD")
         if(H5MF_init_merge_flags(f) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "problem initializing free space merge flags")
-        f->shared->fs.tmp_addr = f->shared->maxaddr;
+        f->shared->tmp_addr = f->shared->maxaddr;
         /* Disable temp. space allocation for parallel I/O (for now) */
         /* (When we've arranged to have the relocated metadata addresses (and
          *      sizes) broadcast during the "end of epoch" metadata operations,
@@ -704,7 +704,7 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
          *      merged into the trunk and journaling is enabled, at least until
          *      we make it work. - QAK)
          */
-        f->shared->fs.use_tmp_space = !H5F_HAS_FEATURE(f, H5FD_FEAT_HAS_MPI);
+        f->shared->use_tmp_space = !H5F_HAS_FEATURE(f, H5FD_FEAT_HAS_MPI);
 
         /* Get object flush callback information */
         if(H5P_get(plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &(f->shared->object_flush)) < 0)
@@ -1206,10 +1206,10 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
     if(flags & H5F_ACC_RDWR) {
         /* For paged aggregation */
         /* If there is a small section at EOF, put the mis-aligned fragment to free-space manager */
-        if((H5F_PAGED_AGGR(file)) && (shared->fs.last_small)) {
+        if((H5F_PAGED_AGGR(file)) && (shared->last_small)) {
             if(H5MF_eof_fragment_fsm(file, dxpl_id))
                 HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to H5MF_eof_fragment_fsm")
-            shared->fs.last_small = 0;
+            shared->last_small = 0;
         }
     }
 

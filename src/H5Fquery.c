@@ -1068,7 +1068,7 @@ H5F_is_tmp_addr(const H5F_t *f, haddr_t addr)
     HDassert(f);
     HDassert(f->shared);
 
-    FUNC_LEAVE_NOAPI(H5F_addr_le(f->shared->fs.tmp_addr, addr))
+    FUNC_LEAVE_NOAPI(H5F_addr_le(f->shared->tmp_addr, addr))
 } /* end H5F_is_tmp_addr() */
 
 
@@ -1096,7 +1096,7 @@ H5F_use_tmp_space(const H5F_t *f)
     HDassert(f);
     HDassert(f->shared);
 
-    FUNC_LEAVE_NOAPI(f->shared->fs.use_tmp_space)
+    FUNC_LEAVE_NOAPI(f->shared->use_tmp_space)
 } /* end H5F_use_tmp_space() */
 
 
@@ -1174,7 +1174,7 @@ H5F_get_pgend_meta_thres(const H5F_t *f)
     HDassert(f);
     HDassert(f->shared);
 
-    FUNC_LEAVE_NOAPI(f->shared->fs.pgend_meta_thres)
+    FUNC_LEAVE_NOAPI(f->shared->pgend_meta_thres)
 } /* end H5F_get_pgend_meta_thres() */
 
 
@@ -1197,7 +1197,7 @@ H5F_get_point_of_no_return(const H5F_t *f)
     HDassert(f);
     HDassert(f->shared);
 
-    FUNC_LEAVE_NOAPI(f->shared->fs.point_of_no_return)
+    FUNC_LEAVE_NOAPI(f->shared->point_of_no_return)
 } /* end H5F_get_point_of_no_return() */
 
 #ifdef H5_HAVE_PARALLEL

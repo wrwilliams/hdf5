@@ -1479,10 +1479,10 @@ H5Fformat_convert(hid_t fid)
         } /* end if */
 
         /* Check for persistent freespace manager, which needs to be downgraded */
-        if(!(f->shared->fs.strategy == H5F_FILE_SPACE_STRATEGY_DEF &&
-             f->shared->fs.persist == H5F_FREE_SPACE_PERSIST_DEF &&
-             f->shared->fs.threshold == H5F_FREE_SPACE_THRESHOLD_DEF &&
-             f->shared->fs.page_size == H5F_FILE_SPACE_PAGE_SIZE_DEF)) {
+        if(!(f->shared->fs_strategy == H5F_FILE_SPACE_STRATEGY_DEF &&
+             f->shared->fs_persist == H5F_FREE_SPACE_PERSIST_DEF &&
+             f->shared->fs_threshold == H5F_FREE_SPACE_THRESHOLD_DEF &&
+             f->shared->fs_page_size == H5F_FILE_SPACE_PAGE_SIZE_DEF)) {
             /* Check to remove free-space manager info message from superblock extension */
             if(H5F_addr_defined(f->shared->sblock->ext_addr))
                 if(H5F_super_ext_remove_msg(f, H5AC_ind_read_dxpl_id, H5O_FSINFO_ID) < 0)
@@ -1493,10 +1493,10 @@ H5Fformat_convert(hid_t fid)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "unable to free free-space address")
 
             /* Set non-persistent freespace manager */
-            f->shared->fs.strategy = H5F_FILE_SPACE_STRATEGY_DEF;
-            f->shared->fs.persist = H5F_FREE_SPACE_PERSIST_DEF;
-            f->shared->fs.threshold = H5F_FREE_SPACE_THRESHOLD_DEF;
-            f->shared->fs.page_size = H5F_FILE_SPACE_PAGE_SIZE_DEF;
+            f->shared->fs_strategy = H5F_FILE_SPACE_STRATEGY_DEF;
+            f->shared->fs_persist = H5F_FREE_SPACE_PERSIST_DEF;
+            f->shared->fs_threshold = H5F_FREE_SPACE_THRESHOLD_DEF;
+            f->shared->fs_page_size = H5F_FILE_SPACE_PAGE_SIZE_DEF;
 
             /* Indicate that the superblock should be marked dirty */
             mark_dirty = TRUE;
