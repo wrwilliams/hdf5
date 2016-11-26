@@ -543,7 +543,7 @@
 #define H5F_SDATA_BLOCK_SIZE_DEF	2048
 
 /* Check for file using paged aggregation */
-#define H5F_PAGED_AGGR(F) (F->shared->fs.strategy == H5F_FSPACE_STRATEGY_PAGE && F->shared->fs.page_size)
+#define H5F_PAGED_AGGR(F) (F->shared->fs_strategy == H5F_FSPACE_STRATEGY_PAGE && F->shared->fs_page_size)
 
 /* Macros to define signatures of all objects in the file */
 

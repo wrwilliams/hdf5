@@ -60,17 +60,17 @@
 /* For non-paged aggregation: map allocation request type to tracked free-space type */
 /* F -- pointer to H5F_t; T -- H5FD_mem_t */
 #define H5MF_ALLOC_TO_FS_AGGR_TYPE(F, T)                  \
-        ((H5FD_MEM_DEFAULT == (F)->shared->fs.type_map[T]) ? (T) : (F)->shared->fs.type_map[T])
+        ((H5FD_MEM_DEFAULT == (F)->shared->fs_type_map[T]) ? (T) : (F)->shared->fs_type_map[T])
 
 /* Get section class type based on size */
 #define H5MF_SECT_CLASS_TYPE(F, S)                          \
         ((H5F_PAGED_AGGR(F)) ?                              \
-         ((S >= (F)->shared->fs.page_size) ? H5MF_FSPACE_SECT_LARGE : H5MF_FSPACE_SECT_SMALL) : H5MF_FSPACE_SECT_SIMPLE)
+         ((S >= (F)->shared->fs_page_size) ? H5MF_FSPACE_SECT_LARGE : H5MF_FSPACE_SECT_SMALL) : H5MF_FSPACE_SECT_SIMPLE)
 
 /* Get section class cls */
 #define H5MF_SECT_CLS_TYPE(F, S)                            \
         ((H5F_PAGED_AGGR(F)) ?                              \
-         ((S >= (F)->shared->fs.page_size) ?                \
+         ((S >= (F)->shared->fs_page_size) ?                \
           H5MF_FSPACE_SECT_CLS_LARGE : H5MF_FSPACE_SECT_CLS_SMALL) : H5MF_FSPACE_SECT_CLS_SIMPLE)
 
 /* Calculate the mis-aligned fragment */

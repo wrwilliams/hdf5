@@ -171,26 +171,26 @@ H5MF_sects_debug(H5F_t *f, hid_t dxpl_id, haddr_t fs_addr, FILE *stream, int ind
     HDassert(fwidth >= 0);
 
     for(type = H5FD_MEM_DEFAULT; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
-        if(H5F_addr_eq(f->shared->fs.man_addr[type], fs_addr)) {
-            if(!f->shared->fs.man[type])
+        if(H5F_addr_eq(f->shared->fs_addr[type], fs_addr)) {
+            if(!f->shared->fs_man[type])
                 if(H5MF_open_fstype(f, dxpl_id, type) < 0)
                     HGOTO_ERROR(H5E_RESOURCE, H5E_CANTINIT, FAIL, "can't initialize file free space")
 
-            if(f->shared->fs.man[type]) {
+            if(f->shared->fs_man[type]) {
                 H5MF_debug_iter_ud_t udata;        /* User data for callbacks */
 
                 /* Prepare user data for section iteration callback */
-                udata.fspace = f->shared->fs.man[type];
+                udata.fspace = f->shared->fs_man[type];
                 udata.stream = stream;
                 udata.indent = indent;
                 udata.fwidth = fwidth;
 
                 /* Iterate over all the free space sections */
-                if(H5FS_sect_iterate(f, dxpl_id, f->shared->fs.man[type], H5MF_sects_debug_cb, &udata) < 0)
+                if(H5FS_sect_iterate(f, dxpl_id, f->shared->fs_man[type], H5MF_sects_debug_cb, &udata) < 0)
                     HGOTO_ERROR(H5E_HEAP, H5E_BADITER, FAIL, "can't iterate over heap's free space")
 
                 /* Close the free space information */
-                if(H5FS_close(f, dxpl_id, f->shared->fs.man[type]) < 0)
+                if(H5FS_close(f, dxpl_id, f->shared->fs_man[type]) < 0)
                     HGOTO_ERROR(H5E_HEAP, H5E_CANTRELEASE, FAIL, "can't release free space info")
             } /* end if */
             break;
@@ -256,7 +256,7 @@ HDfprintf(stderr, "%s: for type = H5FD_MEM_DEFAULT, eoa = %a\n", FUNC, eoa);
                 H5MF_debug_iter_ud_t udata;        /* User data for callbacks */
 
                 /* Prepare user data for section iteration callback */
-                udata.fspace = f->shared->fs.page.fs_man[ptype];
+                udata.fspace = f->shared->fs_man[ptype];
                 udata.stream = stream;
                 udata.indent = indent + 6;
                 udata.fwidth = MAX(0, fwidth - 6);

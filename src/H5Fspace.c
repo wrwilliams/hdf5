@@ -109,7 +109,7 @@ H5F_alloc(H5F_t *f, hid_t dxpl_id, H5F_mem_t type, hsize_t size, haddr_t *frag_a
     HDassert(size > 0);
 
     /* Check whether the file can use temporary addresses */
-    if(f->shared->fs.use_tmp_space) {
+    if(f->shared->use_tmp_space) {
         haddr_t	eoa;            /* Current EOA for the file */
 
         /* Get the EOA for the file */
@@ -117,7 +117,7 @@ H5F_alloc(H5F_t *f, hid_t dxpl_id, H5F_mem_t type, hsize_t size, haddr_t *frag_a
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, HADDR_UNDEF, "Unable to get eoa")
 
         /* Check for overlapping into file's temporary allocation space */
-        if(H5F_addr_gt((eoa + size), f->shared->fs.tmp_addr))
+        if(H5F_addr_gt((eoa + size), f->shared->tmp_addr))
             HGOTO_ERROR(H5E_FILE, H5E_BADRANGE, HADDR_UNDEF, "'normal' file space allocation request will overlap into 'temporary' file space")
     } /* end if */
 

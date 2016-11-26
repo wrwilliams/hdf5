@@ -576,44 +576,44 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
                     HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to get free-space manager info message")
 
                 /* Update changed values */
-                if(f->shared->fs.strategy != fsinfo.strategy) {
-                    f->shared->fs.strategy = fsinfo.strategy;
+                if(f->shared->fs_strategy != fsinfo.strategy) {
+                    f->shared->fs_strategy = fsinfo.strategy;
 
                     /* Set non-default strategy in the property list */
                     if(H5P_set(c_plist, H5F_CRT_FILE_SPACE_STRATEGY_NAME, &fsinfo.strategy) < 0)
                         HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space strategy")
                 } /* end if */
-                if(f->shared->fs.persist != fsinfo.persist) {
-                    f->shared->fs.persist = fsinfo.persist;
+                if(f->shared->fs_persist != fsinfo.persist) {
+                    f->shared->fs_persist = fsinfo.persist;
 
                     /* Set non-default strategy in the property list */
                     if(H5P_set(c_plist, H5F_CRT_FREE_SPACE_PERSIST_NAME, &fsinfo.persist) < 0)
                         HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space strategy")
                 } /* end if */
-                if(f->shared->fs.threshold != fsinfo.threshold) {
-                    f->shared->fs.threshold = fsinfo.threshold;
+                if(f->shared->fs_threshold != fsinfo.threshold) {
+                    f->shared->fs_threshold = fsinfo.threshold;
 
                     /* Set non-default threshold in the property list */
                     if(H5P_set(c_plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, &fsinfo.threshold) < 0)
                         HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space strategy")
                 } /* end if */
-                if(f->shared->fs.page_size != fsinfo.page_size) {
-                    f->shared->fs.page_size = fsinfo.page_size;
+                if(f->shared->fs_page_size != fsinfo.page_size) {
+                    f->shared->fs_page_size = fsinfo.page_size;
 
                     /* Set file space page size in the property list */
                     if(H5P_set(c_plist, H5F_CRT_FILE_SPACE_PAGE_SIZE_NAME, &fsinfo.page_size) < 0)
                         HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space page size")
                 } /* end if */
-                if(f->shared->fs.last_small != fsinfo.last_small)
+                if(f->shared->last_small != fsinfo.last_small)
                     /* Initialize the tracking of last section at EOF */
-                    f->shared->fs.last_small = f->shared->fs.track_last_small = fsinfo.last_small;
-                if(f->shared->fs.pgend_meta_thres != fsinfo.pgend_meta_thres)
+                    f->shared->last_small = f->shared->track_last_small = fsinfo.last_small;
+                if(f->shared->pgend_meta_thres != fsinfo.pgend_meta_thres)
                     /* Initialize page end meta threshold */
-                    f->shared->fs.pgend_meta_thres = fsinfo.pgend_meta_thres;
+                    f->shared->pgend_meta_thres = fsinfo.pgend_meta_thres;
 
-                f->shared->fs.man_addr[0] = HADDR_UNDEF;
-                for(u = 1; u < NELMTS(f->shared->fs.man_addr); u++)
-                    f->shared->fs.man_addr[u] = fsinfo.fs_addr[u - 1];
+                f->shared->fs_addr[0] = HADDR_UNDEF;
+                for(u = 1; u < NELMTS(f->shared->fs_addr); u++)
+                    f->shared->fs_addr[u] = fsinfo.fs_addr[u - 1];
             } /* end if not marked "unknown" */
         } /* end if */
 
@@ -792,10 +792,10 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to get rank for btree internal nodes")
 
     /* Check for non-default free-space settings */
-    if(!(f->shared->fs.strategy == H5F_FILE_SPACE_STRATEGY_DEF &&
-            f->shared->fs.persist == H5F_FREE_SPACE_PERSIST_DEF &&
-            f->shared->fs.threshold == H5F_FREE_SPACE_THRESHOLD_DEF &&
-	    f->shared->fs.page_size == H5F_FILE_SPACE_PAGE_SIZE_DEF))
+    if(!(f->shared->fs_strategy == H5F_FILE_SPACE_STRATEGY_DEF &&
+            f->shared->fs_persist == H5F_FREE_SPACE_PERSIST_DEF &&
+            f->shared->fs_threshold == H5F_FREE_SPACE_THRESHOLD_DEF &&
+	    f->shared->fs_page_size == H5F_FILE_SPACE_PAGE_SIZE_DEF))
         non_default_fs_settings = TRUE;
 
     /* Bump superblock version if latest superblock version support is enabled */
@@ -845,7 +845,7 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
     /* Sanity check the userblock size vs. the file's allocation alignment */
     if(userblock_size > 0) {
 	/* Set up the alignment to use for page or aggr fs */
-	hsize_t alignment = H5F_PAGED_AGGR(f) ? f->shared->fs.page_size : f->shared->alignment;
+	hsize_t alignment = H5F_PAGED_AGGR(f) ? f->shared->fs_page_size : f->shared->alignment;
 
         if(userblock_size < alignment)
             HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "userblock size must be > file object alignment")
@@ -1015,12 +1015,12 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
             H5O_fsinfo_t fsinfo;    /* Free space manager info message */
 
             /* Write free-space manager info message to superblock extension object header if needed */
-            fsinfo.strategy = f->shared->fs.strategy;
-            fsinfo.persist = f->shared->fs.persist;
-            fsinfo.threshold = f->shared->fs.threshold;
-            fsinfo.page_size = f->shared->fs.page_size;
-            fsinfo.last_small = f->shared->fs.last_small;
-            fsinfo.pgend_meta_thres = f->shared->fs.pgend_meta_thres;
+            fsinfo.strategy = f->shared->fs_strategy;
+            fsinfo.persist = f->shared->fs_persist;
+            fsinfo.threshold = f->shared->fs_threshold;
+            fsinfo.page_size = f->shared->fs_page_size;
+            fsinfo.last_small = f->shared->last_small;
+            fsinfo.pgend_meta_thres = f->shared->pgend_meta_thres;
 
             for(ptype = H5F_MEM_PAGE_SUPER; ptype < H5F_MEM_PAGE_NTYPES; H5_INC_ENUM(H5F_mem_page_t, ptype))
                 fsinfo.fs_addr[ptype - 1] = HADDR_UNDEF;

@@ -115,17 +115,17 @@ HDfprintf(stderr, "%s: alloc_type = %u, size = %Hu\n", FUNC, (unsigned)alloc_typ
     /* Couldn't find anything from the free space manager, go allocate some */
     if(alloc_type != H5FD_MEM_DRAW && alloc_type != H5FD_MEM_GHEAP) {
         /* Handle metadata differently from "raw" data */
-        if(HADDR_UNDEF == (ret_value = H5MF_aggr_alloc(f, dxpl_id, &(f->shared->fs.meta_aggr), &(f->shared->fs.sdata_aggr), alloc_type, size)))
+        if(HADDR_UNDEF == (ret_value = H5MF_aggr_alloc(f, dxpl_id, &(f->shared->meta_aggr), &(f->shared->sdata_aggr), alloc_type, size)))
             HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, HADDR_UNDEF, "can't allocate metadata")
     } /* end if */
     else {
         /* Allocate "raw" data: H5FD_MEM_DRAW and H5FD_MEM_GHEAP */
-        if(HADDR_UNDEF == (ret_value = H5MF_aggr_alloc(f, dxpl_id, &(f->shared->fs.sdata_aggr), &(f->shared->fs.meta_aggr), H5FD_MEM_DRAW, size)))
+        if(HADDR_UNDEF == (ret_value = H5MF_aggr_alloc(f, dxpl_id, &(f->shared->sdata_aggr), &(f->shared->meta_aggr), H5FD_MEM_DRAW, size)))
             HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, HADDR_UNDEF, "can't allocate raw data")
     } /* end else */
 
     /* Sanity check for overlapping into file's temporary allocation space */
-    HDassert(H5F_addr_le((ret_value + size), f->shared->fs.tmp_addr));
+    HDassert(H5F_addr_le((ret_value + size), f->shared->tmp_addr));
 
 done:
 #ifdef H5MF_AGGR_DEBUG
@@ -183,7 +183,7 @@ HDfprintf(stderr, "%s: type = %u, size = %Hu\n", FUNC, (unsigned)type, size);
      * allocate "generic" space and sub-allocate out of that, if possible.
      * Otherwise just allocate through H5F_alloc().
      */
-    if((f->shared->feature_flags & aggr->feature_flag) && f->shared->fs.strategy != H5F_FSPACE_STRATEGY_NONE) {
+    if((f->shared->feature_flags & aggr->feature_flag) && f->shared->fs_strategy != H5F_FSPACE_STRATEGY_NONE) {
         haddr_t	aggr_frag_addr = HADDR_UNDEF;   /* Address of aggregrator fragment */
         hsize_t	aggr_frag_size = 0;             /* Size of aggregator fragment */
         hsize_t alignment;                      /* Alignment of this section */
@@ -217,7 +217,7 @@ HDfprintf(stderr, "%s: aggr = {%a, %Hu, %Hu}\n", FUNC, aggr->addr, aggr->tot_siz
 		hsize_t ext_size = size + aggr_frag_size;
 
                 /* Check for overlapping into file's temporary allocation space */
-                if(H5F_addr_gt((aggr->addr + aggr->size + ext_size), f->shared->fs.tmp_addr))
+                if(H5F_addr_gt((aggr->addr + aggr->size + ext_size), f->shared->tmp_addr))
                     HGOTO_ERROR(H5E_RESOURCE, H5E_BADRANGE, HADDR_UNDEF, "'normal' file space allocation request will overlap into 'temporary' file space")
 
 		if ((aggr->addr > 0) && (extended = H5F_try_extend(f, alloc_type, (aggr->addr + aggr->size), ext_size)) < 0)
@@ -255,7 +255,7 @@ HDfprintf(stderr, "%s: Allocating block\n", FUNC);
 		    ext_size += (aggr_frag_size - (ext_size - size));
 
                 /* Check for overlapping into file's temporary allocation space */
-                if(H5F_addr_gt((aggr->addr + aggr->size + ext_size), f->shared->fs.tmp_addr))
+                if(H5F_addr_gt((aggr->addr + aggr->size + ext_size), f->shared->tmp_addr))
                     HGOTO_ERROR(H5E_RESOURCE, H5E_BADRANGE, HADDR_UNDEF, "'normal' file space allocation request will overlap into 'temporary' file space")
 
 		if((aggr->addr > 0) && (extended = H5F_try_extend(f, alloc_type, (aggr->addr + aggr->size), ext_size)) < 0)
@@ -349,7 +349,7 @@ HDfprintf(stderr, "%s: Allocating block\n", FUNC);
     } /* end else */
 
     /* Sanity check for overlapping into file's temporary allocation space */
-    HDassert(H5F_addr_le((ret_value + size), f->shared->fs.tmp_addr));
+    HDassert(H5F_addr_le((ret_value + size), f->shared->tmp_addr));
 
     /* Post-condition sanity check */
     if(H5F_ALIGNMENT(f) && size >= H5F_THRESHOLD(f))
@@ -737,28 +737,28 @@ H5MF_free_aggrs(H5F_t *f, hid_t dxpl_id)
     HDassert(f->shared->lf);
 
     /* Retrieve metadata aggregator info, if available */
-    if(H5MF_aggr_query(f, &(f->shared->fs.meta_aggr), &ma_addr, &ma_size) < 0)
+    if(H5MF_aggr_query(f, &(f->shared->meta_aggr), &ma_addr, &ma_size) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "can't query metadata aggregator stats")
 
     /* Retrieve 'small data' aggregator info, if available */
-    if(H5MF_aggr_query(f, &(f->shared->fs.sdata_aggr), &sda_addr, &sda_size) < 0)
+    if(H5MF_aggr_query(f, &(f->shared->sdata_aggr), &sda_addr, &sda_size) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "can't query small data aggregator stats")
 
     /* Make certain we release the aggregator that's later in the file first */
     /* (so the file shrinks properly) */
     if(H5F_addr_defined(ma_addr) && H5F_addr_defined(sda_addr)) {
         if(H5F_addr_lt(ma_addr, sda_addr)) {
-            first_aggr = &(f->shared->fs.sdata_aggr);
-            second_aggr = &(f->shared->fs.meta_aggr);
+            first_aggr = &(f->shared->sdata_aggr);
+            second_aggr = &(f->shared->meta_aggr);
         } /* end if */
         else {
-            first_aggr = &(f->shared->fs.meta_aggr);
-            second_aggr = &(f->shared->fs.sdata_aggr);
+            first_aggr = &(f->shared->meta_aggr);
+            second_aggr = &(f->shared->sdata_aggr);
         } /* end else */
     } /* end if */
     else {
-        first_aggr = &(f->shared->fs.meta_aggr);
-        second_aggr = &(f->shared->fs.sdata_aggr);
+        first_aggr = &(f->shared->meta_aggr);
+        second_aggr = &(f->shared->sdata_aggr);
     } /* end else */
 
      /* Release the unused portion of the metadata and "small data" blocks back
@@ -882,16 +882,16 @@ H5MF_aggrs_try_shrink_eoa(H5F_t *f, hid_t dxpl_id)
     HDassert(f);
     HDassert(f->shared);
 
-    if((ma_status = H5MF_aggr_can_shrink_eoa(f, H5FD_MEM_DEFAULT, &(f->shared->fs.meta_aggr))) < 0)
+    if((ma_status = H5MF_aggr_can_shrink_eoa(f, H5FD_MEM_DEFAULT, &(f->shared->meta_aggr))) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "can't query metadata aggregator stats")
     if(ma_status > 0)
-	if(H5MF_aggr_free(f, dxpl_id, H5FD_MEM_DEFAULT, &(f->shared->fs.meta_aggr)) < 0)
+	if(H5MF_aggr_free(f, dxpl_id, H5FD_MEM_DEFAULT, &(f->shared->meta_aggr)) < 0)
 	    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSHRINK, FAIL, "can't check for shrinking eoa")
 
-    if((sda_status = H5MF_aggr_can_shrink_eoa(f, H5FD_MEM_DRAW, &(f->shared->fs.sdata_aggr))) < 0)
+    if((sda_status = H5MF_aggr_can_shrink_eoa(f, H5FD_MEM_DRAW, &(f->shared->sdata_aggr))) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "can't query small data aggregator stats")
     if(sda_status > 0)
-	if(H5MF_aggr_free(f, dxpl_id, H5FD_MEM_DRAW, &(f->shared->fs.sdata_aggr)) < 0)
+	if(H5MF_aggr_free(f, dxpl_id, H5FD_MEM_DRAW, &(f->shared->sdata_aggr)) < 0)
 	    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSHRINK, FAIL, "can't check for shrinking eoa")
 
     ret_value = (ma_status || sda_status);

@@ -109,7 +109,7 @@ HDfprintf(stderr, "%s: read from addr = %a, size = %Zu\n", FUNC, addr, size);
     HDassert(H5F_addr_defined(addr));
 
     /* Check for attempting I/O on 'temporary' file address */
-    if(H5F_addr_le(f->shared->fs.tmp_addr, (addr + size)))
+    if(H5F_addr_le(f->shared->tmp_addr, (addr + size)))
         HGOTO_ERROR(H5E_IO, H5E_BADRANGE, FAIL, "attempting I/O in temporary file space")
 
     /* Treat global heap as raw data */
@@ -164,7 +164,7 @@ HDfprintf(stderr, "%s: write to addr = %a, size = %Zu\n", FUNC, addr, size);
     HDassert(H5F_addr_defined(addr));
 
     /* Check for attempting I/O on 'temporary' file address */
-    if(H5F_addr_le(f->shared->fs.tmp_addr, (addr + size)))
+    if(H5F_addr_le(f->shared->tmp_addr, (addr + size)))
         HGOTO_ERROR(H5E_IO, H5E_BADRANGE, FAIL, "attempting I/O in temporary file space")
 
     /* Treat global heap as raw data */

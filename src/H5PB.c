@@ -223,32 +223,32 @@ H5PB_create(H5F_t *f, size_t size, unsigned page_buf_min_meta_perc, unsigned pag
     HDassert(f->shared);
 
     /* check args */
-    if(f->shared->fs.page_size == 0)
+    if(f->shared->fs_page_size == 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "Enabling Page Buffering requires paged metadata aggregation")
     /* round down the size if it is larger than the page size */
-    else if(size > f->shared->fs.page_size) {
+    else if(size > f->shared->fs_page_size) {
         hsize_t temp_size;
-        temp_size = (size / f->shared->fs.page_size) * f->shared->fs.page_size;
+        temp_size = (size / f->shared->fs_page_size) * f->shared->fs_page_size;
         H5_CHECKED_ASSIGN(size, size_t, temp_size, hsize_t);
     }
-    else if(0 != size % f->shared->fs.page_size)
+    else if(0 != size % f->shared->fs_page_size)
         HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "Page Buffer size must be >= to the page size");
 
     if(NULL == (page_buf = H5FL_CALLOC(H5PB_t)))
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
 
     page_buf->max_size = size;
-    H5_CHECKED_ASSIGN(page_buf->page_size, size_t, f->shared->fs.page_size, hsize_t);
+    H5_CHECKED_ASSIGN(page_buf->page_size, size_t, f->shared->fs_page_size, hsize_t);
 
     page_buf->min_meta_perc = page_buf_min_meta_perc;
     page_buf->min_raw_perc = page_buf_min_raw_perc;
 
     /* calculate the minimum page count for metadata and raw data
        based on the fractions provided */
-    page_buf->min_meta_count = (unsigned)(size/f->shared->fs.page_size) * ((double)page_buf_min_meta_perc/100);
-    page_buf->min_raw_count = (unsigned)(size/f->shared->fs.page_size) * ((double)page_buf_min_raw_perc/100);
+    page_buf->min_meta_count = (unsigned)(size/f->shared->fs_page_size) * ((double)page_buf_min_meta_perc/100);
+    page_buf->min_raw_count = (unsigned)(size/f->shared->fs_page_size) * ((double)page_buf_min_raw_perc/100);
 
-    //fprintf(stderr, "Creating a page buffer of size %zu, Page size = %zu\n", size, (size_t)f->shared->fs.page_size);
+    //fprintf(stderr, "Creating a page buffer of size %zu, Page size = %zu\n", size, (size_t)f->shared->fs_page_size);
     //fprintf(stderr, "MIN metadata count = %u, MIN raw data count = %u\n", page_buf->min_meta_count, page_buf->min_raw_count);
 
     if((page_buf->slist_ptr = H5SL_create(H5SL_TYPE_HADDR, NULL)) == NULL)
