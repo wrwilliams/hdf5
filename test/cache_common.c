@@ -21,7 +21,6 @@
  */
 #include "h5test.h"
 #include "H5Cprivate.h"
-#include "H5ACprivate.h"
 #include "H5Iprivate.h"
 #include "H5MFprivate.h"
 #include "H5MMprivate.h"
@@ -722,8 +721,8 @@ notify_get_initial_load_size(void *udata, size_t *image_length)
  *-------------------------------------------------------------------------
  */
 static herr_t
-get_final_load_size(const void *image, size_t image_len, void *udata,
-    size_t *actual_len, int32_t entry_type)
+get_final_load_size(const void H5_ATTR_UNUSED *image, size_t H5_ATTR_UNUSED image_len,
+    void *udata, size_t *actual_len, int32_t entry_type)
 {
     test_entry_t *entry;
     test_entry_t *base_addr;

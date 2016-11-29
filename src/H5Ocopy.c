@@ -322,6 +322,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out*/,
     unsigned               mesgno = 0;
     haddr_t                addr_new = HADDR_UNDEF;
     hbool_t                *deleted = NULL;      /* Array of flags indicating whether messages should be copied */
+    hbool_t                inserted = FALSE;        /* Whether the destination object header has been inserted into the cache */
     size_t                 null_msgs;               /* Number of NULL messages found in each loop */
     size_t                 orig_dst_msgs;           /* Original # of messages in dest. object */
     H5O_mesg_t             *mesg_src;               /* Message in source object header */
@@ -878,6 +879,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out*/,
     if(H5AC_insert_entry(oloc_dst->file, dxpl_id, H5AC_OHDR, oloc_dst->addr, oh_dst, H5AC__NO_FLAGS_SET) < 0)
         HGOTO_ERROR_TAG(H5E_OHDR, H5E_CANTINSERT, FAIL, "unable to cache object header")
     oh_dst = NULL;
+    inserted = TRUE;
 
     /* Reset metadat tag */
     H5_END_TAG(FAIL);
@@ -899,7 +901,7 @@ done:
         HDONE_ERROR(H5E_OHDR, H5E_CANTUNPROTECT, FAIL, "unable to release object header")
 
     /* Free destination object header on failure */
-    if(ret_value < 0 && oh_dst) {
+    if(ret_value < 0 && oh_dst && !inserted) {
         if(H5O__free(oh_dst) < 0)
             HDONE_ERROR(H5E_OHDR, H5E_CANTFREE, FAIL, "unable to destroy object header data")
         if(H5O_loc_reset(oloc_dst) < 0)

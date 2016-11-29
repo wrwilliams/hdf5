@@ -106,8 +106,6 @@ test_cont(char *filename, hid_t fapl)
 
     if(H5O_msg_create(&oh_locA, H5O_MTIME_NEW_ID, 0, 0, &time_new, H5AC_ind_read_dxpl_id) < 0)
         FAIL_STACK_ERROR
-    if(H5O_msg_create(&oh_locA, H5O_MTIME_NEW_ID, 0, 0, &time_new, H5AC_ind_read_dxpl_id) < 0)
-        FAIL_STACK_ERROR
 
     if(H5O_msg_create(&oh_locB, H5O_MTIME_ID, 0, 0, &time_new, H5AC_ind_read_dxpl_id) < 0)
         FAIL_STACK_ERROR
@@ -761,9 +759,8 @@ main(void)
     H5F_t	*f = NULL;
     char	filename[1024];
     H5O_hdr_info_t hdr_info;            /* Object info */
-    H5O_loc_t	oh_loc, oh_loc2;        /* Object header locations */
+    H5O_loc_t	oh_loc;                 /* Object header locations */
     time_t	time_new, ro;
-    int         chunkno;                /* Chunk index for message */
     int		i;                      /* Local index variable */
     unsigned    b;                      /* Index for "new format" loop */
     herr_t      ret;                    /* Generic return value */

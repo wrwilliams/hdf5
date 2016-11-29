@@ -3955,15 +3955,13 @@ external_set_elink_fapl3(hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_set_elink_acc_flags(const char H5_ATTR_UNUSED *env_h5_drvr,
-    hid_t fapl, hbool_t new_format)
+external_set_elink_acc_flags(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
 {
     hid_t       file1 = -1, file2 = -1, group = -1, subgroup = -1, gapl = -1;
     char        filename1[NAME_BUF_SIZE],
                 filename2[NAME_BUF_SIZE];
     herr_t      ret;
     unsigned    flags;
-    char        *driver = NULL;        /* VFD string (from env variable) */
 
     if(new_format)
         TESTING("H5Pset/get_elink_acc_flags() (w/new group format)")
@@ -4053,8 +4051,7 @@ external_set_elink_acc_flags(const char H5_ATTR_UNUSED *env_h5_drvr,
     if(H5Fclose(file1) < 0) TEST_ERROR
 
     /* Only run this part with VFDs that support SWMR */
-    driver = HDgetenv("HDF5_DRIVER");
-    if(H5FD_supports_swmr_test(driver)) {
+    if(H5FD_supports_swmr_test(env_h5_drvr)) {
 
         /* Reopen file1, with read-write and SWMR-write access */
         /* Only supported under the latest file format */
