@@ -191,7 +191,6 @@ typedef struct H5EA_hdr_t {
     haddr_t addr;                       /* Address of header in file */
     size_t size;                        /* Size of header in file */
     H5F_t *f;                           /* Pointer to file for extensible array */
-    hbool_t swmr_write;                 /* Flag indicating the file is opened with SWMR-write access */
     size_t file_rc;                     /* Reference count of files using array header */
     hbool_t pending_delete;             /* Array is pending deletion */
     size_t sizeof_addr;                 /* Size of file addresses */
@@ -208,7 +207,8 @@ typedef struct H5EA_hdr_t {
     /* Client information (not stored) */
     void *cb_ctx;                       /* Callback context */
 
-    /* Flush dependency information (not stored) */
+    /* SWMR / Flush dependency information (not stored) */
+    hbool_t swmr_write;                 /* Flag indicating the file is opened with SWMR-write access */
     H5AC_proxy_entry_t *top_proxy;      /* 'Top' proxy cache entry for all array entries */
     void *parent;		        /* Pointer to 'top' proxy flush dependency
                                          * parent, if it exists, otherwise NULL.
@@ -245,7 +245,7 @@ typedef struct H5EA_iblock_t {
     haddr_t     addr;           /* Address of this index block on disk          */
     size_t      size;           /* Size of index block on disk                  */
 
-    /* Flush dependency information (not stored) */
+    /* SWMR / Flush dependency information (not stored) */
     H5AC_proxy_entry_t *top_proxy;      /* "Top" proxy cache entry for all array entries */
 
     /* Computed/cached values (not stored) */
@@ -269,7 +269,7 @@ typedef struct H5EA_sblock_t {
     haddr_t     addr;           /* Address of this index block on disk          */
     size_t      size;           /* Size of index block on disk                  */
 
-    /* Flush dependency information (not stored) */
+    /* SWMR / Flush dependency information (not stored) */
     hbool_t     has_hdr_depend; /* Whether this object has a flush dependency on the header */
     H5AC_proxy_entry_t *top_proxy;      /* "Top" proxy cache entry for all array entries */
     H5EA_iblock_t *parent;      /* Parent object for super block (index block)  */
@@ -297,7 +297,7 @@ typedef struct H5EA_dblock_t {
     haddr_t     addr;           /* Address of this data block on disk                   */
     size_t      size;           /* Size of data block on disk                           */
 
-    /* Flush dependency information (not stored) */
+    /* SWMR / Flush dependency information (not stored) */
     hbool_t     has_hdr_depend; /* Whether this object has a flush dependency on the header */
     H5AC_proxy_entry_t *top_proxy;      /* 'Top' proxy cache entry for all array entries */
     void        *parent;        /* Parent object for data block (index or super block)  */
@@ -320,7 +320,7 @@ typedef struct H5EA_dbk_page_t {
     haddr_t     addr;           /* Address of this data block page on disk          */
     size_t      size;           /* Size of data block page on disk                  */
 
-    /* Flush dependency information (not stored) */
+    /* SWMR / Flush dependency information (not stored) */
     hbool_t     has_hdr_depend; /* Whether this object has a flush dependency on the header */
     H5AC_proxy_entry_t *top_proxy;      /* "Top" proxy cache entry for all array entries */
     H5EA_sblock_t *parent;      /* Parent object for data block page (super block)  */

@@ -575,6 +575,7 @@ H5EA__cache_hdr_notify(H5AC_notify_action_t action, void *_thing))
                 if(hdr->top_proxy) {
                     if(H5AC_proxy_entry_remove_child(hdr->top_proxy, hdr) < 0)
                         H5E_THROW(H5E_CANTUNDEPEND, "unable to destroy flush dependency between header and extensible array 'top' proxy")
+                    /* Don't reset hdr->top_proxy here, it's destroyed when the header is freed -QAK */
                 } /* end if */
 		break;
 

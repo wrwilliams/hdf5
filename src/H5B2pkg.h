@@ -170,7 +170,6 @@ typedef struct H5B2_hdr_t {
 
     /* Shared internal data structures (not stored) */
     H5F_t       *f;             /* Pointer to the file that the B-tree is in */
-    void        *parent;        /* Flush dependency parent */
     haddr_t     addr;           /* Address of B-tree header in the file */
     size_t      hdr_size;       /* Size of the B-tree header on disk */
     size_t      rc;             /* Reference count of nodes using this header */
@@ -183,11 +182,28 @@ typedef struct H5B2_hdr_t {
     uint8_t	*page;	        /* Common disk page for I/O */
     size_t      *nat_off;       /* Array of offsets of native records */
     H5B2_node_info_t *node_info; /* Table of node info structs for current depth of B-tree */
-    hbool_t     swmr_write;     /* Whether we are doing SWMR writes */
-    struct H5B2_leaf_t *shadowed_leaf; /* Linked list of shadowed leaf nodes */
-    struct H5B2_internal_t *shadowed_internal; /* Linked list of shadowed internal nodes */
     void        *min_native_rec; /* Pointer to minimum native record                  */
     void        *max_native_rec; /* Pointer to maximum native record                  */
+
+    /* SWMR / Flush dependency information (not stored) */
+    hbool_t     swmr_write;     /* Whether we are doing SWMR writes */
+    H5AC_proxy_entry_t *top_proxy;  /* 'Top' proxy cache entry for all B-tree entries */
+    void        *parent;        /* Pointer to 'top' proxy flush dependency
+                                 * parent, if it exists, otherwise NULL.
+                                 * If the v2 B-tree is being used to index a
+                                 * chunked dataset and the dataset metadata is
+                                 * modified by a SWMR writer, this field will
+                                 * be set equal to the object header proxy
+                                 * that is the flush dependency parent
+                                 * of the v2 B-tree header.
+ 				 *
+ 				 * The field is used to avoid duplicate setups
+                                 * of the flush dependency relationship, and to
+                                 * allow the v2 B-tree header to destroy the
+                                 * flush dependency on receipt of an eviction
+                                 * notification from the metadata cache.
+				 */
+    uint64_t    shadow_epoch;   /* Epoch of header, for making shadow copies */
 
     /* Client information (not stored) */
     const H5B2_class_t *cls;	/* Class of B-tree client */
@@ -201,11 +217,13 @@ typedef struct H5B2_leaf_t {
 
     /* Internal B-tree information */
     H5B2_hdr_t	*hdr;		/* Pointer to the [pinned] v2 B-tree header   */
-    void        *parent;        /* Flush dependency parent                    */
     uint8_t     *leaf_native;   /* Pointer to native records                  */
     uint16_t    nrec;           /* Number of records in node                  */
-    struct H5B2_leaf_t *shadowed_next; /* Next node in shadowed list          */
-    struct H5B2_leaf_t *shadowed_prev; /* Previous node in shadowed list      */
+
+    /* SWMR / Flush dependency information (not stored) */
+    H5AC_proxy_entry_t *top_proxy;  /* 'Top' proxy cache entry for all B-tree entries */
+    void        *parent;        /* Flush dependency parent for leaf           */
+    uint64_t    shadow_epoch;   /* Epoch of node, for making shadow copies */
 } H5B2_leaf_t;
 
 /* B-tree internal node information */
@@ -215,13 +233,15 @@ typedef struct H5B2_internal_t {
 
     /* Internal B-tree information */
     H5B2_hdr_t	*hdr;		/* Pointer to the [pinned] v2 B-tree header   */
-    void        *parent;        /* Flush dependency parent                    */
     uint8_t     *int_native;    /* Pointer to native records                  */
     H5B2_node_ptr_t *node_ptrs; /* Pointer to node pointers                   */
     uint16_t    nrec;           /* Number of records in node                  */
     uint16_t    depth;          /* Depth of this node in the B-tree           */
-    struct H5B2_internal_t *shadowed_next; /* Next node in shadowed list      */
-    struct H5B2_internal_t *shadowed_prev; /* Previous node in shadowed list  */
+
+    /* SWMR / Flush dependency information (not stored) */
+    H5AC_proxy_entry_t *top_proxy;  /* 'Top' proxy cache entry for all B-tree entries */
+    void        *parent;        /* Flush dependency parent for internal node  */
+    uint64_t    shadow_epoch;   /* Epoch of node, for making shadow copies */
 } H5B2_internal_t;
 
 /* v2 B-tree */
@@ -247,14 +267,14 @@ typedef enum H5B2_update_status_t {
     H5B2_UPDATE_INSERT_CHILD_FULL   /* Update will insert record, but child is full */
 } H5B2_update_status_t;
 
-/* Callback info for loading a free space header into the cache */
+/* Callback info for loading a v2 B-tree header into the cache */
 typedef struct H5B2_hdr_cache_ud_t {
     H5F_t *f;                   /* File that v2 b-tree header is within */
     haddr_t addr;               /* Address of B-tree header in the file */
     void *ctx_udata;            /* User-data for protecting */
 } H5B2_hdr_cache_ud_t;
 
-/* Callback info for loading a free space internal node into the cache */
+/* Callback info for loading a v2 B-tree internal node into the cache */
 typedef struct H5B2_internal_cache_ud_t {
     H5F_t *f;                   /* File that v2 b-tree header is within */
     H5B2_hdr_t *hdr;            /* v2 B-tree header */
@@ -263,7 +283,7 @@ typedef struct H5B2_internal_cache_ud_t {
     uint16_t depth;             /* Depth of node to load */
 } H5B2_internal_cache_ud_t;
 
-/* Callback info for loading a free space leaf node into the cache */
+/* Callback info for loading a v2 B-tree leaf node into the cache */
 typedef struct H5B2_leaf_cache_ud_t {
     H5F_t *f;                   /* File that v2 b-tree header is within */
     H5B2_hdr_t *hdr;            /* v2 B-tree header */
