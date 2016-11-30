@@ -6006,6 +6006,11 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
         H5C__UPDATE_STATS_FOR_FLUSH(cache_ptr, entry_ptr)
     } /* end else if */
 
+    /* Note that the algorithm below is (very) similar to the set of operations
+     * in H5C_remove_entry() and should be kept in sync with changes
+     * to that code. - QAK, 2016/11/30
+     */
+
     /* Update the cache internal data structures. */
     if(destroy) {
         /* Sanity checks */
@@ -7888,6 +7893,11 @@ H5C_remove_entry(void *_entry)
     HDassert(!entry->in_slist);
     HDassert(!entry->flush_marker);
     HDassert(!entry->flush_in_progress);
+
+    /* Note that the algorithm below is (very) similar to the set of operations
+     * in H5C__flush_single_entry() and should be kept in sync with changes
+     * to that code. - QAK, 2016/11/30
+     */
 
     /* Update stats, as if we are "destroying" and taking ownership of the entry */
     H5C__UPDATE_STATS_FOR_EVICTION(cache, entry, TRUE)
