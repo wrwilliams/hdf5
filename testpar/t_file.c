@@ -161,6 +161,7 @@ test_page_buffer_access(void)
     ret = H5Pset_coll_metadata_write(fapl, FALSE);
     VRFY((ret >= 0), "");
 
+#ifdef OUT
     ret = create_file(filename, fcpl, fapl, H5AC_METADATA_WRITE_STRATEGY__DISTRIBUTED);
     VRFY((ret == 0), "");
     ret = open_file(filename, fapl, H5AC_METADATA_WRITE_STRATEGY__DISTRIBUTED, sizeof(int)*100, sizeof(int)*100000);
@@ -170,6 +171,7 @@ test_page_buffer_access(void)
     VRFY((ret == 0), "");
     ret = open_file(filename, fapl, H5AC_METADATA_WRITE_STRATEGY__PROCESS_0_ONLY, sizeof(int)*100, sizeof(int)*100000);
     VRFY((ret == 0), "");
+#endif
 
     ret = H5Pset_file_space_page_size(fcpl, sizeof(int)*100);
     VRFY((ret == 0), "");

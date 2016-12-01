@@ -604,9 +604,6 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
                     if(H5P_set(c_plist, H5F_CRT_FILE_SPACE_PAGE_SIZE_NAME, &fsinfo.page_size) < 0)
                         HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space page size")
                 } /* end if */
-                if(f->shared->last_small != fsinfo.last_small)
-                    /* Initialize the tracking of last section at EOF */
-                    f->shared->last_small = f->shared->track_last_small = fsinfo.last_small;
                 if(f->shared->pgend_meta_thres != fsinfo.pgend_meta_thres)
                     /* Initialize page end meta threshold */
                     f->shared->pgend_meta_thres = fsinfo.pgend_meta_thres;
@@ -1019,8 +1016,8 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
             fsinfo.persist = f->shared->fs_persist;
             fsinfo.threshold = f->shared->fs_threshold;
             fsinfo.page_size = f->shared->fs_page_size;
-            fsinfo.last_small = f->shared->last_small;
             fsinfo.pgend_meta_thres = f->shared->pgend_meta_thres;
+            fsinfo.eoa_pre_fsm_fsalloc = HADDR_UNDEF;
 
             for(ptype = H5F_MEM_PAGE_SUPER; ptype < H5F_MEM_PAGE_NTYPES; H5_INC_ENUM(H5F_mem_page_t, ptype))
                 fsinfo.fs_addr[ptype - 1] = HADDR_UNDEF;

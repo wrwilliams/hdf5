@@ -786,7 +786,7 @@ typedef struct H5O_fsinfo_t {
     hsize_t threshold;                      /* Free-space section threshold */
     hsize_t page_size;                      /* For paged aggregation: file space page size */
     size_t pgend_meta_thres;                /* For paged aggregation: page end metadata threshold */
-    unsigned char last_small;               /* For paged aggregation: EOF file space section type */
+    haddr_t eoa_pre_fsm_fsalloc;            /* For paged aggregation: the eoa before free-space headers & sinfo */
     haddr_t fs_addr[H5F_MEM_PAGE_NTYPES - 1];   /* 13 addresses of free-space managers */
                                                 /* For non-paged aggregation: only 6 addresses are used */
 } H5O_fsinfo_t;

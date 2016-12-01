@@ -286,8 +286,6 @@ struct H5F_file_t {
 
     /* Paged aggregation info */
     hsize_t fs_page_size;                           /* File space page size */
-    unsigned char last_small;                       /* The allocation at EOF is a small section or not */
-    unsigned char track_last_small;                 /* Tracking of the current allocation is a small section or not */
     size_t pgend_meta_thres;                        /* Do not track page end meta section <= this threshold */
 
     /* Metadata accumulator information */

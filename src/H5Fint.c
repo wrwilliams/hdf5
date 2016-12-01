@@ -610,7 +610,6 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
         } /* end for */
 
         /* Initialization for handling file space (for paged aggregation) */
-        f->shared->last_small = f->shared->track_last_small = 0;
         f->shared->pgend_meta_thres = H5F_FILE_SPACE_PGEND_META_THRES;
 
         /* intialize point of no return */
@@ -1202,16 +1201,6 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
     /* Formulate the actual file name, after following symlinks, etc. */
     if(H5F_build_actual_name(file, a_plist, name, &file->actual_name) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to build actual name")
-
-    if(flags & H5F_ACC_RDWR) {
-        /* For paged aggregation */
-        /* If there is a small section at EOF, put the mis-aligned fragment to free-space manager */
-        if((H5F_PAGED_AGGR(file)) && (shared->last_small)) {
-            if(H5MF_eof_fragment_fsm(file, dxpl_id))
-                HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to H5MF_eof_fragment_fsm")
-            shared->last_small = 0;
-        }
-    }
 
     /* Success */
     ret_value = file;
