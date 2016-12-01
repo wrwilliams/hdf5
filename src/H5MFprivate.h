@@ -66,7 +66,6 @@ H5_DLL haddr_t H5MF_close_allocate(H5F_t *f, H5FD_mem_t alloc_type, hid_t dxpl_i
 H5_DLL ssize_t H5MF_get_free_sections(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type,
     size_t nsects, H5F_sect_info_t *sect_info);
 H5_DLL herr_t H5MF_get_freespace(H5F_t *f, hid_t dxpl_id, hsize_t *tot_space, hsize_t *meta_size);
-H5_DLL herr_t H5MF_eof_fragment_fsm(H5F_t *f, hid_t dxpl_id);
 
 /* File 'temporary' space allocation routines */
 H5_DLL haddr_t H5MF_alloc_tmp(H5F_t *f, hsize_t size);

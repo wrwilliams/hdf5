@@ -4750,7 +4750,7 @@ hsize_t align;
     /* Get the file's version information */
     ret = H5Fget_info1(file, &finfo);
     CHECK(ret, FAIL, "H5Fget_info1");
-    VERIFY(finfo.super_ext_size, 144,"H5Fget_info1");
+    VERIFY(finfo.super_ext_size, 152,"H5Fget_info1");
     VERIFY(finfo.sohm.hdr_size, 0,"H5Fget_info1");
     VERIFY(finfo.sohm.msgs_info.index_size, 0,"H5Fget_info1");
     VERIFY(finfo.sohm.msgs_info.heap_size, 0,"H5Fget_info1");
@@ -4782,7 +4782,7 @@ hsize_t align;
     /* Get the file's version information */
     ret = H5Fget_info1(file, &finfo);
     CHECK(ret, FAIL, "H5Fget_info1");
-    VERIFY(finfo.super_ext_size, 144,"H5Fget_info1");
+    VERIFY(finfo.super_ext_size, 152,"H5Fget_info1");
     VERIFY(finfo.sohm.hdr_size, 0,"H5Fget_info1");
     VERIFY(finfo.sohm.msgs_info.index_size, 0,"H5Fget_info1");
     VERIFY(finfo.sohm.msgs_info.heap_size, 0,"H5Fget_info1");
@@ -4850,12 +4850,16 @@ test_file(void)
     test_rw_noupdate();                         /* Test to ensure that RW permissions don't write the file unless dirtied */
 
     test_userblock_alignment();                 /* Tests that files created with a userblock and alignment interact properly */
+#ifdef OUT
     test_userblock_alignment_paged();           /* Tests files created with a userblock and alignment (via paged aggregation) interact properly */
+#endif
     test_filespace_info();                      /* Test file creation public routines: */
                                                 /* H5Pget/set_file_space_strategy() & H5Pget/set_file_space_page_size() */
+#ifdef OUT
     test_file_freespace(env_h5_drvr);           /* Test file public routine H5Fget_freespace() */
-    test_sects_freespace(env_h5_drvr, FALSE);   /* Test file public routine H5Fget_free_sections() */
     test_sects_freespace(env_h5_drvr, TRUE);    /* Test file public routine H5Fget_free_sections() for new format */
+#endif
+    test_sects_freespace(env_h5_drvr, FALSE);   /* Test file public routine H5Fget_free_sections() */
 
     test_filespace_compatible();                /* Test compatibility for file space management */
     test_filespace_round_compatible();          /* Testing file space compatibility for files from trunk to 1_8 to trunk */

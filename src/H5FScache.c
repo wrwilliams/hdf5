@@ -869,6 +869,7 @@ H5FS__cache_sinfo_deserialize(const void *_image, size_t len, void *_udata,
 
     /* initialize old_sect_size */
     H5_CHECKED_ASSIGN(old_sect_size, size_t, udata->fspace->sect_size, hsize_t);
+//HDfprintf(stderr, "old_sect_size= %a\n", old_sect_size);
 
     /* Magic number */
     if(HDmemcmp(image, H5FS_SINFO_MAGIC, (size_t)H5_SIZEOF_MAGIC))
@@ -881,9 +882,11 @@ H5FS__cache_sinfo_deserialize(const void *_image, size_t len, void *_udata,
 
     /* Address of free space header for these sections */
     H5F_addr_decode(udata->f, &image, &fs_addr);
+//HDfprintf(stderr, "fs_addr= %a\n", fs_addr);
     if(H5F_addr_ne(fs_addr, udata->fspace->addr))
         HGOTO_ERROR(H5E_FSPACE, H5E_CANTLOAD, NULL, "incorrect header address for free space sections")
 
+//HDfprintf(stderr, "serial_sect_count= %u\n", fspace->serial_sect_count);
     /* Check for any serialized sections */
     if(fspace->serial_sect_count > 0) {
         hsize_t old_tot_sect_count;     /* Total section count from header */
@@ -913,6 +916,7 @@ H5FS__cache_sinfo_deserialize(const void *_image, size_t len, void *_udata,
 
             /* The number of sections of this node's size */
             UINT64DECODE_VAR(image, node_count, sect_cnt_size);
+//HDfprintf(stderr, "node_count=%u\n", node_count);
             HDassert(node_count);
 
             /* The size of the sections for this node */
@@ -934,6 +938,7 @@ H5FS__cache_sinfo_deserialize(const void *_image, size_t len, void *_udata,
 
                 /* Call 'deserialize' callback for this section */
                 des_flags = 0;
+//HDfprintf(stderr, "sect_addr= %a, sect_size=%u, sect->type=%u\n", sect_addr, sect_size, sect_type);
                 HDassert(udata->fspace->sect_cls[sect_type].deserialize);
                 if(NULL == (new_sect = (*fspace->sect_cls[sect_type].deserialize) (&fspace->sect_cls[sect_type], udata->dxpl_id, image, sect_addr, sect_size, &des_flags)))
                     HGOTO_ERROR(H5E_FSPACE, H5E_CANTDECODE, NULL, "can't deserialize section")
@@ -1162,12 +1167,14 @@ H5FS__cache_sinfo_serialize(const H5F_t *f, void *_image, size_t len,
     *image++ = H5FS_SINFO_VERSION;
 
     /* Address of free space header for these sections */
+//HDfprintf(stderr, "sinfo->fspce->addr= %a, sect_size=%u\n", sinfo->fspace->addr, fspace->sect_size);
     H5F_addr_encode(f, &image, sinfo->fspace->addr);
 
     /* Set up user data for iterator */
     udata.sinfo = sinfo;
     udata.image = &image;
     udata.sect_cnt_size = H5VM_limit_enc_size((uint64_t)sinfo->fspace->serial_sect_count);
+//HDfprintf(stderr, "sinfo->fspace->serial_sect_count=%u\n", sinfo->fspace->serial_sect_count);
 
     /* Iterate over all the bins */
     for(bin = 0; bin < sinfo->nbins; bin++)
@@ -1277,6 +1284,7 @@ H5FS__sinfo_serialize_sect_cb(void *_item, void H5_ATTR_UNUSED *key, void *_udat
         /* The type of this section */
         *(*udata->image)++ = (uint8_t)sect->type;
 
+//HDfprintf(stderr, "sect->addr= %a, sect->size=%u, sect->type=%u\n", sect->addr, sect->size, sect->type);
         /* Call 'serialize' callback for this section */
         if(sect_cls->serialize) {
             if((*sect_cls->serialize)(sect_cls, sect, *udata->image) < 0)

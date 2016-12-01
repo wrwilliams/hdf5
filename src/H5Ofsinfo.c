@@ -112,7 +112,7 @@ H5O_fsinfo_decode(H5F_t *f, hid_t H5_ATTR_UNUSED dxpl_id, H5O_t H5_ATTR_UNUSED *
 
     H5F_DECODE_LENGTH(f, p, fsinfo->page_size); /* File space page size */
     UINT16DECODE(p, fsinfo->pgend_meta_thres);  /* Page end metdata threshold */
-    fsinfo->last_small = *p++;                  /* EOF file space section type */
+    H5F_addr_decode(f, &p, &(fsinfo->eoa_pre_fsm_fsalloc)); /* EOA before free-space header and section info */
 
     /* Decode addresses of free space managers, if persisting */
     if(fsinfo->persist) {
@@ -166,7 +166,7 @@ H5O_fsinfo_encode(H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p, c
 
     H5F_ENCODE_LENGTH(f, p, fsinfo->page_size);	/* File space page size */
     UINT16ENCODE(p, fsinfo->pgend_meta_thres);	/* Page end metadata threshold */
-    *p++ = fsinfo->last_small;			/* EOF file space section type */
+    H5F_addr_encode(f, &p, fsinfo->eoa_pre_fsm_fsalloc);    /* EOA before free-space header and section info */
 
     /* Store addresses of free-space managers, if persisting */
     if(fsinfo->persist) {
@@ -243,7 +243,7 @@ H5O_fsinfo_size(const H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, const voi
 		+ (size_t)H5F_SIZEOF_SIZE(f)    /* Free-space section threshold */
 		+ (size_t)H5F_SIZEOF_SIZE(f)    /* File space page size */
 		+ 2                             /* Page end meta threshold */
-		+ 1;                            /* EOF file space section type */
+		+ (size_t)H5F_SIZEOF_ADDR(f);
     
     /* Free-space manager addresses */
     if(fsinfo->persist)
@@ -335,8 +335,8 @@ H5O_fsinfo_debug(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, const vo
     HDfprintf(stream, "%*s%-*s %u\n", indent, "", fwidth,
               "Page end metadata threshold:", fsinfo->pgend_meta_thres);
 
-    HDfprintf(stream, "%*s%-*s %u\n", indent, "", fwidth,
-              "EOF file space section type:", fsinfo->last_small);
+    HDfprintf(stream, "%*s%-*s %a\n", indent, "", fwidth,
+              "eoa_pre_fsm_fsalloc:", fsinfo->eoa_pre_fsm_fsalloc);
 
     if(fsinfo->persist) {
         for(ptype = H5F_MEM_PAGE_SUPER; ptype < H5F_MEM_PAGE_NTYPES; H5_INC_ENUM(H5F_mem_page_t, ptype))

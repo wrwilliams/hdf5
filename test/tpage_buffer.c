@@ -1453,6 +1453,12 @@ main(void)
     if(env_h5_drvr == NULL)
         env_h5_drvr = "nomatch";
 
+    if(0 == HDstrcmp(env_h5_drvr, "multi")) {
+        SKIPPED();
+        puts("Multi VFD doesn't support page buffering");
+        return (0);
+    }
+
     fapl = h5_fileaccess();
 
     nerrors += test_args(fapl, env_h5_drvr);

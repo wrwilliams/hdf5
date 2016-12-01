@@ -746,17 +746,16 @@ H5MF_sect_small_can_shrink(const H5FS_section_info_t *_sect, void *_udata)
     end = sect->sect_info.addr + sect->sect_info.size;
 
     /* Check if the section is exactly at the end of the allocated space in the file */
-    if(H5F_addr_eq(end, eoa)) {
-        if(udata->allow_small_shrink || eoa % udata->f->shared->fs_page_size) {
-            /* Set the shrinking type */
-            udata->shrink = H5MF_SHRINK_EOA;
+    if(H5F_addr_eq(end, eoa) && sect->sect_info.size == udata->f->shared->fs_page_size) {
+        udata->shrink = H5MF_SHRINK_EOA;
+
 #ifdef H5MF_ALLOC_DEBUG_MORE
 HDfprintf(stderr, "%s: section {%a, %Hu}, shrinks file, eoa = %a\n", FUNC, sect->sect_info.addr, sect->sect_info.size, eoa);
 #endif /* H5MF_ALLOC_DEBUG_MORE */
 
-            /* Indicate shrinking can occur */
-            HGOTO_DONE(TRUE)
-        }
+        /* Indicate shrinking can occur */
+        HGOTO_DONE(TRUE)
+
     } /* end if */
 
 done:
@@ -844,7 +843,8 @@ H5MF_sect_small_can_merge(const H5FS_section_info_t *_sect1,
     /* Check if second section adjoins first section */
     ret_value = H5F_addr_eq(sect1->sect_info.addr + sect1->sect_info.size, sect2->sect_info.addr);
     if(ret_value > 0)
-	if((sect1->sect_info.addr / udata->f->shared->fs_page_size) != (((sect2->sect_info.addr + sect2->sect_info.size - 1) / udata->f->shared->fs_page_size)))
+        /* If they are on different pages, couldn't merge */
+        if((sect1->sect_info.addr / udata->f->shared->fs_page_size) != (((sect2->sect_info.addr + sect2->sect_info.size - 1) / udata->f->shared->fs_page_size)))
 	    ret_value = FALSE;
 
 #ifdef H5MF_ALLOC_DEBUG_MORE
@@ -1034,7 +1034,7 @@ H5MF_sect_large_can_shrink(const H5FS_section_info_t *_sect, void *_udata)
     end = sect->sect_info.addr + sect->sect_info.size;
 
     /* Check if the section is exactly at the end of the allocated space in the file */
-    if(H5F_addr_eq(end, eoa)) {
+    if(H5F_addr_eq(end, eoa) && sect->sect_info.size >= udata->f->shared->fs_page_size) {
         /* Set the shrinking type */
         udata->shrink = H5MF_SHRINK_EOA;
 #ifdef H5MF_ALLOC_DEBUG_MORE
