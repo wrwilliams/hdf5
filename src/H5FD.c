@@ -811,6 +811,9 @@ H5FD_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
     if(NULL == (file = (driver->open)(name, flags, fapl_id, maxaddr)))
 	HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, NULL, "open failed")
 
+    /* Set the file access flags */
+    file->access_flags = flags;
+
     /*
      * Fill in public fields. We must increment the reference count on the
      * driver ID to prevent it from being freed while this file is open.
@@ -839,10 +842,6 @@ H5FD_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
     /* Start with base address set to 0 */
     /* (This will be changed later, when the superblock is located) */
     file->base_addr = 0;
-
-    /* Check for SWMR reader access */
-    if(flags & H5F_ACC_SWMR_READ)
-        file->swmr_read = TRUE;
 
     /* Set return value */
     ret_value = file;

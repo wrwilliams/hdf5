@@ -215,9 +215,8 @@ H5P_genplist_t *dxpl, H5FD_mem_t type, haddr_t addr,
      * objects being written within the file by the application performing
      * SWMR write operations.
      */
-    if(!file->swmr_read && ((addr + file->base_addr + size) > eoa))
-        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow, addr = %llu, size=%llu, eoa=%llu", 
-                    (unsigned long long)(addr+ file->base_addr), (unsigned long long)size, (unsigned long long)eoa)
+    if(!(file->access_flags & H5F_ACC_SWMR_READ) && ((addr + file->base_addr + size) > eoa))
+        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow, addr = %llu, size = %llu, eoa = %llu", (unsigned long long)(addr + file->base_addr), (unsigned long long)size, (unsigned long long)eoa)
 
     /* Dispatch to driver */
     if((file->cls->read)(file, type, H5P_PLIST_ID(dxpl), addr + file->base_addr, size, buf) < 0)

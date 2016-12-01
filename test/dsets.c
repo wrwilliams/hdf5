@@ -8291,9 +8291,8 @@ test_chunk_fast(const char *env_h5_driver, hid_t fapl)
         /* Skip this iteration if SWMR I/O is not supported for the VFD specified
          * by the environment variable.
          */
-        if(!H5FD_supports_swmr_test(env_h5_driver)) {
+        if(swmr && !H5FD_supports_swmr_test(env_h5_driver))
             continue;
-        }
 
 #ifdef H5_HAVE_FILTER_DEFLATE
         /* Loop over compressing chunks */

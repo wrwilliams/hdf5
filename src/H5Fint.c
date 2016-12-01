@@ -1140,7 +1140,7 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
          * request was to create a non-existent file (since the file already
          * exists), or if the new request adds write access (since the
          * readers don't expect the file to change under them), or if the
-             * SWMR write/read access flags don't agree.
+         * SWMR write/read access flags don't agree.
          */
         if(H5FD_close(lf) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
