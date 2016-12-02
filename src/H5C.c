@@ -1702,11 +1702,6 @@ H5C_move_entry(H5C_t *	     cache_ptr,
     HDassert(entry_ptr->addr == old_addr);
     HDassert(entry_ptr->type == type);
 
-#ifdef QAK
-    if(entry_ptr->is_protected)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTMOVE, FAIL, "target entry is protected.")
-#endif /* QAK */
-
     H5C__SEARCH_INDEX(cache_ptr, new_addr, test_entry_ptr, FAIL)
 
     if(test_entry_ptr != NULL) { /* we are hosed */
