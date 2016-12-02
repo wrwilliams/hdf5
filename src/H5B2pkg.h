@@ -345,6 +345,9 @@ extern const H5B2_class_t *const H5B2_client_class_g[H5B2_NUM_BTREE_ID];
 /* Generic routines */
 H5_DLL herr_t H5B2__create_flush_depend(H5AC_info_t *parent_entry,
     H5AC_info_t *child_entry);
+H5_DLL herr_t H5B2__update_flush_depend(H5B2_hdr_t *hdr, hid_t dxpl_id,
+    unsigned depth, const H5B2_node_ptr_t *node_ptr, void *old_parent,
+    void *new_parent);
 H5_DLL herr_t H5B2__destroy_flush_depend(H5AC_info_t *parent_entry,
     H5AC_info_t *child_entry);
 

@@ -806,8 +806,6 @@ H5B2__remove_internal(H5B2_hdr_t *hdr, hid_t dxpl_id, hbool_t *depth_decreased,
     unsigned *new_cache_info_flags_ptr = NULL;
     H5B2_node_ptr_t *new_node_ptr;      /* Pointer to new node pointer */
     H5B2_internal_t *internal;          /* Pointer to internal node */
-    const H5AC_class_t *new_root_class; /* Pointer to new root node's class info */
-    void *new_root = NULL;              /* Pointer to new root node (if old root collapsed) */
     H5B2_nodepos_t next_pos = H5B2_POS_MIDDLE;  /* Position of next node */
     unsigned internal_flags = H5AC__NO_FLAGS_SET;
     haddr_t internal_addr;              /* Address of internal node */
@@ -851,57 +849,10 @@ H5B2__remove_internal(H5B2_hdr_t *hdr, hid_t dxpl_id, hbool_t *depth_decreased,
         curr_node_ptr->addr = internal->node_ptrs[0].addr;
         curr_node_ptr->node_nrec = internal->node_ptrs[0].node_nrec;
 
-        /* Update flush dependencies */
-        if(hdr->swmr_write) {
-            hbool_t update_dep = FALSE; /* Whether to update root flush dependency */
-
-            /* Update hdr to root dependency */
-            if(depth > 1) {
-                H5B2_internal_t *new_root_int = NULL;
-
-                /* Protect new root */
-                if(NULL == (new_root_int = H5B2__protect_internal(hdr, dxpl_id, curr_node_ptr->addr, hdr, curr_node_ptr->node_nrec, (uint16_t)(depth - 1), H5AC__NO_FLAGS_SET)))
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
-                new_root_class = H5AC_BT2_INT;
-                new_root = new_root_int;
-
-                if(new_root_int->parent == internal) {
-                    new_root_int->parent = hdr;
-                    update_dep = TRUE;
-                } /* end if */
-                else
-                    HDassert(new_root_int->parent == hdr);
-            } /* end if */
-            else {
-                H5B2_leaf_t *new_root_leaf = NULL;
-
-                /* Protect new root */
-                if(NULL == (new_root_leaf = H5B2__protect_leaf(hdr, dxpl_id, curr_node_ptr->addr, hdr, curr_node_ptr->node_nrec, H5AC__NO_FLAGS_SET)))
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
-                new_root_class = H5AC_BT2_LEAF;
-                new_root = new_root_leaf;
-
-                if(new_root_leaf->parent == internal) {
-                    new_root_leaf->parent = hdr;
-                    update_dep = TRUE;
-                } /* end if */
-                else
-                    HDassert(new_root_leaf->parent == hdr);
-            } /* end else */
-
-            /* Update flush dependency if necessary */
-            if(update_dep) {
-                if(H5B2__destroy_flush_depend((H5AC_info_t *)internal, (H5AC_info_t *)new_root) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency")
-                if(H5B2__create_flush_depend((H5AC_info_t *)hdr, (H5AC_info_t *)new_root) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency")
-            } /* end if */
-
-            /* Unprotect the new root */
-            if(H5AC_unprotect(hdr->f, dxpl_id, new_root_class, curr_node_ptr->addr, new_root, H5AC__NO_FLAGS_SET) < 0)
-                HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-            new_root = NULL;
-        } /* end if */
+        /* Update flush dependency for child, if using SWMR */
+        if(hdr->swmr_write)
+            if(H5B2__update_flush_depend(hdr, dxpl_id, depth, curr_node_ptr, internal, hdr) < 0)
+                HGOTO_ERROR(H5E_BTREE, H5E_CANTUPDATE, FAIL, "unable to update child node to new parent")
 
         /* Indicate that the level of the B-tree decreased */
         *depth_decreased = TRUE;
@@ -934,8 +885,7 @@ H5B2__remove_internal(H5B2_hdr_t *hdr, hid_t dxpl_id, hbool_t *depth_decreased,
         if(swap_loc)
             idx = 0;
         else {
-            if(H5B2__locate_record(hdr->cls, internal->nrec, hdr->nat_off, internal->int_native, 
-                                   udata, &idx, &cmp) < 0)
+            if(H5B2__locate_record(hdr->cls, internal->nrec, hdr->nat_off, internal->int_native, udata, &idx, &cmp) < 0)
                 HGOTO_ERROR(H5E_BTREE, H5E_CANTCOMPARE, FAIL, "can't compare btree2 records")
             if(cmp >= 0)
                 idx++;
@@ -1065,13 +1015,6 @@ done:
     if(internal && H5AC_unprotect(hdr->f, dxpl_id, H5AC_BT2_INT, internal_addr, internal, internal_flags) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release internal B-tree node")
 
-    /* Release the new root's child on error */
-    if(new_root) {
-        HDassert(ret_value < 0);
-        if(H5AC_unprotect(hdr->f, dxpl_id, new_root_class, curr_node_ptr->addr, new_root, H5AC__NO_FLAGS_SET) < 0)
-            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-    } /* end if */
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5B2__remove_internal() */
 
@@ -1100,8 +1043,6 @@ H5B2__remove_internal_by_idx(H5B2_hdr_t *hdr, hid_t dxpl_id,
     H5AC_info_t *new_cache_info;        /* Pointer to new cache info */
     unsigned *new_cache_info_flags_ptr = NULL;
     H5B2_node_ptr_t *new_node_ptr;      /* Pointer to new node pointer */
-    const H5AC_class_t *new_root_class; /* Pointer to new root node's class info */
-    void *new_root = NULL;              /* Pointer to new root node (if old root collapsed) */
     H5B2_internal_t *internal;          /* Pointer to internal node */
     H5B2_nodepos_t next_pos = H5B2_POS_MIDDLE;  /* Position of next node */
     unsigned internal_flags = H5AC__NO_FLAGS_SET;
@@ -1149,57 +1090,10 @@ H5B2__remove_internal_by_idx(H5B2_hdr_t *hdr, hid_t dxpl_id,
         curr_node_ptr->addr = internal->node_ptrs[0].addr;
         curr_node_ptr->node_nrec = internal->node_ptrs[0].node_nrec;
 
-        /* Update flush dependencies */
-        if(hdr->swmr_write) {
-            hbool_t update_dep = FALSE; /* Whether to update root flush dependency */
-
-            /* Update hdr to root dependency */
-            if(depth > 1) {
-                H5B2_internal_t *new_root_int = NULL;
-
-                /* Protect new root */
-                if(NULL == (new_root_int = H5B2__protect_internal(hdr, dxpl_id, curr_node_ptr->addr, hdr, curr_node_ptr->node_nrec, (uint16_t)(depth - 1), H5AC__NO_FLAGS_SET)))
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
-                new_root_class = H5AC_BT2_INT;
-                new_root = new_root_int;
-
-                if(new_root_int->parent == internal) {
-                    new_root_int->parent = hdr;
-                    update_dep = TRUE;
-                } /* end if */
-                else
-                    HDassert(new_root_int->parent == hdr);
-            } /* end if */
-            else {
-                H5B2_leaf_t *new_root_leaf = NULL;
-
-                /* Protect new root */
-                if(NULL == (new_root_leaf = H5B2__protect_leaf(hdr, dxpl_id, curr_node_ptr->addr, hdr, curr_node_ptr->node_nrec, H5AC__NO_FLAGS_SET)))
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
-                new_root_class = H5AC_BT2_LEAF;
-                new_root = new_root_leaf;
-
-                if(new_root_leaf->parent == internal) {
-                    new_root_leaf->parent = hdr;
-                    update_dep = TRUE;
-                } /* end if */
-                else
-                    HDassert(new_root_leaf->parent == hdr);
-            } /* end else */
-
-            /* Update flush dependency if necessary */
-            if(update_dep) {
-                if(H5B2__destroy_flush_depend((H5AC_info_t *)internal, (H5AC_info_t *)new_root) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency")
-                if(H5B2__create_flush_depend((H5AC_info_t *)hdr, (H5AC_info_t *)new_root) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency")
-            } /* end if */
-
-            /* Unprotect the new root */
-            if(H5AC_unprotect(hdr->f, dxpl_id, new_root_class, curr_node_ptr->addr, new_root, H5AC__NO_FLAGS_SET) < 0)
-                HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-            new_root = NULL;
-        } /* end if */
+        /* Update flush dependency for child, if using SWMR */
+        if(hdr->swmr_write)
+            if(H5B2__update_flush_depend(hdr, dxpl_id, depth, curr_node_ptr, internal, hdr) < 0)
+                HGOTO_ERROR(H5E_BTREE, H5E_CANTUPDATE, FAIL, "unable to update child node to new parent")
 
         /* Indicate that the level of the B-tree decreased */
         *depth_decreased = TRUE;
@@ -1223,7 +1117,7 @@ H5B2__remove_internal_by_idx(H5B2_hdr_t *hdr, hid_t dxpl_id,
         unsigned retries;       /* Number of times to attempt redistribution */
 
         /* Shadow the node if doing SWMR writes */
-        if(hdr->swmr_write && !collapsed_root) {
+        if(hdr->swmr_write) {
             if(H5B2__shadow_internal(hdr, dxpl_id, depth, curr_node_ptr, &internal) < 0)
                 HGOTO_ERROR(H5E_BTREE, H5E_CANTCOPY, FAIL, "unable to shadow internal node")
             internal_addr = curr_node_ptr->addr;
@@ -1411,13 +1305,6 @@ done:
     /* Release the B-tree internal node */
     if(internal && H5AC_unprotect(hdr->f, dxpl_id, H5AC_BT2_INT, internal_addr, internal, internal_flags) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release internal B-tree node")
-
-    /* Release the new root's child on error */
-    if(new_root) {
-        HDassert(ret_value < 0);
-        if(H5AC_unprotect(hdr->f, dxpl_id, new_root_class, curr_node_ptr->addr, new_root, H5AC__NO_FLAGS_SET) < 0)
-            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-    } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5B2__remove_internal_by_idx() */

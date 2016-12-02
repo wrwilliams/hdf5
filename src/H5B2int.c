@@ -58,6 +58,9 @@
 /********************/
 /* Local Prototypes */
 /********************/
+static herr_t H5B2__update_child_flush_depends(H5B2_hdr_t *hdr, hid_t dxpl_id,
+    unsigned depth, const H5B2_node_ptr_t *node_ptrs, unsigned start_idx,
+    unsigned end_idx, void *old_parent, void *new_parent);
 
 
 /*********************/
@@ -152,16 +155,12 @@ H5B2__split1(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
     const H5AC_class_t *child_class;    /* Pointer to child node's class info */
     haddr_t left_addr, right_addr;      /* Addresses of left & right child nodes */
     void *left_child = NULL, *right_child = NULL;     /* Pointers to child nodes */
-    const H5AC_class_t *grandchild_class; /* Pointer to grandchild node's class info */
-    haddr_t grandchild_addr;            /* Grandchild address */
-    void *grandchild = NULL;            /* Pointer to grandchild node */
     uint16_t *left_nrec, *right_nrec;   /* Pointers to child # of records */
     uint8_t *left_native, *right_native;/* Pointers to childs' native records */
     H5B2_node_ptr_t *left_node_ptrs = NULL, *right_node_ptrs = NULL;/* Pointers to childs' node pointer info */
     uint16_t mid_record;                /* Index of "middle" record in current node */
     uint16_t old_node_nrec;             /* Number of records in internal node split */
     unsigned left_child_flags = H5AC__NO_FLAGS_SET, right_child_flags = H5AC__NO_FLAGS_SET;     /* Flags for unprotecting child nodes */
-    unsigned u;                         /* Local index variable */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -278,6 +277,7 @@ H5B2__split1(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
 
     /* Determine total number of records in new child nodes */
     if(depth > 1) {
+        unsigned u;                    /* Local index variable */
         hsize_t new_left_all_nrec;     /* New total number of records in left child */
         hsize_t new_right_all_nrec;    /* New total number of records in right child */
 
@@ -311,64 +311,11 @@ H5B2__split1(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
     if(parent_cache_info_flags_ptr)
         *parent_cache_info_flags_ptr |= H5AC__DIRTIED_FLAG;
 
-    /* Update flush dependencies */
-    if(hdr->swmr_write) {
-
-        /* Update node pointers */
-        if(depth > 1) {
-            /* Loop over grandchildren */
-            for(u = 0; u < (*right_nrec + (unsigned)1); u++) {
-                hbool_t update_deps = FALSE;    /* Whether to update flush dependencies */
-
-                grandchild_addr = right_node_ptrs[u].addr;
-                if(depth > 2) {
-                    H5B2_internal_t *grandchild_int = NULL;
-
-                    /* Protect grandchild */
-                    if(NULL == (grandchild_int = H5B2__protect_internal(hdr, dxpl_id, grandchild_addr, right_child, right_node_ptrs[u].node_nrec, (uint16_t)(depth - 2), H5AC__NO_FLAGS_SET)))
-                        HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
-                    grandchild_class = H5AC_BT2_INT;
-                    grandchild = grandchild_int;
-
-                    if(grandchild_int->parent == left_child) {
-                        grandchild_int->parent = right_child;
-                        update_deps = TRUE;
-                    } /* end if */
-                    else
-                        HDassert(grandchild_int->parent == right_child);
-                } /* end if */
-                else {
-                    H5B2_leaf_t *grandchild_leaf = NULL;
-
-                    /* Protect grandchild */
-                    if(NULL == (grandchild_leaf = H5B2__protect_leaf(hdr, dxpl_id, grandchild_addr, right_child, right_node_ptrs[u].node_nrec, H5AC__NO_FLAGS_SET)))
-                        HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
-                    grandchild_class = H5AC_BT2_LEAF;
-                    grandchild = grandchild_leaf;
-
-                    if(grandchild_leaf->parent == left_child) {
-                        grandchild_leaf->parent = right_child;
-                        update_deps = TRUE;
-                    } /* end if */
-                    else
-                        HDassert(grandchild_leaf->parent == right_child);
-                } /* end else */
-
-                /* Update flush dependencies if necessary */
-                if(update_deps) {
-                    if(H5B2__destroy_flush_depend((H5AC_info_t *)left_child, (H5AC_info_t *)grandchild) < 0)
-                        HGOTO_ERROR(H5E_BTREE, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency")
-                    if(H5B2__create_flush_depend((H5AC_info_t *)right_child, (H5AC_info_t *)grandchild) < 0)
-                        HGOTO_ERROR(H5E_BTREE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency")
-                } /* end if */
-
-                /* Unprotect the grandchild */
-                if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, right_node_ptrs[u].addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-                grandchild = NULL;
-            } /* end for */
-        } /* end if */
-    } /* end if */
+    /* Update flush dependencies for grandchildren, if using SWMR */
+    if(hdr->swmr_write && depth > 1)
+        if(H5B2__update_child_flush_depends(hdr, dxpl_id, depth, right_node_ptrs,
+                0, (unsigned)(*right_nrec + 1), left_child, right_child) < 0)
+            HGOTO_ERROR(H5E_BTREE, H5E_CANTUPDATE, FAIL, "unable to update child nodes to new parent")
 
 #ifdef H5B2_DEBUG
     H5B2__assert_internal((hsize_t)0, hdr, internal);
@@ -388,13 +335,6 @@ done:
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree leaf node")
     if(right_child && H5AC_unprotect(hdr->f, dxpl_id, child_class, right_addr, right_child, right_child_flags) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree leaf node")
-
-    /* Unprotect the grandchild (should only happen on error) */
-    if(grandchild) {
-        HDassert(ret_value < 0);
-        if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, grandchild_addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-    } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5B2__split1() */
@@ -499,15 +439,11 @@ H5B2__redistribute2(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
     const H5AC_class_t *child_class;    /* Pointer to child node's class info */
     haddr_t left_addr, right_addr;      /* Addresses of left & right child nodes */
     void *left_child = NULL, *right_child = NULL;     /* Pointers to child nodes */
-    const H5AC_class_t *grandchild_class; /* Pointer to grandchild node's class info */
-    haddr_t grandchild_addr;            /* Grandchild address */
-    void *grandchild = NULL;            /* Pointer to grandchild node */
     uint16_t *left_nrec, *right_nrec;   /* Pointers to child # of records */
     uint8_t *left_native, *right_native;    /* Pointers to childs' native records */
     H5B2_node_ptr_t *left_node_ptrs = NULL, *right_node_ptrs = NULL;/* Pointers to childs' node pointer info */
     hssize_t left_moved_nrec = 0, right_moved_nrec = 0; /* Number of records moved, for internal redistrib */
     unsigned left_child_flags = H5AC__NO_FLAGS_SET, right_child_flags = H5AC__NO_FLAGS_SET;     /* Flags for unprotecting child nodes */
-    unsigned u;                         /* Local index variable */
     herr_t ret_value = SUCCEED;           /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -621,6 +557,7 @@ H5B2__redistribute2(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
         /* Handle node pointers, if we have an internal node */
         if(depth > 1) {
             hsize_t moved_nrec = move_nrec;   /* Total number of records moved, for internal redistrib */
+            unsigned u;                       /* Local index variable */
 
             /* Count the number of records being moved */
             for(u = 0; u < move_nrec; u++)
@@ -635,64 +572,11 @@ H5B2__redistribute2(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
             HDmemmove(&(right_node_ptrs[0]), &(right_node_ptrs[move_nrec]), sizeof(H5B2_node_ptr_t) * (new_right_nrec + (unsigned)1));
         } /* end if */
 
-        /* Update flush dependencies */
-        if(hdr->swmr_write) {
-
-            /* Update node pointers */
-            if(depth > 1) {
-                /* Loop over grandchildren */
-                for(u = (*left_nrec + (unsigned)1); u < (*left_nrec + (unsigned)move_nrec + (unsigned)1); u++) {
-                    hbool_t update_deps = FALSE;    /* Whether to update flush dependencies */
-
-                    grandchild_addr = left_node_ptrs[u].addr;
-                    if(depth > 2) {
-                        H5B2_internal_t *grandchild_int = NULL;
-
-                        /* Protect grandchild */
-                        if(NULL == (grandchild_int = H5B2__protect_internal(hdr, dxpl_id, grandchild_addr, left_child, left_node_ptrs[u].node_nrec, (uint16_t)(depth - 2), H5AC__NO_FLAGS_SET)))
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
-                        grandchild_class = H5AC_BT2_INT;
-                        grandchild = grandchild_int;
-
-                        if(grandchild_int->parent == right_child) {
-                            grandchild_int->parent = left_child;
-                            update_deps = TRUE;
-                        } /* end if */
-                        else
-                            HDassert(grandchild_int->parent == left_child);
-                    } /* end if */
-                    else {
-                        H5B2_leaf_t *grandchild_leaf = NULL;
-
-                        /* Protect grandchild */
-                        if(NULL == (grandchild_leaf = H5B2__protect_leaf(hdr, dxpl_id, grandchild_addr, left_child, left_node_ptrs[u].node_nrec, H5AC__NO_FLAGS_SET)))
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
-                        grandchild_class = H5AC_BT2_LEAF;
-                        grandchild = grandchild_leaf;
-
-                        if(grandchild_leaf->parent == right_child) {
-                            grandchild_leaf->parent = left_child;
-                            update_deps = TRUE;
-                        } /* end if */
-                        else
-                            HDassert(grandchild_leaf->parent == left_child);
-                    } /* end else */
-
-                    /* Update flush dependencies if necessary */
-                    if(update_deps) {
-                        if(H5B2__destroy_flush_depend((H5AC_info_t *)right_child, (H5AC_info_t *)grandchild) < 0)
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency")
-                        if(H5B2__create_flush_depend((H5AC_info_t *)left_child, (H5AC_info_t *)grandchild) < 0)
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency")
-                    } /* end if */
-
-                    /* Unprotect the grandchild */
-                    if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, left_node_ptrs[u].addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-                        HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-                    grandchild = NULL;
-                } /* end for */
-            } /* end if */
-        } /* end if */
+        /* Update flush dependencies for grandchildren, if using SWMR */
+        if(hdr->swmr_write && depth > 1)
+            if(H5B2__update_child_flush_depends(hdr, dxpl_id, depth, left_node_ptrs,
+                    (unsigned)(*left_nrec + 1), (unsigned)(*left_nrec + move_nrec + 1), right_child, left_child) < 0)
+                HGOTO_ERROR(H5E_BTREE, H5E_CANTUPDATE, FAIL, "unable to update child nodes to new parent")
 
         /* Update number of records in child nodes */
         *left_nrec = (uint16_t)(*left_nrec + move_nrec);
@@ -729,6 +613,7 @@ H5B2__redistribute2(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
         /* Handle node pointers, if we have an internal node */
         if(depth > 1) {
             hsize_t moved_nrec = move_nrec;   /* Total number of records moved, for internal redistrib */
+            unsigned u;                       /* Local index variable */
 
             /* Slide node pointers in right node up */
             HDmemmove(&(right_node_ptrs[move_nrec]), &(right_node_ptrs[0]), sizeof(H5B2_node_ptr_t) * (size_t)(*right_nrec + 1));
@@ -743,64 +628,11 @@ H5B2__redistribute2(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
             H5_CHECKED_ASSIGN(right_moved_nrec, hssize_t, moved_nrec, hsize_t)
         } /* end if */
 
-        /* Update flush dependencies */
-        if(hdr->swmr_write) {
-
-            /* Update node pointers */
-            if(depth > 1) {
-                /* Loop over grandchildren */
-                for(u = 0; u < move_nrec; u++) {
-                    hbool_t update_deps = FALSE;    /* Whether to update flush dependencies */
-
-                    grandchild_addr = right_node_ptrs[u].addr;
-                    if(depth > 2) {
-                        H5B2_internal_t *grandchild_int = NULL;
-
-                        /* Protect grandchild */
-                        if(NULL == (grandchild_int = H5B2__protect_internal(hdr, dxpl_id, grandchild_addr, right_child, right_node_ptrs[u].node_nrec, (uint16_t)(depth - 2), H5AC__NO_FLAGS_SET)))
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
-                        grandchild_class = H5AC_BT2_INT;
-                        grandchild = grandchild_int;
-
-                        if(grandchild_int->parent == left_child) {
-                            grandchild_int->parent = right_child;
-                            update_deps = TRUE;
-                        } /* end if */
-                        else
-                            HDassert(grandchild_int->parent == right_child);
-                    } /* end if */
-                    else {
-                        H5B2_leaf_t *grandchild_leaf = NULL;
-
-                        /* Protect grandchild */
-                        if(NULL == (grandchild_leaf = H5B2__protect_leaf(hdr, dxpl_id, grandchild_addr, right_child, right_node_ptrs[u].node_nrec, H5AC__NO_FLAGS_SET)))
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
-                        grandchild_class = H5AC_BT2_LEAF;
-                        grandchild = grandchild_leaf;
-
-                        if(grandchild_leaf->parent == left_child) {
-                            grandchild_leaf->parent = right_child;
-                            update_deps = TRUE;
-                        } /* end if */
-                        else
-                            HDassert(grandchild_leaf->parent == right_child);
-                    } /* end else */
-
-                    /* Update flush dependencies if necessary */
-                    if(update_deps) {
-                        if(H5B2__destroy_flush_depend((H5AC_info_t *)left_child, (H5AC_info_t *)grandchild) < 0)
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency")
-                        if(H5B2__create_flush_depend((H5AC_info_t *)right_child, (H5AC_info_t *)grandchild) < 0)
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency")
-                    } /* end if */
-
-                    /* Unprotect the grandchild */
-                    if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, right_node_ptrs[u].addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-                        HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-                    grandchild = NULL;
-                } /* end for */
-            } /* end if */
-        } /* end if */
+        /* Update flush dependencies for grandchildren, if using SWMR */
+        if(hdr->swmr_write && depth > 1)
+            if(H5B2__update_child_flush_depends(hdr, dxpl_id, depth, right_node_ptrs,
+                    0, (unsigned)move_nrec, left_child, right_child) < 0)
+                HGOTO_ERROR(H5E_BTREE, H5E_CANTUPDATE, FAIL, "unable to update child nodes to new parent")
 
         /* Update number of records in child nodes */
         *left_nrec = new_left_nrec;
@@ -844,13 +676,6 @@ done:
     if(right_child && H5AC_unprotect(hdr->f, dxpl_id, child_class, right_addr, right_child, right_child_flags) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree child node")
 
-    /* Unprotect the grandchild (should only happen on error) */
-    if(grandchild) {
-        HDassert(ret_value < 0);
-        if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, grandchild_addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-    } /* end if */
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5B2__redistribute2() */
 
@@ -880,9 +705,6 @@ H5B2__redistribute3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
     haddr_t middle_addr;                /* Address of middle child node */
     void *left_child = NULL, *right_child = NULL;     /* Pointers to child nodes */
     void *middle_child = NULL;          /* Pointers to middle child node */
-    const H5AC_class_t *grandchild_class; /* Pointer to grandchild node's class info */
-    haddr_t grandchild_addr;            /* Grandchild address */
-    void *grandchild = NULL;            /* Pointer to grandchild node */
     uint16_t *left_nrec, *right_nrec;   /* Pointers to child # of records */
     uint16_t *middle_nrec;              /* Pointers to middle child # of records */
     uint8_t *left_native, *right_native;    /* Pointers to childs' native records */
@@ -891,7 +713,6 @@ H5B2__redistribute3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
     hssize_t middle_moved_nrec = 0;     /* Number of records moved, for internal split */
     unsigned left_child_flags = H5AC__NO_FLAGS_SET, right_child_flags = H5AC__NO_FLAGS_SET;     /* Flags for unprotecting child nodes */
     unsigned middle_child_flags = H5AC__NO_FLAGS_SET;     /* Flags for unprotecting child nodes */
-    unsigned u;                         /* Local index variable */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -1027,8 +848,9 @@ H5B2__redistribute3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
 
             /* Move node pointers also if this is an internal node */
             if(depth > 1) {
-                hsize_t moved_nrec;         /* Total number of records moved, for internal redistrib */
+                hsize_t moved_nrec;     /* Total number of records moved, for internal redistrib */
                 unsigned move_nptrs;    /* Number of node pointers to move */
+                unsigned u;             /* Local index variable */
 
                 /* Move middle node pointers into left node */
                 move_nptrs = (unsigned)(new_left_nrec - *left_nrec);
@@ -1044,64 +866,11 @@ H5B2__redistribute3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
                 HDmemmove(&(middle_node_ptrs[0]), &(middle_node_ptrs[move_nptrs]), sizeof(H5B2_node_ptr_t) * ((*middle_nrec - move_nptrs) + 1));
             } /* end if */
 
-            /* Update flush dependencies */
-            if(hdr->swmr_write) {
-
-                /* Update node pointers */
-                if(depth > 1) {
-                    /* Loop over grandchildren */
-                    for(u = (*left_nrec + (unsigned)1); u < (*left_nrec + (unsigned)moved_middle_nrec + 1); u++) {
-                        hbool_t update_deps = FALSE;    /* Whether to update flush dependencies */
-
-                        grandchild_addr = left_node_ptrs[u].addr;
-                        if(depth > 2) {
-                            H5B2_internal_t *grandchild_int = NULL;
-
-                            /* Protect grandchild */
-                            if(NULL == (grandchild_int = H5B2__protect_internal(hdr, dxpl_id, grandchild_addr, left_child, left_node_ptrs[u].node_nrec, (uint16_t)(depth - 2), H5AC__NO_FLAGS_SET)))
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
-                            grandchild_class = H5AC_BT2_INT;
-                            grandchild = grandchild_int;
-
-                            if(grandchild_int->parent == middle_child) {
-                                grandchild_int->parent = left_child;
-                                update_deps = TRUE;
-                            } /* end if */
-                            else
-                                HDassert(grandchild_int->parent == left_child);
-                        } /* end if */
-                        else {
-                            H5B2_leaf_t *grandchild_leaf = NULL;
-
-                            /* Protect grandchild */
-                            if(NULL == (grandchild_leaf = H5B2__protect_leaf(hdr, dxpl_id, grandchild_addr, left_child, left_node_ptrs[u].node_nrec, H5AC__NO_FLAGS_SET)))
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
-                            grandchild_class = H5AC_BT2_LEAF;
-                            grandchild = grandchild_leaf;
-
-                            if(grandchild_leaf->parent == middle_child) {
-                                grandchild_leaf->parent = left_child;
-                                update_deps = TRUE;
-                            } /* end if */
-                            else
-                                HDassert(grandchild_leaf->parent == left_child);
-                        } /* end else */
-
-                        /* Update flush dependencies if necessary */
-                        if(update_deps) {
-                            if(H5B2__destroy_flush_depend((H5AC_info_t *)middle_child, (H5AC_info_t *)grandchild) < 0)
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency")
-                            if(H5B2__create_flush_depend((H5AC_info_t *)left_child, (H5AC_info_t *)grandchild) < 0)
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency")
-                        } /* end if */
-
-                        /* Unprotect the grandchild */
-                        if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, left_node_ptrs[u].addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-                        grandchild = NULL;
-                    } /* end for */
-                } /* end if */
-            } /* end if */
+            /* Update flush dependencies for grandchildren, if using SWMR */
+            if(hdr->swmr_write && depth > 1)
+                if(H5B2__update_child_flush_depends(hdr, dxpl_id, depth, left_node_ptrs,
+                        (unsigned)(*left_nrec + 1), (unsigned)(*left_nrec + moved_middle_nrec + 1), middle_child, left_child) < 0)
+                    HGOTO_ERROR(H5E_BTREE, H5E_CANTUPDATE, FAIL, "unable to update child nodes to new parent")
 
             /* Update the current number of records in middle node */
             curr_middle_nrec = (uint16_t)(curr_middle_nrec - moved_middle_nrec);
@@ -1130,7 +899,8 @@ H5B2__redistribute3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
 
             /* Move node pointers also if this is an internal node */
             if(depth > 1) {
-                hsize_t moved_nrec;         /* Total number of records moved, for internal redistrib */
+                hsize_t moved_nrec;     /* Total number of records moved, for internal redistrib */
+                unsigned u;             /* Local index variable */
 
                 /* Slide the node pointers in right node up */
                 HDmemmove(&(right_node_ptrs[right_nrec_move]), &(right_node_ptrs[0]), sizeof(H5B2_node_ptr_t) * (size_t)(*right_nrec + 1));
@@ -1145,64 +915,11 @@ H5B2__redistribute3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
                 middle_moved_nrec -= (hssize_t)(moved_nrec + right_nrec_move);
             } /* end if */
 
-            /* Update flush dependencies */
-            if(hdr->swmr_write) {
-
-                /* Update node pointers */
-                if(depth > 1) {
-                    /* Loop over grandchildren */
-                    for(u = 0; u < right_nrec_move; u++) {
-                        hbool_t update_deps = FALSE;    /* Whether to update flush dependencies */
-
-                        grandchild_addr = right_node_ptrs[u].addr;
-                        if(depth > 2) {
-                            H5B2_internal_t *grandchild_int = NULL;
-
-                            /* Protect grandchild */
-                            if(NULL == (grandchild_int = H5B2__protect_internal(hdr, dxpl_id, grandchild_addr, right_child, right_node_ptrs[u].node_nrec, (uint16_t)(depth - 2), H5AC__NO_FLAGS_SET)))
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
-                            grandchild_class = H5AC_BT2_INT;
-                            grandchild = grandchild_int;
-
-                            if(grandchild_int->parent == middle_child) {
-                                grandchild_int->parent = right_child;
-                                update_deps = TRUE;
-                            } /* end if */
-                            else
-                                HDassert(grandchild_int->parent == right_child);
-                        } /* end if */
-                        else {
-                            H5B2_leaf_t *grandchild_leaf = NULL;
-
-                            /* Protect grandchild */
-                            if(NULL == (grandchild_leaf = H5B2__protect_leaf(hdr, dxpl_id, grandchild_addr, right_child, right_node_ptrs[u].node_nrec, H5AC__NO_FLAGS_SET)))
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
-                            grandchild_class = H5AC_BT2_LEAF;
-                            grandchild = grandchild_leaf;
-
-                            if(grandchild_leaf->parent == middle_child) {
-                                grandchild_leaf->parent = right_child;
-                                update_deps = TRUE;
-                            } /* end if */
-                            else
-                                HDassert(grandchild_leaf->parent == right_child);
-                        } /* end else */
-
-                        /* Update flush dependencies if necessary */
-                        if(update_deps) {
-                            if(H5B2__destroy_flush_depend((H5AC_info_t *)middle_child, (H5AC_info_t *)grandchild) < 0)
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency")
-                            if(H5B2__create_flush_depend((H5AC_info_t *)right_child, (H5AC_info_t *)grandchild) < 0)
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency")
-                        } /* end if */
-
-                        /* Unprotect the grandchild */
-                        if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, right_node_ptrs[u].addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-                        grandchild = NULL;
-                    } /* end for */
-                } /* end if */
-            } /* end if */
+            /* Update flush dependencies for grandchildren, if using SWMR */
+            if(hdr->swmr_write && depth > 1)
+                if(H5B2__update_child_flush_depends(hdr, dxpl_id, depth, right_node_ptrs,
+                        0, (unsigned)right_nrec_move, middle_child, right_child) < 0)
+                    HGOTO_ERROR(H5E_BTREE, H5E_CANTUPDATE, FAIL, "unable to update child nodes to new parent")
 
             /* Update the current number of records in middle node */
             curr_middle_nrec = (uint16_t)(curr_middle_nrec - right_nrec_move);
@@ -1231,7 +948,8 @@ H5B2__redistribute3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
 
             /* Move node pointers also if this is an internal node */
             if(depth > 1) {
-                hsize_t moved_nrec;         /* Total number of records moved, for internal redistrib */
+                hsize_t moved_nrec;     /* Total number of records moved, for internal redistrib */
+                unsigned u;             /* Local index variable */
 
                 /* Slide the node pointers in middle node up */
                 HDmemmove(&(middle_node_ptrs[left_nrec_move]), &(middle_node_ptrs[0]), sizeof(H5B2_node_ptr_t) * (size_t)(curr_middle_nrec + 1));
@@ -1246,64 +964,11 @@ H5B2__redistribute3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
                 middle_moved_nrec += (hssize_t)(moved_nrec + left_nrec_move);
             } /* end if */
 
-            /* Update flush dependencies */
-            if(hdr->swmr_write) {
-
-                /* Update node pointers */
-                if(depth > 1) {
-                    /* Loop over grandchildren */
-                    for(u = 0; u < left_nrec_move; u++) {
-                        hbool_t update_deps = FALSE;    /* Whether to update flush dependencies */
-
-                        grandchild_addr = middle_node_ptrs[u].addr;
-                        if(depth > 2) {
-                            H5B2_internal_t *grandchild_int = NULL;
-
-                            /* Protect grandchild */
-                            if(NULL == (grandchild_int = H5B2__protect_internal(hdr, dxpl_id, grandchild_addr, middle_child, middle_node_ptrs[u].node_nrec, (uint16_t)(depth - 2), H5AC__NO_FLAGS_SET)))
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
-                            grandchild_class = H5AC_BT2_INT;
-                            grandchild = grandchild_int;
-
-                            if(grandchild_int->parent == left_child) {
-                                grandchild_int->parent = middle_child;
-                                update_deps = TRUE;
-                            } /* end if */
-                            else
-                                HDassert(grandchild_int->parent == middle_child);
-                        } /* end if */
-                        else {
-                            H5B2_leaf_t *grandchild_leaf = NULL;
-
-                            /* Protect grandchild */
-                            if(NULL == (grandchild_leaf = H5B2__protect_leaf(hdr, dxpl_id, grandchild_addr, middle_child, middle_node_ptrs[u].node_nrec, H5AC__NO_FLAGS_SET)))
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
-                            grandchild_class = H5AC_BT2_LEAF;
-                            grandchild = grandchild_leaf;
-
-                            if(grandchild_leaf->parent == left_child) {
-                                grandchild_leaf->parent = middle_child;
-                                update_deps = TRUE;
-                            } /* end if */
-                            else
-                                HDassert(grandchild_leaf->parent == middle_child);
-                        } /* end for */
-
-                        /* Update flush dependencies if necessary */
-                        if(update_deps) {
-                            if(H5B2__destroy_flush_depend((H5AC_info_t *)left_child, (H5AC_info_t *)grandchild) < 0)
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency")
-                            if(H5B2__create_flush_depend((H5AC_info_t *)middle_child, (H5AC_info_t *)grandchild) < 0)
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency")
-                        } /* end else */
-
-                        /* Unprotect the grandchild */
-                        if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, middle_node_ptrs[u].addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-                        grandchild = NULL;
-                    } /* end for */
-                } /* end if */
-            } /* end if */
+            /* Update flush dependencies for grandchildren, if using SWMR */
+            if(hdr->swmr_write && depth > 1)
+                if(H5B2__update_child_flush_depends(hdr, dxpl_id, depth, middle_node_ptrs,
+                        0, (unsigned)left_nrec_move, left_child, middle_child) < 0)
+                    HGOTO_ERROR(H5E_BTREE, H5E_CANTUPDATE, FAIL, "unable to update child nodes to new parent")
 
             /* Update the current number of records in middle node */
             curr_middle_nrec = (uint16_t)(curr_middle_nrec + left_nrec_move);
@@ -1331,7 +996,8 @@ H5B2__redistribute3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
 
             /* Move node pointers also if this is an internal node */
             if(depth > 1) {
-                hsize_t moved_nrec;         /* Total number of records moved, for internal redistrib */
+                hsize_t moved_nrec;     /* Total number of records moved, for internal redistrib */
+                unsigned u;             /* Local index variable */
 
                 /* Move right node pointers into middle node */
                 HDmemcpy(&(middle_node_ptrs[curr_middle_nrec + 1]), &(right_node_ptrs[0]), sizeof(H5B2_node_ptr_t) * right_nrec_move);
@@ -1346,64 +1012,11 @@ H5B2__redistribute3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
                 HDmemmove(&(right_node_ptrs[0]), &(right_node_ptrs[right_nrec_move]), sizeof(H5B2_node_ptr_t) * (size_t)(new_right_nrec + 1));
             } /* end if */
 
-            /* Update flush dependencies */
-            if(hdr->swmr_write) {
-
-                /* Update node pointers */
-                if(depth > 1) {
-                    /* Loop over grandchildren */
-                    for(u = (curr_middle_nrec + (unsigned)1); u < (curr_middle_nrec + right_nrec_move + 1); u++) {
-                        hbool_t update_deps = FALSE;    /* Whether to update flush dependencies */
-
-                        grandchild_addr = middle_node_ptrs[u].addr;
-                        if(depth > 2) {
-                            H5B2_internal_t *grandchild_int = NULL;
-
-                            /* Protect grandchild */
-                            if(NULL == (grandchild_int = H5B2__protect_internal(hdr, dxpl_id, grandchild_addr, middle_child, middle_node_ptrs[u].node_nrec, (uint16_t)(depth - 2), H5AC__NO_FLAGS_SET)))
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
-                            grandchild_class = H5AC_BT2_INT;
-                            grandchild = grandchild_int;
-
-                            if(grandchild_int->parent == right_child) {
-                                grandchild_int->parent = middle_child;
-                                update_deps = TRUE;
-                            } /* end if */
-                            else
-                                HDassert(grandchild_int->parent == middle_child);
-                        } /* end if */
-                        else {
-                            H5B2_leaf_t *grandchild_leaf = NULL;
-
-                            /* Protect grandchild */
-                            if(NULL == (grandchild_leaf = H5B2__protect_leaf(hdr, dxpl_id, grandchild_addr, middle_child, middle_node_ptrs[u].node_nrec, H5AC__NO_FLAGS_SET)))
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
-                            grandchild_class = H5AC_BT2_LEAF;
-                            grandchild = grandchild_leaf;
-
-                            if(grandchild_leaf->parent == right_child) {
-                                grandchild_leaf->parent = middle_child;
-                                update_deps = TRUE;
-                            } /* end if */
-                            else
-                                HDassert(grandchild_leaf->parent == middle_child);
-                        } /* end else */
-
-                        /* Update flush dependencies if necessary */
-                        if(update_deps) {
-                            if(H5B2__destroy_flush_depend((H5AC_info_t *)right_child, (H5AC_info_t *)grandchild) < 0)
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency")
-                            if(H5B2__create_flush_depend((H5AC_info_t *)middle_child, (H5AC_info_t *)grandchild) < 0)
-                                HGOTO_ERROR(H5E_BTREE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency")
-                        } /* end if */
-
-                        /* Unprotect the grandchild */
-                        if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, middle_node_ptrs[u].addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-                        grandchild = NULL;
-                    } /* end for */
-                } /* end if */
-            } /* end if */
+            /* Update flush dependencies for grandchildren, if using SWMR */
+            if(hdr->swmr_write && depth > 1)
+                if(H5B2__update_child_flush_depends(hdr, dxpl_id, depth, middle_node_ptrs,
+                        (unsigned)(curr_middle_nrec + 1), (unsigned)(curr_middle_nrec + right_nrec_move + 1), right_child, middle_child) < 0)
+                    HGOTO_ERROR(H5E_BTREE, H5E_CANTUPDATE, FAIL, "unable to update child nodes to new parent")
 
             /* Mark nodes as dirty */
             middle_child_flags |= H5AC__DIRTIED_FLAG;
@@ -1460,13 +1073,6 @@ done:
     if(right_child && H5AC_unprotect(hdr->f, dxpl_id, child_class, right_addr, right_child, right_child_flags) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree child node")
 
-    /* Unprotect the grandchild (should only happen on error) */
-    if(grandchild) {
-        HDassert(ret_value < 0);
-        if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, grandchild_addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-    } /* end if */
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5B2__redistribute3() */
 
@@ -1494,14 +1100,10 @@ H5B2__merge2(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
     const H5AC_class_t *child_class;    /* Pointer to child node's class info */
     haddr_t left_addr, right_addr;      /* Addresses of left & right child nodes */
     void *left_child = NULL, *right_child = NULL;     /* Pointers to left & right child nodes */
-    const H5AC_class_t *grandchild_class; /* Pointer to grandchild node's class info */
-    haddr_t grandchild_addr;            /* Grandchild address */
-    void *grandchild = NULL;            /* Pointer to grandchild node */
     uint16_t *left_nrec, *right_nrec;   /* Pointers to left & right child # of records */
     uint8_t *left_native, *right_native;    /* Pointers to left & right children's native records */
     H5B2_node_ptr_t *left_node_ptrs = NULL, *right_node_ptrs = NULL;/* Pointers to childs' node pointer info */
     unsigned left_child_flags = H5AC__NO_FLAGS_SET, right_child_flags = H5AC__NO_FLAGS_SET;     /* Flags for unprotecting child nodes */
-    unsigned u;                         /* Local index variable */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -1588,64 +1190,11 @@ H5B2__merge2(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
         if(depth > 1)
             HDmemcpy(&(left_node_ptrs[*left_nrec + 1]), &(right_node_ptrs[0]), sizeof(H5B2_node_ptr_t) * (size_t)(*right_nrec + 1));
 
-        /* Update flush dependencies */
-        if(hdr->swmr_write) {
-
-            /* Update node pointers */
-            if(depth > 1) {
-                /* Loop over grandchildren */
-                for(u = (*left_nrec + (unsigned)1); u < (*left_nrec + (unsigned)*right_nrec + (unsigned)2); u++) {
-                    hbool_t update_deps = FALSE;    /* Whether to update flush dependencies */
-
-                    grandchild_addr = left_node_ptrs[u].addr;
-                    if(depth > 2) {
-                        H5B2_internal_t *grandchild_int = NULL;
-
-                        /* Protect grandchild */
-                        if(NULL == (grandchild_int = H5B2__protect_internal(hdr, dxpl_id, grandchild_addr, left_child, left_node_ptrs[u].node_nrec, (uint16_t)(depth - 2), H5AC__NO_FLAGS_SET)))
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
-                        grandchild_class = H5AC_BT2_INT;
-                        grandchild = grandchild_int;
-
-                        if(grandchild_int->parent == right_child) {
-                            grandchild_int->parent = left_child;
-                            update_deps = TRUE;
-                        } /* end if */
-                        else
-                            HDassert(grandchild_int->parent == left_child);
-                    } /* end if */
-                    else {
-                        H5B2_leaf_t *grandchild_leaf = NULL;
-
-                        /* Protect grandchild */
-                        if(NULL == (grandchild_leaf = H5B2__protect_leaf(hdr, dxpl_id, grandchild_addr, left_child, left_node_ptrs[u].node_nrec, H5AC__NO_FLAGS_SET)))
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
-                        grandchild_class = H5AC_BT2_LEAF;
-                        grandchild = grandchild_leaf;
-
-                        if(grandchild_leaf->parent == right_child) {
-                            grandchild_leaf->parent = left_child;
-                            update_deps = TRUE;
-                        } /* end if */
-                        else
-                            HDassert(grandchild_leaf->parent == left_child);
-                    } /* end else */
-
-                    /* Update flush dependencies if necessary */
-                    if(update_deps) {
-                        if(H5B2__destroy_flush_depend((H5AC_info_t *)right_child, (H5AC_info_t *)grandchild) < 0)
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency")
-                        if(H5B2__create_flush_depend((H5AC_info_t *)left_child, (H5AC_info_t *)grandchild) < 0)
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency")
-                    } /* end if */
-
-                    /* Unprotect the grandchild */
-                    if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, left_node_ptrs[u].addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-                        HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-                    grandchild = NULL;
-                } /* end for */
-            } /* end if */
-        } /* end if */
+        /* Update flush dependencies for grandchildren, if using SWMR */
+        if(hdr->swmr_write && depth > 1)
+            if(H5B2__update_child_flush_depends(hdr, dxpl_id, depth, left_node_ptrs,
+                    (unsigned)(*left_nrec + 1), (unsigned)(*left_nrec + *right_nrec + 2), right_child, left_child) < 0)
+                HGOTO_ERROR(H5E_BTREE, H5E_CANTUPDATE, FAIL, "unable to update child nodes to new parent")
 
         /* Update # of records in left node */
         *left_nrec = (uint16_t)(*left_nrec + *right_nrec + 1);
@@ -1699,13 +1248,6 @@ done:
     if(right_child && H5AC_unprotect(hdr->f, dxpl_id, child_class, right_addr, right_child, right_child_flags) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree child node")
 
-    /* Unprotect the grandchild (should only happen on error) */
-    if(grandchild) {
-        HDassert(ret_value < 0);
-        if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, grandchild_addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-    } /* end if */
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5B2__merge2() */
 
@@ -1735,9 +1277,6 @@ H5B2__merge3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
     haddr_t middle_addr;                /* Address of middle child node */
     void *left_child = NULL, *right_child = NULL;     /* Pointers to left & right child nodes */
     void *middle_child = NULL;          /* Pointer to middle child node */
-    const H5AC_class_t *grandchild_class; /* Pointer to grandchild node's class info */
-    haddr_t grandchild_addr;            /* Grandchild address */
-    void *grandchild = NULL;            /* Pointer to grandchild node */
     uint16_t *left_nrec, *right_nrec;   /* Pointers to left & right child # of records */
     uint16_t *middle_nrec;              /* Pointer to middle child # of records */
     uint8_t *left_native, *right_native;    /* Pointers to left & right children's native records */
@@ -1747,7 +1286,6 @@ H5B2__merge3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
     hsize_t middle_moved_nrec;          /* Number of records moved, for internal split */
     unsigned left_child_flags = H5AC__NO_FLAGS_SET, right_child_flags = H5AC__NO_FLAGS_SET;     /* Flags for unprotecting child nodes */
     unsigned middle_child_flags = H5AC__NO_FLAGS_SET;     /* Flags for unprotecting child nodes */
-    unsigned u;                         /* Local index variable */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -1865,6 +1403,7 @@ H5B2__merge3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
 
         /* Move node pointers also if this is an internal node */
         if(depth > 1) {
+            unsigned u;         /* Local index variable */
 
             /* Copy node pointers from middle node into left node */
             HDmemcpy(&(left_node_ptrs[*left_nrec + 1]), &(middle_node_ptrs[0]), sizeof(H5B2_node_ptr_t) * middle_nrec_move);
@@ -1877,64 +1416,11 @@ H5B2__merge3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
             HDmemmove(&(middle_node_ptrs[0]), &(middle_node_ptrs[middle_nrec_move]), sizeof(H5B2_node_ptr_t) * (size_t)((unsigned)(*middle_nrec + 1) - middle_nrec_move));
         } /* end if */
 
-        /* Update flush dependencies */
-        if(hdr->swmr_write) {
-
-            /* Update node pointers */
-            if(depth > 1) {
-                /* Loop over grandchildren */
-                for(u = (*left_nrec + (unsigned)1); u < (*left_nrec + (unsigned)middle_nrec_move + (unsigned)1); u++) {
-                    hbool_t update_deps = FALSE;    /* Whether to update flush dependencies */
-
-                    grandchild_addr = left_node_ptrs[u].addr;
-                    if(depth > 2) {
-                        H5B2_internal_t *grandchild_int = NULL;
-
-                        /* Protect grandchild */
-                        if(NULL == (grandchild_int = H5B2__protect_internal(hdr, dxpl_id, grandchild_addr, left_child, left_node_ptrs[u].node_nrec, (uint16_t)(depth - 2), H5AC__NO_FLAGS_SET)))
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
-                        grandchild_class = H5AC_BT2_INT;
-                        grandchild = grandchild_int;
-
-                        if(grandchild_int->parent == middle_child) {
-                            grandchild_int->parent = left_child;
-                            update_deps = TRUE;
-                        } /* end if */
-                        else
-                            HDassert(grandchild_int->parent == left_child);
-                    } /* end if */
-                    else {
-                        H5B2_leaf_t *grandchild_leaf = NULL;
-
-                        /* Protect grandchild */
-                        if(NULL == (grandchild_leaf = H5B2__protect_leaf(hdr, dxpl_id, grandchild_addr, left_child, left_node_ptrs[u].node_nrec, H5AC__NO_FLAGS_SET)))
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
-                        grandchild_class = H5AC_BT2_LEAF;
-                        grandchild = grandchild_leaf;
-
-                        if(grandchild_leaf->parent == middle_child) {
-                            grandchild_leaf->parent = left_child;
-                            update_deps = TRUE;
-                        } /* end if */
-                        else
-                            HDassert(grandchild_leaf->parent == left_child);
-                    } /* end else */
-
-                    /* Update flush dependencies if necessary */
-                    if(update_deps) {
-                        if(H5B2__destroy_flush_depend((H5AC_info_t *)middle_child, (H5AC_info_t *)grandchild) < 0)
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency")
-                        if(H5B2__create_flush_depend((H5AC_info_t *)left_child, (H5AC_info_t *)grandchild) < 0)
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency")
-                    } /* end if */
-
-                    /* Unprotect the grandchild */
-                    if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, left_node_ptrs[u].addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-                        HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-                    grandchild = NULL;
-                } /* end for */
-            } /* end if */
-        } /* end if */
+        /* Update flush dependencies for grandchildren, if using SWMR */
+        if(hdr->swmr_write && depth > 1)
+            if(H5B2__update_child_flush_depends(hdr, dxpl_id, depth, left_node_ptrs,
+                    (unsigned)(*left_nrec + 1), (unsigned)(*left_nrec + middle_nrec_move + 1), middle_child, left_child) < 0)
+                HGOTO_ERROR(H5E_BTREE, H5E_CANTUPDATE, FAIL, "unable to update child nodes to new parent")
 
         /* Update # of records in left & middle nodes */
         *left_nrec = (uint16_t)(*left_nrec + middle_nrec_move);
@@ -1958,64 +1444,11 @@ H5B2__merge3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
             /* Copy node pointers from right node into middle node */
             HDmemcpy(&(middle_node_ptrs[*middle_nrec + 1]), &(right_node_ptrs[0]), sizeof(H5B2_node_ptr_t) * (size_t)(*right_nrec + 1));
 
-        /* Update flush dependencies */
-        if(hdr->swmr_write) {
-
-            /* Update node pointers */
-            if(depth > 1) {
-                /* Loop over grandchildren */
-                for(u = (*middle_nrec + (unsigned)1); u < (*middle_nrec + (unsigned)*right_nrec + (unsigned)2); u++) {
-                    hbool_t update_deps = FALSE;    /* Whether to update flush dependencies */
-
-                    grandchild_addr = middle_node_ptrs[u].addr;
-                    if(depth > 2) {
-                        H5B2_internal_t *grandchild_int = NULL;
-
-                        /* Protect grandchild */
-                        if(NULL == (grandchild_int = H5B2__protect_internal(hdr, dxpl_id, grandchild_addr, middle_child, middle_node_ptrs[u].node_nrec, (uint16_t)(depth - 2), H5AC__NO_FLAGS_SET)))
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
-                        grandchild_class = H5AC_BT2_INT;
-                        grandchild = grandchild_int;
-
-                        if(grandchild_int->parent == right_child) {
-                            grandchild_int->parent = middle_child;
-                            update_deps = TRUE;
-                        } /* end if */
-                        else
-                            HDassert(grandchild_int->parent == middle_child);
-                    } /* end if */
-                    else {
-                        H5B2_leaf_t *grandchild_leaf = NULL;
-
-                        /* Protect grandchild */
-                        if(NULL == (grandchild_leaf = H5B2__protect_leaf(hdr, dxpl_id, grandchild_addr, middle_child, middle_node_ptrs[u].node_nrec, H5AC__NO_FLAGS_SET)))
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
-                        grandchild_class = H5AC_BT2_LEAF;
-                        grandchild = grandchild_leaf;
-
-                        if(grandchild_leaf->parent == right_child) {
-                            grandchild_leaf->parent = middle_child;
-                            update_deps = TRUE;
-                        } /* end if */
-                        else
-                            HDassert(grandchild_leaf->parent == middle_child);
-                    } /* end else */
-
-                    /* Update flush dependencies if necessary */
-                    if(update_deps) {
-                        if(H5B2__destroy_flush_depend((H5AC_info_t *)right_child, (H5AC_info_t *)grandchild) < 0)
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency")
-                        if(H5B2__create_flush_depend((H5AC_info_t *)middle_child, (H5AC_info_t *)grandchild) < 0)
-                            HGOTO_ERROR(H5E_BTREE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency")
-                    } /* end if */
-
-                    /* Unprotect the grandchild */
-                    if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, middle_node_ptrs[u].addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-                        HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-                    grandchild = NULL;
-                } /* end for */
-            } /* end if */
-        } /* end if */
+        /* Update flush dependencies for grandchildren, if using SWMR */
+        if(hdr->swmr_write && depth > 1)
+            if(H5B2__update_child_flush_depends(hdr, dxpl_id, depth, middle_node_ptrs,
+                    (unsigned)(*middle_nrec + 1), (unsigned)(*middle_nrec + *right_nrec + 2), right_child, middle_child) < 0)
+                HGOTO_ERROR(H5E_BTREE, H5E_CANTUPDATE, FAIL, "unable to update child nodes to new parent")
 
         /* Update # of records in middle node */
         *middle_nrec = (uint16_t)(*middle_nrec + (*right_nrec + 1));
@@ -2076,13 +1509,6 @@ done:
     /* Delete right node & remove from cache (marked as dirty) */
     if(right_child && H5AC_unprotect(hdr->f, dxpl_id, child_class, right_addr, right_child, right_child_flags) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree child node")
-
-    /* Unprotect the grandchild (should only happen on error) */
-    if(grandchild) {
-        HDassert(ret_value < 0);
-        if(H5AC_unprotect(hdr->f, dxpl_id, grandchild_class, grandchild_addr, grandchild, H5AC__NO_FLAGS_SET) < 0)
-            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
-    } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5B2__merge3() */
@@ -2433,6 +1859,137 @@ H5B2__create_flush_depend(H5AC_info_t *parent_entry, H5AC_info_t *child_entry)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5B2__create_flush_depend() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5B2__update_flush_depend
+ *
+ * Purpose:     Update flush dependencies for children of a node
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ * Programmer:  Quincey Koziol
+ *		koziol@lbl.gov
+ *		Dec  1 2016
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5B2__update_flush_depend(H5B2_hdr_t *hdr, hid_t dxpl_id, unsigned depth,
+    const H5B2_node_ptr_t *node_ptr, void *old_parent, void *new_parent)
+{
+    const H5AC_class_t *child_class;    /* Pointer to child node's class info */
+    void *child = NULL;                 /* Pointer to child node */
+    void **parent_ptr;                  /* Pointer to child node's parent */
+    hbool_t update_deps = FALSE;        /* Whether to update flush dependencies */
+    herr_t ret_value = SUCCEED;         /* Return value */
+
+    FUNC_ENTER_PACKAGE
+    
+    /* Sanity checks */
+    HDassert(hdr);
+    HDassert(depth > 0);
+    HDassert(node_ptr);
+    HDassert(old_parent);
+    HDassert(new_parent);
+
+    /* Get child node pointer */
+    if(depth > 1) {
+        H5B2_internal_t *child_int;
+
+        /* Protect child */
+        if(NULL == (child_int = H5B2__protect_internal(hdr, dxpl_id, node_ptr->addr, new_parent, node_ptr->node_nrec, (uint16_t)(depth - 1), H5AC__NO_FLAGS_SET)))
+            HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
+        child_class = H5AC_BT2_INT;
+        child = child_int;
+
+        if(child_int->parent == old_parent) {
+            parent_ptr = &child_int->parent;
+            update_deps = TRUE;
+        } /* end if */
+        else
+            HDassert(child_int->parent == new_parent);
+    } /* end if */
+    else {
+        H5B2_leaf_t *child_leaf;
+
+        /* Protect child */
+        if(NULL == (child_leaf = H5B2__protect_leaf(hdr, dxpl_id, node_ptr->addr, new_parent, node_ptr->node_nrec, H5AC__NO_FLAGS_SET)))
+            HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
+        child_class = H5AC_BT2_LEAF;
+        child = child_leaf;
+
+        if(child_leaf->parent == old_parent) {
+            parent_ptr = &child_leaf->parent;
+            update_deps = TRUE;
+        } /* end if */
+        else
+            HDassert(child_leaf->parent == new_parent);
+    } /* end else */
+
+    /* Update flush dependencies if necessary */
+    if(update_deps) {
+        /* Sanity check */
+        HDassert(parent_ptr);
+
+        /* Switch the flush dependency for the node */
+        if(H5B2__destroy_flush_depend((H5AC_info_t *)old_parent, (H5AC_info_t *)child) < 0)
+            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency")
+        *parent_ptr = new_parent;
+        if(H5B2__create_flush_depend((H5AC_info_t *)new_parent, (H5AC_info_t *)child) < 0)
+            HGOTO_ERROR(H5E_BTREE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency")
+    } /* end if */
+
+done:
+    /* Unprotect the child */
+    if(child)
+        if(H5AC_unprotect(hdr->f, dxpl_id, child_class, node_ptr->addr, child, H5AC__NO_FLAGS_SET) < 0)
+            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree node")
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5B2__update_flush_depend() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5B2__update_child_flush_depends
+ *
+ * Purpose:     Update flush dependencies for children of a node
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ * Programmer:  Quincey Koziol
+ *		koziol@lbl.gov
+ *		Dec  1 2016
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5B2__update_child_flush_depends(H5B2_hdr_t *hdr, hid_t dxpl_id, unsigned depth,
+    const H5B2_node_ptr_t *node_ptrs, unsigned start_idx, unsigned end_idx, 
+    void *old_parent, void *new_parent)
+{
+    unsigned u;                         /* Local index variable */
+    herr_t ret_value = SUCCEED;         /* Return value */
+
+    FUNC_ENTER_STATIC
+    
+    /* Sanity checks */
+    HDassert(hdr);
+    HDassert(depth > 1);
+    HDassert(node_ptrs);
+    HDassert(start_idx <= end_idx);
+    HDassert(old_parent);
+    HDassert(new_parent);
+
+    /* Loop over children */
+    for(u = start_idx; u < end_idx; u++)
+        /* Update parent for children */
+        if(H5B2__update_flush_depend(hdr, dxpl_id, depth - 1, &node_ptrs[u], old_parent, new_parent) < 0)
+            HGOTO_ERROR(H5E_BTREE, H5E_CANTUPDATE, FAIL, "unable to update child node to new parent")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5B2__update_child_flush_depends() */
 
 
 /*-------------------------------------------------------------------------
