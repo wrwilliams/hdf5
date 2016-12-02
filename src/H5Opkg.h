@@ -48,17 +48,6 @@
  *      and 'size' callback for places to change when updating this. */
 #define H5O_VERSION_LATEST	H5O_VERSION_2
 
-/* This is the initial size of the dynamically allocated list of object 
- * header continuation chunk flush dependency parents maintained by the 
- * object header proxy.  
- *
- * The current value of 1 presumes that the typical number of entries 
- * on this list is almost always either zero or 1.  Increase this value 
- * if appropriate.
- */
-#define H5O_FD_PAR_LIST_BASE	1
-
-
 /*
  * Align messages on 8-byte boundaries because we would like to copy the
  * object header chunks directly into memory and operate on them there, even
@@ -411,9 +400,7 @@ typedef struct H5O_chunk_proxy_t {
      * (if cont_chunkno == 0) or the chunk proxy indicated by the 
      * cont_chunkno field (if cont_chunkno > 0).
      */
-    void * fd_parent_ptr;               /* pointer to flush dependency parent
-                                         * it it exists.  NULL otherwise.
-                                         */
+    void *parent;                       /* Pointer to flush dependency parent */
 } H5O_chunk_proxy_t;
 
 /* Callback information for loading object header chunk from disk */

@@ -74,6 +74,8 @@ set (H5B2_SOURCES
     ${HDF5_SRC_DIR}/H5B2dbg.c
     ${HDF5_SRC_DIR}/H5B2hdr.c
     ${HDF5_SRC_DIR}/H5B2int.c
+    ${HDF5_SRC_DIR}/H5B2internal.c
+    ${HDF5_SRC_DIR}/H5B2leaf.c
     ${HDF5_SRC_DIR}/H5B2stat.c
     ${HDF5_SRC_DIR}/H5B2test.c
 )

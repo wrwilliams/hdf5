@@ -125,6 +125,9 @@
 #define H5B2_NUM_INT_REC(h, d) \
     (((h)->node_size - (H5B2_INT_PREFIX_SIZE + H5B2_INT_POINTER_SIZE(h, d))) / ((h)->rrec_size + H5B2_INT_POINTER_SIZE(h, d)))
 
+/* Uncomment this macro to enable extra sanity checking */
+/* #define H5B2_DEBUG */
+
 
 /****************************/
 /* Package Private Typedefs */
@@ -345,6 +348,21 @@ H5_DLL herr_t H5B2__create_flush_depend(H5AC_info_t *parent_entry,
 H5_DLL herr_t H5B2__destroy_flush_depend(H5AC_info_t *parent_entry,
     H5AC_info_t *child_entry);
 
+/* Internal node management routines */
+H5_DLL herr_t H5B2__split1(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
+    H5B2_node_ptr_t *curr_node_ptr, unsigned *parent_cache_info_flags_ptr,
+    H5B2_internal_t *internal, unsigned *internal_flags_ptr, unsigned idx);
+H5_DLL herr_t H5B2__redistribute2(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
+    H5B2_internal_t *internal, unsigned idx);
+H5_DLL herr_t H5B2__redistribute3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
+    H5B2_internal_t *internal, unsigned *internal_flags_ptr, unsigned idx);
+H5_DLL herr_t H5B2__merge2(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
+    H5B2_node_ptr_t *curr_node_ptr, unsigned *parent_cache_info_flags_ptr,
+    H5B2_internal_t *internal, unsigned *internal_flags_ptr, unsigned idx);
+H5_DLL herr_t H5B2__merge3(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
+    H5B2_node_ptr_t *curr_node_ptr, unsigned *parent_cache_info_flags_ptr,
+    H5B2_internal_t *internal, unsigned *internal_flags_ptr, unsigned idx);
+
 /* Routines for managing B-tree header info */
 H5_DLL H5B2_hdr_t *H5B2__hdr_alloc(H5F_t *f);
 H5_DLL haddr_t H5B2__hdr_create(H5F_t *f, hid_t dxpl_id,
@@ -363,17 +381,26 @@ H5_DLL herr_t H5B2__hdr_unprotect(H5B2_hdr_t *hdr, hid_t dxpl_id,
 H5_DLL herr_t H5B2__hdr_delete(H5B2_hdr_t *hdr, hid_t dxpl_id);
 
 /* Routines for operating on leaf nodes */
-H5B2_leaf_t *H5B2__protect_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, haddr_t addr,
+H5_DLL H5B2_leaf_t *H5B2__protect_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, haddr_t addr,
     void *parent, uint16_t nrec, unsigned flags);
+H5_DLL herr_t H5B2__shadow_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id,
+    H5B2_node_ptr_t *curr_node_ptr, H5B2_leaf_t **leaf);
+H5_DLL herr_t H5B2__swap_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
+    H5B2_internal_t *internal, unsigned *internal_flags_ptr, unsigned idx,
+    void *swap_loc);
 
 /* Routines for operating on internal nodes */
 H5_DLL H5B2_internal_t *H5B2__protect_internal(H5B2_hdr_t *hdr, hid_t dxpl_id,
     haddr_t addr, void *parent, uint16_t nrec, uint16_t depth, unsigned flags);
+H5_DLL herr_t H5B2__shadow_internal(H5B2_hdr_t *hdr, hid_t dxpl_id,
+    uint16_t depth, H5B2_node_ptr_t *curr_node_ptr, H5B2_internal_t **internal);
 
 /* Routines for allocating nodes */
 H5_DLL herr_t H5B2__split_root(H5B2_hdr_t *hdr, hid_t dxpl_id);
 H5_DLL herr_t H5B2__create_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, void *parent,
     H5B2_node_ptr_t *node_ptr);
+H5_DLL herr_t H5B2__create_internal(H5B2_hdr_t *hdr, hid_t dxpl_id, void *parent,
+    H5B2_node_ptr_t *node_ptr, uint16_t depth);
 
 /* Routines for releasing structures */
 H5_DLL herr_t H5B2__hdr_free(H5B2_hdr_t *hdr);
@@ -381,7 +408,7 @@ H5_DLL herr_t H5B2__leaf_free(H5B2_leaf_t *l);
 H5_DLL herr_t H5B2__internal_free(H5B2_internal_t *i);
 
 /* Routines for inserting records */
-H5_DLL herr_t H5B2__insert_hdr(H5B2_hdr_t *hdr, hid_t dxpl_id, void *udata);
+H5_DLL herr_t H5B2__insert(H5B2_hdr_t *hdr, hid_t dxpl_id, void *udata);
 H5_DLL herr_t H5B2__insert_internal(H5B2_hdr_t *hdr, hid_t dxpl_id,
     uint16_t depth, unsigned *parent_cache_info_flags_ptr,
     H5B2_node_ptr_t *curr_node_ptr, H5B2_nodepos_t curr_pos, void *parent, void *udata);
@@ -449,6 +476,15 @@ H5_DLL herr_t H5B2__int_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr,
 H5_DLL herr_t H5B2__leaf_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr,
     FILE *stream, int indent, int fwidth, const H5B2_class_t *type,
     haddr_t hdr_addr, unsigned nrec, haddr_t obj_addr);
+
+/* Sanity checking routines */
+#ifdef H5B2_DEBUG
+/* Don't label these with H5_ATTR_PURE or you'll get even more warnings... */
+H5_DLL herr_t H5B2__assert_internal(hsize_t parent_all_nrec, const H5B2_hdr_t *hdr, const H5B2_internal_t *internal);
+H5_DLL herr_t H5B2__assert_internal2(hsize_t parent_all_nrec, const H5B2_hdr_t *hdr, const H5B2_internal_t *internal, const H5B2_internal_t *internal2);
+H5_DLL herr_t H5B2__assert_leaf(const H5B2_hdr_t *hdr, const H5B2_leaf_t *leaf);
+H5_DLL herr_t H5B2__assert_leaf2(const H5B2_hdr_t *hdr, const H5B2_leaf_t *leaf, const H5B2_leaf_t *leaf2);
+#endif /* H5B2_DEBUG */
 
 /* Testing routines */
 #ifdef H5B2_TESTING

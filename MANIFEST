@@ -491,6 +491,8 @@
 ./src/H5B2dbg.c
 ./src/H5B2hdr.c
 ./src/H5B2int.c
+./src/H5B2internal.c
+./src/H5B2leaf.c
 ./src/H5B2module.h
 ./src/H5B2pkg.h
 ./src/H5B2private.h

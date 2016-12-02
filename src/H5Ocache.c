@@ -1027,7 +1027,6 @@ static herr_t
 H5O__cache_chk_notify(H5AC_notify_action_t action, void *_thing)
 {
     H5O_chunk_proxy_t *chk_proxy = (H5O_chunk_proxy_t *)_thing;
-    void *parent = NULL;                /* Chunk containing continuation message that points to this chunk */
     H5O_chunk_proxy_t *cont_chk_proxy = NULL; /* Proxy for chunk containing continuation message that points to this chunk, if not chunk 0 */
     herr_t ret_value = SUCCEED;         /* Return value */
 
@@ -1045,6 +1044,8 @@ H5O__cache_chk_notify(H5AC_notify_action_t action, void *_thing)
             if(chk_proxy->oh->swmr_write) {
                 /* Add flush dependency on chunk parent */
                 {
+                    void *parent;       /* Chunk containing continuation message that points to this chunk */
+
                     /* Determine the parent of the chunk */
                     if(chk_proxy->cont_chunkno == 0)
                         parent = chk_proxy->oh;
@@ -1070,7 +1071,7 @@ H5O__cache_chk_notify(H5AC_notify_action_t action, void *_thing)
                     /* Make note of the address and pointer of the flush dependency
                      * parent so we can take the dependency down on eviction.
                      */
-                    chk_proxy->fd_parent_ptr = parent;
+                    chk_proxy->parent = parent;
                 }
 
                 /* Add flush dependency on object header proxy, if proxy exists */
@@ -1111,12 +1112,12 @@ H5O__cache_chk_notify(H5AC_notify_action_t action, void *_thing)
                 /* Remove flush dependency on parent object header chunk */
                 {
                     /* Sanity checks */
-                    HDassert(chk_proxy->fd_parent_ptr != NULL);
-                    HDassert(((H5C_cache_entry_t *)(chk_proxy->fd_parent_ptr))->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
-                    HDassert(((H5C_cache_entry_t *)(chk_proxy->fd_parent_ptr))->type);
-                    HDassert((((H5C_cache_entry_t *)(chk_proxy->fd_parent_ptr))->type->id == H5AC_OHDR_ID) || (((H5C_cache_entry_t *)(chk_proxy->fd_parent_ptr))->type->id == H5AC_OHDR_CHK_ID));
+                    HDassert(chk_proxy->parent != NULL);
+                    HDassert(((H5C_cache_entry_t *)(chk_proxy->parent))->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+                    HDassert(((H5C_cache_entry_t *)(chk_proxy->parent))->type);
+                    HDassert((((H5C_cache_entry_t *)(chk_proxy->parent))->type->id == H5AC_OHDR_ID) || (((H5C_cache_entry_t *)(chk_proxy->parent))->type->id == H5AC_OHDR_CHK_ID));
 
-                    if(H5AC_destroy_flush_dependency(chk_proxy->fd_parent_ptr, chk_proxy) < 0)
+                    if(H5AC_destroy_flush_dependency(chk_proxy->parent, chk_proxy) < 0)
                         HGOTO_ERROR(H5E_OHDR, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency")
                 }
 

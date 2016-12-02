@@ -290,7 +290,7 @@ H5B2_insert(H5B2_t *bt2, hid_t dxpl_id, void *udata)
     hdr = bt2->hdr;
 
     /* Insert the record */
-    if(H5B2__insert_hdr(hdr, dxpl_id, udata) < 0)
+    if(H5B2__insert(hdr, dxpl_id, udata) < 0)
         HGOTO_ERROR(H5E_BTREE, H5E_CANTINSERT, FAIL, "unable to insert record into B-tree")
 
 done:
@@ -355,7 +355,7 @@ H5B2_update(H5B2_t *bt2, hid_t dxpl_id, void *udata, H5B2_modify_t op, void *op_
 
     /* Use insert algorithm if nodes to leaf full */
     if(H5B2_UPDATE_INSERT_CHILD_FULL == status) {
-        if(H5B2__insert_hdr(hdr, dxpl_id, udata) < 0)
+        if(H5B2__insert(hdr, dxpl_id, udata) < 0)
             HGOTO_ERROR(H5E_BTREE, H5E_CANTINSERT, FAIL, "unable to insert record into B-tree")
     } /* end if */
     else if(H5B2_UPDATE_SHADOW_DONE == status || H5B2_UPDATE_INSERT_DONE == status) {
@@ -1014,9 +1014,9 @@ H5B2_remove_by_idx(H5B2_t *bt2, hid_t dxpl_id, H5_iter_order_t order,
     if(hdr->depth > 0) {
         hbool_t depth_decreased = FALSE;  /* Flag to indicate whether the depth of the B-tree decreased */
 
-        if(H5B2__remove_internal_by_idx(hdr, dxpl_id, &depth_decreased, NULL,
-                NULL, hdr->depth, &(hdr->cache_info), NULL, &hdr->root,
-                H5B2_POS_ROOT, idx, op, op_data) < 0)
+        if(H5B2__remove_internal_by_idx(hdr, dxpl_id, &depth_decreased, NULL, NULL,
+                hdr->depth, &(hdr->cache_info), NULL, &hdr->root, H5B2_POS_ROOT,
+                idx, op, op_data) < 0)
             HGOTO_ERROR(H5E_BTREE, H5E_CANTDELETE, FAIL, "unable to remove record from B-tree internal node")
 
         /* Check for decreasing the depth of the B-tree */
