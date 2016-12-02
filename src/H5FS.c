@@ -1006,84 +1006,6 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5FS_depend
- *
- * Purpose:     Make a child flush dependency between the free space
- *              manager's and another piece of metadata in the file.
- *
- * Return:      SUCCEED/FAIL
- *
- * Programmer:  Dana Robinson
- *              Fall 2012
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5FS_depend(H5AC_info_t *parent_entry, H5FS_t *fs)
-{
-    /* Local variables */
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT
-
-#ifdef QAK
-HDfprintf(stderr, "%s: Called\n", FUNC);
-#endif /* QAK */
-
-    /*
-     * Check arguments.
-     */
-    HDassert(fs);
-
-    /* Set up flush dependency between parent entry and free space manager */
-    if(H5FS__create_flush_depend(parent_entry, (H5AC_info_t *)fs) < 0)
-        HGOTO_ERROR(H5E_FSPACE, H5E_CANTDEPEND, FAIL, "unable to create flush dependency on file metadata")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-}  /* end H5FS_depend() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5FS_undepend
- *
- * Purpose:     Remove a child flush dependency between the free space
- *              manager's and another piece of metadata in the file.
- *
- * Return:      SUCCEED/FAIL
- *
- * Programmer:  Dana Robinson
- *              Fall 2012
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5FS_undepend(H5AC_info_t *parent_entry, H5FS_t *fs)
-{
-    /* Local variables */
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT
-
-#ifdef QAK
-HDfprintf(stderr, "%s: Called\n", FUNC);
-#endif /* QAK */
-
-    /*
-     * Check arguments.
-     */
-    HDassert(fs);
-
-    /* Remove flush dependency between parent entry and free space manager */
-    if(H5FS__destroy_flush_depend(parent_entry, (H5AC_info_t *)fs) < 0)
-        HGOTO_ERROR(H5E_FSPACE, H5E_CANTUNDEPEND, FAIL, "unable to destroy flush dependency on file metadata")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-}   /* end H5FS_undepend() */
-
-
-/*-------------------------------------------------------------------------
  * Function:    H5FS__hdr_dest
  *
  * Purpose:     Destroys a free space header in memory.

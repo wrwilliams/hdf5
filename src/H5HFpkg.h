@@ -616,12 +616,6 @@ H5FL_BLK_EXTERN(direct_block);
 /* Package Private Prototypes */
 /******************************/
 
-/* Generic routines */
-H5_DLL herr_t H5HF__create_flush_depend(H5AC_info_t *parent_entry,
-    H5AC_info_t *child_entry);
-H5_DLL herr_t H5HF__destroy_flush_depend(H5AC_info_t *parent_entry,
-    H5AC_info_t *child_entry);
-
 /* Doubling table routines */
 H5_DLL herr_t H5HF_dtable_init(H5HF_dtable_t *dtable);
 H5_DLL herr_t H5HF_dtable_dest(H5HF_dtable_t *dtable);

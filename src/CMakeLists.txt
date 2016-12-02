@@ -325,7 +325,6 @@ set (H5HF_SOURCES
     ${HDF5_SRC_DIR}/H5HFhdr.c
     ${HDF5_SRC_DIR}/H5HFhuge.c
     ${HDF5_SRC_DIR}/H5HFiblock.c
-    ${HDF5_SRC_DIR}/H5HFint.c
     ${HDF5_SRC_DIR}/H5HFiter.c
     ${HDF5_SRC_DIR}/H5HFman.c
     ${HDF5_SRC_DIR}/H5HFsection.c

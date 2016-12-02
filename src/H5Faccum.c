@@ -726,6 +726,7 @@ H5F__accum_write(const H5F_io_info_t *fio_info, H5FD_mem_t map_type, haddr_t add
             } /* end else */
         } /* end if */
         else {
+            /* Make certain that data in accumulator is visible before new write */
 	    if((H5F_INTENT(fio_info->f) & H5F_ACC_SWMR_WRITE) > 0)
                 /* Flush if dirty and reset accumulator */
                 if(H5F__accum_reset(fio_info, TRUE) < 0)
