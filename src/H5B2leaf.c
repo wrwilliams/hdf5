@@ -59,6 +59,8 @@
 /********************/
 /* Local Prototypes */
 /********************/
+static herr_t H5B2__shadow_leaf(H5B2_leaf_t *leaf, hid_t dxpl_id,
+    H5B2_node_ptr_t *curr_node_ptr);
 
 
 /*********************/
@@ -181,8 +183,8 @@ done:
  *-------------------------------------------------------------------------
  */
 H5B2_leaf_t *
-H5B2__protect_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, haddr_t addr, void *parent, 
-    uint16_t nrec, unsigned flags)
+H5B2__protect_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, void *parent, 
+    H5B2_node_ptr_t *node_ptr, hbool_t shadow, unsigned flags)
 {
     H5B2_leaf_cache_ud_t udata;         /* User-data for callback */
     H5B2_leaf_t *leaf;                  /* v2 B-tree leaf node */
@@ -192,7 +194,8 @@ H5B2__protect_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, haddr_t addr, void *parent,
 
     /* Check arguments. */
     HDassert(hdr);
-    HDassert(H5F_addr_defined(addr));
+    HDassert(node_ptr);
+    HDassert(H5F_addr_defined(node_ptr->addr));
 
     /* only H5AC__READ_ONLY_FLAG may appear in flags */
     HDassert((flags & (unsigned)(~H5AC__READ_ONLY_FLAG)) == 0);
@@ -201,10 +204,10 @@ H5B2__protect_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, haddr_t addr, void *parent,
     udata.f = hdr->f;
     udata.hdr = hdr;
     udata.parent = parent;
-    H5_CHECKED_ASSIGN(udata.nrec, uint16_t, nrec, unsigned)
+    udata.nrec = node_ptr->node_nrec;
 
     /* Protect the leaf node */
-    if(NULL == (leaf = (H5B2_leaf_t *)H5AC_protect(hdr->f, dxpl_id, H5AC_BT2_LEAF, addr, &udata, flags)))
+    if(NULL == (leaf = (H5B2_leaf_t *)H5AC_protect(hdr->f, dxpl_id, H5AC_BT2_LEAF, node_ptr->addr, &udata, flags)))
         HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, NULL, "unable to protect B-tree leaf node")
 
     /* Create top proxy, if it doesn't exist */
@@ -215,6 +218,11 @@ H5B2__protect_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, haddr_t addr, void *parent,
         leaf->top_proxy = hdr->top_proxy;
     } /* end if */
 
+    /* Shadow the node, if requested */
+    if(shadow)
+        if(H5B2__shadow_leaf(leaf, dxpl_id, node_ptr) < 0)
+            HGOTO_ERROR(H5E_BTREE, H5E_CANTCOPY, NULL, "unable to shadow leaf node")
+
     /* Set return value */
     ret_value = leaf;
 
@@ -222,8 +230,18 @@ done:
     /* Clean up on error */
     if(!ret_value) {
         /* Release the leaf node, if it was protected */
-        if(leaf && H5AC_unprotect(hdr->f, dxpl_id, H5AC_BT2_LEAF, addr, leaf, H5AC__NO_FLAGS_SET) < 0)
-            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, NULL, "unable to unprotect v2 B-tree leaf node, address = %llu", (unsigned long long)addr)
+        if(leaf) {
+            /* Remove from v2 B-tree's proxy, if added */
+            if(leaf->top_proxy) {
+                if(H5AC_proxy_entry_remove_child(leaf->top_proxy, leaf) < 0)
+                    HDONE_ERROR(H5E_BTREE, H5E_CANTUNDEPEND, NULL, "unable to destroy flush dependency between leaf node and v2 B-tree 'top' proxy")
+                leaf->top_proxy = NULL;
+            } /* end if */
+
+            /* Unprotect leaf node */
+            if(H5AC_unprotect(hdr->f, dxpl_id, H5AC_BT2_LEAF, node_ptr->addr, leaf, H5AC__NO_FLAGS_SET) < 0)
+                HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, NULL, "unable to unprotect v2 B-tree leaf node, address = %llu", (unsigned long long)node_ptr->addr)
+        } /* end if */
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -275,7 +293,7 @@ H5B2__neighbor_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, H5B2_node_ptr_t *curr_node_p
     HDassert(op);
 
     /* Lock current B-tree node */
-    if(NULL == (leaf = H5B2__protect_leaf(hdr, dxpl_id, curr_node_ptr->addr, parent, curr_node_ptr->node_nrec, H5AC__READ_ONLY_FLAG)))
+    if(NULL == (leaf = H5B2__protect_leaf(hdr, dxpl_id, parent, curr_node_ptr, FALSE, H5AC__READ_ONLY_FLAG)))
         HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
 
     /* Locate node pointer for child */
@@ -309,7 +327,7 @@ H5B2__neighbor_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, H5B2_node_ptr_t *curr_node_p
         HGOTO_ERROR(H5E_BTREE, H5E_NOTFOUND, FAIL, "unable to find neighbor record in B-tree")
 
 done:
-    /* Release the B-tree internal node */
+    /* Release the B-tree leaf node */
     if(leaf && H5AC_unprotect(hdr->f, dxpl_id, H5AC_BT2_LEAF, curr_node_ptr->addr, leaf, H5AC__NO_FLAGS_SET) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree leaf node")
 
@@ -348,7 +366,7 @@ H5B2__insert_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, H5B2_node_ptr_t *curr_node_ptr
     HDassert(H5F_addr_defined(curr_node_ptr->addr));
 
     /* Lock current B-tree node */
-    if(NULL == (leaf = H5B2__protect_leaf(hdr, dxpl_id, curr_node_ptr->addr, parent, curr_node_ptr->node_nrec, H5AC__NO_FLAGS_SET)))
+    if(NULL == (leaf = H5B2__protect_leaf(hdr, dxpl_id, parent, curr_node_ptr, FALSE, H5AC__NO_FLAGS_SET)))
         HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
 
     /* Must have a leaf node with enough space to insert a record now */
@@ -415,8 +433,10 @@ done:
     if(leaf) {
         /* Shadow the node if doing SWMR writes */
         if(hdr->swmr_write && (leaf_flags & H5AC__DIRTIED_FLAG))
-            if(H5B2__shadow_leaf(hdr, dxpl_id, curr_node_ptr, &leaf) < 0)
+            if(H5B2__shadow_leaf(leaf, dxpl_id, curr_node_ptr) < 0)
                 HDONE_ERROR(H5E_BTREE, H5E_CANTCOPY, FAIL, "unable to shadow leaf B-tree node")
+
+        /* Unprotect leaf node */
         if(H5AC_unprotect(hdr->f, dxpl_id, H5AC_BT2_LEAF, curr_node_ptr->addr, leaf, leaf_flags) < 0)
             HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release leaf B-tree node")
     } /* end if */
@@ -460,7 +480,7 @@ H5B2__update_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, H5B2_node_ptr_t *curr_node_ptr
     HDassert(H5F_addr_defined(curr_node_ptr->addr));
 
     /* Lock current B-tree node */
-    if(NULL == (leaf = H5B2__protect_leaf(hdr, dxpl_id, curr_node_ptr->addr, parent, curr_node_ptr->node_nrec, H5AC__NO_FLAGS_SET)))
+    if(NULL == (leaf = H5B2__protect_leaf(hdr, dxpl_id, parent, curr_node_ptr, FALSE, H5AC__NO_FLAGS_SET)))
         HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
 
     /* Sanity check number of records */
@@ -563,7 +583,7 @@ done:
         /* Check if we should shadow this node */
         if(hdr->swmr_write && (leaf_flags & H5AC__DIRTIED_FLAG)) {
             /* Attempt to shadow the node if doing SWMR writes */
-            if(H5B2__shadow_leaf(hdr, dxpl_id, curr_node_ptr, &leaf) < 0)
+            if(H5B2__shadow_leaf(leaf, dxpl_id, curr_node_ptr) < 0)
                 HDONE_ERROR(H5E_BTREE, H5E_CANTCOPY, FAIL, "unable to shadow leaf B-tree node")
 
             /* Change the state to "shadowed" if only modified currently */
@@ -571,6 +591,8 @@ done:
             if(*status == H5B2_UPDATE_MODIFY_DONE)
                 *status = H5B2_UPDATE_SHADOW_DONE;
         } /* end if */
+
+        /* Unprotect leaf node */
         if(H5AC_unprotect(hdr->f, dxpl_id, H5AC_BT2_LEAF, curr_node_ptr->addr, leaf, leaf_flags) < 0)
             HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release leaf B-tree node")
     } /* end if */
@@ -619,11 +641,11 @@ H5B2__swap_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
 
         /* Setup information for unlocking child node */
         child_class = H5AC_BT2_INT;
-        child_addr = internal->node_ptrs[idx].addr;
 
         /* Lock B-tree child nodes */
-        if(NULL == (child_internal = H5B2__protect_internal(hdr, dxpl_id, child_addr, internal, internal->node_ptrs[idx].node_nrec, (uint16_t)(depth - 1), H5AC__NO_FLAGS_SET)))
+        if(NULL == (child_internal = H5B2__protect_internal(hdr, dxpl_id, internal, &internal->node_ptrs[idx], (uint16_t)(depth - 1), FALSE, H5AC__NO_FLAGS_SET)))
             HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
+        child_addr = internal->node_ptrs[idx].addr;
 
         /* More setup for accessing child node information */
         child = child_internal;
@@ -634,11 +656,11 @@ H5B2__swap_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
 
         /* Setup information for unlocking child nodes */
         child_class = H5AC_BT2_LEAF;
-        child_addr = internal->node_ptrs[idx].addr;
 
         /* Lock B-tree child node */
-        if(NULL == (child_leaf = H5B2__protect_leaf(hdr, dxpl_id, child_addr, internal, internal->node_ptrs[idx].node_nrec, H5AC__NO_FLAGS_SET)))
+        if(NULL == (child_leaf = H5B2__protect_leaf(hdr, dxpl_id, internal, &internal->node_ptrs[idx], FALSE, H5AC__NO_FLAGS_SET)))
             HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
+        child_addr = internal->node_ptrs[idx].addr;
 
         /* More setup for accessing child node information */
         child = child_leaf;
@@ -686,34 +708,32 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
-H5B2__shadow_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, H5B2_node_ptr_t *curr_node_ptr,
-    H5B2_leaf_t **leaf)
+static herr_t
+H5B2__shadow_leaf(H5B2_leaf_t *leaf, hid_t dxpl_id, H5B2_node_ptr_t *curr_node_ptr)
 {
-    hbool_t node_pinned = FALSE;
-    hbool_t node_protected = TRUE;
-    haddr_t new_node_addr;              /* Address to move node to */
+    H5B2_hdr_t *hdr;                    /* B-tree header */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_STATIC
 
     /*
      * Check arguments.
      */
-    HDassert(hdr);
+    HDassert(leaf);
     HDassert(curr_node_ptr);
     HDassert(H5F_addr_defined(curr_node_ptr->addr));
-    HDassert(leaf);
-    HDassert(*leaf);
+    hdr = leaf->hdr;
+    HDassert(hdr);
     HDassert(hdr->swmr_write);
-    HDassert((*leaf)->hdr == hdr);
 
     /* We only need to shadow the node if it has not been shadowed since the
      * last time the header was flushed, as otherwise it will be unreachable by
      * the readers so there will be no need to shadow.  To check if it has been
      * shadowed, compare the epoch of this node and the header.  If this node's
      * epoch is <= to the header's, it hasn't been shadowed yet. */
-    if((*leaf)->shadow_epoch <= hdr->shadow_epoch) {
+    if(leaf->shadow_epoch <= hdr->shadow_epoch) {
+        haddr_t new_node_addr;              /* Address to move node to */
+
         /*
         * We must clone the old node so readers with an out-of-date version of
         * the parent can still see the correct number of children, via the
@@ -723,43 +743,20 @@ H5B2__shadow_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, H5B2_node_ptr_t *curr_node_ptr
         if(HADDR_UNDEF == (new_node_addr = H5MF_alloc(hdr->f, H5FD_MEM_BTREE, dxpl_id, (hsize_t)hdr->node_size)))
             HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, FAIL, "unable to allocate file space to move B-tree node")
 
-        /* Pin old entry so it is not flushed when we unprotect */
-        if(H5AC_pin_protected_entry(*leaf) < 0)
-            HGOTO_ERROR(H5E_BTREE, H5E_CANTPIN, FAIL, "unable to pin old B-tree node")
-        node_pinned = TRUE;
-
-        /* Unprotect node so we can move it.  Do not mark it dirty yet so it is
-        * not flushed to the old location (however unlikely). */
-        if(H5AC_unprotect(hdr->f, dxpl_id, H5AC_BT2_LEAF, curr_node_ptr->addr, *leaf, H5AC__NO_FLAGS_SET) < 0)
-            HGOTO_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release old B-tree node")
-        node_protected = FALSE;
-
         /* Move the location of the old child on the disk */
-        if(H5AC_move_entry(hdr->f, H5AC_BT2_LEAF, curr_node_ptr->addr, new_node_addr, H5AC_ind_read_dxpl_id) < 0)
+        if(H5AC_move_entry(hdr->f, H5AC_BT2_LEAF, curr_node_ptr->addr, new_node_addr, dxpl_id) < 0)
             HGOTO_ERROR(H5E_BTREE, H5E_CANTMOVE, FAIL, "unable to move B-tree node")
         curr_node_ptr->addr = new_node_addr;
 
-        /* Re-protect node at new address.  Should have the same location in
-         * memory. */
-        if(*leaf != H5B2__protect_leaf(hdr, dxpl_id, curr_node_ptr->addr, (*leaf)->parent, curr_node_ptr->node_nrec, H5AC__NO_FLAGS_SET))
-            HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
-        node_protected = TRUE;
+        /* Should free the space in the file, but this is not supported by
+         * SWMR_WRITE code yet - QAK, 2016/12/01
+         */
 
         /* Set shadow epoch for node ahead of header */
-        (*leaf)->shadow_epoch = hdr->shadow_epoch + 1;
+        leaf->shadow_epoch = hdr->shadow_epoch + 1;
     } /* end if */
 
 done:
-    if(node_pinned)
-        if(H5AC_unpin_entry(*leaf) < 0)
-            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPIN, FAIL, "unable to unpin leaf B-tree node")
-
-    /* Reset node pointer on error */
-    if(ret_value < 0) {
-        HDassert(!node_protected);
-        *leaf = NULL;
-    } /* end if */
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5B2__shadow_leaf() */
 
@@ -796,9 +793,9 @@ H5B2__remove_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, H5B2_node_ptr_t *curr_node_ptr
     HDassert(H5F_addr_defined(curr_node_ptr->addr));
 
     /* Lock current B-tree node */
-    leaf_addr = curr_node_ptr->addr;
-    if(NULL == (leaf = H5B2__protect_leaf(hdr, dxpl_id, leaf_addr, parent, curr_node_ptr->node_nrec, H5AC__NO_FLAGS_SET)))
+    if(NULL == (leaf = H5B2__protect_leaf(hdr, dxpl_id, parent, curr_node_ptr, FALSE, H5AC__NO_FLAGS_SET)))
         HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
+    leaf_addr = curr_node_ptr->addr;
 
     /* Sanity check number of records */
     HDassert(curr_node_ptr->all_nrec == curr_node_ptr->node_nrec);
@@ -838,7 +835,7 @@ H5B2__remove_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, H5B2_node_ptr_t *curr_node_ptr
     if(leaf->nrec > 0) {
         /* Shadow the node if doing SWMR writes */
         if(hdr->swmr_write) {
-            if(H5B2__shadow_leaf(hdr, dxpl_id, curr_node_ptr, &leaf) < 0)
+            if(H5B2__shadow_leaf(leaf, dxpl_id, curr_node_ptr) < 0)
                 HGOTO_ERROR(H5E_BTREE, H5E_CANTCOPY, FAIL, "unable to shadow leaf node")
             leaf_addr = curr_node_ptr->addr;
         } /* end if */
@@ -904,9 +901,9 @@ H5B2__remove_leaf_by_idx(H5B2_hdr_t *hdr, hid_t dxpl_id,
     HDassert(H5F_addr_defined(curr_node_ptr->addr));
 
     /* Lock B-tree leaf node */
-    leaf_addr = curr_node_ptr->addr;
-    if(NULL == (leaf = H5B2__protect_leaf(hdr, dxpl_id, leaf_addr, parent, curr_node_ptr->node_nrec, H5AC__NO_FLAGS_SET)))
+    if(NULL == (leaf = H5B2__protect_leaf(hdr, dxpl_id, parent, curr_node_ptr, FALSE, H5AC__NO_FLAGS_SET)))
         HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree leaf node")
+    leaf_addr = curr_node_ptr->addr;
 
     /* Sanity check number of records */
     HDassert(curr_node_ptr->all_nrec == curr_node_ptr->node_nrec);
@@ -941,7 +938,7 @@ H5B2__remove_leaf_by_idx(H5B2_hdr_t *hdr, hid_t dxpl_id,
     if(leaf->nrec > 0) {
         /* Shadow the node if doing SWMR writes */
         if(hdr->swmr_write) {
-            if(H5B2__shadow_leaf(hdr, dxpl_id, curr_node_ptr, &leaf) < 0)
+            if(H5B2__shadow_leaf(leaf, dxpl_id, curr_node_ptr) < 0)
                 HGOTO_ERROR(H5E_BTREE, H5E_CANTCOPY, FAIL, "unable to shadow leaf node")
             leaf_addr = curr_node_ptr->addr;
         } /* end if */

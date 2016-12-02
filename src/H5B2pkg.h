@@ -384,19 +384,16 @@ H5_DLL herr_t H5B2__hdr_unprotect(H5B2_hdr_t *hdr, hid_t dxpl_id,
 H5_DLL herr_t H5B2__hdr_delete(H5B2_hdr_t *hdr, hid_t dxpl_id);
 
 /* Routines for operating on leaf nodes */
-H5_DLL H5B2_leaf_t *H5B2__protect_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, haddr_t addr,
-    void *parent, uint16_t nrec, unsigned flags);
-H5_DLL herr_t H5B2__shadow_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id,
-    H5B2_node_ptr_t *curr_node_ptr, H5B2_leaf_t **leaf);
+H5_DLL H5B2_leaf_t * H5B2__protect_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id,
+    void *parent, H5B2_node_ptr_t *node_ptr, hbool_t shadow, unsigned flags);
 H5_DLL herr_t H5B2__swap_leaf(H5B2_hdr_t *hdr, hid_t dxpl_id, uint16_t depth,
     H5B2_internal_t *internal, unsigned *internal_flags_ptr, unsigned idx,
     void *swap_loc);
 
 /* Routines for operating on internal nodes */
 H5_DLL H5B2_internal_t *H5B2__protect_internal(H5B2_hdr_t *hdr, hid_t dxpl_id,
-    haddr_t addr, void *parent, uint16_t nrec, uint16_t depth, unsigned flags);
-H5_DLL herr_t H5B2__shadow_internal(H5B2_hdr_t *hdr, hid_t dxpl_id,
-    uint16_t depth, H5B2_node_ptr_t *curr_node_ptr, H5B2_internal_t **internal);
+    void *parent, H5B2_node_ptr_t *node_ptr, uint16_t depth, hbool_t shadow,
+    unsigned flags);
 
 /* Routines for allocating nodes */
 H5_DLL herr_t H5B2__split_root(H5B2_hdr_t *hdr, hid_t dxpl_id);
