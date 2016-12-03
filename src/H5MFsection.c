@@ -1053,10 +1053,10 @@ done:
 /*-------------------------------------------------------------------------
  * Function:	H5MF_sect_large_shrink
  *
- * Purpose:	Shrink container with section
+ * Purpose:     Shrink a large-sized section
  *
- * Return:	Success:	non-negative
- *          Failure:	negative
+ * Return:      Success:	non-negative
+ *              Failure:	negative
  *
  * Programmer:	Vailin Choi; Dec 2012
  *
@@ -1065,8 +1065,9 @@ done:
 static herr_t
 H5MF_sect_large_shrink(H5FS_section_info_t **_sect, void *_udata)
 {
-    H5MF_free_section_t **sect = (H5MF_free_section_t **)_sect;   /* File free section */
-    H5MF_sect_ud_t *udata = (H5MF_sect_ud_t *)_udata;   /* User data for callback */
+    H5MF_free_section_t **sect = (H5MF_free_section_t **)_sect; /* File free section */
+    H5MF_sect_ud_t *udata = (H5MF_sect_ud_t *)_udata;           /* User data for callback */
+    hsize_t frag_size = 0;              /* Fragment size */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -1078,17 +1079,26 @@ H5MF_sect_large_shrink(H5FS_section_info_t **_sect, void *_udata)
     HDassert(udata->f);
     HDassert(udata->shrink == H5MF_SHRINK_EOA);
     HDassert(H5F_INTENT(udata->f) & H5F_ACC_RDWR);
+    HDassert(H5F_PAGED_AGGR(udata->f));
 
-    /* Release section's space at EOA with file driver */
-    if(H5F_free(udata->f, udata->dxpl_id, udata->alloc_type, (*sect)->sect_info.addr, (*sect)->sect_info.size) < 0)
+    /* Calculate possible mis-aligned fragment */
+    H5MF_EOA_MISALIGN(udata->f, (*sect)->sect_info.addr, udata->f->shared->fs_page_size, frag_size);
+
+    /* Free full pages from EOA */
+    /* Retain partial page in the free-space manager so as to keep EOA at page boundary */
+    if(H5F_free(udata->f, udata->dxpl_id, udata->alloc_type, (*sect)->sect_info.addr+frag_size, (*sect)->sect_info.size-frag_size) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "driver free request failed")
 
-    /* Free section */
-    if(H5MF_sect_free((H5FS_section_info_t *)*sect) < 0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free simple section node")
+    if(frag_size) /* Adjust section size for the partial page */
+        (*sect)->sect_info.size = frag_size;
+    else {
+        /* Free section */
+        if(H5MF_sect_free((H5FS_section_info_t *)*sect) < 0)
+            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free simple section node")
 
-    /* Mark section as freed, for free space manager */
-    *sect = NULL;
+        /* Mark section as freed, for free space manager */
+        *sect = NULL;
+    }
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

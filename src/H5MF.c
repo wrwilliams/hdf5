@@ -1452,14 +1452,14 @@ H5MF_sects_dump(f, dxpl_id, stderr);
  * Function:	H5MF_try_extend
  *
  * Purpose:	Extend a block in the file if possible.
- *
- * Notes:
- *      For paged aggregation--
- *          A small block cannot be extended across page boundary.
- *              1) Try extending the block if it is at EOA
- *              2) Try extending the block into a free-space section
- *              3) For a small meta block that is within page end threshold--
- *                 check if extension is possible
+ *          For non-paged aggregation:
+ *          --try to extend at EOA
+ *          --try to extend into the aggregators
+ *          --try to extend into a free-space section if adjoined
+ *          For paged aggregation:
+ *          --try to extend at EOA
+ *          --try to extend into a free-space section if adjoined
+ *          --try to extend into the page end threshold if a metadata block
  *
  * Return:	Success:	TRUE(1)  - Block was extended
  *                      FALSE(0) - Block could not be extended
@@ -1479,6 +1479,7 @@ H5MF_try_extend(H5F_t *f, hid_t dxpl_id, H5FD_mem_t alloc_type, haddr_t addr,
     haddr_t end;                            /* End of block to extend */
     H5FD_mem_t  map_type;                   /* Mapped type */
     htri_t allow_extend = TRUE;		        /* Possible to extend the block */
+    hsize_t frag_size = 0;                  /* Size of mis-aligned fragment */
     htri_t ret_value = FALSE;      	        /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -1496,24 +1497,67 @@ HDfprintf(stderr, "%s: Entering: alloc_type = %u, addr = %a, size = %Hu, extra_r
     /* Compute end of block to extend */
     end = addr + size;
 
-    /* For paged aggregation and a small section: determine whether page boundary can be crossed for the extension */
-    if(H5F_PAGED_AGGR(f) && size < f->shared->fs_page_size)
-        if((addr / f->shared->fs_page_size) != (((addr + size + extra_requested) - 1) / f->shared->fs_page_size))
-            allow_extend = FALSE;
+    /* For paged aggregation:
+     *   To extend a small block: can only extend if not crossing page boundary 
+     *   To extend a large block at EOA: calculate in advance mis-aligned fragment so EOA will still end at page boundary
+     */
+    if(H5F_PAGED_AGGR(f)) {
+        if(size < f->shared->fs_page_size) {
+            /* To extend a small block: cannot cross page boundary */
+            if((addr / f->shared->fs_page_size) != (((end + extra_requested) - 1) / f->shared->fs_page_size))
+                allow_extend = FALSE;
+        } else {
+            haddr_t eoa;  /* EOA for the file */
+
+            /*   To extend a large block: calculate in advance the mis-aligned fragment so EOA will end at page boundary if extended */
+            if(HADDR_UNDEF == (eoa = H5F_get_eoa(f, alloc_type)))
+                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "Unable to get eoa")
+            HDassert(!(eoa % f->shared->fs_page_size));
+
+            H5MF_EOA_MISALIGN(f, (eoa+extra_requested), f->shared->fs_page_size, frag_size);
+        }
+    }
 
     /* Set the ring type in the DXPL */
     if(H5AC_set_ring(dxpl_id, H5AC_RING_FSM, &dxpl, &orig_ring) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, FAIL, "unable to set ring value")
 
     if(allow_extend) {
-        /* Try extending the block if it is at EOA */
-        if((ret_value = H5F_try_extend(f, map_type, end, extra_requested)) < 0)
+        /* Try extending the block at EOA */
+        if((ret_value = H5F_try_extend(f, map_type, end, extra_requested + frag_size)) < 0)
             HGOTO_ERROR(H5E_RESOURCE, H5E_CANTEXTEND, FAIL, "error extending file")
 #ifdef H5MF_ALLOC_DEBUG_MORE
 HDfprintf(stderr, "%s: extended = %t\n", FUNC, ret_value);
 #endif /* H5MF_ALLOC_DEBUG_MORE */
 
-        /* For non-paged aggregation */
+        /* If extending at EOA succeeds: */
+        /*   for paged aggregation, put the fragment into the large-sized free-space manager */
+        if(ret_value == TRUE && H5F_PAGED_AGGR(f) && frag_size) {
+            H5F_mem_page_t ptype;               /* Free-space mananger type */
+            H5MF_free_section_t *node = NULL;   /* Free space section pointer */
+
+            /* Should be large-sized block */
+            HDassert(size >= f->shared->fs_page_size);
+
+            H5MF_alloc_to_fs_type(f, alloc_type, size, &ptype);
+
+            /* Start up the free-space manager */
+            if(!(f->shared->fs_man[ptype]))
+                if(H5MF_start_fstype(f, dxpl_id, ptype) < 0)
+                    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTINIT, FAIL, "can't initialize file free space")
+
+            /* Create free space section for the fragment */
+            if(NULL == (node = H5MF_sect_new(H5MF_FSPACE_SECT_LARGE, end + extra_requested, frag_size)))
+                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTINIT, FAIL, "can't initialize free space section")
+
+            /* Add the fragment to the large-sized free-space manager */
+            if(H5MF_add_sect(f, alloc_type, dxpl_id, f->shared->fs_man[ptype], node) < 0)
+                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTINSERT, FAIL, "can't re-add section to file free space")
+
+            node = NULL;
+        }
+
+        /* For non-paged aggregation: try to extend into the aggregators */
         if(ret_value == FALSE && !H5F_PAGED_AGGR(f)) {
             H5F_blk_aggr_t *aggr;   /* Aggregator to use */
 
@@ -1527,6 +1571,7 @@ HDfprintf(stderr, "%s: H5MF_aggr_try_extend = %t\n", FUNC, ret_value);
 #endif /* H5MF_ALLOC_DEBUG_MORE */
         } /* end if */
 
+        /* If no extension so far, try to extend into a free-space section */
         if(ret_value == FALSE) {
             H5F_mem_page_t fs_type;     /* Free-space manager type */
             H5MF_sect_ud_t udata;       /* User data */
@@ -1544,7 +1589,7 @@ HDfprintf(stderr, "%s: H5MF_aggr_try_extend = %t\n", FUNC, ret_value);
                 if(H5MF_open_fstype(f, dxpl_id, fs_type) < 0)
                     HGOTO_ERROR(H5E_RESOURCE, H5E_CANTINIT, FAIL, "can't initialize file free space")
 
-            /* Check if the block is able to extend into a free-space section */
+            /* Try to extend the block into a free-space section */
             if(f->shared->fs_man[fs_type]) {
                 if((ret_value = H5FS_sect_try_extend(f, dxpl_id, f->shared->fs_man[fs_type], addr, size, extra_requested, H5FS_ADD_RETURNED_SPACE, &udata)) < 0)
                     HGOTO_ERROR(H5E_RESOURCE, H5E_CANTEXTEND, FAIL, "error extending block in free space manager")
@@ -1553,11 +1598,12 @@ HDfprintf(stderr, "%s: Try to H5FS_sect_try_extend = %t\n", FUNC, ret_value);
 #endif /* H5MF_ALLOC_DEBUG_MORE */
             } /* end if */
 
-            /* For paged aggregation: If the extended request for a small meta section is within page end threshold */
+            /* For paged aggregation and a metadata block: try to extend into page end threshold */
             if(ret_value == FALSE && H5F_PAGED_AGGR(f) && map_type != H5FD_MEM_DRAW) {
-                hsize_t prem = f->shared->fs_page_size - (end % f->shared->fs_page_size);
 
-                if(prem <= H5F_PGEND_META_THRES(f) && prem >= extra_requested)
+                H5MF_EOA_MISALIGN(f, end, f->shared->fs_page_size, frag_size);
+
+                if(frag_size <= H5F_PGEND_META_THRES(f) && extra_requested <= frag_size)
                     ret_value = TRUE;
 #ifdef H5MF_ALLOC_DEBUG_MORE
 HDfprintf(stderr, "%s: Try to extend into the page end threshold = %t\n", FUNC, ret_value);

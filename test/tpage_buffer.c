@@ -304,7 +304,6 @@ test_args(hid_t orig_fapl, const char *env_h5_drvr)
     char filename[FILENAME_LEN]; /* Filename to use */
     hid_t file_id = -1;          /* File ID */
     hid_t fcpl, fapl;
-    hbool_t split = FALSE, multi = FALSE;
     herr_t ret;
 
     TESTING("Settings for Page Buffering");
@@ -1452,12 +1451,6 @@ main(void)
     env_h5_drvr = HDgetenv("HDF5_DRIVER");
     if(env_h5_drvr == NULL)
         env_h5_drvr = "nomatch";
-
-    if(0 == HDstrcmp(env_h5_drvr, "multi")) {
-        SKIPPED();
-        puts("Multi VFD doesn't support page buffering");
-        return (0);
-    }
 
     fapl = h5_fileaccess();
 

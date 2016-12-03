@@ -8011,10 +8011,10 @@ test_page_small_try_extend(const char *env_h5_drvr, hid_t fapl)
         /* Should succeed */
         if(was_extended != TRUE) TEST_ERROR
 
-        /* Try extending the block by a "large" size, crossing page boundary */
+        /* Try extending the large-sized block */
         was_extended = H5MF_try_extend(f, H5AC_ind_read_dxpl_id, H5FD_MEM_DRAW, (haddr_t)saddr1, (hsize_t)TBLOCK_SIZE4106, (hsize_t)TBLOCK_SIZE5000);
-        /* Should succeed */
-        if(was_extended != TRUE) TEST_ERROR
+        /* Should not succeed because the mis-aligned fragment in the page is in the large-sized free-space manager */
+        if(was_extended == TRUE) TEST_ERROR
 
         /* Close the file */
         if(H5Fclose(fid) < 0)
