@@ -190,7 +190,6 @@ const H5C_class_t prefetched_entry_class =
     /* serialize        = */ H5C__prefetched_entry_serialize,
     /* notify           = */ H5C__prefetched_entry_notify,
     /* free_icr         = */ H5C__prefetched_entry_free_icr,
-    /* clear            = */ NULL,
     /* fsf_size         = */ H5C__prefetched_entry_fsf_size,
 };
 
