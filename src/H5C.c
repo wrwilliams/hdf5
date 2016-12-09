@@ -6453,7 +6453,7 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
              &&
              (((entry_ptr->type->flags) & H5C__CLASS_SKIP_WRITES) == 0)) {
 
-            H5FD_mem_t mem_type;
+            H5FD_mem_t mem_type = H5FD_MEM_DEFAULT;
 
 #ifdef H5_HAVE_PARALLEL
             if(collective_write_list) {
