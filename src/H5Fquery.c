@@ -837,7 +837,8 @@ H5F_get_fc_degree(const H5F_t *f)
 /*-------------------------------------------------------------------------
  * Function:    H5F_get_evict_on_close
  *
- * Purpose:     Retrieve the 'file close degree' for the file.
+ * Purpose:     Checks if evict-on-close is desired for objects in the
+ *              file.
  *
  * Return:      Success:    Flag indicating whether the evict-on-close
  *                          property was set for the file.
