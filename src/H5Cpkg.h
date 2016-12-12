@@ -4913,15 +4913,6 @@ struct H5C_t {
 #endif /* NDEBUG */
 };
 
-#ifdef H5_HAVE_PARALLEL
-typedef struct H5C_collective_write_t {
-    size_t length;
-    hbool_t free_buf;
-    void *buf;
-    haddr_t offset;
-} H5C_collective_write_t;
-#endif /* H5_HAVE_PARALLEL */
-
 /* Define typedef for tagged cache entry iteration callbacks */
 typedef int (*H5C_tag_iter_cb_t)(H5C_cache_entry_t *entry, void *ctx);
 
