@@ -722,7 +722,7 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
         flush_flags |= H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG;
     }
 
-    if(H5C__flush_single_entry(f, dxpl_id, pf_entry_ptr, flush_flags, NULL) < 0)
+    if(H5C__flush_single_entry(f, dxpl_id, pf_entry_ptr, flush_flags) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTEXPUNGE, FAIL, "can't expunge prefetched entry")
 
 #ifndef NDEGUG /* verify deletion */
