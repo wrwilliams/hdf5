@@ -414,9 +414,9 @@ H5_DLL herr_t H5AC_add_candidate(H5AC_t * cache_ptr, haddr_t addr);
 #endif /* H5_HAVE_PARALLEL */
 
 /* Debugging functions */
-#ifndef NDEBUG
 H5_DLL herr_t H5AC_stats(const H5F_t *f);
 H5_DLL herr_t H5AC_dump_cache(const H5F_t *f);
+#ifndef NDEBUG
 H5_DLL herr_t H5AC_get_entry_ptr_from_addr(const H5F_t *f, haddr_t addr,
     void ** entry_ptr_ptr);
 H5_DLL herr_t H5AC_flush_dependency_exists(H5F_t *f, haddr_t parent_addr, 
