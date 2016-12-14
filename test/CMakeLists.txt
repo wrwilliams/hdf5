@@ -250,6 +250,7 @@ set (H5_TESTS
     vds
     file_image
     unregister
+    cache_logging
     cork
 )
 
