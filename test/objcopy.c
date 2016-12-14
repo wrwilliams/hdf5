@@ -13840,7 +13840,7 @@ main(void)
     if(nerrors) {
         printf("***** %d OBJECT COPY TEST%s FAILED! *****\n",
                 nerrors, (1 == nerrors ? "" : "S"));
-        exit(1);
+        exit(EXIT_FAILURE);
     } /* end if */
 
     puts ("All object copying tests passed.");
