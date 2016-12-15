@@ -587,7 +587,7 @@ endforeach (test ${H5TEST_TESTS})
 
 set_tests_properties (H5TEST-flush2 PROPERTIES DEPENDS H5TEST-flush1)
 set_tests_properties (H5TEST-fheap PROPERTIES TIMEOUT 1800)
-set_tests_properties (H5TEST-big PROPERTIES TIMEOUT 1800)
+set_tests_properties (H5TEST-big PROPERTIES TIMEOUT 3600)
 set_tests_properties (H5TEST-btree2 PROPERTIES TIMEOUT 1800)
 set_tests_properties (H5TEST-objcopy PROPERTIES TIMEOUT 2400)
 
@@ -618,7 +618,7 @@ if (BUILD_SHARED_LIBS)
 
   set_tests_properties (H5TEST-shared-flush2 PROPERTIES DEPENDS H5TEST-shared-flush1)
   set_tests_properties (H5TEST-shared-fheap PROPERTIES TIMEOUT 1800)
-  set_tests_properties (H5TEST-shared-big PROPERTIES TIMEOUT 1800)
+  set_tests_properties (H5TEST-shared-big PROPERTIES TIMEOUT 3600)
   set_tests_properties (H5TEST-shared-btree2 PROPERTIES TIMEOUT 1800)
   set_tests_properties (H5TEST-shared-objcopy PROPERTIES TIMEOUT 2400)
 endif (BUILD_SHARED_LIBS)
@@ -644,7 +644,7 @@ if (NOT CYGWIN)
       ENVIRONMENT "srcdir=${HDF5_TEST_BINARY_DIR}/H5TEST;HDF5TestExpress=${HDF_TEST_EXPRESS}"
       WORKING_DIRECTORY ${HDF5_TEST_BINARY_DIR}/H5TEST
   )
-  set_tests_properties (H5TEST-cache PROPERTIES TIMEOUT 2400)
+  set_tests_properties (H5TEST-cache PROPERTIES TIMEOUT 3600)
 endif (NOT CYGWIN)
 
 #-- Adding test for err_compat
@@ -751,7 +751,7 @@ if (BUILD_SHARED_LIBS)
         ENVIRONMENT "srcdir=${HDF5_TEST_BINARY_DIR}/H5TEST-shared;HDF5TestExpress=${HDF_TEST_EXPRESS}"
         WORKING_DIRECTORY ${HDF5_TEST_BINARY_DIR}/H5TEST-shared
     )
-    set_tests_properties (H5TEST-shared-cache PROPERTIES TIMEOUT 2400)
+    set_tests_properties (H5TEST-shared-cache PROPERTIES TIMEOUT 3600)
   endif (NOT CYGWIN)
 
   #-- Adding test for err_compat
@@ -1078,7 +1078,7 @@ if (HDF5_TEST_VFD)
     set_tests_properties (VFD-${vfdname}-flush2 PROPERTIES TIMEOUT 10)
     set_tests_properties (VFD-${vfdname}-istore PROPERTIES TIMEOUT 1800)
     if (NOT CYGWIN)
-      set_tests_properties (VFD-${vfdname}-cache PROPERTIES TIMEOUT 1800)
+      set_tests_properties (VFD-${vfdname}-cache PROPERTIES TIMEOUT 3600)
     endif (NOT CYGWIN)
     if (BUILD_SHARED_LIBS)
       set_tests_properties (VFD-${vfdname}-flush2-shared PROPERTIES DEPENDS VFD-${vfdname}-flush1-shared)
@@ -1086,7 +1086,7 @@ if (HDF5_TEST_VFD)
       set_tests_properties (VFD-${vfdname}-flush2-shared PROPERTIES TIMEOUT 10)
       set_tests_properties (VFD-${vfdname}-istore-shared PROPERTIES TIMEOUT 1800)
       if (NOT CYGWIN)
-        set_tests_properties (VFD-${vfdname}-cache-shared PROPERTIES TIMEOUT 1800)
+        set_tests_properties (VFD-${vfdname}-cache-shared PROPERTIES TIMEOUT 3600)
       endif (NOT CYGWIN)
     endif (BUILD_SHARED_LIBS)
     if (HDF5_TEST_FHEAP_VFD)
