@@ -259,94 +259,93 @@ static int read_info(const char *filename, pack_opt_t *options)
         if (rc == -1)
             break;
 
-	/*-------------------------------------------------------------------------
+        /*-------------------------------------------------------------------------
          * filter
          *-------------------------------------------------------------------------
          */
-	if (HDstrcmp(stype,"-f") == 0) {
-	    /* find begining of info */
-	    i = 0;
-	    c = '0';
-	    while (c != ' ') {
-		if(fscanf(fp, "%c", &c) < 0 && HDferror(fp)) {
-		    error_msg("fscanf error\n");
-		    h5tools_setstatus(EXIT_FAILURE);
-		    ret_value = EXIT_FAILURE;
-		    goto done;
-		} /* end if */
+        if (HDstrcmp(stype,"-f") == 0) {
+            /* find begining of info */
+            i = 0;
+            c = '0';
+            while (c != ' ') {
+                if(fscanf(fp, "%c", &c) < 0 && HDferror(fp)) {
+                    error_msg("fscanf error\n");
+                    h5tools_setstatus(EXIT_FAILURE);
+                    ret_value = EXIT_FAILURE;
+                    goto done;
+                } /* end if */
                 if (HDfeof(fp))
-		    break;
-	    }
+                    break;
+            }
             c = '0';
             /* go until end */
             while (c != ' ') {
-		if(fscanf(fp, "%c", &c) < 0 && HDferror(fp)) {
-		    error_msg("fscanf error\n");
-		    h5tools_setstatus(EXIT_FAILURE);
-		    ret_value = EXIT_FAILURE;
-		    goto done;
-		} /* end if */
+                if(fscanf(fp, "%c", &c) < 0 && HDferror(fp)) {
+                    error_msg("fscanf error\n");
+                    h5tools_setstatus(EXIT_FAILURE);
+                    ret_value = EXIT_FAILURE;
+                    goto done;
+                } /* end if */
                 comp_info[i] = c;
                 i++;
                 if (HDfeof(fp))
-		    break;
-		if (c == 10 /*eol*/)
-		    break;
-	    }
+                    break;
+                if (c == 10 /*eol*/)
+                    break;
+            }
             comp_info[i - 1] = '\0'; /*cut the last " */
 
             if (h5repack_addfilter(comp_info, options) == -1) {
-		error_msg("could not add compression option\n");
-		h5tools_setstatus(EXIT_FAILURE);
+                error_msg("could not add compression option\n");
+                h5tools_setstatus(EXIT_FAILURE);
                 ret_value = EXIT_FAILURE;
                 goto done;
-	    }
-	}
-
+            }
+        }
         /*-------------------------------------------------------------------------
          * layout
          *-------------------------------------------------------------------------
          */
         else if (HDstrcmp(stype,"-l") == 0) {
 
-	    /* find begining of info */
-	    i = 0;
-	    c = '0';
-	    while (c != ' ') {
-		if(fscanf(fp, "%c", &c) < 0 && HDferror(fp)) {
-		    error_msg("fscanf error\n");
-		    h5tools_setstatus(EXIT_FAILURE);
-		    ret_value = EXIT_FAILURE;
-		    goto done;
-		} /* end if */
-		if (HDfeof(fp))
-		    break;
-	    }
-	    c = '0';
-	    /* go until end */
-	    while (c != ' ') {
-		if(fscanf(fp, "%c", &c) < 0 && HDferror(fp)) {
-		    error_msg("fscanf error\n");
-		    h5tools_setstatus(EXIT_FAILURE);
-		    ret_value = EXIT_FAILURE;
-		    goto done;
-		} /* end if */
-		comp_info[i] = c;
-		i++;
-		if (HDfeof(fp))
-		    break;
-		if (c == 10 /*eol*/)
-		    break;
-	    }
+            /* find begining of info */
+            i = 0;
+            c = '0';
+            while (c != ' ') {
+                if(fscanf(fp, "%c", &c) < 0 && HDferror(fp)) {
+                    error_msg("fscanf error\n");
+                    h5tools_setstatus(EXIT_FAILURE);
+                    ret_value = EXIT_FAILURE;
+                    goto done;
+                } /* end if */
+                if (HDfeof(fp))
+                    break;
+            }
+            c = '0';
+            /* go until end */
+            while (c != ' ') {
+                if(fscanf(fp, "%c", &c) < 0 && HDferror(fp)) {
+                    error_msg("fscanf error\n");
+                    h5tools_setstatus(EXIT_FAILURE);
+                    ret_value = EXIT_FAILURE;
+                    goto done;
+                } /* end if */
+                comp_info[i] = c;
+                i++;
+                if (HDfeof(fp))
+                    break;
+                if (c == 10 /*eol*/)
+                    break;
+            }
             comp_info[i - 1] = '\0'; /*cut the last " */
 
             if (h5repack_addlayout(comp_info, options) == -1) {
-		error_msg("could not add chunck option\n");
-		h5tools_setstatus(EXIT_FAILURE);
-		ret_value = EXIT_FAILURE;
-		goto done;
-	    }
-	}
+                error_msg("could not add chunck option\n");
+                h5tools_setstatus(EXIT_FAILURE);
+                ret_value = EXIT_FAILURE;
+                goto done;
+            }
+        }
         /*-------------------------------------------------------------------------
          * not valid
          *-------------------------------------------------------------------------
@@ -358,7 +357,6 @@ static int read_info(const char *filename, pack_opt_t *options)
             goto done;
         }
     }
-
 
 done:
     if (fp)
