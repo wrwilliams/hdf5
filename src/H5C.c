@@ -1538,6 +1538,13 @@ H5C_mark_entry_dirty(void *thing)
 
         /* Check for entry changing status and do notifications, etc. */
         if(was_clean) {
+            /* If the entry's type has a 'notify' callback send a 'entry dirtied'
+             * notice now that the entry is fully integrated into the cache.
+             */
+            if(entry_ptr->type->notify &&
+                    (entry_ptr->type->notify)(H5C_NOTIFY_ACTION_ENTRY_DIRTIED, entry_ptr) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry dirty flag set")
+
             /* Propagate the dirty flag up the flush dependency chain if appropriate */
             if(entry_ptr->flush_dep_nparents > 0)
                 if(H5C__mark_flush_dep_dirty(entry_ptr) < 0)
@@ -1663,6 +1670,13 @@ H5C_move_entry(H5C_t *	     cache_ptr,
 
             /* Check for entry changing status and do notifications, etc. */
             if(!was_dirty) {
+                /* If the entry's type has a 'notify' callback send a 'entry dirtied'
+                 * notice now that the entry is fully integrated into the cache.
+                 */
+                if(entry_ptr->type->notify &&
+                        (entry_ptr->type->notify)(H5C_NOTIFY_ACTION_ENTRY_DIRTIED, entry_ptr) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry dirty flag set")
+
                 /* Propagate the dirty flag up the flush dependency chain if appropriate */
                 if(entry_ptr->flush_dep_nparents > 0)
                     if(H5C__mark_flush_dep_dirty(entry_ptr) < 0)
@@ -1804,6 +1818,13 @@ H5C_resize_entry(void *thing, size_t new_size)
 
         /* Check for entry changing status and do notifications, etc. */
         if(was_clean) {
+            /* If the entry's type has a 'notify' callback send a 'entry dirtied'
+             * notice now that the entry is fully integrated into the cache.
+             */
+            if(entry_ptr->type->notify &&
+                    (entry_ptr->type->notify)(H5C_NOTIFY_ACTION_ENTRY_DIRTIED, entry_ptr) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry dirty flag set")
+
             /* Propagate the dirty flag up the flush dependency chain if appropriate */
             if(entry_ptr->flush_dep_nparents > 0)
                 if(H5C__mark_flush_dep_dirty(entry_ptr) < 0)
@@ -3029,6 +3050,13 @@ H5C_unprotect(H5F_t *		  f,
             /* Update index for newly dirtied entry */
             H5C__UPDATE_INDEX_FOR_ENTRY_DIRTY(cache_ptr, entry_ptr)
 
+            /* If the entry's type has a 'notify' callback send a 'entry dirtied'
+             * notice now that the entry is fully integrated into the cache.
+             */
+            if(entry_ptr->type->notify &&
+                    (entry_ptr->type->notify)(H5C_NOTIFY_ACTION_ENTRY_DIRTIED, entry_ptr) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry dirty flag set")
+
             /* Propagate the flush dep dirty flag up the flush dependency chain
              * if appropriate */
             if(entry_ptr->flush_dep_nparents > 0)
@@ -3037,6 +3065,13 @@ H5C_unprotect(H5F_t *		  f,
         } /* end if */ 
         /* Check for newly clean entry */
         else if(!was_clean && !entry_ptr->is_dirty) {
+            /* If the entry's type has a 'notify' callback send a 'entry cleaned'
+             * notice now that the entry is fully integrated into the cache.
+             */
+            if(entry_ptr->type->notify &&
+                    (entry_ptr->type->notify)(H5C_NOTIFY_ACTION_ENTRY_CLEANED, entry_ptr) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry dirty flag cleared")
+
             /* Propagate the flush dep clean flag up the flush dependency chain
              * if appropriate */
             if(entry_ptr->flush_dep_nparents > 0)
@@ -3487,6 +3522,11 @@ H5C_create_flush_dependency(void * parent_thing, void * child_thing)
         HDassert(parent_entry->flush_dep_ndirty_children < parent_entry->flush_dep_nchildren);
 
         parent_entry->flush_dep_ndirty_children++;
+
+        /* If the parent has a 'notify' callback, send a 'child entry dirtied' notice */
+        if(parent_entry->type->notify &&
+                (parent_entry->type->notify)(H5C_NOTIFY_ACTION_CHILD_DIRTIED, parent_entry) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify parent about child entry dirty flag set")
     } /* end if */
 
     /* Post-conditions, for successful operation */
@@ -3593,6 +3633,11 @@ H5C_destroy_flush_dependency(void *parent_thing, void * child_thing)
         HDassert(parent_entry->flush_dep_ndirty_children > 0);
 
         parent_entry->flush_dep_ndirty_children--;
+
+        /* If the parent has a 'notify' callback, send a 'child entry cleaned' notice */
+        if(parent_entry->type->notify &&
+                (parent_entry->type->notify)(H5C_NOTIFY_ACTION_CHILD_CLEANED, parent_entry) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify parent about child entry dirty flag reset")
     } /* end if */
 
     /* Shrink or free the parent array if apporpriate */
@@ -6014,6 +6059,13 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
 
         /* Check for entry changing status and do notifications, etc. */
         if(was_dirty) {
+            /* If the entry's type has a 'notify' callback send a 'entry cleaned'
+             * notice now that the entry is fully integrated into the cache.
+             */
+            if(entry_ptr->type->notify &&
+                    (entry_ptr->type->notify)(H5C_NOTIFY_ACTION_ENTRY_CLEANED, entry_ptr) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry dirty flag cleared")
+
             /* Propagate the clean flag up the flush dependency chain if appropriate */
 	    HDassert(entry_ptr->flush_dep_ndirty_children == 0);
 	    if(entry_ptr->flush_dep_nparents > 0)
@@ -6123,6 +6175,13 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
 
                 if(entry_ptr->type->clear && (entry_ptr->type->clear)(f, (void *)entry_ptr, TRUE) < 0)
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to clear entry")
+
+                /* If the entry's type has a 'notify' callback send a 'entry cleaned'
+                 * notice now that the entry is fully integrated into the cache.
+                 */
+                if(entry_ptr->type->notify &&
+                        (entry_ptr->type->notify)(H5C_NOTIFY_ACTION_ENTRY_CLEANED, entry_ptr) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry dirty flag cleared")
             } /* end if */
 
             /* we are about to discard the in core representation --
@@ -7544,8 +7603,9 @@ static herr_t
 H5C__mark_flush_dep_dirty(H5C_cache_entry_t * entry)
 {
     unsigned u;                         /* Local index variable */
+    herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_STATIC_NOERR
+    FUNC_ENTER_STATIC
 
     /* Sanity checks */
     HDassert(entry);
@@ -7557,9 +7617,15 @@ H5C__mark_flush_dep_dirty(H5C_cache_entry_t * entry)
 
 	/* Adjust the parent's number of dirty children */
 	entry->flush_dep_parent[u]->flush_dep_ndirty_children++;
+
+        /* If the parent has a 'notify' callback, send a 'child entry dirtied' notice */
+        if(entry->flush_dep_parent[u]->type->notify &&
+                (entry->flush_dep_parent[u]->type->notify)(H5C_NOTIFY_ACTION_CHILD_DIRTIED, entry->flush_dep_parent[u]) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify parent about child entry dirty flag set")
     } /* end for */
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* H5C__mark_flush_dep_dirty() */
 
 
@@ -7582,8 +7648,9 @@ static herr_t
 H5C__mark_flush_dep_clean(H5C_cache_entry_t * entry)
 {
     unsigned u;                         /* Local index variable */
+    herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_STATIC_NOERR
+    FUNC_ENTER_STATIC
 
     /* Sanity checks */
     HDassert(entry);
@@ -7595,9 +7662,15 @@ H5C__mark_flush_dep_clean(H5C_cache_entry_t * entry)
 
 	/* Adjust the parent's number of dirty children */
 	entry->flush_dep_parent[u]->flush_dep_ndirty_children--;
+
+        /* If the parent has a 'notify' callback, send a 'child entry cleaned' notice */
+        if(entry->flush_dep_parent[u]->type->notify &&
+                (entry->flush_dep_parent[u]->type->notify)(H5C_NOTIFY_ACTION_CHILD_CLEANED, entry->flush_dep_parent[u]) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify parent about child entry dirty flag reset")
     } /* end for */
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* H5C__mark_flush_dep_clean() */
 
 #ifndef NDEBUG
