@@ -139,7 +139,8 @@ int total_writes           = 0;
  *		happen to overlap some collective operation.
  *
  *      cleared: Boolean flag that is set to true whenever the entry is
- *              dirty, and is cleared via a call to datum_clear().
+ *              dirty, and is cleared via a call to datum_notify with the
+ *              "entry cleaned" action.
  *
  *      flushed: Boolean flag that is set to true whenever the entry is
  *              dirty, and is flushed by the metadata cache.
@@ -411,8 +412,6 @@ static herr_t datum_notify(H5C_notify_action_t action, void *thing);
 
 static herr_t datum_free_icr(void * thing);
 
-static herr_t datum_clear(H5F_t * f, void *  thing, hbool_t about_to_destroy);
-
 #define DATUM_ENTRY_TYPE	H5AC_TEST_ID
 
 #define NUMBER_OF_ENTRY_TYPES	1
@@ -439,15 +438,14 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     /* name          */ "datum",
     /* mem_type      */ H5FD_MEM_DEFAULT,
     /* flags         */ H5AC__CLASS_SKIP_READS | H5AC__CLASS_SKIP_WRITES,
-    /* get_load_size */ (H5AC_get_load_size_func_t)datum_get_load_size,
-    /* deserialize   */ (H5AC_deserialize_func_t)datum_deserialize,
-    /* image_len     */ (H5AC_image_len_func_t)datum_image_len,
-    /* pre_serialize */ (H5AC_pre_serialize_func_t)NULL,
-    /* serialize     */ (H5AC_serialize_func_t)datum_serialize,
-    /* notify        */ (H5AC_notify_func_t)datum_notify,
-    /* free_icr      */ (H5AC_free_icr_func_t)datum_free_icr,
-    /* clear         */ (H5AC_clear_func_t)datum_clear,
-    /* fsf_size      */ (H5AC_get_fsf_size_t)NULL,
+    /* get_load_size */ datum_get_load_size,
+    /* deserialize   */ datum_deserialize,
+    /* image_len     */ datum_image_len,
+    /* pre_serialize */ NULL,
+    /* serialize     */ datum_serialize,
+    /* notify        */ datum_notify,
+    /* free_icr      */ datum_free_icr,
+    /* fsf_size      */ NULL,
   }
 };
 
@@ -2897,7 +2895,16 @@ datum_notify(H5C_notify_action_t action, void *thing)
                 fflush(stdout);
             }
 
-            /* do nothing */
+            entry_ptr->cleared = TRUE;
+            entry_ptr->dirty = FALSE;
+
+            datum_clears++;
+
+            if(entry_ptr->header.is_pinned) {
+                datum_pinned_clears++;
+                HDassert( entry_ptr->global_pinned || entry_ptr->local_pinned );
+            } /* end if */
+
             break;
 
         case H5AC_NOTIFY_ACTION_CHILD_DIRTIED:
@@ -2993,62 +3000,6 @@ datum_free_icr(void * thing)
 
     return(SUCCEED);
 } /* datum_free_icr() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    datum_clear
- *
- * Purpose:     Mark the datum as clean.
- *
- *              Do not write it to the server, or increment the version.
- *
- * Return:      SUCCEED
- *
- * Programmer:  John Mainzer
- *              12/29/05
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-datum_clear(H5F_t H5_ATTR_UNUSED * f,
-            void *  thing,
-            hbool_t H5_ATTR_UNUSED about_to_destroy)
-{
-    int idx;
-    struct datum * entry_ptr;
-
-    HDassert( thing );
-
-    entry_ptr = (struct datum *)thing;
-
-    idx = addr_to_datum_index(entry_ptr->base_addr);
-
-    HDassert( idx >= 0 );
-    HDassert( idx < NUM_DATA_ENTRIES );
-    HDassert( idx < virt_num_data_entries );
-    HDassert( &(data[idx]) == entry_ptr );
-
-    HDassert( entry_ptr->header.addr == entry_ptr->base_addr );
-    HDassert( ( entry_ptr->header.size == entry_ptr->len ) ||
-              ( entry_ptr->header.size == entry_ptr->local_len ) );
-
-    HDassert( ( entry_ptr->dirty ) ||
-              ( entry_ptr->header.is_dirty == entry_ptr->dirty ) );
-
-    entry_ptr->cleared = TRUE;
-    entry_ptr->dirty = FALSE;
-
-    datum_clears++;
-
-    if ( entry_ptr->header.is_pinned ) {
-
-        datum_pinned_clears++;
-        HDassert( entry_ptr->global_pinned || entry_ptr->local_pinned );
-    }
-
-    return(SUCCEED);
-
-} /* datum_clear() */
 
 
 /*****************************************************************************/

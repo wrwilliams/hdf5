@@ -94,7 +94,6 @@ const H5AC_class_t H5AC_SOHM_TABLE[1] = {{
     H5SM__cache_table_serialize,        /* 'serialize' callback */
     NULL,                               /* 'notify' callback */
     H5SM__cache_table_free_icr,         /* 'free_icr' callback */
-    NULL,			        /* 'clear' callback */
     NULL,                               /* 'fsf_size' callback */
 }};
 
@@ -110,7 +109,6 @@ const H5AC_class_t H5AC_SOHM_LIST[1] = {{
     H5SM__cache_list_serialize,         /* 'serialize' callback */
     NULL,                               /* 'notify' callback */
     H5SM__cache_list_free_icr,          /* 'free_icr' callback */
-    NULL,			        /* 'clear' callback */
     NULL,                               /* 'fsf_size' callback */
 }};
 

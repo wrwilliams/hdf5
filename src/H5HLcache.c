@@ -114,7 +114,6 @@ const H5AC_class_t H5AC_LHEAP_PRFX[1] = {{
     H5HL__cache_prefix_serialize,       /* 'serialize' callback */
     NULL,                               /* 'notify' callback */
     H5HL__cache_prefix_free_icr,        /* 'free_icr' callback */
-    NULL,                               /* 'clear' callback */
     NULL,                               /* 'fsf_size' callback */
 }};
 
@@ -130,7 +129,6 @@ const H5AC_class_t H5AC_LHEAP_DBLK[1] = {{
     H5HL__cache_datablock_serialize,    /* 'serialize' callback */
     NULL,                               /* 'notify' callback */
     H5HL__cache_datablock_free_icr,     /* 'free_icr' callback */
-    NULL,                               /* 'clear' callback */
     NULL,                               /* 'fsf_size' callback */
 }};
 

@@ -109,7 +109,6 @@ const H5AC_class_t H5AC_BT2_HDR[1] = {{
     H5B2__cache_hdr_serialize,          /* 'serialize' callback */
     NULL,                               /* 'notify' callback */
     H5B2__cache_hdr_free_icr,           /* 'free_icr' callback */
-    NULL,				/* 'clear' callback */
     NULL,				/* 'fsf_size' callback */
 }};
 
@@ -126,7 +125,6 @@ const H5AC_class_t H5AC_BT2_INT[1] = {{
     H5B2__cache_int_serialize,          /* 'serialize' callback */
     NULL,                               /* 'notify' callback */
     H5B2__cache_int_free_icr,           /* 'free_icr' callback */
-    NULL,				/* 'clear' callback */
     NULL,				/* 'fsf_size' callback */
 }};
 
@@ -143,7 +141,6 @@ const H5AC_class_t H5AC_BT2_LEAF[1] = {{
     H5B2__cache_leaf_serialize,         /* 'serialize' callback */
     NULL,                               /* 'notify' callback */
     H5B2__cache_leaf_free_icr,          /* 'free_icr' callback */
-    NULL,				/* 'clear' callback */
     NULL,				/* 'fsf_size' callback */
 }};
 
