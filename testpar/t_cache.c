@@ -398,10 +398,8 @@ static void * datum_deserialize(const void * image_ptr,
                                 void * udata_ptr,
                                 hbool_t * dirty_ptr);
 
-static herr_t datum_image_len(void *thing,
-                              size_t *image_len_ptr,
-                              hbool_t *compressed_ptr,
-                              size_t *compressed_len_ptr);
+static herr_t datum_image_len(const void *thing,
+                              size_t *image_len_ptr);
 
 static herr_t datum_serialize(const H5F_t *f,
                               void *image_ptr,
@@ -2446,8 +2444,7 @@ datum_deserialize(const void * image_ptr,
  *-------------------------------------------------------------------------
  */
 static herr_t
-datum_image_len(void *thing, size_t *image_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_len_ptr)
+datum_image_len(const void *thing, size_t *image_len)
 {
     int idx;
     struct datum * entry_ptr;

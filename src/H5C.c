@@ -1275,24 +1275,10 @@ H5C_insert_entry(H5F_t *             f,
     /* not protected, so can't be dirtied */
     entry_ptr->dirtied  = FALSE;
 
-    /* Retrieve the size of the thing.  Set the compressed field to FALSE
-     * and the compressed_size field to zero first, as they may not be 
-     * initialized by the image_len call.
-     */
-    entry_ptr->compressed = FALSE;
-    entry_ptr->compressed_size = 0;
-    if((type->image_len)(thing, &(entry_ptr->size), &(entry_ptr->compressed), &(entry_ptr->compressed_size)) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTGETSIZE, FAIL, "Can't get size of thing")
+    /* Retrieve the size of the thing */
+    if((type->image_len)(thing, &(entry_ptr->size)) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTGETSIZE, FAIL, "can't get size of thing")
     HDassert(entry_ptr->size > 0 &&  entry_ptr->size < H5C_MAX_ENTRY_SIZE);
-    HDassert(((type->flags & H5C__CLASS_COMPRESSED_FLAG) != 0) ||
-             (entry_ptr->compressed == FALSE));
-
-    /* entry has just been inserted -- thus compressed size cannot have 
-     * been computed yet.  Thus if entry_ptr->compressed is TRUE, 
-     * entry_ptr->size must equal entry_ptr->compressed_size.
-     */
-    HDassert(!entry_ptr->compressed || (entry_ptr->size == entry_ptr->compressed_size));
-    HDassert(entry_ptr->compressed || (entry_ptr->compressed_size == 0));
 
     entry_ptr->in_slist = FALSE;
 
@@ -2121,22 +2107,14 @@ H5C_protect(H5F_t *		f,
 
                 if(entry_ptr->image_ptr == NULL) {
                     int mpi_rank;
-                    size_t image_size;
 
                     if((mpi_rank = H5F_mpi_get_rank(f)) < 0)
                         HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "Can't get MPI rank")
 
-                    if(entry_ptr->compressed)
-                        image_size = entry_ptr->compressed_size;
-                    else
-                        image_size = entry_ptr->size;
-                    HDassert(image_size > 0);
-
-                    if(NULL == (entry_ptr->image_ptr = H5MM_malloc(image_size + H5C_IMAGE_EXTRA_SPACE)))
+                    if(NULL == (entry_ptr->image_ptr = H5MM_malloc(entry_ptr->size + H5C_IMAGE_EXTRA_SPACE)))
                         HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, NULL, "memory allocation failed for on disk image buffer")
 #if H5C_DO_MEMORY_SANITY_CHECKS
-                    HDmemcpy(((uint8_t *)entry_ptr->image_ptr) + image_size, 
-                             H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
+                    HDmemcpy(((uint8_t *)entry_ptr->image_ptr) + entry_ptr->size, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
 #endif /* H5C_DO_MEMORY_SANITY_CHECKS */
                     if(0 == mpi_rank)
                         if(H5C__generate_image(f, cache_ptr, entry_ptr, dxpl_id) < 0)
@@ -5884,18 +5862,10 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
 #endif /* H5C_DO_SANITY_CHECKS */
 
         if(NULL == entry_ptr->image_ptr) {
-            size_t image_size;
-
-            if(entry_ptr->compressed)
-                image_size = entry_ptr->compressed_size;
-            else
-                image_size = entry_ptr->size;
-            HDassert(image_size > 0);
-
-            if(NULL == (entry_ptr->image_ptr = H5MM_malloc(image_size + H5C_IMAGE_EXTRA_SPACE)))
+            if(NULL == (entry_ptr->image_ptr = H5MM_malloc(entry_ptr->size + H5C_IMAGE_EXTRA_SPACE)))
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for on disk image buffer")
 #if H5C_DO_MEMORY_SANITY_CHECKS
-            HDmemcpy(((uint8_t *)entry_ptr->image_ptr) + image_size, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
+            HDmemcpy(((uint8_t *)entry_ptr->image_ptr) + entry_ptr->size, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
 #endif /* H5C_DO_MEMORY_SANITY_CHECKS */
         } /* end if */
 
@@ -5911,19 +5881,7 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
          * in the entry's type, we silently skip the write.  This
          * flag should only be used in test code. 
          */
-        if(((entry_ptr->type->flags) & H5C__CLASS_SKIP_WRITES) == 0)
-        {
-	    /* If compression is not enabled, the size of the entry on 
-             * disk is entry_prt->size.  However if entry_ptr->compressed
-             * is TRUE, the on disk size is entry_ptr->compressed_size.
-             */
-            size_t image_size;
-
-            if(entry_ptr->compressed)
-                image_size = entry_ptr->compressed_size;
-            else
-                image_size = entry_ptr->size;
-
+        if(((entry_ptr->type->flags) & H5C__CLASS_SKIP_WRITES) == 0) {
 #ifdef H5_HAVE_PARALLEL
             if(collective_write_list) {
                 H5C_collective_write_t *item;
@@ -5931,7 +5889,7 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
                 if(NULL == (item = (H5C_collective_write_t *)H5FL_MALLOC(H5C_collective_write_t)))
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "unable to allocate skip list item")
 
-                item->length = image_size;
+                item->length = entry_ptr->size;
                 item->free_buf = FALSE;
                 item->buf = entry_ptr->image_ptr;
                 item->offset = entry_ptr->addr;
@@ -5943,11 +5901,9 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
             } /* end if */
             else
 #endif /* H5_HAVE_PARALLEL */
-
-            if(H5F_block_write(f, entry_ptr->type->mem_type, entry_ptr->addr,
-                    image_size, dxpl_id, entry_ptr->image_ptr) < 0)
+            if(H5F_block_write(f, entry_ptr->type->mem_type, entry_ptr->addr, entry_ptr->size, dxpl_id, entry_ptr->image_ptr) < 0)
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't write image to file.")
-        }
+        } /* end if */
 
         /* if the entry has a notify callback, notify it that we have 
          * just flushed the entry.
@@ -6101,30 +6057,22 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
             HDassert(!H5F_IS_TMP_ADDR(f, entry_ptr->addr));
 #ifndef NDEBUG
             {
-                hbool_t curr_compressed = FALSE;
                 size_t curr_len;
-                size_t curr_compressed_len = 0;
 
                 /* Get the actual image size for the thing again */
-                entry_ptr->type->image_len((void *)entry_ptr, &curr_len, &curr_compressed, &curr_compressed_len);
+                entry_ptr->type->image_len((void *)entry_ptr, &curr_len);
                 HDassert(curr_len == entry_ptr->size);
-                HDassert(curr_compressed == entry_ptr->compressed);
-                HDassert(curr_compressed_len == entry_ptr->compressed_size);
             }
 #endif /* NDEBUG */
 
-            /* if the file space free size callback is defined, use
+            /* If the file space free size callback is defined, use
              * it to get the size of the block of file space to free.
-             * Otherwise use entry_ptr->compressed_size if 
-             * entry_ptr->compressed == TRUE, and entry_ptr->size
-             * if entry_ptr->compressed == FALSE.
+             * Otherwise use entry_ptr->size.
              */
             if(entry_ptr->type->fsf_size) {
                 if((entry_ptr->type->fsf_size)((void *)entry_ptr, &fsf_size) < 0)
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTFREE, FAIL, "unable to get file space free size")
             } /* end if */
-            else if(entry_ptr->compressed) /* use compressed size */
-                fsf_size = entry_ptr->compressed_size;
             else    /* no file space free size callback -- use entry size */
                 fsf_size = entry_ptr->size;
 
@@ -6238,14 +6186,6 @@ H5C_load_entry(H5F_t *              f,
                 void *              udata)
 {
     hbool_t     dirty = FALSE;          /* Flag indicating whether thing was dirtied during deserialize */
-    hbool_t     compressed = FALSE;     /* flag indicating whether thing            */
-                                        /* will be run through filters on           */
-                                        /* on read and write.  Usually FALSE        */
-                                        /* set to true if appropriate.              */
-    size_t      compressed_size = 0;    /* entry compressed size if                 */
-                                        /* known -- otherwise uncompressed.         */
-                                        /* Zero indicates compression not           */
-                                        /* enabled.                                 */
     void *      image = NULL;           /* Buffer for disk image                    */
     void *      thing = NULL;           /* Pointer to thing loaded                  */
     H5C_cache_entry_t *entry = NULL;    /* Alias for thing loaded, as cache entry   */
@@ -6264,17 +6204,11 @@ H5C_load_entry(H5F_t *              f,
     HDassert(f->shared->cache);
     HDassert(type);
 
-    /* for now, we do not combine the speculative load and compressed flags */
-    HDassert(!((type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG) &&
-               (type->flags & H5C__CLASS_COMPRESSED_FLAG)));
-
     /* Can't see how skip reads could be usefully combined with
-     * either the speculative read or compressed flags.  Hence disallow.
+     * the speculative read flag.  Hence disallow.
      */
     HDassert(!((type->flags & H5C__CLASS_SKIP_READS) &&
                (type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG)));
-    HDassert(!((type->flags & H5C__CLASS_SKIP_READS) &&
-               (type->flags & H5C__CLASS_COMPRESSED_FLAG)));
 
     HDassert(H5F_addr_defined(addr));
     HDassert(type->get_load_size);
@@ -6388,53 +6322,18 @@ H5C_load_entry(H5F_t *              f,
         entry->magic = H5C__H5C_CACHE_ENTRY_T_MAGIC;
         entry->type  = type;
 
-        /* verify that compressed and compressed_len are initialized */
-        HDassert(compressed == FALSE);
-        HDassert(compressed_size == 0);
-
         /* Get the actual image size for the thing */
-        if(type->image_len(thing, &new_len, &compressed, &compressed_size) < 0)
+        if(type->image_len(thing, &new_len) < 0)
             HGOTO_ERROR(H5E_CACHE, H5E_CANTGET, NULL, "can't retrieve image length")
 
         if(new_len == 0)
             HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, NULL, "image length is 0")
 
-        HDassert(((type->flags & H5C__CLASS_COMPRESSED_FLAG) != 0) ||
-                 ((compressed == FALSE) && (compressed_size == 0)));
-        HDassert((compressed == TRUE) || (compressed_size == 0));
-
         if(new_len != len) {
 
-            if(type->flags & H5C__CLASS_COMPRESSED_FLAG) {
-
-                /* if new_len != len, then compression must be 
-                 * enabled on the entry.  In this case, the image_len
-                 * callback should have set compressed to TRUE, set 
-                 * new_len equal to the uncompressed size of the 
-                 * entry, and compressed_len equal to the compressed
-                 * size -- which must equal len.
-                 *
-                 * We can't verify the uncompressed size, but we can 
-                 * verify the rest with the following assertions.
-                 */
-                HDassert(compressed);
-                HDassert(compressed_size == len);
-
-                /* new_len should contain the uncompressed size.  Set len
-                 * equal to new_len, so that the cache will use the 
-                 * uncompressed size for purposes of space allocation, etc.
-                 */
-                len = new_len;
-
-            } else if (type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG) {
+            if (type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG) {
 
                 void *new_image;       /* Buffer for disk image */
-
-                /* compressed must be FALSE, and compressed_size 
-                 * must be zero.
-                 */
-                HDassert(!compressed);
-                HDassert(compressed_size == 0);
 
                 /* Adjust the size of the image to match new_len */
                 if(NULL == (new_image = H5MM_realloc(image, 
@@ -6496,13 +6395,6 @@ H5C_load_entry(H5F_t *              f,
 
 #ifndef NDEBUG
                     {
-                        /* new_compressed and new_compressed_size must be 
-                         * initialize to FALSE / 0 respectively, as clients
-                         * that don't use compression may ignore these two 
-                         * parameters.
-                         */
-                        hbool_t new_compressed = FALSE;
-                        size_t new_compressed_size = 0;
                         size_t new_new_len;
 
                         /* Get the actual image size for the thing again.  Note
@@ -6514,10 +6406,8 @@ H5C_load_entry(H5F_t *              f,
                         entry->magic = H5C__H5C_CACHE_ENTRY_T_MAGIC;
                         entry->type  = type;
 
-                        type->image_len(thing, &new_new_len, &new_compressed, &new_compressed_size);
+                        type->image_len(thing, &new_new_len);
                         HDassert(new_new_len == new_len);
-                        HDassert(!new_compressed);
-                        HDassert(new_compressed_size == 0);
                     } /* end block */
 #endif /* NDEBUG */
                 } /* end if (new_len > len) */
@@ -6528,7 +6418,7 @@ H5C_load_entry(H5F_t *              f,
             } else { /* throw an error */
 
                 HGOTO_ERROR(H5E_CACHE, H5E_UNSUPPORTED, NULL, \
-                     "size of non-speculative, non-compressed object changed")
+                     "size of non-speculative object changed")
             }
         } /* end if (new_len != len) */
     } /* end if */
@@ -6561,8 +6451,6 @@ H5C_load_entry(H5F_t *              f,
     entry->addr                 = addr;
     entry->size                 = len;
     HDassert(entry->size < H5C_MAX_ENTRY_SIZE);
-    entry->compressed           = compressed;
-    entry->compressed_size      = compressed_size;
     entry->image_ptr            = image;
     entry->image_up_to_date     = TRUE;
     entry->type                 = type;
@@ -7741,7 +7629,6 @@ H5C__assert_flush_dep_nocycle(const H5C_cache_entry_t * entry,
  *
  *-------------------------------------------------------------------------
  */
-
 herr_t
 H5C_serialize_cache(const H5F_t *f, hid_t dxpl_id)
 {
@@ -8088,18 +7975,17 @@ done:
 static herr_t
 H5C_serialize_single_entry(const H5F_t *f, 
                            hid_t dxpl_id, 
-		           H5C_t *cache_ptr,
+                           H5C_t *cache_ptr,
                            H5C_cache_entry_t *entry_ptr,
                            hbool_t *restart_scan_ptr,
                            hbool_t *restart_bucket_ptr)
 {
     hbool_t		was_dirty;
     hbool_t		target_entry_relocated = FALSE;
-    unsigned 		serialize_flags = H5C__SERIALIZE_NO_FLAGS_SET;
+    unsigned    serialize_flags = H5C__SERIALIZE_NO_FLAGS_SET;
     haddr_t		new_addr = HADDR_UNDEF;
     haddr_t		old_addr = HADDR_UNDEF;
     size_t		new_len = 0;
-    size_t		new_compressed_len = 0;
     herr_t		ret_value = SUCCEED;      /* Return value */
 
 #if 0
@@ -8131,29 +8017,13 @@ H5C_serialize_single_entry(const H5F_t *f,
 
 
     /* allocate buffer for the entry image if required. */
-    if ( NULL == entry_ptr->image_ptr ) {
+    if(NULL == entry_ptr->image_ptr) {
 
-        size_t image_size;
-
-        if(entry_ptr->compressed)
-
-            image_size = entry_ptr->compressed_size;
-
-        else
-
-            image_size = entry_ptr->size;
-
-        HDassert(image_size > 0);
-
-        if ( NULL == (entry_ptr->image_ptr = 
-			H5MM_malloc(image_size + H5C_IMAGE_EXTRA_SPACE)) )
-
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, \
-                        "memory allocation failed for on disk image buffer")
+        if(NULL == (entry_ptr->image_ptr = H5MM_malloc(entry_ptr->size + H5C_IMAGE_EXTRA_SPACE)) )
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for on disk image buffer")
 
 #if H5C_DO_MEMORY_SANITY_CHECKS
-        HDmemcpy(((uint8_t *)entry_ptr->image_ptr) + image_size, \
-                 H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
+        HDmemcpy(((uint8_t *)entry_ptr->image_ptr) + entry_ptr->size, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
 #endif /* H5C_DO_MEMORY_SANITY_CHECKS */
     } /* end if */
 
@@ -8183,36 +8053,28 @@ H5C_serialize_single_entry(const H5F_t *f,
     cache_ptr->entry_fd_height_change_counter = 0;
 
     /* Call client's pre-serialize callback, if there's one */
-    if ( ( entry_ptr->type->pre_serialize != NULL ) && 
-         ( (entry_ptr->type->pre_serialize)(f, dxpl_id, 
-                                            (void *)entry_ptr,
-                                            entry_ptr->addr, 
-                                            entry_ptr->size,
-					    entry_ptr->compressed_size,
-                                            &new_addr, &new_len, 
-                                            &new_compressed_len,
-                                            &serialize_flags) < 0 ) )
-
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                    "unable to pre-serialize entry")
+    if((entry_ptr->type->pre_serialize != NULL) && 
+         ((entry_ptr->type->pre_serialize)(f, dxpl_id, 
+                                           (void *)entry_ptr,
+                                           entry_ptr->addr, 
+                                           entry_ptr->size,
+                                           &new_addr,
+                                           &new_len, 
+                                           &serialize_flags) < 0 ))
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to pre-serialize entry")
 
      /* set cache_ptr->slist_change_in_pre_serialize if the slist 
       * was modified.
       */
      if(cache_ptr->slist_changed)
-
          cache_ptr->slist_change_in_pre_serialize = TRUE;
 
      /* Check for any flags set in the pre-serialize callback */
      if ( serialize_flags != H5C__SERIALIZE_NO_FLAGS_SET ) {
 
         /* Check for unexpected flags from serialize callback */
-        if(serialize_flags & ~(H5C__SERIALIZE_RESIZED_FLAG | 
-                               H5C__SERIALIZE_MOVED_FLAG |
-                               H5C__SERIALIZE_COMPRESSED_FLAG))
-
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                        "unknown serialize flag(s)")
+        if(serialize_flags & ~(H5C__SERIALIZE_RESIZED_FLAG | H5C__SERIALIZE_MOVED_FLAG))
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unknown serialize flag(s)")
 
 #ifdef H5_HAVE_PARALLEL
         /* In the parallel case, resizes and moves in the serialize 
@@ -8239,80 +8101,51 @@ H5C_serialize_single_entry(const H5F_t *f,
          *     tests will be necessary.
          */
         if(cache_ptr->aux_ptr != NULL)
-
-            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                        "resize/move in serialize occured in parallel case.")
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "resize/move in serialize occured in parallel case.")
 #endif /* H5_HAVE_PARALLEL */
 
         /* Resize the buffer if required */
-        if ( ( ( ! entry_ptr->compressed ) &&
-               ( serialize_flags & H5C__SERIALIZE_RESIZED_FLAG ) ) ||
-             ( ( entry_ptr->compressed ) &&
-               ( serialize_flags & H5C__SERIALIZE_COMPRESSED_FLAG ) ) )
-        {
-            size_t new_image_size;
-
-      	    if(entry_ptr->compressed)
-
-                new_image_size = new_compressed_len;
-
-            else
-
-                new_image_size = new_len;
-
-            HDassert(new_image_size > 0);
-
+        if(serialize_flags & H5C__SERIALIZE_RESIZED_FLAG) {
             /* Release the current image */
             if(entry_ptr->image_ptr)
-
                 entry_ptr->image_ptr = H5MM_xfree(entry_ptr->image_ptr);
 
             /* Allocate a new image buffer */
-            if ( NULL == (entry_ptr->image_ptr = 
-			H5MM_malloc(new_image_size + H5C_IMAGE_EXTRA_SPACE)) )
-
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, \
-                            "memory allocation failed for on disk image buffer")
+            if(NULL == (entry_ptr->image_ptr = H5MM_malloc(entry_ptr->size + H5C_IMAGE_EXTRA_SPACE)))
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for on disk image buffer")
 
 #if H5C_DO_MEMORY_SANITY_CHECKS
-            HDmemcpy(((uint8_t *)entry_ptr->image_ptr) + new_image_size, 
-                     H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
+            HDmemcpy(((uint8_t *)entry_ptr->image_ptr) + entry_ptr->size, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
 #endif /* H5C_DO_MEMORY_SANITY_CHECKS */
         } /* end if */
 
-	/* If required, update the entry and the cache data structures
+        /* If required, update the entry and the cache data structures
          * for a resize.
-	 */
-        if ( serialize_flags & H5C__SERIALIZE_RESIZED_FLAG) {
+         */
+        if(serialize_flags & H5C__SERIALIZE_RESIZED_FLAG) {
 
-            H5C__UPDATE_STATS_FOR_ENTRY_SIZE_CHANGE(cache_ptr, \
-                                                    entry_ptr, new_len)
+            H5C__UPDATE_STATS_FOR_ENTRY_SIZE_CHANGE(cache_ptr, entry_ptr, new_len)
 
             /* update the hash table for the size change */
-            H5C__UPDATE_INDEX_FOR_SIZE_CHANGE(cache_ptr, \
-                                              entry_ptr->size, \
-                                              new_len, entry_ptr, \
-                                              !(entry_ptr->is_dirty));
+            H5C__UPDATE_INDEX_FOR_SIZE_CHANGE(cache_ptr, entry_ptr->size, new_len, entry_ptr, !(entry_ptr->is_dirty));
 
             /* The entry can't be protected since we are
              * in the process of serializing the cache.  Thus we must
              * update the replacement policy data structures for the 
-	     * size change.  The macro deals with the pinned case.
+             * size change.  The macro deals with the pinned case.
              */
             H5C__UPDATE_RP_FOR_SIZE_CHANGE(cache_ptr, entry_ptr, new_len);
 
             /* If the entry is dirty, it should be in the skip list.  If so
              * we must update the skip list for the size change.
              */
-            if ( entry_ptr->is_dirty ) {
-
-	        HDassert(entry_ptr->in_slist);
-                H5C__UPDATE_SLIST_FOR_SIZE_CHANGE(cache_ptr, entry_ptr->size, \
-                                                  new_len)
-            } else {
-
-		HDassert(!entry_ptr->in_slist);
-	    }
+            if(entry_ptr->is_dirty) {
+                HDassert(entry_ptr->in_slist);
+                H5C__UPDATE_SLIST_FOR_SIZE_CHANGE(cache_ptr, entry_ptr->size, new_len)
+            } /* end if */
+            else {
+                HDassert(!entry_ptr->in_slist);
+            } /* end else */
 
             /* finally, update the entry for its new size */
             entry_ptr->size = new_len;
@@ -8322,27 +8155,27 @@ H5C_serialize_single_entry(const H5F_t *f,
         /* If required, update the entry and the cache data structures 
          * for a move 
          */
-        if ( serialize_flags & H5C__SERIALIZE_MOVED_FLAG ) {
+        if(serialize_flags & H5C__SERIALIZE_MOVED_FLAG) {
 
 #if H5C_DO_SANITY_CHECKS
             int64_t saved_slist_len_increase;
             int64_t saved_slist_size_increase;
 #endif /* H5C_DO_SANITY_CHECKS */
 
-	    target_entry_relocated = TRUE;
+            target_entry_relocated = TRUE;
 
-	    /* since the entry has moved, it is probably no longer in 
+            /* since the entry has moved, it is probably no longer in 
              * the same hash bucket.  Thus at a minimum, we must set 
              * *restart_bucket_ptr to TRUE.
              */
 
-	    *restart_bucket_ptr = TRUE;
+            *restart_bucket_ptr = TRUE;
 
             if(entry_ptr->addr == old_addr) {
 
-		/* update stats and the entries relocated counter */
+                /* update stats and the entries relocated counter */
                 H5C__UPDATE_STATS_FOR_MOVE(cache_ptr, entry_ptr)
-		cache_ptr->entries_relocated_counter++;
+                cache_ptr->entries_relocated_counter++;
 
                 /* we must update cache data structures for the 
                  * change in address.
@@ -8353,25 +8186,23 @@ H5C_serialize_single_entry(const H5F_t *f,
                  */
                 H5C__DELETE_FROM_INDEX(cache_ptr, entry_ptr)
 
-		if ( was_dirty ) {
-
-	            HDassert(entry_ptr->in_slist);
+                if(was_dirty) {
+                    HDassert(entry_ptr->in_slist);
                     H5C__REMOVE_ENTRY_FROM_SLIST(cache_ptr, entry_ptr)
+                } /* end if */
+                else {
+                    HDassert(!entry_ptr->in_slist);
+                } /* end else */
 
-                } else {
-
-		    HDassert(!entry_ptr->in_slist);
-		}
-
-	        /* update the entry for its new address */
+                /* update the entry for its new address */
                 entry_ptr->addr = new_addr;
 
-	        /* and then reinsert in the index and slist (if appropriate) */
+                /* and then reinsert in the index and slist (if appropriate) */
                 H5C__INSERT_IN_INDEX(cache_ptr, entry_ptr, FAIL)
 
-		if ( entry_ptr->is_dirty ) {
+                if(entry_ptr->is_dirty) {
 #if H5C_DO_SANITY_CHECKS
-	            /* save cache_ptr->slist_len_increase and 
+                    /* save cache_ptr->slist_len_increase and 
                      * cache_ptr->slist_size_increase before the 
                      * reinsertion into the slist, and restore 
                      * them afterwards to avoid skewing our sanity
@@ -8387,85 +8218,61 @@ H5C_serialize_single_entry(const H5F_t *f,
                     cache_ptr->slist_len_increase = saved_slist_len_increase;
                     cache_ptr->slist_size_increase = saved_slist_size_increase;
 #endif /* H5C_DO_SANITY_CHECKS */
-		}
+                } /* end if */
             }
-            else /* move is alread done for us -- just do sanity checks */
-
+            else {
+                /* move is alread done for us -- just do sanity checks */
                 HDassert(entry_ptr->addr == new_addr);
-
+            } /* end else */
         } /* end if */
 
-        if ( serialize_flags & H5C__SERIALIZE_COMPRESSED_FLAG ) {
-
-            /* just save the new compressed entry size in 
-             * entry_ptr->compressed_size.  We don't need to 
- 	     * do more, as compressed size is only used for I/O.
-             */
-            HDassert(entry_ptr->compressed);
-            entry_ptr->compressed_size = new_compressed_len;
-        }
     } /* end if ( serialize_flags != H5C__SERIALIZE_NO_FLAGS_SET ) */
 
     /* Serialize object into buffer */
-    {
-        size_t image_len;
 
-        if(entry_ptr->compressed)
+    /* reset cache_ptr->slist_changed so we can detect slist
+     * modifications in the serialize call.
+     */
+    cache_ptr->slist_changed = FALSE;
 
-            image_len = entry_ptr->compressed_size;
+        
+    if(entry_ptr->type->serialize(f, entry_ptr->image_ptr, entry_ptr->size, (void *)entry_ptr) < 0 )
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to serialize entry")
 
-        else
-
-            image_len = entry_ptr->size;
-
-        /* reset cache_ptr->slist_changed so we can detect slist
-         * modifications in the serialize call.
-         */
-        cache_ptr->slist_changed = FALSE;
-
-            
-        if( entry_ptr->type->serialize(f, entry_ptr->image_ptr, 
-                                       image_len, (void *)entry_ptr) < 0 )
-
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                        "unable to serialize entry")
-
-        /* set cache_ptr->slist_change_in_serialize if the 
-         * slist was modified.
-         */
-        if(cache_ptr->slist_changed)
-
-            cache_ptr->slist_change_in_serialize = TRUE;
+    /* set cache_ptr->slist_change_in_serialize if the 
+     * slist was modified.
+     */
+    if(cache_ptr->slist_changed)
+        cache_ptr->slist_change_in_serialize = TRUE;
 
 #if H5C_DO_MEMORY_SANITY_CHECKS
-        HDassert(0 == HDmemcmp(((uint8_t *)entry_ptr->image_ptr) + image_len, 
-                                       H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE));
+    HDassert(0 == HDmemcmp(((uint8_t *)entry_ptr->image_ptr) + entry_ptr->size, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE));
 #endif /* H5C_DO_MEMORY_SANITY_CHECKS */
 
-        entry_ptr->image_up_to_date = TRUE;
-    }
+    entry_ptr->image_up_to_date = TRUE;
 
     /* reset the flush_in progress flag */
     entry_ptr->flush_in_progress = FALSE;
 
     /* set *restart_scan_ptr to TRUE if appropriate */
-    if ( ( cache_ptr->entries_loaded_counter > 0 ) ||
-         ( cache_ptr->entries_inserted_counter > 0 ) ||
-         ( cache_ptr->entries_relocated_counter > 1 ) ||
-         ( ( cache_ptr->entries_relocated_counter > 0 ) &&
-           ( ! target_entry_relocated ) ) ||
-         ( cache_ptr->entry_fd_height_change_counter > 0 ) ) {
-
-	*restart_scan_ptr = TRUE;
-    }
+    if((cache_ptr->entries_loaded_counter > 0)
+            ||
+            (cache_ptr->entries_inserted_counter > 0)
+            ||
+            (cache_ptr->entries_relocated_counter > 1)
+            ||
+            ((cache_ptr->entries_relocated_counter > 0)
+            &&
+            (!target_entry_relocated))
+            ||
+            (cache_ptr->entry_fd_height_change_counter > 0))
+	    *restart_scan_ptr = TRUE;
 
 done:
 
-    HDassert( ( ret_value != SUCCEED ) || 
-              ( ! entry_ptr->flush_in_progress ) );
+    HDassert((ret_value != SUCCEED) || (!entry_ptr->flush_in_progress));
 
-    HDassert( ( ret_value != SUCCEED ) || 
-              ( entry_ptr->image_up_to_date ) );
+    HDassert((ret_value != SUCCEED) || (entry_ptr->image_up_to_date));
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -8534,7 +8341,6 @@ H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_p
     haddr_t		new_addr = HADDR_UNDEF;
     haddr_t		old_addr = HADDR_UNDEF;
     size_t		new_len = 0;
-    size_t		new_compressed_len = 0;
     unsigned            serialize_flags = H5C__SERIALIZE_NO_FLAGS_SET;
     herr_t              ret_value = SUCCEED;
 
@@ -8544,18 +8350,10 @@ H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_p
     HDassert(!entry_ptr->image_up_to_date);
 
     if(NULL == entry_ptr->image_ptr) {
-        size_t image_size;
-
-        if(entry_ptr->compressed)
-            image_size = entry_ptr->compressed_size;
-        else
-            image_size = entry_ptr->size;
-        HDassert(image_size > 0);
-
-        if(NULL == (entry_ptr->image_ptr = H5MM_malloc(image_size + H5C_IMAGE_EXTRA_SPACE)))
+        if(NULL == (entry_ptr->image_ptr = H5MM_malloc(entry_ptr->size + H5C_IMAGE_EXTRA_SPACE)))
             HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for on disk image buffer");
 #if H5C_DO_MEMORY_SANITY_CHECKS
-        HDmemcpy(((uint8_t *)entry_ptr->image_ptr) + image_size, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
+        HDmemcpy(((uint8_t *)entry_ptr->image_ptr) + entry_ptr->size, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
 #endif /* H5C_DO_MEMORY_SANITY_CHECKS */
     } /* end if */
 
@@ -8569,18 +8367,15 @@ H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_p
 
     /* Call client's pre-serialize callback, if there's one */
     if(entry_ptr->type->pre_serialize && 
-         (entry_ptr->type->pre_serialize)(f, dxpl_id, 
-                (void *)entry_ptr, entry_ptr->addr, entry_ptr->size,
-                entry_ptr->compressed_size, &new_addr, &new_len, 
-                &new_compressed_len, &serialize_flags) < 0)
+            (entry_ptr->type->pre_serialize)(f, dxpl_id, (void *)entry_ptr,
+                entry_ptr->addr, entry_ptr->size, &new_addr, &new_len, &serialize_flags) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to pre-serialize entry")
 
     /* Check for any flags set in the pre-serialize callback */
     if(serialize_flags != H5C__SERIALIZE_NO_FLAGS_SET) {
         /* Check for unexpected flags from serialize callback */
         if(serialize_flags & ~(H5C__SERIALIZE_RESIZED_FLAG | 
-                               H5C__SERIALIZE_MOVED_FLAG |
-                               H5C__SERIALIZE_COMPRESSED_FLAG))
+                               H5C__SERIALIZE_MOVED_FLAG))
             HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unknown serialize flag(s)")
 
 #ifdef H5_HAVE_PARALLEL
@@ -8614,49 +8409,31 @@ H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_p
             HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "resize/move in serialize occured in parallel case.")
 #endif
 
-        /* Resize the buffer if required */
-        if(((!entry_ptr->compressed) && (serialize_flags & H5C__SERIALIZE_RESIZED_FLAG)) ||
-                ((entry_ptr->compressed) && (serialize_flags & H5C__SERIALIZE_COMPRESSED_FLAG))) {
-            size_t new_image_size;
-
-            if(entry_ptr->compressed)
-                new_image_size = new_compressed_len;
-            else
-                new_image_size = new_len;
-            HDassert(new_image_size > 0);
-
-            /* Release the current image */
-            if(entry_ptr->image_ptr)
-                entry_ptr->image_ptr = H5MM_xfree(entry_ptr->image_ptr);
-
-            /* Allocate a new image buffer */
-            if(NULL == (entry_ptr->image_ptr = H5MM_malloc(new_image_size + H5C_IMAGE_EXTRA_SPACE)))
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for on disk image buffer")
-
-#if H5C_DO_MEMORY_SANITY_CHECKS
-            HDmemcpy(((uint8_t *)entry_ptr->image_ptr) + new_image_size, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
-#endif /* H5C_DO_MEMORY_SANITY_CHECKS */
-        } /* end if */
-
-        /* If required, update the entry and the cache data structures
-         * for a resize.
-         */
+        /* If required, resize the buffer and update the entry and the cache
+         * data structures */
         if(serialize_flags & H5C__SERIALIZE_RESIZED_FLAG) {
+            /* Allocate a new image buffer */
+            if(NULL == (entry_ptr->image_ptr = H5MM_realloc(entry_ptr->image_ptr, new_len + H5C_IMAGE_EXTRA_SPACE)))
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for on disk image buffer")
+#if H5C_DO_MEMORY_SANITY_CHECKS
+            HDmemcpy(((uint8_t *)entry_ptr->image_ptr) + new_len, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
+#endif /* H5C_DO_MEMORY_SANITY_CHECKS */
+
+            /* Update statistics for resizing the entry */
             H5C__UPDATE_STATS_FOR_ENTRY_SIZE_CHANGE(cache_ptr, entry_ptr, new_len);
 
-            /* update the hash table for the size change*/
+            /* update the hash table for the size change */
             H5C__UPDATE_INDEX_FOR_SIZE_CHANGE(cache_ptr, entry_ptr->size, \
                                               new_len, entry_ptr, !(entry_ptr->is_dirty));
 
-            /* The entry can't be protected since we are
-             * in the process of flushing it.  Thus we must
-             * update the replacement policy data
-             * structures for the size change.  The macro
-             * deals with the pinned case.
+            /* The entry can't be protected since we are in the process of
+             * flushing it.  Thus we must update the replacement policy data
+             * structures for the size change.  The macro deals with the pinned
+             * case.
              */
             H5C__UPDATE_RP_FOR_SIZE_CHANGE(cache_ptr, entry_ptr, new_len);
 
-            /* as we haven't updated the cache data structures for 
+            /* As we haven't updated the cache data structures for 
              * for the flush or flush destroy yet, the entry should
              * be in the slist.  Thus update it for the size change.
              */
@@ -8673,12 +8450,9 @@ H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_p
         if(serialize_flags & H5C__SERIALIZE_MOVED_FLAG) {
             H5C__UPDATE_STATS_FOR_MOVE(cache_ptr, entry_ptr);
 
+            /* We must update cache data structures for the change in address */
             if(entry_ptr->addr == old_addr) {
-                /* we must update cache data structures for the 
-                 * change in address.
-                 */
-
-                /* delete the entry from the hash table and the slist */
+                /* Delete the entry from the hash table and the slist */
                 H5C__DELETE_FROM_INDEX(cache_ptr, entry_ptr);
                 H5C__REMOVE_ENTRY_FROM_SLIST(cache_ptr, entry_ptr, FALSE);
 
@@ -8692,35 +8466,15 @@ H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_p
             else /* move is already done for us -- just do sanity checks */
                 HDassert(entry_ptr->addr == new_addr);
         } /* end if */
-
-        if(serialize_flags & H5C__SERIALIZE_COMPRESSED_FLAG) {
-            /* just save the new compressed entry size in 
-             * entry_ptr->compressed_size.  We don't need to 
-             * do more, as compressed size is only used for I/O.
-             */
-            HDassert(entry_ptr->compressed);
-            entry_ptr->compressed_size = new_compressed_len;
-        } /* end if */
     } /* end if(serialize_flags != H5C__SERIALIZE_NO_FLAGS_SET) */
 
     /* Serialize object into buffer */
-    {
-        size_t image_len;
-
-        if(entry_ptr->compressed)
-            image_len = entry_ptr->compressed_size;
-        else
-            image_len = entry_ptr->size;
-
-        if(entry_ptr->type->serialize(f, entry_ptr->image_ptr, image_len, (void *)entry_ptr) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to serialize entry")
-
+    if(entry_ptr->type->serialize(f, entry_ptr->image_ptr, entry_ptr->size, (void *)entry_ptr) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to serialize entry")
 #if H5C_DO_MEMORY_SANITY_CHECKS
-        HDassert(0 == HDmemcmp(((uint8_t *)entry_ptr->image_ptr) + image_len, 
-                               H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE));
+    HDassert(0 == HDmemcmp(((uint8_t *)entry_ptr->image_ptr) + entry_ptr->size, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE));
 #endif /* H5C_DO_MEMORY_SANITY_CHECKS */
-        entry_ptr->image_up_to_date = TRUE;
-    } /* end block */
+    entry_ptr->image_up_to_date = TRUE;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
