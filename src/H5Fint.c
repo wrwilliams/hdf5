@@ -171,6 +171,8 @@ H5F_get_access_plist(H5F_t *f, hbool_t app_ref)
         latest_format = TRUE;
     if(H5P_set(new_plist, H5F_ACS_LATEST_FORMAT_NAME, &latest_format) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'latest format' flag")
+    if(H5P_set(new_plist, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, &(f->shared->read_attempts)) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'read attempts ' flag")
     if(H5P_set(new_plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &(f->shared->object_flush)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set object flush callback")
 
@@ -1030,6 +1032,8 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
     unsigned            page_buf_min_meta_perc, page_buf_min_raw_perc;
     hbool_t             evict_on_close;     /* evict on close value from plist  */
     H5F_t              *ret_value = NULL;   /*actual return value           */
+    char               *lock_env_var = NULL;/*env var pointer               */
+    hbool_t             use_file_locking;   /*read from env var             */
 
     FUNC_ENTER_NOAPI(NULL)
 
@@ -1043,6 +1047,16 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
      */
     if(NULL == (drvr = H5FD_get_class(fapl_id)))
         HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "unable to retrieve VFL class")
+
+    /* Check the environment variable that determines if we care
+     * about file locking. File locking should be used unless explicitly
+     * disabled.
+     */
+    lock_env_var = HDgetenv("HDF5_USE_FILE_LOCKING");
+    if(lock_env_var && !HDstrcmp(lock_env_var, "FALSE"))
+        use_file_locking = FALSE;
+    else
+        use_file_locking = TRUE;    
 
     /*
      * Opening a file is a two step process. First we try to open the
@@ -1085,23 +1099,23 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
 
     /* Is the file already open? */
     if((shared = H5F_sfile_search(lf)) != NULL) {
-	/*
-	 * The file is already open, so use that one instead of the one we
-	 * just opened. We only one one H5FD_t* per file so one doesn't
-	 * confuse the other.  But fail if this request was to truncate the
-	 * file (since we can't do that while the file is open), or if the
-	 * request was to create a non-existent file (since the file already
-	 * exists), or if the new request adds write access (since the
-	 * readers don't expect the file to change under them).
-	 */
-	if(H5FD_close(lf) < 0)
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
-	if(flags & H5F_ACC_TRUNC)
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to truncate a file which is already open")
-	if(flags & H5F_ACC_EXCL)
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "file exists")
-	if((flags & H5F_ACC_RDWR) && 0 == (shared->flags & H5F_ACC_RDWR))
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "file is already open for read-only")
+        /*
+         * The file is already open, so use that one instead of the one we
+         * just opened. We only one one H5FD_t* per file so one doesn't
+         * confuse the other.  But fail if this request was to truncate the
+         * file (since we can't do that while the file is open), or if the
+         * request was to create a non-existent file (since the file already
+         * exists), or if the new request adds write access (since the
+         * readers don't expect the file to change under them).
+         */
+        if(H5FD_close(lf) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
+        if(flags & H5F_ACC_TRUNC)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to truncate a file which is already open")
+        if(flags & H5F_ACC_EXCL)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "file exists")
+        if((flags & H5F_ACC_RDWR) && 0 == (shared->flags & H5F_ACC_RDWR))
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "file is already open for read-only")
 
         /* Allocate new "high-level" file struct */
         if((file = H5F_new(shared, flags, fcpl_id, fapl_id, NULL)) == NULL)
@@ -1121,8 +1135,19 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
             if(NULL == (lf = H5FD_open(name, flags, fapl_id, HADDR_UNDEF)))
                 HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file")
         } /* end if */
+
+        /* Place an advisory lock on the file */
+        if(use_file_locking)
+            if(H5FD_lock(lf, (hbool_t)((flags & H5F_ACC_RDWR) ? TRUE : FALSE)) < 0) {
+                /* Locking failed - Closing will remove the lock */                
+                if(H5FD_close(lf) < 0) 
+                    HDONE_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
+                HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to lock the file")
+            } /* end if */
+
+        /* Create the 'top' file structure */
         if(NULL == (file = H5F_new(NULL, flags, fcpl_id, fapl_id, lf)))
-            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to create new file object")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to initialize file structure")
     } /* end else */
 
     /* Retain the name the file was opened with */
@@ -1180,7 +1205,8 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
          */
         if(H5G_mkroot(file, dxpl_id, TRUE) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to create/open root group")
-    } else if (1 == shared->nrefs) {
+    } /* end if */
+    else if (1 == shared->nrefs) {
 
         /* Read the superblock if it hasn't been read before. */
         if(H5F__super_read(file, dxpl_id, TRUE) < 0)
@@ -1210,7 +1236,8 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
             shared->fc_degree = lf->cls->fc_degree;
         else
             shared->fc_degree = fc_degree;
-    } else if(shared->nrefs > 1) {
+    } /* end if */
+    else if(shared->nrefs > 1) {
         if(fc_degree == H5F_CLOSE_DEFAULT && shared->fc_degree != lf->cls->fc_degree)
             HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "file close degree doesn't match")
         if(fc_degree != H5F_CLOSE_DEFAULT && fc_degree != shared->fc_degree)
