@@ -3906,8 +3906,8 @@ move_entry(H5C_t * cache_ptr,
         HDassert( entry_ptr->type == type );
         HDassert( entry_ptr == entry_ptr->self );
         HDassert( entry_ptr->cache_ptr == cache_ptr );
-        HDassert( !(entry_ptr->is_read_only && entry_ptr->ro_ref_count > 1) );
-        HDassert( !(entry_ptr->header.is_read_only && entry_ptr->header.ro_ref_count > 1) );
+        HDassert( !entry_ptr->is_read_only );
+        HDassert( !entry_ptr->header.is_read_only );
 
 
         if ( entry_ptr->at_main_addr && !main_addr ) {
