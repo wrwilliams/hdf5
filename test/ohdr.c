@@ -304,8 +304,9 @@ error:
 /*
  *  To exercise the coding for the re-read of the object header for SWMR access.
  *  When the object header is read in H5O_load() of H5Ocache.c, the library initially reads
- *  512 bytes for decoding, then reads the remaining bytes later if the object header is
- *  greater than 512 bytes.  For SWMR access, the read should be done all at one time.
+ *  H5O_SPEC_READ_SIZE (512, currently)  bytes for decoding, then reads the
+ *  remaining bytes later if the object header is greater than H5O_SPEC_READ_SIZE
+ *  bytes.  For SWMR access, the read should be done all at one time.
  */
 static herr_t
 test_ohdr_swmr(hbool_t new_format)
@@ -396,9 +397,9 @@ test_ohdr_swmr(hbool_t new_format)
     if(obj_info.hdr.version != OBJ_VERSION_LATEST)
         FAIL_STACK_ERROR
 
-    /* The size of object header should be greater than the speculative read size of 512 */
+    /* The size of object header should be greater than the speculative read size of H5O_SPEC_READ_SIZE */
     /* This will exercise the coding for the re-read of the object header for SWMR access */
-    if(obj_info.hdr.space.total < 512)
+    if(obj_info.hdr.space.total < H5O_SPEC_READ_SIZE)
         TEST_ERROR;
 
     /* Close the dataset */
