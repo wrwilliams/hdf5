@@ -345,7 +345,7 @@ int main(int argc, const char *argv[])
     } /* end if */
 
     /* Send a message to indicate "H5Fopen" is complete--releasing the file lock */
-    h5_send_message(WRITER_MESSAGE);
+    h5_send_message(WRITER_MESSAGE, NULL, NULL);
 
     /* Emit informational message */
     if(verbose)

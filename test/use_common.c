@@ -283,7 +283,7 @@ int write_uc_file(hbool_t tosend)
 
     if(tosend)
         /* Send a message that H5Fopen is complete--releasing the file lock */
-        h5_send_message(WRITER_MESSAGE);
+        h5_send_message(WRITER_MESSAGE, NULL, NULL);
 
     /* Open the dataset of the program name */
     if((dsid = H5Dopen2(fid, progname_g, H5P_DEFAULT)) < 0){

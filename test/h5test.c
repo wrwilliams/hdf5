@@ -93,6 +93,12 @@ static const char *multi_letters = "msbrglo";
 /* Length of multi-file VFD filename buffers */
 #define H5TEST_MULTI_FILENAME_LEN       1024
 
+/* Temporary file for sending signal messages */
+#define TMP_SIGNAL_FILE "tmp_signal_file"
+
+/* The # of seconds to wait for the message file--used by h5_wait_message() */
+#define MESSAGE_TIMEOUT         300             /* Timeout in seconds */
+
 /* Previous error reporting function */
 static H5E_auto2_t err_func = NULL;
 
@@ -1711,56 +1717,118 @@ error:
     return -1;
 }
 
-/*
- * To send a message by creating the file.
- * This is a helper routine used in:
- *	1) tfile.c: test_file_lock_concur() and test_file_lock_swmr_concur()
- *	2) use_common.c
- *	3) swmr_addrme_writer.c, swmr_remove_writer.c, swmr_sparse_writer.c, swmr_writer.c
+/*-------------------------------------------------------------------------
+ * Function:    h5_send_message
+ * 
+ * Purpose:     Sends the specified signal.
+ * 
+ *              In terms of this test framework, a signal consists of a file
+ *              on disk. Since there are multiple processes that need to 
+ *              communicate with each other, they do so by writing and
+ *              reading signal files on disk, the names and contents of 
+ *              which are used to inform a process about when it can
+ *              proceed and what it should do next.
+ * 
+ *              This function writes a signal file. The first argument is
+ *              the name of the signal file, and the second and third
+ *              arguments are the contents of the first two lines of the
+ *              signal file. The last two arguments may be NULL.
+ *
+ * Return:      void
+ *
+ * Programmer:  Mike McGreevy
+ *              August 18, 2010
+ * 
+ *-------------------------------------------------------------------------
  */
 void
-h5_send_message(const char *file)
+h5_send_message(const char *send, const char *arg1, const char *arg2)
 {
-    FILE *id;
+    FILE *signalfile;
 
-    id = HDfopen(file, "w+");
-    HDfclose(id);
+    HDremove(TMP_SIGNAL_FILE);
+
+    /* Create signal file (which will send signal to some other process) */
+    signalfile = HDfopen(TMP_SIGNAL_FILE, "w+");
+
+    /* Write messages to signal file, if provided */
+    if(arg2 != NULL) {
+        HDassert(arg1);
+        HDfprintf(signalfile, "%s\n%s\n", arg1, arg2);
+    } /* end if */
+    else if(arg1 != NULL) {
+        HDassert(arg2 == NULL);
+        HDfprintf(signalfile, "%s\n", arg1);
+    } /* end if */ 
+    else {
+        HDassert(arg1 == NULL);
+        HDassert(arg2 == NULL);
+    }/* end else */
+
+    HDfclose(signalfile);
+
+    HDrename(TMP_SIGNAL_FILE, send);
 } /* h5_send_message() */
 
-/*
- * Repeatedly check for the message file.
- * It will stop when the file exists or exceeds the timeout limit.
- * This is a helper routine used in:
- *	1) tfile.c: test_file_lock_concur() and test_file_lock_swmr_concur()
- *	2) use_common.c
+/*-------------------------------------------------------------------------
+ * Function:    h5_wait_message
+ * 
+ * Purpose:     Waits for the specified signal.
+ * 
+ *              In terms of this test framework, a signal consists of a file
+ *              on disk. Since there are multiple processes that need to 
+ *              communicate with each other, they do so by writing and
+ *              reading signal files on disk, the names and contents of 
+ *              which are used to inform a process about when it can
+ *              proceed and what it should do next.
+ * 
+ *              This function continuously attempts to read the specified
+ *              signal file from disk, and only continues once it has
+ *              successfully done so (i.e., only after another process has
+ *              called the "h5_send_message" function to write the signal file).
+ *              This functon will then immediately remove the file (i.e., 
+ *              to indicate that it has been received and can be reused), 
+ *              and then exits, allowing the calling function to continue.
+ *
+ * Return:      void
+ *
+ * Programmer:  Mike McGreevy
+ *              August 18, 2010
+ * 
+ *-------------------------------------------------------------------------
  */
-int
-h5_wait_message(const char *file)
+herr_t
+h5_wait_message(const char *waitfor) 
 {
-    FILE *id;           /* File pointer */
-    time_t t0, t1;      /* Time info */
+    FILE *returnfile;
+    time_t t0,t1;
 
-    /* Start timer */
+    /* Start timer. If this function runs for too long (i.e., 
+        expected signal is never received), it will
+        return failure */
     HDtime(&t0);
 
-    /* Repeatedly check whether the file exists */
-    while((id = HDfopen(file, "r")) == NULL) {
-        /* Get current time */
+    /* Wait for return signal from some other process */
+    while ((returnfile = HDfopen(waitfor, "r")) == NULL) {
+
+        /* make note of current time. */
         HDtime(&t1);
-        /*
-         * Determine time difference--
-         *   if waiting too long for the message, then it is
-         *   unlikely the message will get sent, then fail rather
-         *   than loop forever.
-         */
-        if(HDdifftime(t1, t0) > MESSAGE_TIMEOUT)
-            goto done;
-    }
 
-    if(id != NULL) HDfclose(id);
-    HDunlink(file);
-    return(1);
+        /* If we've been waiting for a signal for too long, then
+            it was likely never sent and we should fail rather
+            than loop infinitely */
+        if(HDdifftime(t1, t0) > MESSAGE_TIMEOUT) {
+            HDfprintf(stdout, "Error communicating between processes. Make sure test script is running.\n");
+            TEST_ERROR;
+        } /* end if */
+    } /* end while */
 
-done:
-    return(-1);
+    HDfclose(returnfile);
+    HDunlink(waitfor);
+
+    return SUCCEED;
+
+error:
+    return FAIL;
 } /* h5_wait_message() */
+
