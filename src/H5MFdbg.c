@@ -169,30 +169,31 @@ H5MF_sects_debug(H5F_t *f, hid_t dxpl_id, haddr_t fs_addr, FILE *stream, int ind
     HDassert(fwidth >= 0);
 
     for(type = H5FD_MEM_DEFAULT; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
-	if(H5F_addr_eq(f->shared->fs_addr[type], fs_addr)) {
-	    if(!f->shared->fs_man[type])
-		if(H5MF_alloc_open(f, dxpl_id, type) < 0)
-		    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTINIT, FAIL, "can't initialize file free space")
+        if(H5F_addr_eq(f->shared->fs_addr[type], fs_addr)) {
+            if(!f->shared->fs_man[type])
+                if(H5MF_alloc_open(f, dxpl_id, type) < 0)
+                    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTINIT, FAIL, "can't initialize file free space")
 
-	    if(f->shared->fs_man[type]) {
-		H5MF_debug_iter_ud_t udata;        /* User data for callbacks */
+            if(f->shared->fs_man[type]) {
+                H5MF_debug_iter_ud_t udata;        /* User data for callbacks */
 
-		/* Prepare user data for section iteration callback */
-		udata.fspace = f->shared->fs_man[type];
-		udata.stream = stream;
-		udata.indent = indent;
-		udata.fwidth = fwidth;
+                /* Prepare user data for section iteration callback */
+                udata.fspace = f->shared->fs_man[type];
+                udata.stream = stream;
+                udata.indent = indent;
+                udata.fwidth = fwidth;
 
-		/* Iterate over all the free space sections */
-		if(H5FS_sect_iterate(f, dxpl_id, f->shared->fs_man[type], H5MF_sects_debug_cb, &udata) < 0)
-		    HGOTO_ERROR(H5E_HEAP, H5E_BADITER, FAIL, "can't iterate over heap's free space")
+                /* Iterate over all the free space sections */
+                if(H5FS_sect_iterate(f, dxpl_id, f->shared->fs_man[type], H5MF_sects_debug_cb, &udata) < 0)
+                    HGOTO_ERROR(H5E_HEAP, H5E_BADITER, FAIL, "can't iterate over heap's free space")
 
-		/* Close the free space information */
-		if(H5FS_close(f, dxpl_id, f->shared->fs_man[type]) < 0)
-		    HGOTO_ERROR(H5E_HEAP, H5E_CANTRELEASE, FAIL, "can't release free space info")
-	    } /* end if */
-	    break;
-	}
+                /* Close the free space information */
+                if(H5FS_close(f, dxpl_id, f->shared->fs_man[type]) < 0)
+                    HGOTO_ERROR(H5E_HEAP, H5E_CANTRELEASE, FAIL, "can't release free space info")
+            } /* end if */
+
+            break;
+        } /* end if */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -239,7 +240,7 @@ HDfprintf(stderr, "%s: Dumping file free space sections\n", FUNC);
 
     /* Retrieve the 'eoa' for the file */
     if(HADDR_UNDEF == (eoa = H5F_get_eoa(f, H5FD_MEM_DEFAULT)))
-	HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "driver get_eoa request failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "driver get_eoa request failed")
 #ifdef H5MF_ALLOC_DEBUG
 HDfprintf(stderr, "%s: for type = H5FD_MEM_DEFAULT, eoa = %a\n", FUNC, eoa);
 #endif /* H5MF_ALLOC_DEBUG */
@@ -267,9 +268,7 @@ HDfprintf(stderr, "%s: sda_addr = %a, sda_size = %Hu, end of sda = %a\n", FUNC, 
             /* Retrieve the 'eoa' for this file memory type */
             if(HADDR_UNDEF == (eoa = H5F_get_eoa(f, type)))
                 HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "driver get_eoa request failed")
-            HDfprintf(stream, "%*s%-*s %a\n", indent + 3, "", MAX(0, fwidth - 3),
-                      "eoa:",
-                      eoa);
+            HDfprintf(stream, "%*s%-*s %a\n", indent + 3, "", MAX(0, fwidth - 3), "eoa:", eoa);
 
             /* Print header for sections */
             HDfprintf(stream, "%*sSections:\n", indent + 3, "");
