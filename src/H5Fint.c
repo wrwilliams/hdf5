@@ -173,6 +173,8 @@ H5F_get_access_plist(H5F_t *f, hbool_t app_ref)
         latest_format = TRUE;
     if(H5P_set(new_plist, H5F_ACS_LATEST_FORMAT_NAME, &latest_format) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'latest format' flag")
+    if(H5P_set(new_plist, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, &(f->shared->read_attempts)) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'read attempts ' flag")
     if(H5P_set(new_plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &(f->shared->object_flush)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set object flush callback")
 
@@ -690,6 +692,18 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
          */
         f->shared->use_tmp_space = !H5F_HAS_FEATURE(f, H5FD_FEAT_HAS_MPI);
 
+        /* Retrieve the # of read attempts here so that sohm in superblock will get the correct # of attempts */
+        if(H5P_get(plist, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, &f->shared->read_attempts) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get the # of read attempts")
+
+        /* If no value for read attempts has been set, use the default */
+        if(!f->shared->read_attempts)
+            f->shared->read_attempts = H5F_METADATA_READ_ATTEMPTS;
+
+        /* Determine the # of bins for metdata read retries */
+        if(H5F_set_retries(f) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "can't set retries and retries_nbins")
+
         /* Get the metadata cache log location (if we're logging) */
         {
             char *mdc_log_location = NULL;      /* location of metadata cache log location */
@@ -784,6 +798,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
     HDassert(f->shared);
 
     if(1 == f->shared->nrefs) {
+        int actype;                         /* metadata cache type (enum value) */
         H5F_io_info_t fio_info;             /* I/O info for operation */
 
         /* Flush at this point since the file will be closed.
@@ -963,6 +978,11 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
         f->shared->mtab.child = (H5F_mount_t *)H5MM_xfree(f->shared->mtab.child);
         f->shared->mtab.nalloc = 0;
 
+        /* Clean up the metadata retries array */
+        for(actype = 0; actype < (int)H5AC_NTYPES; actype++)
+            if(f->shared->retries[actype])
+                f->shared->retries[actype] = (uint32_t *)H5MM_xfree(f->shared->retries[actype]);
+
         /* Destroy shared file struct */
         f->shared = (H5F_file_t *)H5FL_FREE(H5F_file_t, f->shared);
 
@@ -1046,6 +1066,8 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
     H5F_close_degree_t  fc_degree;          /*file close degree             */
     hbool_t             evict_on_close;     /* evict on close value from plist  */
     H5F_t              *ret_value = NULL;   /*actual return value           */
+    char               *lock_env_var = NULL;/*env var pointer               */
+    hbool_t             use_file_locking;   /*read from env var             */
 
     FUNC_ENTER_NOAPI(NULL)
 
@@ -1060,6 +1082,16 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
     if(NULL == (drvr = H5FD_get_class(fapl_id)))
         HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "unable to retrieve VFL class")
 
+    /* Check the environment variable that determines if we care
+     * about file locking. File locking should be used unless explicitly
+     * disabled.
+     */
+    lock_env_var = HDgetenv("HDF5_USE_FILE_LOCKING");
+    if(lock_env_var && !HDstrcmp(lock_env_var, "FALSE"))
+        use_file_locking = FALSE;
+    else
+        use_file_locking = TRUE;    
+
     /*
      * Opening a file is a two step process. First we try to open the
      * file in a way which doesn't affect its state (like not truncating
@@ -1072,52 +1104,52 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
      * way for us to detect it here anyway).
      */
     if(drvr->cmp)
-	tent_flags = flags & ~(H5F_ACC_CREAT|H5F_ACC_TRUNC|H5F_ACC_EXCL);
+        tent_flags = flags & ~(H5F_ACC_CREAT|H5F_ACC_TRUNC|H5F_ACC_EXCL);
     else
-	tent_flags = flags;
+        tent_flags = flags;
 
     if(NULL == (lf = H5FD_open(name, tent_flags, fapl_id, HADDR_UNDEF))) {
-	if(tent_flags == flags) {
+        if(tent_flags == flags) {
 #ifndef H5_USING_MEMCHECKER
             time_t mytime = HDtime(NULL);
 
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: time = %s, name = '%s', tent_flags = %x", HDctime(&mytime), name, tent_flags)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: time = %s, name = '%s', tent_flags = %x", HDctime(&mytime), name, tent_flags)
 #else /* H5_USING_MEMCHECKER */
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: name = '%s', tent_flags = %x", name, tent_flags)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: name = '%s', tent_flags = %x", name, tent_flags)
 #endif /* H5_USING_MEMCHECKER */
         } /* end if */
         H5E_clear_stack(NULL);
-	tent_flags = flags;
-	if(NULL == (lf = H5FD_open(name, tent_flags, fapl_id, HADDR_UNDEF))) {
+        tent_flags = flags;
+        if(NULL == (lf = H5FD_open(name, tent_flags, fapl_id, HADDR_UNDEF))) {
 #ifndef H5_USING_MEMCHECKER
             time_t mytime = HDtime(NULL);
 
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: time = %s, name = '%s', tent_flags = %x", HDctime(&mytime), name, tent_flags)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: time = %s, name = '%s', tent_flags = %x", HDctime(&mytime), name, tent_flags)
 #else /* H5_USING_MEMCHECKER */
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: name = '%s', tent_flags = %x", name, tent_flags)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file: name = '%s', tent_flags = %x", name, tent_flags)
 #endif /* H5_USING_MEMCHECKER */
         } /* end if */
     } /* end if */
 
     /* Is the file already open? */
     if((shared = H5F_sfile_search(lf)) != NULL) {
-	/*
-	 * The file is already open, so use that one instead of the one we
-	 * just opened. We only one one H5FD_t* per file so one doesn't
-	 * confuse the other.  But fail if this request was to truncate the
-	 * file (since we can't do that while the file is open), or if the
-	 * request was to create a non-existent file (since the file already
-	 * exists), or if the new request adds write access (since the
-	 * readers don't expect the file to change under them).
-	 */
-	if(H5FD_close(lf) < 0)
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
-	if(flags & H5F_ACC_TRUNC)
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to truncate a file which is already open")
-	if(flags & H5F_ACC_EXCL)
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "file exists")
-	if((flags & H5F_ACC_RDWR) && 0 == (shared->flags & H5F_ACC_RDWR))
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "file is already open for read-only")
+        /*
+         * The file is already open, so use that one instead of the one we
+         * just opened. We only one one H5FD_t* per file so one doesn't
+         * confuse the other.  But fail if this request was to truncate the
+         * file (since we can't do that while the file is open), or if the
+         * request was to create a non-existent file (since the file already
+         * exists), or if the new request adds write access (since the
+         * readers don't expect the file to change under them).
+         */
+        if(H5FD_close(lf) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
+        if(flags & H5F_ACC_TRUNC)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to truncate a file which is already open")
+        if(flags & H5F_ACC_EXCL)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "file exists")
+        if((flags & H5F_ACC_RDWR) && 0 == (shared->flags & H5F_ACC_RDWR))
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "file is already open for read-only")
 
         /* Allocate new "high-level" file struct */
         if((file = H5F_new(shared, flags, fcpl_id, fapl_id, NULL)) == NULL)
@@ -1137,8 +1169,19 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
             if(NULL == (lf = H5FD_open(name, flags, fapl_id, HADDR_UNDEF)))
                 HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file")
         } /* end if */
+
+        /* Place an advisory lock on the file */
+        if(use_file_locking)
+            if(H5FD_lock(lf, (hbool_t)((flags & H5F_ACC_RDWR) ? TRUE : FALSE)) < 0) {
+                /* Locking failed - Closing will remove the lock */                
+                if(H5FD_close(lf) < 0) 
+                    HDONE_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
+                HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to lock the file")
+            } /* end if */
+
+        /* Create the 'top' file structure */
         if(NULL == (file = H5F_new(NULL, flags, fcpl_id, fapl_id, lf)))
-            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to create new file object")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to initialize file structure")
     } /* end else */
 
     /* Retain the name the file was opened with */
@@ -1169,15 +1212,16 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
          */
         if(H5G_mkroot(file, dxpl_id, TRUE) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to create/open root group")
-    } else if (1 == shared->nrefs) {
+    } /* end if */
+    else if (1 == shared->nrefs) {
 
-	/* Read the superblock if it hasn't been read before. */
+        /* Read the superblock if it hasn't been read before. */
         if(H5F__super_read(file, dxpl_id, TRUE) < 0)
-	    HGOTO_ERROR(H5E_FILE, H5E_READERROR, NULL, "unable to read superblock")
+            HGOTO_ERROR(H5E_FILE, H5E_READERROR, NULL, "unable to read superblock")
 
-	/* Open the root group */
-	if(H5G_mkroot(file, dxpl_id, FALSE) < 0)
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to read root group")
+        /* Open the root group */
+        if(H5G_mkroot(file, dxpl_id, FALSE) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to read root group")
     } /* end if */
 
     /* Get the file access property list, for future queries */
@@ -1198,7 +1242,8 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
             shared->fc_degree = lf->cls->fc_degree;
         else
             shared->fc_degree = fc_degree;
-    } else if(shared->nrefs > 1) {
+    } /* end if */
+    else if(shared->nrefs > 1) {
         if(fc_degree == H5F_CLOSE_DEFAULT && shared->fc_degree != lf->cls->fc_degree)
             HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "file close degree doesn't match")
         if(fc_degree != H5F_CLOSE_DEFAULT && fc_degree != shared->fc_degree)
@@ -1222,19 +1267,19 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
 
     /* Formulate the absolute path for later search of target file for external links */
     if(H5_build_extpath(name, &file->extpath) < 0)
-	HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to build extpath")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to build extpath")
 
     /* Formulate the actual file name, after following symlinks, etc. */
     if(H5F_build_actual_name(file, a_plist, name, &file->actual_name) < 0)
-	HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to build actual name")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to build actual name")
 
     /* Success */
     ret_value = file;
 
 done:
     if(!ret_value && file)
-	if(H5F_dest(file, dxpl_id, FALSE) < 0)
-	    HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, NULL, "problems closing file")
+        if(H5F_dest(file, dxpl_id, FALSE) < 0)
+            HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, NULL, "problems closing file")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F_open() */
@@ -2205,6 +2250,96 @@ H5F_get_file_image(H5F_t *file, void *buf_ptr, size_t buf_len, hid_t dxpl_id)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5F_get_file_image() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5F_track_metadata_read_retries
+ *
+ * Purpose:     To track the # of a "retries" (log10) for a metadata item.
+ *		This routine should be used only when:
+ *		  "retries" > 0
+ *		  f->shared->read_attempts > 1 (does not have retry when 1)
+ *		  f->shared->retries_nbins > 0 (calculated based on f->shared->read_attempts)
+ *
+ * Return:      Success:        SUCCEED
+ *              Failure:        FAIL
+ *
+ * Programmer:  Vailin Choi; October 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5F_track_metadata_read_retries(H5F_t *f, unsigned actype, unsigned retries)
+{
+    unsigned log_ind;			/* Index to the array of retries based on log10 of retries */
+    double tmp;                         /* Temporary value, to keep compiler quiet */
+    herr_t ret_value = SUCCEED; 	/* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity check */
+    HDassert(f);
+    HDassert(f->shared->read_attempts > 1);
+    HDassert(f->shared->retries_nbins > 0);
+    HDassert(retries > 0);
+    HDassert(retries < f->shared->read_attempts);
+    HDassert(actype < H5AC_NTYPES);
+
+    /* Allocate memory for retries */
+    if(NULL == f->shared->retries[actype])
+        if(NULL == (f->shared->retries[actype] = (uint32_t *)H5MM_calloc((size_t)f->shared->retries_nbins * sizeof(uint32_t))))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
+
+    /* Index to retries based on log10 */
+    tmp = HDlog10((double)retries);
+    log_ind = (unsigned)tmp;
+    HDassert(log_ind < f->shared->retries_nbins);
+
+    /* Increment the # of the "retries" */
+    f->shared->retries[actype][log_ind]++;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5F_track_metadata_read_retries() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5F_set_retries
+ *
+ * Purpose:     To initialize data structures for read retries:
+ *		--zero out "retries"
+ *		--set up "retries_nbins" based on read_attempts
+ *
+ * Return:      Success:        SUCCEED
+ *              Failure:        FAIL
+ *
+ * Programmer:  Vailin Choi; November 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5F_set_retries(H5F_t *f)
+{
+    double tmp;				/* Temporary variable */
+
+    /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    /* Sanity check */
+    HDassert(f);
+
+    /* Initialize the tracking for metadata read retries */
+    HDmemset(f->shared->retries, 0, sizeof(f->shared->retries));
+
+    /* Initialize the # of bins for retries */
+    f->shared->retries_nbins = 0;
+    if(f->shared->read_attempts > 1) {
+        tmp = HDlog10((double)(f->shared->read_attempts - 1));
+        f->shared->retries_nbins = (unsigned)tmp + 1;
+    }
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+} /* H5F_set_retries() */
 
 
 /*-------------------------------------------------------------------------
