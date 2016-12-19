@@ -117,7 +117,7 @@ create_data_sets(hid_t file_id, int min_dset, int max_dset)
     hid_t filespace_ids[MAX_NUM_DSETS];
     hid_t memspace_id = -1;
     hid_t dataset_ids[MAX_NUM_DSETS];
-    hid_t properties;
+    hid_t properties = -1;
     hsize_t dims[2];
     hsize_t a_size[2];
     hsize_t offset[2];
@@ -3060,7 +3060,7 @@ cache_image_smoke_check_1(void)
 {
     const char * fcn_name = "cache_image_smoke_check_1()";
     char filename[512];
-    hbool_t show_progress = FALSE;
+    hbool_t show_progress = TRUE;
     hid_t file_id = -1;
     H5F_t *file_ptr = NULL;
     H5C_t *cache_ptr = NULL;

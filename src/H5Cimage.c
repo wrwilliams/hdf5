@@ -90,8 +90,14 @@
 /* Local Prototypes */
 /********************/
 
-static herr_t H5C__prefetched_entry_get_load_size(const void *udata_ptr,
+static herr_t H5C__prefetched_entry_get_initial_load_size(void *udata_ptr,
     size_t *image_len_ptr);
+
+static herr_t H5C__prefetched_entry_get_final_load_size(const void *image_ptr,
+    size_t image_len, void *udata_ptr, size_t *actual_len_ptr);
+
+static htri_t H5C__prefetched_entry_verify_chksum(const void *image_ptr,
+    size_t len, void *udata_ptr);
 
 static void * H5C__prefetched_entry_deserialize(const void * image_ptr,
     size_t len, void * udata, hbool_t * dirty_ptr);
@@ -179,18 +185,20 @@ extern const H5FD_mem_t class_mem_types[H5C__MAX_NUM_TYPE_IDS + 1];
 
 const H5C_class_t prefetched_entry_class =
 {
-    /* id               = */ H5AC_PREFETCHED_ENTRY_ID,
-    /* name             = */ "prefetched entry",
-    /* mem_type         = */ H5FD_MEM_DEFAULT, /* value doesn't matter */
-    /* flags            = */ H5AC__CLASS_NO_FLAGS_SET,
-    /* get_load_size    = */ H5C__prefetched_entry_get_load_size,
-    /* deserialize      = */ H5C__prefetched_entry_deserialize,
-    /* image_len        = */ H5C__prefetched_entry_image_len,
-    /* pre_serialize    = */ H5C__prefetched_entry_pre_serialize,
-    /* serialize        = */ H5C__prefetched_entry_serialize,
-    /* notify           = */ H5C__prefetched_entry_notify,
-    /* free_icr         = */ H5C__prefetched_entry_free_icr,
-    /* fsf_size         = */ H5C__prefetched_entry_fsf_size,
+    /* id                       = */ H5AC_PREFETCHED_ENTRY_ID,
+    /* name                     = */ "prefetched entry",
+    /* mem_type                 = */ H5FD_MEM_DEFAULT, /* value doesn't matter */
+    /* flags                    = */ H5AC__CLASS_NO_FLAGS_SET,
+    /* get_initial_load_size    = */ H5C__prefetched_entry_get_initial_load_size,
+    /* get_final_load_size      = */ H5C__prefetched_entry_get_final_load_size,
+    /* verify_chksum            = */ H5C__prefetched_entry_verify_chksum,
+    /* deserialize              = */ H5C__prefetched_entry_deserialize,
+    /* image_len                = */ H5C__prefetched_entry_image_len,
+    /* pre_serialize            = */ H5C__prefetched_entry_pre_serialize,
+    /* serialize                = */ H5C__prefetched_entry_serialize,
+    /* notify                   = */ H5C__prefetched_entry_notify,
+    /* free_icr                 = */ H5C__prefetched_entry_free_icr,
+    /* fsf_size                 = */ H5C__prefetched_entry_fsf_size,
 };
 
 
@@ -525,14 +533,14 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
                (type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG)));
 
     HDassert(H5F_addr_defined(addr));
-    HDassert(type->get_load_size);
+    HDassert(type->get_initial_load_size);
     HDassert(type->deserialize);
 
     /* if *pf_entry_ptr is a flush dependency child, destroy all such
      * relationships now.  The client will restore the relationship(s) with
      * the deserialized entry if appropriate.
      */
-    //HDassert(pf_entry_ptr->fd_parent_count == pf_entry_ptr->flush_dep_nparents);
+//HDassert(pf_entry_ptr->fd_parent_count == pf_entry_ptr->flush_dep_nparents);
     for(i = (int)(pf_entry_ptr->fd_parent_count) - 1; i >= 0; i--) {
         HDassert(pf_entry_ptr->flush_dep_parent);
         HDassert(pf_entry_ptr->flush_dep_parent[i]);
@@ -576,8 +584,8 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
 
 
     /* Since the size of the on disk image is known exactly, there is 
-     * no need for either a call to the get_load_size() callback, or 
-     * retries if the H5C__CLASS_SPECULATIVE_LOAD_FLAG flag is set.
+     * no need for either a call to the get_initial_load_size() callback, 
+     * or retries if the H5C__CLASS_SPECULATIVE_LOAD_FLAG flag is set.
      * Similarly, there is no need to clamp possible reads beyond
      * EOF.
      */
@@ -1776,7 +1784,7 @@ done:
  ***************************************************************************/
 
 static herr_t
-H5C__prefetched_entry_get_load_size(const void H5_ATTR_UNUSED *udata_ptr,
+H5C__prefetched_entry_get_initial_load_size(void H5_ATTR_UNUSED *udata_ptr,
     size_t H5_ATTR_UNUSED *image_len_ptr)
 {
     FUNC_ENTER_STATIC_NOERR /* Yes, even though this pushes an error on the stack */
@@ -1784,7 +1792,30 @@ H5C__prefetched_entry_get_load_size(const void H5_ATTR_UNUSED *udata_ptr,
     HERROR(H5E_CACHE, H5E_SYSTEM, "called unreachable fcn.");
 
     FUNC_LEAVE_NOAPI(FAIL)
-} /* end H5C__prefetched_entry_get_load_size() */
+} /* end H5C__prefetched_entry_get_initial_load_size() */
+
+static herr_t
+H5C__prefetched_entry_get_final_load_size(const void H5_ATTR_UNUSED *image_ptr,
+    size_t H5_ATTR_UNUSED image_len, void H5_ATTR_UNUSED *udata_ptr,
+    size_t H5_ATTR_UNUSED *actual_len_ptr)
+{
+    FUNC_ENTER_STATIC_NOERR /* Yes, even though this pushes an error on the stack */
+
+    HERROR(H5E_CACHE, H5E_SYSTEM, "called unreachable fcn.");
+
+    FUNC_LEAVE_NOAPI(FAIL)
+} /* end H5C__prefetched_entry_get_final_load_size() */
+
+static htri_t
+H5C__prefetched_entry_verify_chksum(const void H5_ATTR_UNUSED *image_ptr,
+    size_t H5_ATTR_UNUSED len, void H5_ATTR_UNUSED *udata_ptr)
+{
+    FUNC_ENTER_STATIC_NOERR /* Yes, even though this pushes an error on the stack */
+
+    HERROR(H5E_CACHE, H5E_SYSTEM, "called unreachable fcn.");
+
+    FUNC_LEAVE_NOAPI(FAIL)
+} /* end H5C__prefetched_verify_chksum() */
 
 
 static void *
@@ -3948,7 +3979,7 @@ H5C_prep_for_file_close__scan_entries(H5F_t *f,
             else
                 fd_parents_list_len = (size_t)0;
 
-	        image_len += entry_header_len + fd_parents_list_len + entry_ptr->size;
+            image_len += entry_header_len + fd_parents_list_len + entry_ptr->size;
 
             num_entries_in_image++;
         } /* end if */
