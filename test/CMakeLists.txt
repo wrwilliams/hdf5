@@ -198,7 +198,6 @@ MACRO (ADD_H5_EXE file)
 ENDMACRO (ADD_H5_EXE file)
 
 set (H5_TESTS
-    #testhdf5
     cache
     cache_api
     cache_tagging
@@ -213,7 +212,6 @@ set (H5_TESTS
     fheap
     pool
     accum
-    #hyperslab
     istore
     bittests
     dt_arith
@@ -237,7 +235,6 @@ set (H5_TESTS
     app_ref
     enum
     set_extent
-    #ttsafe
     enc_dec_plist
     enc_dec_plist_cross_platform
     getname
@@ -351,14 +348,10 @@ set (H5_CHECK_TESTS
     err_compat
     tcheck_version
     testmeta
-    #accum_swmr_reader
     atomic_writer
     atomic_reader
     links_env
     flushrefresh
-    #use_append_chunk
-    #use_append_mchunks
-    #use_disable_mdc_flushes
 )
 
 foreach (test ${H5_CHECK_TESTS})
