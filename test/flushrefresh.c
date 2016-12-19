@@ -24,11 +24,15 @@
  *
  */
 
+#define H5FD_FRIEND		/*suppress error about including H5FDpkg	  */
+#define H5FD_TESTING
+
 /* ======== */
 /* Includes */
 /* ======== */
 
 #include "testhdf5.h"
+#include "H5FDpkg.h"		/* File Drivers				*/
 
 /* ======= */
 /* Defines */
@@ -42,10 +46,6 @@
 #define SIGNAL_BETWEEN_PROCESSES_1 "flushrefresh_VERIFICATION_CHECKPOINT1"
 #define SIGNAL_BETWEEN_PROCESSES_2 "flushrefresh_VERIFICATION_CHECKPOINT2"
 #define SIGNAL_FROM_SCRIPT "flushrefresh_VERIFICATION_DONE"
-#define TMP_FILE "tmp_signal_file"
-
-/* Signal Timeout Length in Secs */
-#define SIGNAL_TIMEOUT 300
 
 /* Paths to Various Objects in the Testfile */
 #define RG "/"
@@ -110,8 +110,6 @@ herr_t end_refresh_verification_process(void);
 /* Other Helper Functions */
 herr_t check_for_errors(void);
 herr_t end_verification(void);
-herr_t wait_for_signal(const char * waitfor);
-void send_signal(const char * send, const char * arg1, const char * arg2);
 
 /* ========= */
 /* Functions */
@@ -157,15 +155,13 @@ int main(int argc, const char *argv[])
 
         /* Determine driver being used */
         envval = HDgetenv("HDF5_DRIVER");
-        if(envval == NULL)
-            envval = "";
 
-        if(!HDstrcmp(envval, "sec2") || !HDstrcmp(envval, "stdio") || !HDstrcmp(envval, "")) {
+        if(envval == NULL || H5FD_supports_swmr_test(envval)) {
             if(test_flush() != SUCCEED) TEST_ERROR;
             if(test_refresh() != SUCCEED) TEST_ERROR;
         } /* end if */
         else {
-            HDfprintf(stdout, "Skipping all flush/refresh tests (only run with sec2 or stdio file drivers).\n");
+            HDfprintf(stdout, "Skipping all flush/refresh tests (only run with SWMR-enabled file drivers).\n");
             
             /* Test script is expecting some signals, so send them out to end it. */
             if(end_verification() < 0) TEST_ERROR;
@@ -809,10 +805,10 @@ herr_t run_flush_verification_process(const char * obj_pathname, const char * ex
     HDremove(SIGNAL_FROM_SCRIPT);
 
     /* Send Signal to SCRIPT indicating that it should kick off a verification process. */
-    send_signal(SIGNAL_TO_SCRIPT, obj_pathname, expected);
+    h5_send_message(SIGNAL_TO_SCRIPT, obj_pathname, expected);
 
     /* Wait for Signal from SCRIPT indicating that verification process has completed. */
-    if(wait_for_signal(SIGNAL_FROM_SCRIPT) < 0) TEST_ERROR;
+    if(h5_wait_message(SIGNAL_FROM_SCRIPT) < 0) TEST_ERROR;
 
     /* Check to see if any errors occurred */
     if(check_for_errors() < 0) TEST_ERROR;
@@ -905,11 +901,11 @@ herr_t start_refresh_verification_process(const char * obj_pathname)
 
     /* Send Signal to SCRIPT indicating that it should kick off a refresh 
        verification process */
-    send_signal(SIGNAL_TO_SCRIPT, obj_pathname, NULL);
+    h5_send_message(SIGNAL_TO_SCRIPT, obj_pathname, NULL);
     
     /* Wait for Signal from VERIFICATION PROCESS indicating that it's opened the
        target object and ready for MAIN PROCESS to modify it */
-    if(wait_for_signal(SIGNAL_BETWEEN_PROCESSES_1) < 0) TEST_ERROR;
+    if(h5_wait_message(SIGNAL_BETWEEN_PROCESSES_1) < 0) TEST_ERROR;
 
     /* Check to see if any errors occurred */
     if(check_for_errors() < 0) TEST_ERROR;
@@ -944,11 +940,11 @@ herr_t end_refresh_verification_process(void)
     /* Send Signal to REFRESH VERIFICATION PROCESS indicating that the object
         has been modified and it should now attempt to refresh its metadata,
         and verify the results. */
-    send_signal(SIGNAL_BETWEEN_PROCESSES_2, NULL, NULL);
+    h5_send_message(SIGNAL_BETWEEN_PROCESSES_2, NULL, NULL);
 
     /* Wait for Signal from SCRIPT indicating that the refresh verification
         process has completed. */
-    if(wait_for_signal(SIGNAL_FROM_SCRIPT) < 0) TEST_ERROR;
+    if(h5_wait_message(SIGNAL_FROM_SCRIPT) < 0) TEST_ERROR;
 
     /* Check to see if any errors occurred */
     if(check_for_errors() < 0) TEST_ERROR;
@@ -1004,11 +1000,11 @@ herr_t refresh_verification(const char * obj_pathname)
 
     /* Send Signal to MAIN PROCESS indicating that it can go ahead and modify the 
         object. */
-    send_signal(SIGNAL_BETWEEN_PROCESSES_1, obj_pathname, NULL);
+    h5_send_message(SIGNAL_BETWEEN_PROCESSES_1, obj_pathname, NULL);
 
     /* Wait for Signal from MAIN PROCESS indicating that it's modified the 
         object and we can run verification now. */
-    if(wait_for_signal(SIGNAL_BETWEEN_PROCESSES_2) < 0) PROCESS_ERROR;
+    if(h5_wait_message(SIGNAL_BETWEEN_PROCESSES_2) < 0) PROCESS_ERROR;
 
     /* Get object info again. This will NOT reflect what's on disk, only what's 
        in the cache. Thus, all values will be unchanged from above, despite 
@@ -1142,129 +1138,14 @@ herr_t end_verification(void)
     HDremove(SIGNAL_FROM_SCRIPT);
 
     /* Send Signal to SCRIPT to indicate that we're done with verification. */
-    send_signal(SIGNAL_TO_SCRIPT, "VERIFICATION_DONE", "VERIFICATION_DONE");
+    h5_send_message(SIGNAL_TO_SCRIPT, "VERIFICATION_DONE", "VERIFICATION_DONE");
     
     /* Wait for Signal from SCRIPT indicating that we can continue. */
-    if(wait_for_signal(SIGNAL_FROM_SCRIPT) < 0) TEST_ERROR;
+    if(h5_wait_message(SIGNAL_FROM_SCRIPT) < 0) TEST_ERROR;
 
     return SUCCEED;
 
 error:
     return FAIL;
 } /* end_verification */
-
-
-/*-------------------------------------------------------------------------
- * Function:    send_signal
- * 
- * Purpose:     Sends the specified signal.
- * 
- *              In terms of this test framework, a signal consists of a file
- *              on disk. Since there are multiple processes that need to 
- *              communicate with each other, they do so by writing and
- *              reading signal files on disk, the names and contents of 
- *              which are used to inform a process about when it can
- *              proceed and what it should do next.
- * 
- *              This function writes a signal file. The first argument is
- *              the name of the signal file, and the second and third
- *              arguments are the contents of the first two lines of the
- *              signal file. The last two arguments may be NULL.
- *
- * Return:      void
- *
- * Programmer:  Mike McGreevy
- *              August 18, 2010
- * 
- *-------------------------------------------------------------------------
- */
-void send_signal(const char * send, const char * arg1, const char * arg2)
-{
-    FILE *signalfile = NULL;
-
-    HDremove(TMP_FILE);
-
-    /* Create signal file (which will send signal to some other process) */
-    signalfile = HDfopen(TMP_FILE, "w+");
-
-    /* Write messages to signal file, if provided */
-    if(arg2 != NULL) {
-        HDassert(arg1);
-        HDfprintf(signalfile, "%s\n%s\n", arg1, arg2);
-    } /* end if */
-    else if(arg1 != NULL) {
-        HDassert(arg2 == NULL);
-        HDfprintf(signalfile, "%s\n", arg1);
-    } /* end if */ 
-    else {
-        HDassert(arg1 == NULL);
-        HDassert(arg2 == NULL);
-    }/* end else */
-
-    HDfclose(signalfile);
-
-    HDrename(TMP_FILE, send);
-} /* send_signal */
-
-
-/*-------------------------------------------------------------------------
- * Function:    wait_for_signal
- * 
- * Purpose:     Waits for the specified signal.
- * 
- *              In terms of this test framework, a signal consists of a file
- *              on disk. Since there are multiple processes that need to 
- *              communicate with each other, they do so by writing and
- *              reading signal files on disk, the names and contents of 
- *              which are used to inform a process about when it can
- *              proceed and what it should do next.
- * 
- *              This function continuously attempts to read the specified
- *              signal file from disk, and only continues once it has
- *              successfully done so (i.e., only after another process has
- *              called the "send_signal" function to write the signal file).
- *              This functon will then immediately remove the file (i.e., 
- *              to indicate that it has been received and can be reused), 
- *              and then exits, allowing the calling function to continue.
- *
- * Return:      void
- *
- * Programmer:  Mike McGreevy
- *              August 18, 2010
- * 
- *-------------------------------------------------------------------------
- */
-herr_t wait_for_signal(const char * waitfor) 
-{
-    FILE *returnfile;
-    time_t t0,t1;
-
-    /* Start timer. If this function runs for too long (i.e., 
-        expected signal is never received), it will
-        return failure */
-    HDtime(&t0);
-
-    /* Wait for return signal from some other process */
-    while ((returnfile = HDfopen(waitfor, "r")) == NULL) {
-
-        /* make note of current time. */
-        HDtime(&t1);
-
-        /* If we've been waiting for a signal for too long, then
-            it was likely never sent and we should fail rather
-            than loop infinitely */
-        if(HDdifftime(t1, t0) > SIGNAL_TIMEOUT) {
-            HDfprintf(stdout, "Error communicating between processes. Make sure test script is running.\n");
-            TEST_ERROR;
-        } /* end if */
-    } /* end while */
-
-    HDfclose(returnfile);
-    HDunlink(waitfor);
-
-    return SUCCEED;
-
-error:
-    return FAIL;
-} /* wait_for_signal */
 
