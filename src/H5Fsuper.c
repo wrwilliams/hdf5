@@ -608,6 +608,20 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
                     /* Initialize page end meta threshold */
                     f->shared->pgend_meta_thres = fsinfo.pgend_meta_thres;
 
+                if(f->shared->eoa_pre_fsm_fsalloc != fsinfo.eoa_pre_fsm_fsalloc)
+                    f->shared->eoa_pre_fsm_fsalloc = fsinfo.eoa_pre_fsm_fsalloc;
+
+                /* f->shared->eoa_pre_fsm_fsalloc must always be HADDR_UNDEF
+                 * in the absence of persistant free space managers.
+                 */
+                HDassert((!f->shared->fs_persist) ||
+                         (f->shared->eoa_pre_fsm_fsalloc != HADDR_UNDEF));
+                HDassert(!f->shared->first_alloc_dealloc);
+
+                if((f->shared->eoa_pre_fsm_fsalloc != HADDR_UNDEF) &&
+                   (H5F_INTENT(f) & H5F_ACC_RDWR))
+                    f->shared->first_alloc_dealloc = TRUE;
+
                 f->shared->fs_addr[0] = HADDR_UNDEF;
                 for(u = 1; u < NELMTS(f->shared->fs_addr); u++)
                     f->shared->fs_addr[u] = fsinfo.fs_addr[u - 1];

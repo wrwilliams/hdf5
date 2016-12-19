@@ -188,7 +188,8 @@ H5_DLL herr_t H5FS_delete(H5F_t *f, hid_t dxpl_id, haddr_t fs_addr);
 H5_DLL herr_t H5FS_close(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace);
 H5_DLL herr_t H5FS_alloc_hdr(H5F_t *f, H5FS_t *fspace, haddr_t *fs_addr, hid_t dxpl_id);
 H5_DLL herr_t H5FS_alloc_sect(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id);
-H5_DLL herr_t H5FS_free(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id);
+H5_DLL herr_t H5FS_free(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id, 
+    hbool_t free_file_space);
 
 /* Free space section routines */
 H5_DLL herr_t H5FS_sect_add(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
@@ -212,6 +213,12 @@ H5_DLL herr_t H5FS_sect_query_last(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, hadd
 /* Statistics routine */
 H5_DLL herr_t H5FS_stat_info(const H5F_t *f, const H5FS_t *frsp, H5FS_stat_t *stats);
 H5_DLL herr_t H5FS_get_sect_count(const H5FS_t *frsp, hsize_t *tot_sect_count);
+
+/* free space manager settling routines */
+H5_DLL herr_t H5FS_vfd_alloc_hdr_and_section_info_if_needed(H5F_t *f,
+                                                          hid_t dxpl_id,
+                                                          H5FS_t *fspace,
+                                                          haddr_t *fs_addr_ptr);
 
 /* Debugging routines for dumping file structures */
 H5_DLL herr_t H5FS_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr,

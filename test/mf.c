@@ -6152,6 +6152,16 @@ test_mf_fs_persist_split(void)
 
     TESTING("file's free-space managers are persistent for split-file");
 
+    /* for now, we don't support persistant free space managers 
+     * with the split file driver.
+     */
+    SKIPPED();
+    HDfprintf(stdout, " Persistant FSMs disabled in multi file driver.\n");
+    return 0;  /* <========== note return */
+
+    /* File creation property list template */
+    if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
+
     if((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0)
     FAIL_STACK_ERROR
 
@@ -6453,6 +6463,13 @@ test_mf_fs_persist_multi(void)
 
 
     TESTING("file's free-space managers are persistent for multi-file");
+
+    /* for now, we don't support persistant free space managers 
+     * with the multi file driver.
+     */
+    SKIPPED();
+    HDfprintf(stdout, " Persistant FSMs disabled in multi file driver.\n");
+    return 0;  /* <========== note return */
 
     /* File creation property list template */
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
@@ -6835,6 +6852,7 @@ test_mf_fs_gone(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
     haddr_t addr1, addr2, addr3, addr4;     /* File address for H5FD_MEM_SUPER */
     H5FD_mem_t  fs_type; 
     hbool_t contig_addr_vfd;
+    hbool_t ran_H5MF_tidy_self_referential_fsm_hack = FALSE;
 
     if(new_format)
         HDputs("Testing file's free-space is going away with new library format...");
@@ -6929,6 +6947,17 @@ test_mf_fs_gone(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
     if(!H5F_addr_defined(f->shared->fs_addr[fs_type]))
         TEST_ERROR
 
+    /* Since we are about to open a self referential free space 
+     * manager prior to the first file space allocation / deallocation
+     * call H5MF_tidy_self_referential_fsm_hack() first so as to avoid
+     * assertion failures on the first file space alloc / dealloc.
+     */
+    if(f->shared->first_alloc_dealloc){
+        if(SUCCEED!=H5MF_tidy_self_referential_fsm_hack(f,H5AC_ind_read_dxpl_id))
+            FAIL_STACK_ERROR
+        ran_H5MF_tidy_self_referential_fsm_hack = TRUE;
+    }
+
     /* Start up H5FD_MEM_SUPER free-space manager */
     if(!(f->shared->fs_man[fs_type]))
         if(H5MF_open_fstype(f, H5AC_ind_read_dxpl_id, (H5F_mem_page_t)fs_type) < 0)
@@ -6938,8 +6967,14 @@ test_mf_fs_gone(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
     if(H5FS_stat_info(f, f->shared->fs_man[fs_type], &fs_stat) < 0)
         FAIL_STACK_ERROR
 
-    if(!H5F_addr_defined(fs_stat.addr))
+    /* if we ran H5MF_tidy_self_referential_fsm_hack(), the 
+     * H5FD_MEM_SUPER free space manager must be floating.
+     * Thus fs_stat.addr must be undefined.
+     */
+    if((!ran_H5MF_tidy_self_referential_fsm_hack) &&
+       (!H5F_addr_defined(fs_stat.addr)))
         TEST_ERROR
+
     if(fs_stat.tot_space < TBLOCK_SIZE3)
         TEST_ERROR
 
@@ -7430,6 +7465,16 @@ test_mf_fs_persist(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
         /* Verify that H5FD_MEM_SUPER free-space manager is there */
         if(!H5F_addr_defined(f->shared->fs_addr[tt]))
             TEST_ERROR
+
+        /* Since we are about to open a self referential free space 
+         * manager prior to the first file space allocation / deallocation
+         * call H5MF_tidy_self_referential_fsm_hack() first so as to avoid
+         * assertion failures on the first file space alloc / dealloc.
+         */
+        if((f->shared->first_alloc_dealloc) &&
+           (SUCCEED != 
+            H5MF_tidy_self_referential_fsm_hack(f, H5AC_ind_read_dxpl_id)))
+            FAIL_STACK_ERROR
 
         /* Start up H5FD_MEM_SUPER free-space manager */
         if(!(f->shared->fs_man[tt]))

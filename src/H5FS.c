@@ -913,7 +913,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5FS_free(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id)
+H5FS_free(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id, hbool_t free_file_space)
 {
     haddr_t	saved_addr;             /* Previous address of item */
     unsigned    cache_flags;        /* Flags for unprotecting cache entries */
@@ -959,7 +959,8 @@ H5FS_free(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id)
 
         /* Free space for the free-space manager section info */
         if(!H5F_IS_TMP_ADDR(f, saved_addr)) {
-            if(H5MF_xfree(f, H5FD_MEM_FSPACE_SINFO, dxpl_id, saved_addr, saved_size) < 0)
+            if(free_file_space &&
+               H5MF_xfree(f, H5FD_MEM_FSPACE_SINFO, dxpl_id, saved_addr, saved_size) < 0)
                 HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "unable to release free space sections")
         } /* end if */
 
@@ -1000,7 +1001,8 @@ H5FS_free(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id)
         fspace->addr = HADDR_UNDEF;
 
         /* Free space for the free-space manager header */
-        if(H5MF_xfree(f, H5FD_MEM_FSPACE_HDR, dxpl_id, saved_addr, (hsize_t)H5FS_HEADER_SIZE(f)) < 0)
+        if(free_file_space &&
+           H5MF_xfree(f, H5FD_MEM_FSPACE_HDR, dxpl_id, saved_addr, (hsize_t)H5FS_HEADER_SIZE(f)) < 0)
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "unable to free free space header")
     } /* end if */
 
