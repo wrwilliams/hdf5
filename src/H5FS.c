@@ -364,7 +364,7 @@ HDfprintf(stderr, "%s: Expunging free space section info from cache\n", FUNC);
 
                 if(H5AC_expunge_entry(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, cache_flags) < 0)
                     HGOTO_ERROR(H5E_HEAP, H5E_CANTREMOVE, FAIL, "unable to remove free space section info from cache")
-            }
+            } /* end block */
 
 #ifdef H5FS_DEBUG
 HDfprintf(stderr, "%s: Done expunging free space section info from cache\n", FUNC);
@@ -938,8 +938,8 @@ H5FS_free(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id)
             cache_udata.f = f;
             cache_udata.dxpl_id = dxpl_id;
             cache_udata.fspace = fspace;
-	    if(NULL == (fspace->sinfo = (H5FS_sinfo_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, &cache_udata, H5AC__READ_ONLY_FLAG)))
-		HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, FAIL, "unable to protect free space section info")
+            if(NULL == (fspace->sinfo = (H5FS_sinfo_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, &cache_udata, H5AC__READ_ONLY_FLAG)))
+                HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, FAIL, "unable to protect free space section info")
 
             /* Unload and release ownership of the free-space manager section info */
             if(H5AC_unprotect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, fspace->sinfo, cache_flags) < 0)
@@ -979,8 +979,8 @@ H5FS_free(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id)
             cache_udata.nclasses = 0;
             cache_udata.classes = NULL;
             cache_udata.cls_init_udata = NULL;
-	    if(NULL == (fspace = (H5FS_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_HDR, fspace->addr, &cache_udata, H5AC__READ_ONLY_FLAG)))
-		HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, FAIL, "unable to protect free space section info")
+            if(NULL == (fspace = (H5FS_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_HDR, fspace->addr, &cache_udata, H5AC__READ_ONLY_FLAG)))
+                HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, FAIL, "unable to protect free space section info")
 
             /* Unpin the free-space manager header */
             if(H5AC_unpin_entry(fspace) < 0)

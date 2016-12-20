@@ -438,7 +438,7 @@ H5FS__cache_hdr_pre_serialize(const H5F_t *f, hid_t dxpl_id, void *_thing,
         /* This implies that the header "owns" the section info.  
          *
          * Unfortunately, the comments in the code are not clear as to 
-	 * what this means, but from reviewing the code (most particularly
+         * what this means, but from reviewing the code (most particularly
          * H5FS_close(), H5FS_sinfo_lock, and H5FS_sinfo_unlock()), I 
          * gather that it means that the header is maintaining a pointer to 
          * an instance of H5FS_sinfo_t in which free space data is 
@@ -482,7 +482,7 @@ H5FS__cache_hdr_pre_serialize(const H5F_t *f, hid_t dxpl_id, void *_thing,
          * disk if it doesn't exist.  Similarly, since the section info
          * will not be stored to disk unless the header is, 
          * H5F_addr_defined(fspace->addr) must hold as well.
-	 *
+         *
          * As the objective is to touch up the free space manager header
          * so that it contains sensical data on the size and location of 
          * the section information, we have to handle each of the above
@@ -514,18 +514,18 @@ H5FS__cache_hdr_pre_serialize(const H5F_t *f, hid_t dxpl_id, void *_thing,
          * serialize the header if it thought it was clean.
          */
         if(fspace->serial_sect_count > 0 && H5F_addr_defined(fspace->addr)) {
-	    /* Sanity check */
+            /* Sanity check */
             HDassert(fspace->sect_size > 0);
 
             if(!H5F_addr_defined(fspace->sect_addr)) { /* case 1 */
-		/* allocate file space for the section info, and insert it
+                /* allocate file space for the section info, and insert it
                  * into the metadata cache.
                  */
                 if(HADDR_UNDEF == (fspace->sect_addr = H5MF_alloc((H5F_t *)f, H5FD_MEM_FSPACE_SINFO, dxpl_id, fspace->sect_size)))
                     HGOTO_ERROR(H5E_FSPACE, H5E_NOSPACE, FAIL, "file allocation failed for free space sections")
 
                 fspace->alloc_sect_size = (size_t)fspace->sect_size;
-		if(H5AC_insert_entry((H5F_t *)f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, fspace->sinfo, H5AC__NO_FLAGS_SET) < 0)
+                if(H5AC_insert_entry((H5F_t *)f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, fspace->sinfo, H5AC__NO_FLAGS_SET) < 0)
                     HGOTO_ERROR(H5E_FSPACE, H5E_CANTINIT, FAIL, "can't add free space sections to cache")
 
                 HDassert(fspace->sinfo->cache_info.size == fspace->alloc_sect_size);
@@ -538,7 +538,7 @@ H5FS__cache_hdr_pre_serialize(const H5F_t *f, hid_t dxpl_id, void *_thing,
             else if(H5F_IS_TMP_ADDR(f, fspace->sect_addr)) { /* case 2 */
                 haddr_t new_sect_addr;
 
-		/* move the section info from temporary (AKA imaginary) file
+                /* move the section info from temporary (AKA imaginary) file
                  * space to real file space.
                  */
 
@@ -575,7 +575,7 @@ H5FS__cache_hdr_pre_serialize(const H5F_t *f, hid_t dxpl_id, void *_thing,
             /* for one reason or another (see comment above) there should
              * not be any file space allocated for the section info.
              */
-	    HDassert(!H5F_addr_defined(fspace->sect_addr));
+            HDassert(!H5F_addr_defined(fspace->sect_addr));
         } /* end else */
     } /* end if */
     else if(H5F_addr_defined(fspace->sect_addr)) {
@@ -594,7 +594,7 @@ H5FS__cache_hdr_pre_serialize(const H5F_t *f, hid_t dxpl_id, void *_thing,
             unsigned sect_status = 0;
             haddr_t new_sect_addr;
 
-	    /* we have work to do -- must relocate section info into 
+            /* we have work to do -- must relocate section info into 
              * real file space.
              *
              * Since the section info address is in temporary space (AKA
@@ -1379,3 +1379,4 @@ H5FS__sinfo_serialize_node_cb(void *_item, void H5_ATTR_UNUSED *key, void *_udat
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS__sinfo_serialize_node_cb() */
+
