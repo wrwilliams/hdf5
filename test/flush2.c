@@ -31,8 +31,13 @@
 
 const char *FILENAME[] = {
     "flush",
+    "flush-swmr",
     "noflush",
+    "noflush-swmr",
+    "flush_extend",
+    "flush_extend-swmr",
     "noflush_extend",
+    "noflush_extend-swmr",
     NULL
 };
 
@@ -219,6 +224,19 @@ main(void)
     /* Check the case where the file was flushed */
     h5_fixname(FILENAME[0], fapl, name, sizeof name);
 
+    if(check_file(name, fapl, FALSE)) {
+        H5_FAILED()
+        goto error;
+    }
+    else
+        PASSED();
+
+
+    TESTING("H5Fflush (part2 with flush + SWMR)");
+
+    /* Check the case where the file was flushed w/SWMR */
+    h5_fixname(FILENAME[1], fapl, name, sizeof name);
+
     /* Clear the status_flags of the file which is flushed and exited in flush1.c */
     if(clear_status_flags(name, fapl) < 0) {
         H5_FAILED()
@@ -239,7 +257,29 @@ main(void)
     H5Eget_auto2(H5E_DEFAULT,&func,NULL);
     H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
 
-    h5_fixname(FILENAME[1], fapl, name, sizeof name);
+    h5_fixname(FILENAME[2], fapl, name, sizeof name);
+    /* No need to clear the status_flags because this file is not flushed in flush1.c */
+    /* H5Fopen() in check_file() will just return error */
+    if(check_file(name, fapl, FALSE))
+        PASSED()
+    else {
+#if defined H5_HAVE_WIN32_API && !defined (hdf5_EXPORTS)
+        SKIPPED();
+        puts("   DLL will flush the file even when calling _exit, skip this test temporarily");
+#else
+        H5_FAILED()
+        goto error;
+#endif
+    }
+    H5Eset_auto2(H5E_DEFAULT, func, NULL);
+
+    /* Check the case where the file was not flushed.  This should give an error
+     * so we turn off the error stack temporarily */
+    TESTING("H5Fflush (part2 without flush + SWMR)");
+    H5Eget_auto2(H5E_DEFAULT,&func,NULL);
+    H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
+
+    h5_fixname(FILENAME[3], fapl, name, sizeof name);
     /* No need to clear the status_flags because this file is not flushed in flush1.c */
     /* H5Fopen() in check_file() will just return error */
     if(check_file(name, fapl, FALSE))
@@ -257,17 +297,78 @@ main(void)
 
     /* Check the case where the file was flushed, but more data was added afterward.  This should give an error
      * so we turn off the error stack temporarily */
-    TESTING("H5Fflush (part2 with flush and later addition)");
+    TESTING("H5Fflush (part2 with flush and later addition and another flush)");
     H5Eget_auto2(H5E_DEFAULT,&func,NULL);
     H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
 
-    h5_fixname(FILENAME[2], fapl, name, sizeof name);
+    h5_fixname(FILENAME[4], fapl, name, sizeof name);
 
     /* Clear the status_flags of the file which is flushed and exited in flush1.c */
     if(clear_status_flags(name, fapl) < 0) {
         H5_FAILED()
         goto error;
     }
+
+    if(check_file(name, fapl, TRUE)) {
+        H5_FAILED()
+        goto error;
+    }
+    else
+        PASSED();
+
+    H5Eset_auto2(H5E_DEFAULT, func, NULL);
+
+    /* Check the case where the file was flushed, but more data was added afterward.  This should give an error
+     * so we turn off the error stack temporarily */
+    TESTING("H5Fflush (part2 with flush and later addition and another flush + SWMR)");
+    H5Eget_auto2(H5E_DEFAULT,&func,NULL);
+    H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
+
+    h5_fixname(FILENAME[5], fapl, name, sizeof name);
+
+    if(check_file(name, fapl, TRUE))
+        PASSED()
+    else {
+#if defined H5_HAVE_WIN32_API && !defined (hdf5_EXPORTS)
+        SKIPPED();
+        puts("   DLL will flush the file even when calling _exit, skip this test temporarily");
+#else
+        H5_FAILED()
+        goto error;
+#endif
+    }
+
+    H5Eset_auto2(H5E_DEFAULT, func, NULL);
+
+    /* Check the case where the file was flushed, but more data was added afterward.  This should give an error
+     * so we turn off the error stack temporarily */
+    TESTING("H5Fflush (part2 with flush and later addition)");
+    H5Eget_auto2(H5E_DEFAULT,&func,NULL);
+    H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
+
+    h5_fixname(FILENAME[6], fapl, name, sizeof name);
+
+    if(check_file(name, fapl, TRUE))
+        PASSED()
+    else {
+#if defined H5_HAVE_WIN32_API && !defined (hdf5_EXPORTS)
+        SKIPPED();
+        puts("   DLL will flush the file even when calling _exit, skip this test temporarily");
+#else
+        H5_FAILED()
+        goto error;
+#endif
+    }
+
+    H5Eset_auto2(H5E_DEFAULT, func, NULL);
+
+    /* Check the case where the file was flushed, but more data was added afterward.  This should give an error
+     * so we turn off the error stack temporarily */
+    TESTING("H5Fflush (part2 with flush and later addition + SWMR)");
+    H5Eget_auto2(H5E_DEFAULT,&func,NULL);
+    H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
+
+    h5_fixname(FILENAME[7], fapl, name, sizeof name);
 
     if(check_file(name, fapl, TRUE))
         PASSED()
