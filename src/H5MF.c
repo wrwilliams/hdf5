@@ -992,6 +992,14 @@ HDfprintf(stderr, "%s: Check 1.0\n", FUNC);
     if(H5AC_set_ring(dxpl_id, fsm_ring, &dxpl, &orig_ring) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, HADDR_UNDEF, "unable to set ring value")
 
+     /* we are about to change the contents of the free space manager --
+      * notify metadata cache that the associated fsm ring is
+      * unsettled
+      */
+    if(H5AC_unsettle_ring(f, fsm_ring) < 0)
+        HGOTO_ERROR(H5E_RESOURCE, H5E_SYSTEM, HADDR_UNDEF, \
+                    "attempt to notify cache that ring is unsettled failed.")
+
     /* Check if the free space manager for the file has been initialized */
     if(!f->shared->fs_man[fs_type] && H5F_addr_defined(f->shared->fs_addr[fs_type])) {
         /* Open the free-space manager */
@@ -1377,6 +1385,14 @@ HDfprintf(stderr, "%s: Entering - alloc_type = %u, addr = %a, size = %Hu\n", FUN
         fsm_ring = H5C_RING_RDFSM;
     if(H5AC_set_ring(dxpl_id, fsm_ring, &dxpl, &orig_ring) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, FAIL, "unable to set ring value")
+
+    /* we are about to change the contents of the free space manager --
+     * notify metadata cache that the associated fsm ring is
+     * unsettled
+     */
+    if (H5AC_unsettle_ring(f, fsm_ring) < 0)
+        HGOTO_ERROR(H5E_RESOURCE, H5E_SYSTEM, FAIL, \
+                    "attempt to notify cache that ring is unsettled failed.")
 
     /* Check for attempting to free space that's a 'temporary' file address */
     if(H5F_addr_le(f->shared->tmp_addr, addr))
@@ -2163,7 +2179,12 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
              (final_eoa = H5FD_get_eoa(f->shared->lf, H5FD_MEM_DEFAULT)) )
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to get file size")
 
-        HDassert(final_eoa == f->shared->eoa_post_fsm_fsalloc);
+        /* f->shared->eoa_post_fsm_fsalloc is undefined if there has 
+         * been no file space allocation or deallocation since file 
+         * open.
+         */
+        HDassert((f->shared->first_alloc_dealloc) ||
+                 (final_eoa == f->shared->eoa_post_fsm_fsalloc));
 
     } /* end if */
     else {  /* super_vers can be 0, 1, 2 */
@@ -3222,6 +3243,10 @@ H5MF_settle_raw_data_fsm(H5F_t *f, hid_t dxpl_id)
     /* shouldn't be called if free space managers aren't persistant */
     HDassert(f->shared->fs_persist);
 
+    /* shouldn't be called if there have been no file space allocations or
+     * deallocations since file open (note NOT since file creation).
+     */
+    HDassert(!f->shared->first_alloc_dealloc);
 
     /* shouldn't be called unless we have a superblock supporting the
      * superblock extension.
@@ -3780,6 +3805,11 @@ H5MF_settle_meta_data_fsm(H5F_t *f, hid_t dxpl_id)
 
     /* shouldn't be called if free space strategy isn't persistant */
     HDassert(f->shared->fs_persist);
+
+    /* shouldn't be called if there have been no file space allocations or
+     * deallocations since file open (note NOT since file creation).
+     */
+    HDassert(!f->shared->first_alloc_dealloc);
 
     H5MF_alloc_to_fs_type(f, H5FD_MEM_FSPACE_HDR, (size_t)1, 
                           &sm_fshdr_fs_type);
@@ -4396,15 +4426,15 @@ H5MF_tidy_self_referential_fsm_hack(H5F_t *f, hid_t dxpl_id)
                 first_srfsm_hdr = f->shared->fs_addr[lg_fshdr_fs_type];
 
 
-            HDassert(NULL == f->shared->fs_man[sm_fssinfo_fs_type]);
+            HDassert(NULL == f->shared->fs_man[lg_fshdr_fs_type]);
 
             /* open the FSM */
-            if ( H5MF_open_fstype(f, dxpl_id, sm_fssinfo_fs_type) < 0 )
+            if ( H5MF_open_fstype(f, dxpl_id, lg_fshdr_fs_type) < 0 )
 
                  HGOTO_ERROR(H5E_RESOURCE, H5E_CANTINIT, FAIL, \
                              "can't initialize file free space manager")
 
-            HDassert(f->shared->fs_man[sm_fssinfo_fs_type]);
+            HDassert(f->shared->fs_man[lg_fshdr_fs_type]);
         }
 
         if ( ( lg_fshdr_fs_type != lg_fssinfo_fs_type ) &&
