@@ -363,7 +363,7 @@ H5HF__cache_hdr_get_final_load_size(const void *_image, size_t image_len,
     const uint8_t *image = (const uint8_t *)_image;	/* Pointer into raw data buffer */
     H5HF_hdr_cache_ud_t *udata = (H5HF_hdr_cache_ud_t *)_udata; /* pointer to user data */
     unsigned filter_len;        /* Size of I/O filter information (in bytes) */
-    htri_t ret_value = SUCCEED; /* Return value */
+    herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_STATIC
 
@@ -1730,7 +1730,7 @@ H5HF__cache_dblock_deserialize(const void *_image, size_t len, void *_udata,
     H5HF_dblock_cache_ud_t *udata = (H5HF_dblock_cache_ud_t *)_udata;   /* User data for callback */
     H5HF_parent_t       *par_info;      /* Pointer to parent information */
     H5HF_direct_t       *dblock = NULL; /* Direct block info */
-    const uint8_t       *image = _image;/* Pointer into raw data buffer */
+    const uint8_t       *image = (const uint8_t *)_image;/* Pointer into raw data buffer */
     void                *read_buf = NULL; /* Pointer to buffer to decompress */
     haddr_t             heap_addr;      /* Address of heap header in the file */
     void *              ret_value = NULL;       /* Return value */
@@ -2629,38 +2629,38 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, H5HF_hdr_t *hdr,
 
         /* make note of the on disk address of the root iblock */
         if(root_iblock == NULL)
-	    /* hdr->man_dtable.table_addr must contain address of root
+            /* hdr->man_dtable.table_addr must contain address of root
              * iblock.  Check to see if it is in cache.  If it is, 
              * protect it and put its address in root_iblock.
              */
-	    root_iblock_addr = hdr->man_dtable.table_addr;
+            root_iblock_addr = hdr->man_dtable.table_addr;
         else
-	    root_iblock_addr = root_iblock->addr;
+            root_iblock_addr = root_iblock->addr;
 
-	/* get the status of the root iblock */
-	HDassert(root_iblock_addr != HADDR_UNDEF);
+        /* get the status of the root iblock */
+        HDassert(root_iblock_addr != HADDR_UNDEF);
         if(H5AC_get_entry_status(f, root_iblock_addr, &root_iblock_status) < 0)
             HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't get root iblock status")
 
-	root_iblock_in_cache = ( (root_iblock_status & H5AC_ES__IN_CACHE) != 0);
-	HDassert(root_iblock_in_cache || (root_iblock == NULL));
+        root_iblock_in_cache = ( (root_iblock_status & H5AC_ES__IN_CACHE) != 0);
+        HDassert(root_iblock_in_cache || (root_iblock == NULL));
 
-	if(!root_iblock_in_cache) /* we are done */
-	    *clean = TRUE;
-	else if(root_iblock_status & H5AC_ES__IS_DIRTY)
-	    *clean = FALSE;
+        if(!root_iblock_in_cache) /* we are done */
+            *clean = TRUE;
+        else if(root_iblock_status & H5AC_ES__IS_DIRTY)
+            *clean = FALSE;
     } /* end if */
     else if((hdr->man_dtable.curr_root_rows == 0) &&
-		(HADDR_UNDEF != hdr->man_dtable.table_addr)) {
+            (HADDR_UNDEF != hdr->man_dtable.table_addr)) {
         haddr_t		root_dblock_addr;
         unsigned	root_dblock_status = 0;
 
-	/* this is scenario 2 -- we have a root dblock */
-	root_dblock_addr = hdr->man_dtable.table_addr;
+        /* this is scenario 2 -- we have a root dblock */
+        root_dblock_addr = hdr->man_dtable.table_addr;
         if(H5AC_get_entry_status(f, root_dblock_addr, &root_dblock_status) < 0)
             HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't get root dblock status")
 
-	if(root_dblock_status & H5AC_ES__IN_CACHE) {
+        if(root_dblock_status & H5AC_ES__IN_CACHE) {
             /* If a root dblock is in cache, it must have a flush
              * dependency relationship with the header.
              */
@@ -2669,11 +2669,11 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, H5HF_hdr_t *hdr,
             if(0 != (root_dblock_status & H5AC_ES__IS_FLUSH_DEP_PARENT))
                 HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "root dblock in cache and is a flush dep parent.")
 
-	    if(root_dblock_status & H5AC_ES__IS_DIRTY)
+            if(root_dblock_status & H5AC_ES__IS_DIRTY)
                 *clean = FALSE;
-	} /* end if */
+        } /* end if */
         else    /* root dblock not in cache */
-	    *clean = TRUE;
+            *clean = TRUE;
     } /* end else-if */
     else
 	/* this is scenario 3 -- the fractal heap is empty, and we 
@@ -2749,11 +2749,11 @@ H5HF__cache_verify_iblock_descendants_clean(H5F_t *f, H5HF_indirect_t *iblock,
 
     /* verify that flush dependency setup is plausible */
     if(0 == (*iblock_status & H5AC_ES__IS_FLUSH_DEP_CHILD))
-	HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock is not a flush dep child.")
+        HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock is not a flush dep child.")
     if(((has_dblocks || has_iblocks)) && (0 == (*iblock_status & H5AC_ES__IS_FLUSH_DEP_PARENT)))
-	HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock has children and is not a flush dep parent.")
+        HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock has children and is not a flush dep parent.")
     if(((has_dblocks || has_iblocks)) && (0 == (*iblock_status & H5AC_ES__IS_PINNED)))
-	HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock has children and is not pinned.")
+        HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock has children and is not pinned.")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2762,29 +2762,29 @@ done:
 
 
 /*------------------------------------------------------------------------
- * Function:	H5HF__cache_verify_iblocks_dblocks_clean
+ * Function:    H5HF__cache_verify_iblocks_dblocks_clean
  *
- * Purpose:	Sanity checking routine that attempts to verify that all
- *		direct blocks pointed to by the supplied indirect block
- *		are either clean, or not in the cache.
+ * Purpose:     Sanity checking routine that attempts to verify that all
+ *              direct blocks pointed to by the supplied indirect block
+ *              are either clean, or not in the cache.
  *
- *		In passing, the function also does a cursory check to 
- *		spot any obvious errors in the flush dependency setup.  
- *		If any problems are found, the function returns failure.  
- *		Note that these checks are not exhaustive, thus passing 
- *		them does not mean that the flush dependencies are 
- *		correct -- only that there is nothing obviously wrong
- *		with them.
+ *              In passing, the function also does a cursory check to 
+ *              spot any obvious errors in the flush dependency setup.  
+ *              If any problems are found, the function returns failure.  
+ *              Note that these checks are not exhaustive, thus passing 
+ *              them does not mean that the flush dependencies are 
+ *              correct -- only that there is nothing obviously wrong
+ *              with them.
  *
- *		WARNING:  This function presumes that the supplied 
- *		iblock is in the cache, and will not be removed 
- *		during the call.  Caller must ensure that this is 
- *		the case before the call.
+ *              WARNING:  This function presumes that the supplied 
+ *              iblock is in the cache, and will not be removed 
+ *              during the call.  Caller must ensure that this is 
+ *              the case before the call.
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:	John Mainzer
- *		5/25/14
+ * Programmer:  John Mainzer
+ *              5/25/14
  *
  *-------------------------------------------------------------------------
  */

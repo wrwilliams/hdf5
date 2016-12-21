@@ -1635,7 +1635,7 @@ H5Fget_mdc_logging_status(hid_t file_id, hbool_t *is_enabled,
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* H5Fstop_mdc_logging() */
+} /* H5Fget_mdc_logging_status() */
 
 
 /*-------------------------------------------------------------------------
@@ -1710,4 +1710,3 @@ H5Fformat_convert(hid_t fid)
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Fformat_convert() */
-

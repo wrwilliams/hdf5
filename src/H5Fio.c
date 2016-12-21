@@ -37,6 +37,7 @@
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5Fpkg.h"             /* File access				*/
+#include "H5FDprivate.h"	/* File drivers				*/
 #include "H5PBprivate.h"	/* Page Buffer				*/
 
 /****************/

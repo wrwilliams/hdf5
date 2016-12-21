@@ -354,7 +354,7 @@ H5FD_try_extend(H5FD_t *file, H5FD_mem_t type, haddr_t blk_end,
             HGOTO_ERROR(H5E_VFL, H5E_CANTEXTEND, FAIL, "driver extend request failed")
 
         /* Indicate success */
-        ret_value = TRUE;
+        HGOTO_DONE(TRUE)
     } /* end if */
 
 done:

@@ -1971,7 +1971,7 @@ H5O_merge_null(H5F_t *f, hid_t dxpl_id, H5O_t *oh)
                         /* Second message has been merged, delete it */
                         if(merged_msg) {
                             H5O_chunk_proxy_t *curr_chk_proxy;        /* Chunk that message is in */
-			    htri_t result;
+                            htri_t result;
 
                             /* Release any information/memory for second message */
                             H5O_msg_free_mesg(curr_msg2);
@@ -1999,12 +1999,12 @@ H5O_merge_null(H5F_t *f, hid_t dxpl_id, H5O_t *oh)
                             /* (Don't bother reducing size of message array for now -QAK) */
                             oh->nmesgs--;
 
-			    /* The merge null message might span the entire chunk: scan for empty chunk to remove */
-			    if((result = H5O_remove_empty_chunks(f, dxpl_id, oh)) < 0)
-				HGOTO_ERROR(H5E_OHDR, H5E_CANTPACK, FAIL, "can't remove empty chunk")
-			    else if(result > 0)
-				/* Get out of loop */
-				break;
+                            /* The merge null message might span the entire chunk: scan for empty chunk to remove */
+                            if((result = H5O_remove_empty_chunks(f, dxpl_id, oh)) < 0)
+                                HGOTO_ERROR(H5E_OHDR, H5E_CANTPACK, FAIL, "can't remove empty chunk")
+                            else if(result > 0)
+                                /* Get out of loop */
+                                break;
 
                             /* If the merged message is too large, shrink the chunk */
                             if(curr_msg->raw_size >= H5O_MESG_MAX_SIZE)
@@ -2381,6 +2381,7 @@ H5O_alloc_shrink_chunk(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned chunkno)
     total_msg_size = new_size - (size_t)(chunkno == 0 ? H5O_SIZEOF_HDR(oh) : H5O_SIZEOF_CHKHDR_OH(oh));
     if(total_msg_size < min_chunk_size) {
         HDassert(oh->alloc_nmesgs > oh->nmesgs);
+        oh->nmesgs++;
 
         /* Initialize new null message to make the chunk large enough */
         oh->mesg[oh->nmesgs].type = H5O_MSG_NULL;
@@ -2393,7 +2394,6 @@ H5O_alloc_shrink_chunk(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned chunkno)
 
         /* update the new chunk size */
         new_size += oh->mesg[oh->nmesgs].raw_size + sizeof_msghdr;
-        oh->nmesgs++;
     } /* end if */
 
     /* Check for changing the chunk #0 data size enough to need adjusting the flags */

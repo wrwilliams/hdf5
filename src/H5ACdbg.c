@@ -154,7 +154,7 @@ done:
 herr_t
 H5AC__close_trace_file(H5AC_t *cache_ptr)
 {
-    FILE *   trace_file_ptr;
+    FILE *   trace_file_ptr = NULL;
     herr_t   ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -183,9 +183,9 @@ done:
  *
  * Purpose:     Open a trace file, and start logging calls to the cache.
  *
- * 		This logging is done at the H5C level, and will only take
- * 		place if H5C_TRACE_FILE_ENABLED (defined in H5Cprivate.h)
- * 		is TRUE.
+ *              This logging is done at the H5C level, and will only take
+ *              place if H5C_TRACE_FILE_ENABLED (defined in H5Cprivate.h)
+ *              is TRUE.
  *
  * Return:      Non-negative on success/Negative on failure
  *
@@ -198,7 +198,7 @@ herr_t
 H5AC__open_trace_file(H5AC_t *cache_ptr, const char *trace_file_name)
 {
     char     file_name[H5AC__MAX_TRACE_FILE_NAME_LEN + H5C__PREFIX_LEN + 2];
-    FILE *   file_ptr;
+    FILE *   file_ptr = NULL;
     herr_t   ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_PACKAGE

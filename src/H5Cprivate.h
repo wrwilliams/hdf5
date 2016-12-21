@@ -66,11 +66,11 @@
 #endif /* H5_HAVE_PARALLEL */
 
 /* Flags for cache client class behavior */
-#define H5C__CLASS_NO_FLAGS_SET			((unsigned)0x0)
-#define H5C__CLASS_SPECULATIVE_LOAD_FLAG	((unsigned)0x1)
+#define H5C__CLASS_NO_FLAGS_SET             ((unsigned)0x0)
+#define H5C__CLASS_SPECULATIVE_LOAD_FLAG    ((unsigned)0x1)
 /* The following flags may only appear in test code */
-#define H5C__CLASS_SKIP_READS			((unsigned)0x2)
-#define H5C__CLASS_SKIP_WRITES			((unsigned)0x4)
+#define H5C__CLASS_SKIP_READS               ((unsigned)0x2)
+#define H5C__CLASS_SKIP_WRITES              ((unsigned)0x4)
 
 /* Flags for pre-serialize callback */
 #define H5C__SERIALIZE_NO_FLAGS_SET	((unsigned)0)
@@ -185,21 +185,21 @@
  *      H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG
  *      H5C__GENERATE_IMAGE_FLAG
  */
-#define H5C__NO_FLAGS_SET			0x00000
-#define H5C__SET_FLUSH_MARKER_FLAG		0x00001
-#define H5C__DELETED_FLAG			0x00002
-#define H5C__DIRTIED_FLAG			0x00004
-#define H5C__PIN_ENTRY_FLAG			0x00008
-#define H5C__UNPIN_ENTRY_FLAG			0x00010
-#define H5C__FLUSH_INVALIDATE_FLAG		0x00020
-#define H5C__FLUSH_CLEAR_ONLY_FLAG		0x00040
-#define H5C__FLUSH_MARKED_ENTRIES_FLAG		0x00080
-#define H5C__FLUSH_IGNORE_PROTECTED_FLAG	0x00100
-#define H5C__READ_ONLY_FLAG			0x00200
-#define H5C__FREE_FILE_SPACE_FLAG		0x00400
-#define H5C__TAKE_OWNERSHIP_FLAG		0x00800
-#define H5C__FLUSH_LAST_FLAG			0x01000
-#define H5C__FLUSH_COLLECTIVELY_FLAG		0x02000
+#define H5C__NO_FLAGS_SET                       0x00000
+#define H5C__SET_FLUSH_MARKER_FLAG              0x00001
+#define H5C__DELETED_FLAG                       0x00002
+#define H5C__DIRTIED_FLAG                       0x00004
+#define H5C__PIN_ENTRY_FLAG                     0x00008
+#define H5C__UNPIN_ENTRY_FLAG                   0x00010
+#define H5C__FLUSH_INVALIDATE_FLAG              0x00020
+#define H5C__FLUSH_CLEAR_ONLY_FLAG              0x00040
+#define H5C__FLUSH_MARKED_ENTRIES_FLAG          0x00080
+#define H5C__FLUSH_IGNORE_PROTECTED_FLAG        0x00100
+#define H5C__READ_ONLY_FLAG                     0x00200
+#define H5C__FREE_FILE_SPACE_FLAG               0x00400
+#define H5C__TAKE_OWNERSHIP_FLAG                0x00800
+#define H5C__FLUSH_LAST_FLAG                    0x01000
+#define H5C__FLUSH_COLLECTIVELY_FLAG            0x02000
 #define H5C__EVICT_ALLOW_LAST_PINS_FLAG         0x04000
 #define H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG     0x08000
 #define H5C__DURING_FLUSH_FLAG                  0x10000 /* Set when the entire cache is being flushed */
@@ -955,12 +955,12 @@ typedef herr_t (*H5C_log_flush_func_t)(H5C_t *cache_ptr, haddr_t addr,
  * debugging.
  */
 
-#define H5C_RING_UNDEFINED	0 /* shouldn't appear in the cache */
-#define H5C_RING_USER		1 /* outermost ring */
-#define H5C_RING_FSM		2
-#define H5C_RING_SBE		4 /* temporarily merged with H5C_RING_SB */
-#define H5C_RING_SB		4 /* innermost ring */
-#define H5C_RING_NTYPES		5 
+#define H5C_RING_UNDEFINED  0 /* shouldn't appear in the cache */
+#define H5C_RING_USER       1 /* outermost ring */
+#define H5C_RING_FSM        2
+#define H5C_RING_SBE        4 /* temporarily merged with H5C_RING_SB */
+#define H5C_RING_SB         4 /* innermost ring */
+#define H5C_RING_NTYPES     5 
 
 typedef int H5C_ring_t;
 
@@ -1343,29 +1343,29 @@ typedef int H5C_ring_t;
  *
  ****************************************************************************/
 typedef struct H5C_cache_entry_t {
-    uint32_t			magic;
-    H5C_t                     * cache_ptr;
-    haddr_t			addr;
-    size_t			size;
-    void  		      *	image_ptr;
-    hbool_t			image_up_to_date;
-    const H5C_class_t	      *	type;
-    hbool_t			is_dirty;
-    hbool_t			dirtied;
-    hbool_t			is_protected;
-    hbool_t			is_read_only;
-    int				ro_ref_count;
-    hbool_t			is_pinned;
-    hbool_t			in_slist;
-    hbool_t			flush_marker;
+    uint32_t                    magic;
+    H5C_t                      *cache_ptr;
+    haddr_t                     addr;
+    size_t                      size;
+    void                       *image_ptr;
+    hbool_t                     image_up_to_date;
+    const H5C_class_t          *type;
+    hbool_t                     is_dirty;
+    hbool_t                     dirtied;
+    hbool_t                     is_protected;
+    hbool_t                     is_read_only;
+    int                         ro_ref_count;
+    hbool_t                     is_pinned;
+    hbool_t                     in_slist;
+    hbool_t                     flush_marker;
     hbool_t                     flush_me_last;
 #ifdef H5_HAVE_PARALLEL
-    hbool_t			clear_on_unprotect;
-    hbool_t			flush_immediately;
-    hbool_t			coll_access;
+    hbool_t                     clear_on_unprotect;
+    hbool_t                     flush_immediately;
+    hbool_t                     coll_access;
 #endif /* H5_HAVE_PARALLEL */
-    hbool_t			flush_in_progress;
-    hbool_t			destroy_in_progress;
+    hbool_t                     flush_in_progress;
+    hbool_t                     destroy_in_progress;
 
     /* fields supporting rings for purposes of flush ordering */
     H5C_ring_t                  ring;
@@ -1376,34 +1376,34 @@ typedef struct H5C_cache_entry_t {
     unsigned                    flush_dep_parent_nalloc;
     unsigned                    flush_dep_nchildren;
     unsigned                    flush_dep_ndirty_children;
-    hbool_t			pinned_from_client;
-    hbool_t			pinned_from_cache;
+    hbool_t                     pinned_from_client;
+    hbool_t                     pinned_from_cache;
 
     /* fields supporting the hash table: */
-    struct H5C_cache_entry_t  *	ht_next;
-    struct H5C_cache_entry_t  *	ht_prev;
+    struct H5C_cache_entry_t   *ht_next;
+    struct H5C_cache_entry_t   *ht_prev;
 
     /* fields supporting replacement policies: */
-    struct H5C_cache_entry_t  *	next;
-    struct H5C_cache_entry_t  *	prev;
-    struct H5C_cache_entry_t  *	aux_next;
-    struct H5C_cache_entry_t  *	aux_prev;
+    struct H5C_cache_entry_t   *next;
+    struct H5C_cache_entry_t   *prev;
+    struct H5C_cache_entry_t   *aux_next;
+    struct H5C_cache_entry_t   *aux_prev;
 #ifdef H5_HAVE_PARALLEL
-    struct H5C_cache_entry_t  *	coll_next;
-    struct H5C_cache_entry_t  *	coll_prev;
+    struct H5C_cache_entry_t   *coll_next;
+    struct H5C_cache_entry_t   *coll_prev;
 #endif /* H5_HAVE_PARALLEL */
 
     /* fields supporting tag lists */
-    struct H5C_cache_entry_t  *	tl_next;
-    struct H5C_cache_entry_t  *	tl_prev;
-    struct H5C_tag_info_t     * tag_info;
+    struct H5C_cache_entry_t   *tl_next;
+    struct H5C_cache_entry_t   *tl_prev;
+    struct H5C_tag_info_t      *tag_info;
 
 #if H5C_COLLECT_CACHE_ENTRY_STATS
     /* cache entry stats fields */
-    int32_t			accesses;
-    int32_t			clears;
-    int32_t			flushes;
-    int32_t			pins;
+    int32_t                     accesses;
+    int32_t                     clears;
+    int32_t                     flushes;
+    int32_t                     pins;
 #endif /* H5C_COLLECT_CACHE_ENTRY_STATS */
 } H5C_cache_entry_t;
 
@@ -1786,4 +1786,3 @@ H5_DLL herr_t H5C_mark_entries_as_clean(H5F_t *f, hid_t dxpl_id, int32_t ce_arra
 #endif /* H5_HAVE_PARALLEL */
 
 #endif /* !_H5Cprivate_H */
-

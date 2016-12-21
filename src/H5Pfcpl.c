@@ -205,7 +205,6 @@ static const hsize_t H5F_def_file_space_page_size_g = H5F_CRT_FILE_SPACE_PAGE_SI
  *
  * Programmer:  Quincey Koziol
  *              October 31, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -287,7 +286,7 @@ H5P_fcrt_reg_prop(H5P_genclass_t *pclass)
             NULL, NULL, NULL, NULL) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
-    /* Register the free-space section threshold */
+    /* Register the free space section threshold */
     if(H5P_register_real(pclass, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, H5F_CRT_FREE_SPACE_THRESHOLD_SIZE, &H5F_def_free_space_threshold_g, 
             NULL, NULL, NULL, H5F_CRT_FREE_SPACE_THRESHOLD_ENC, H5F_CRT_FREE_SPACE_THRESHOLD_DEC, 
             NULL, NULL, NULL, NULL) < 0)

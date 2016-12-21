@@ -34,9 +34,9 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Cpkg.h"		/* Cache				*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
+#include "H5private.h"      /* Generic Functions            */
+#include "H5Cpkg.h"         /* Cache                        */
+#include "H5Eprivate.h"     /* Error Handling               */
 
 
 /****************/
@@ -90,7 +90,7 @@ herr_t H5C_dump_cache_skip_list(H5C_t *cache_ptr, char *calling_fcn);
 herr_t
 H5C_dump_cache(H5C_t * cache_ptr, const char *  cache_name)
 {
-    H5C_cache_entry_t * entry_ptr;
+    H5C_cache_entry_t * entry_ptr = NULL;
     H5SL_t *            slist_ptr = NULL;
     int                 i;                      /* Local index variable */
     herr_t              ret_value = SUCCEED;    /* Return value */
@@ -613,7 +613,7 @@ H5C_stats(H5C_t * cache_ptr,
 	      "%s  Total entry pins (dirty) / unpins  = %ld (%ld) / %ld\n",
               cache_ptr->prefix,
               (long)total_pins,
-	      (long)total_dirty_pins,
+              (long)total_dirty_pins,
               (long)total_unpins);
 
     HDfprintf(stdout, "%s  Total pinned flushes / clears      = %ld / %ld\n",
@@ -625,11 +625,10 @@ H5C_stats(H5C_t * cache_ptr,
               cache_ptr->prefix,
               (long long)(cache_ptr->calls_to_msic));
 
-    if (cache_ptr->calls_to_msic > 0) {
+    if (cache_ptr->calls_to_msic > 0)
         average_entries_skipped_per_calls_to_msic =
             (((double)(cache_ptr->total_entries_skipped_in_msic)) /
             ((double)(cache_ptr->calls_to_msic)));
-    }
 
     HDfprintf(stdout, "%s  MSIC: Average/max entries skipped  = %lf / %ld\n",
               cache_ptr->prefix,
@@ -677,7 +676,7 @@ H5C_stats(H5C_t * cache_ptr,
     HDfprintf(stdout, "%s  aggregate max_size / max_pins      = %d / %d\n",
               cache_ptr->prefix,
               (int)aggregate_max_size,
-	      (int)aggregate_max_pins);
+              (int)aggregate_max_pins);
 
 #endif /* H5C_COLLECT_CACHE_ENTRY_STATS */
 
@@ -777,7 +776,7 @@ H5C_stats(H5C_t * cache_ptr,
                       "%s    entry max_size / max_pins      = %d / %d\n",
                       cache_ptr->prefix,
                       (int)(cache_ptr->max_size[i]),
-		      (int)(cache_ptr->max_pins[i]));
+                      (int)(cache_ptr->max_pins[i]));
 
 
 #endif /* H5C_COLLECT_CACHE_ENTRY_STATS */
@@ -861,8 +860,8 @@ H5C_stats__reset(H5C_t H5_ATTR_UNUSED * cache_ptr)
         cache_ptr->pinned_clears[i]	 	= 0;
         cache_ptr->size_increases[i] 		= 0;
         cache_ptr->size_decreases[i] 		= 0;
-	cache_ptr->entry_flush_size_changes[i]	= 0;
-	cache_ptr->cache_flush_size_changes[i]	= 0;
+        cache_ptr->entry_flush_size_changes[i]	= 0;
+        cache_ptr->cache_flush_size_changes[i]	= 0;
     } /* end for */
 
     cache_ptr->total_ht_insertions		= 0;
@@ -893,9 +892,9 @@ H5C_stats__reset(H5C_t H5_ATTR_UNUSED * cache_ptr)
     cache_ptr->max_entries_scanned_in_msic      = 0;
     cache_ptr->entries_scanned_to_make_space    = 0;
 
-    cache_ptr->slist_scan_restarts		= 0;
-    cache_ptr->LRU_scan_restarts		= 0;
-    cache_ptr->hash_bucket_scan_restarts	= 0;
+    cache_ptr->slist_scan_restarts              = 0;
+    cache_ptr->LRU_scan_restarts                = 0;
+    cache_ptr->hash_bucket_scan_restarts        = 0;
 
 #if H5C_COLLECT_CACHE_ENTRY_STATS
     for(i = 0; i <= cache_ptr->max_type_id; i++) {
@@ -910,6 +909,7 @@ H5C_stats__reset(H5C_t H5_ATTR_UNUSED * cache_ptr)
 #endif /* H5C_COLLECT_CACHE_ENTRY_STATS */
 #endif /* H5C_COLLECT_CACHE_STATS */
 
+    return;
 } /* H5C_stats__reset() */
 
 extern void

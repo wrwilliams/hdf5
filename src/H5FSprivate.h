@@ -67,11 +67,11 @@
                                          *      managed sections is in flux)
                                          */
 
-#define H5FS_PAGE_END_NO_ADD    0x08  	/* For "small" page fs:
-					 * Don't add section to free space:
-					 * 	when the section is at page end and
-					 * 	when the section size is <= "small"
-				    	 */
+#define H5FS_PAGE_END_NO_ADD    0x08    /* For "small" page fs:
+                                         * Don't add section to free space:
+                                         * 	when the section is at page end and
+                                         * 	when the section size is <= "small"
+                                         */
 
 /* Flags for deserialize callback  */
 #define H5FS_DESERIALIZE_NO_ADD  0x01   /* Don't add section to free space

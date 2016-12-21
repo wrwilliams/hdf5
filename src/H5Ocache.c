@@ -657,7 +657,11 @@ H5O__cache_notify(H5AC_notify_action_t action, void *_thing)
     H5O_t *oh = (H5O_t *)_thing;
     herr_t ret_value = SUCCEED;         /* Return value */
 
+#ifdef NDEBUG
     FUNC_ENTER_STATIC
+#else /* NDEBUG */
+    FUNC_ENTER_STATIC_NOERR
+#endif /* NDEBUG */
 
     /*
      * Check arguments.
@@ -701,7 +705,10 @@ H5O__cache_notify(H5AC_notify_action_t action, void *_thing)
 #endif /* NDEBUG */
     } /* end switch */
 
+#ifdef NDEBUG
 done:
+#endif /* NDEBUG */
+
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__cache_notify() */
 
@@ -998,7 +1005,6 @@ static herr_t
 H5O__cache_chk_notify(H5AC_notify_action_t action, void *_thing)
 {
     H5O_chunk_proxy_t *chk_proxy = (H5O_chunk_proxy_t *)_thing;
-    void *parent = NULL;                /* Chunk containing continuation message that points to this chunk */
     H5O_chunk_proxy_t *cont_chk_proxy = NULL; /* Proxy for chunk containing continuation message that points to this chunk, if not chunk 0 */
     herr_t ret_value = SUCCEED;         /* Return value */
 

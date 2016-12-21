@@ -236,7 +236,7 @@ H5HG__cache_heap_deserialize(const void *_image, size_t len, void *_udata,
     if(NULL == (heap->chunk = H5FL_BLK_MALLOC(gheap_chunk, len)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
-    /* copy the image buffer into the newly allocate chunk */
+    /* Copy the image buffer into the newly allocate chunk */
     HDmemcpy(heap->chunk, _image, len);
 
     image = heap->chunk;

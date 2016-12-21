@@ -372,6 +372,9 @@
 #define H5F_SET_GRP_BTREE_SHARED(F, RC) (H5F_set_grp_btree_shared((F), (RC)))
 #define H5F_USE_TMP_SPACE(F)    (H5F_use_tmp_space(F))
 #define H5F_IS_TMP_ADDR(F, ADDR) (H5F_is_tmp_addr((F), (ADDR)))
+#define H5F_USE_MDC_LOGGING(F)  (H5F_use_mdc_logging(F))
+#define H5F_START_MDC_LOG_ON_ACCESS(F)  (H5F_start_mdc_log_on_access(F))
+#define H5F_MDC_LOG_LOCATION(F) (H5F_mdc_log_location(F))
 #define H5F_ALIGNMENT(F)    	(H5F_get_alignment(F))
 #define H5F_THRESHOLD(F)    	(H5F_get_threshold(F))
 #define H5F_PGEND_META_THRES(F) (H5F_get_pgend_meta_thres(F))
@@ -379,11 +382,7 @@
 #ifdef H5_HAVE_PARALLEL
 #define H5F_COLL_MD_READ(F)     (H5F_coll_md_read(F))
 #endif /* H5_HAVE_PARALLEL */
-#define H5F_USE_MDC_LOGGING(F)  (H5F_use_mdc_logging(F))
-#define H5F_START_MDC_LOG_ON_ACCESS(F)  (H5F_start_mdc_log_on_access(F))
-#define H5F_MDC_LOG_LOCATION(F) (H5F_mdc_log_location(F))
 #endif /* H5F_MODULE */
-
 
 /* Macros to encode/decode offset/length's for storing in the file */
 #define H5F_ENCODE_OFFSET(f,p,o) switch(H5F_SIZEOF_ADDR(f)) {		      \
@@ -763,15 +762,15 @@ H5_DLL struct H5UC_t *H5F_grp_btree_shared(const H5F_t *f);
 H5_DLL herr_t H5F_set_grp_btree_shared(H5F_t *f, struct H5UC_t *rc);
 H5_DLL hbool_t H5F_use_tmp_space(const H5F_t *f);
 H5_DLL hbool_t H5F_is_tmp_addr(const H5F_t *f, haddr_t addr);
+H5_DLL hbool_t H5F_use_mdc_logging(const H5F_t *f);
+H5_DLL hbool_t H5F_start_mdc_log_on_access(const H5F_t *f);
+H5_DLL char *H5F_mdc_log_location(const H5F_t *f);
 H5_DLL hsize_t H5F_get_alignment(const H5F_t *f);
 H5_DLL hsize_t H5F_get_threshold(const H5F_t *f);
 #ifdef H5_HAVE_PARALLEL
 H5_DLL H5P_coll_md_read_flag_t H5F_coll_md_read(const H5F_t *f);
 H5_DLL void H5F_set_coll_md_read(H5F_t *f, H5P_coll_md_read_flag_t flag);
 #endif /* H5_HAVE_PARALLEL */
-H5_DLL hbool_t H5F_use_mdc_logging(const H5F_t *f);
-H5_DLL hbool_t H5F_start_mdc_log_on_access(const H5F_t *f);
-H5_DLL char *H5F_mdc_log_location(const H5F_t *f);
 
 /* Functions that retrieve values from VFD layer */
 H5_DLL hid_t H5F_get_driver_id(const H5F_t *f);

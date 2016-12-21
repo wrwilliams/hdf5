@@ -982,7 +982,7 @@ done:
  *
  * Purpose:	Loads an object from the disk.
  *
- * Return:	Success:	Pointer to a new B-tree.
+ * Return:	Success:	Pointer to a new driver info struct
  *		Failure:	NULL
  *
  * Programmer:	Quincey Koziol
@@ -1029,6 +1029,7 @@ H5F__cache_drvrinfo_deserialize(const void *_image, size_t len, void *_udata,
     drv_name[8] = '\0';
     image += 8; /* advance past name/version */
 
+    /* Sanity check */
     HDassert(len == (H5F_DRVINFOBLOCK_HDR_SIZE + drvinfo->len));
 
     /* Validate and decode driver information */

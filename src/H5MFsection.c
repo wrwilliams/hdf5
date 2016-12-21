@@ -436,14 +436,14 @@ H5MF_sect_simple_can_merge(const H5FS_section_info_t *_sect1,
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5MF_sect_simple_merge
+ * Function:    H5MF_sect_simple_merge
  *
- * Purpose:	Merge two sections of this type
+ * Purpose:     Merge two sections of this type
  *
- * Note: Second section always merges into first node
+ * Note:        Second section always merges into first node
  *
- * Return:	Success:	non-negative
- *          Failure:	negative
+ * Return:      Success:    non-negative
+ *              Failure:    negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -480,12 +480,12 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5MF_sect_simple_can_shrink
+ * Function:    H5MF_sect_simple_can_shrink
  *
- * Purpose:	Can this section shrink the container?
+ * Purpose:     Can this section shrink the container?
  *
- * Return:	Success:	non-negative (TRUE/FALSE)
- *          Failure:	negative
+ * Return:      Success:    non-negative (TRUE/FALSE)
+ *              Failure:    negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -510,7 +510,7 @@ H5MF_sect_simple_can_shrink(const H5FS_section_info_t *_sect, void *_udata)
 
     /* Retrieve the end of the file's address space */
     if(HADDR_UNDEF == (eoa = H5F_get_eoa(udata->f, udata->alloc_type)))
-	HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "driver get_eoa request failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "driver get_eoa request failed")
 
     /* Compute address of end of section to check */
     end = sect->sect_info.addr + sect->sect_info.size;
@@ -577,15 +577,14 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5MF_sect_simple_can_shrink() */
 
-
 
 /*-------------------------------------------------------------------------
- * Function:	H5MF_sect_simple_shrink
+ * Function:    H5MF_sect_simple_shrink
  *
- * Purpose:	Shrink container with section
+ * Purpose:     Shrink container with section
  *
- * Return:	Success:	non-negative
- *          Failure:	negative
+ * Return:      Success:    non-negative
+ *              Failure:    negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
