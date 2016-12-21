@@ -19,7 +19,7 @@
  *                      Feb 2009
  *			Vailin Choi
  *
- * Purpose:             Free space manager info message.
+ * Purpose:             File space info message.
  *
  *-------------------------------------------------------------------------
  */
@@ -43,26 +43,26 @@ static herr_t H5O_fsinfo_debug(H5F_t *f, hid_t dxpl_id, const void *_mesg,
 
 /* This message derives from H5O message class */
 const H5O_msg_class_t H5O_MSG_FSINFO[1] = {{
-    H5O_FSINFO_ID,            	/* message id number             	*/
-    "fsinfo",                 	/* message name for debugging    	*/
-    sizeof(H5O_fsinfo_t),     	/* native message size           	*/
-    0,				/* messages are sharable?        	*/
-    H5O_fsinfo_decode,        	/* decode message                	*/
-    H5O_fsinfo_encode,        	/* encode message                	*/
-    H5O_fsinfo_copy,          	/* copy the native value         	*/
-    H5O_fsinfo_size,          	/* size of free-space manager info message */
-    NULL,                   	/* default reset method         	*/
-    H5O_fsinfo_free,	        /* free method				*/
-    NULL,        		/* file delete method			*/
-    NULL,			/* link method				*/
-    NULL,			/* set share method			*/
-    NULL,		    	/* can share method			*/
-    NULL,			/* pre copy native value to file 	*/
-    NULL,			/* copy native value to file    	*/
-    NULL,			/* post copy native value to file	*/
-    NULL,			/* get creation index			*/
-    NULL,			/* set creation index			*/
-    H5O_fsinfo_debug          	/* debug the message            	*/
+    H5O_FSINFO_ID,              /* message id number                        */
+    "fsinfo",                   /* message name for debugging               */
+    sizeof(H5O_fsinfo_t),       /* native message size                      */
+    0,                          /* messages are sharable?                   */
+    H5O_fsinfo_decode,          /* decode message                           */
+    H5O_fsinfo_encode,          /* encode message                           */
+    H5O_fsinfo_copy,            /* copy the native value                    */
+    H5O_fsinfo_size,            /* size of free-space manager info message  */
+    NULL,                       /* default reset method                     */
+    H5O_fsinfo_free,            /* free method                              */
+    NULL,                       /* file delete method                       */
+    NULL,                       /* link method                              */
+    NULL,                       /* set share method                         */
+    NULL,                       /* can share method                         */
+    NULL,                       /* pre copy native value to file            */
+    NULL,                       /* copy native value to file                */
+    NULL,                       /* post copy native value to file           */
+    NULL,                       /* get creation index                       */
+    NULL,                       /* set creation index                       */
+    H5O_fsinfo_debug            /* debug the message                        */
 }};
 
 /* Current version of free-space manager info information */
@@ -111,12 +111,12 @@ H5O_fsinfo_decode(H5F_t *f, hid_t H5_ATTR_UNUSED dxpl_id, H5O_t H5_ATTR_UNUSED *
 
     /* Addresses of free space managers: only exist for H5F_FILE_SPACE_ALL_PERSIST */
     if(fsinfo->strategy == H5F_FILE_SPACE_ALL_PERSIST) {
-	for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
-	    H5F_addr_decode(f, &p, &(fsinfo->fs_addr[type-1]));
+        for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
+            H5F_addr_decode(f, &p, &(fsinfo->fs_addr[type-1]));
     } /* end if */
     else {
-	for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
-	    fsinfo->fs_addr[type-1] = HADDR_UNDEF;
+        for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
+            fsinfo->fs_addr[type-1] = HADDR_UNDEF;
     } /* end else */
 
     /* Set return value */
@@ -160,8 +160,8 @@ H5O_fsinfo_encode(H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p, c
 
     /* Addresses of free space managers: only exist for H5F_FILE_SPACE_ALL_PERSIST */
     if(fsinfo->strategy == H5F_FILE_SPACE_ALL_PERSIST) {
-	for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
-	    H5F_addr_encode(f, &p, fsinfo->fs_addr[type-1]);
+        for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
+            H5F_addr_encode(f, &p, fsinfo->fs_addr[type-1]);
     } /* end if */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
@@ -193,7 +193,7 @@ H5O_fsinfo_copy(const void *_mesg, void *_dest)
     /* check args */
     HDassert(fsinfo);
     if(!dest && NULL == (dest = H5FL_CALLOC(H5O_fsinfo_t)))
-	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* copy */
     *dest = *fsinfo;
@@ -307,4 +307,3 @@ H5O_fsinfo_debug(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, const vo
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O_fsinfo_debug() */
-

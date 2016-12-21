@@ -109,38 +109,38 @@ static herr_t H5FD_family_unlock(H5FD_t *_file);
 
 /* The class struct */
 static const H5FD_class_t H5FD_family_g = {
-    "family",					/*name			*/
-    HADDR_MAX,					/*maxaddr		*/
-    H5F_CLOSE_WEAK,				/*fc_degree		*/
-    H5FD_family_term,                           /*terminate             */
-    H5FD_family_sb_size,			/*sb_size		*/
-    H5FD_family_sb_encode,			/*sb_encode		*/
-    H5FD_family_sb_decode,			/*sb_decode		*/
-    sizeof(H5FD_family_fapl_t),			/*fapl_size		*/
-    H5FD_family_fapl_get,			/*fapl_get		*/
-    H5FD_family_fapl_copy,			/*fapl_copy		*/
-    H5FD_family_fapl_free,			/*fapl_free		*/
-    0,						/*dxpl_size		*/
-    NULL,					/*dxpl_copy		*/
-    NULL,					/*dxpl_free		*/
-    H5FD_family_open,				/*open			*/
-    H5FD_family_close,				/*close			*/
-    H5FD_family_cmp,				/*cmp			*/
-    H5FD_family_query,		                /*query			*/
-    NULL,					/*get_type_map		*/
-    NULL,					/*alloc			*/
-    NULL,					/*free			*/
-    H5FD_family_get_eoa,			/*get_eoa		*/
-    H5FD_family_set_eoa,			/*set_eoa		*/
-    H5FD_family_get_eof,			/*get_eof		*/
-    H5FD_family_get_handle,                     /*get_handle            */
-    H5FD_family_read,				/*read			*/
-    H5FD_family_write,				/*write			*/
-    H5FD_family_flush,				/*flush			*/
-    H5FD_family_truncate,			/*truncate		*/
-    H5FD_family_lock,                           /*lock                  */
-    H5FD_family_unlock,                         /*unlock                */
-    H5FD_FLMAP_DICHOTOMY                        /*fl_map                */
+    "family",                   /*name			*/
+    HADDR_MAX,                  /*maxaddr		*/
+    H5F_CLOSE_WEAK,             /*fc_degree		*/
+    H5FD_family_term,           /*terminate     */
+    H5FD_family_sb_size,        /*sb_size		*/
+    H5FD_family_sb_encode,      /*sb_encode		*/
+    H5FD_family_sb_decode,      /*sb_decode		*/
+    sizeof(H5FD_family_fapl_t), /*fapl_size		*/
+    H5FD_family_fapl_get,       /*fapl_get		*/
+    H5FD_family_fapl_copy,      /*fapl_copy		*/
+    H5FD_family_fapl_free,      /*fapl_free		*/
+    0,                          /*dxpl_size		*/
+    NULL,                       /*dxpl_copy		*/
+    NULL,                       /*dxpl_free		*/
+    H5FD_family_open,           /*open			*/
+    H5FD_family_close,          /*close			*/
+    H5FD_family_cmp,            /*cmp			*/
+    H5FD_family_query,          /*query			*/
+    NULL,                       /*get_type_map  */
+    NULL,                       /*alloc			*/
+    NULL,                       /*free			*/
+    H5FD_family_get_eoa,        /*get_eoa		*/
+    H5FD_family_set_eoa,        /*set_eoa		*/
+    H5FD_family_get_eof,        /*get_eof		*/
+    H5FD_family_get_handle,     /*get_handle    */
+    H5FD_family_read,           /*read			*/
+    H5FD_family_write,          /*write			*/
+    H5FD_family_flush,          /*flush			*/
+    H5FD_family_truncate,       /*truncate		*/
+    H5FD_family_lock,           /*lock          */
+    H5FD_family_unlock,         /*unlock        */
+    H5FD_FLMAP_DICHOTOMY        /*fl_map        */
 };
 
 

@@ -1379,4 +1379,3 @@ H5FS__sinfo_serialize_node_cb(void *_item, void H5_ATTR_UNUSED *key, void *_udat
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS__sinfo_serialize_node_cb() */
-

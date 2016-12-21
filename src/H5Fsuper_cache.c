@@ -163,7 +163,6 @@ H5FL_EXTERN(H5F_super_t);
  * Return:      Non-negative on success/Negative on failure
  *
  * Programmer:  Quincey Koziol
- *              koziol@lbl.gov
  *              December 15, 2016
  *
  *-------------------------------------------------------------------------
@@ -242,7 +241,6 @@ done:
  * Return:      Non-negative on success/Negative on failure
  *
  * Programmer:  Quincey Koziol
- *              koziol@lbl.gov
  *              December 15, 2016
  *
  *-------------------------------------------------------------------------

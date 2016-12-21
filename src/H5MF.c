@@ -35,12 +35,12 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5Fpkg.h"             /* File access				*/
-#include "H5Iprivate.h"		/* IDs			  		*/
-#include "H5MFpkg.h"		/* File memory management		*/
-#include "H5VMprivate.h"	/* Vectors and arrays 			*/
+#include "H5private.h"      /* Generic Functions        */
+#include "H5Eprivate.h"     /* Error handling           */
+#include "H5Fpkg.h"         /* File access              */
+#include "H5Iprivate.h"     /* IDs                      */
+#include "H5MFpkg.h"        /* File memory management   */
+#include "H5VMprivate.h"    /* Vectors and arrays       */
 
 
 /****************/
@@ -106,6 +106,7 @@ hbool_t H5_PKG_INIT_VAR = FALSE;
 /* Local Variables */
 /*******************/
 
+
 
 /*-------------------------------------------------------------------------
  * Function:    H5MF_init_merge_flags
@@ -113,7 +114,7 @@ hbool_t H5_PKG_INIT_VAR = FALSE;
  * Purpose:     Initialize the free space section+aggregator merge flags
  *              for the file.
  *
- * Return:	SUCCEED/FAIL
+ * Return:      SUCCEED/FAIL
  *
  * Programmer:  Quincey Koziol
  *              Friday, February  1, 2008

@@ -432,7 +432,7 @@ H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr, H5AC_cache_image_co
         aux_ptr->candidate_slist_ptr = NULL;
         aux_ptr->write_done = NULL;
         aux_ptr->sync_point_done = NULL;
-	aux_ptr->p0_image_len = 0;
+        aux_ptr->p0_image_len = 0;
 
         sprintf(prefix, "%d:", mpi_rank);
 

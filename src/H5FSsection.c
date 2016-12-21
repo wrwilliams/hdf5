@@ -2647,4 +2647,3 @@ done:
     FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
 
 } /* H5FS_vfd_alloc_section_info_if_needed() */
-

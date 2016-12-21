@@ -142,38 +142,38 @@ static herr_t H5FD_direct_unlock(H5FD_t *_file);
 
 
 static const H5FD_class_t H5FD_direct_g = {
-    "direct",          /*name      */
-    MAXADDR,          /*maxaddr    */
-    H5F_CLOSE_WEAK,        /* fc_degree    */
-    H5FD_direct_term,                           /*terminate             */
-    NULL,          /*sb_size    */
-    NULL,          /*sb_encode    */
-    NULL,          /*sb_decode    */
-    sizeof(H5FD_direct_fapl_t),                 /*fapl_size    */
-    H5FD_direct_fapl_get,            /*fapl_get    */
-    H5FD_direct_fapl_copy,            /*fapl_copy    */
-    NULL,                /*fapl_free    */
-    0,            /*dxpl_size    */
-    NULL,          /*dxpl_copy    */
-    NULL,          /*dxpl_free    */
-    H5FD_direct_open,              /*open      */
-    H5FD_direct_close,                    /*close      */
-    H5FD_direct_cmp,              /*cmp      */
-    H5FD_direct_query,                    /*query      */
-    NULL,          /*get_type_map    */
-    NULL,          /*alloc      */
-    NULL,          /*free      */
-    H5FD_direct_get_eoa,      /*get_eoa    */
-    H5FD_direct_set_eoa,       /*set_eoa    */
-    H5FD_direct_get_eof,      /*get_eof    */
-    H5FD_direct_get_handle,                     /*get_handle            */
-    H5FD_direct_read,        /*read      */
-    H5FD_direct_write,        /*write      */
-    NULL,          /*flush      */
-    H5FD_direct_truncate,      	/*truncate    */
-    H5FD_direct_lock,          	/*lock                  */
-    H5FD_direct_unlock,        	/*unlock                */
-    H5FD_FLMAP_DICHOTOMY       	/*fl_map                */
+    "direct",                   /*name          */
+    MAXADDR,                    /*maxaddr       */
+    H5F_CLOSE_WEAK,             /* fc_degree    */
+    H5FD_direct_term,           /*terminate     */
+    NULL,                       /*sb_size       */
+    NULL,                       /*sb_encode     */
+    NULL,                       /*sb_decode     */
+    sizeof(H5FD_direct_fapl_t), /*fapl_size     */
+    H5FD_direct_fapl_get,       /*fapl_get      */
+    H5FD_direct_fapl_copy,      /*fapl_copy     */
+    NULL,                       /*fapl_free     */
+    0,                          /*dxpl_size     */
+    NULL,                       /*dxpl_copy     */
+    NULL,                       /*dxpl_free     */
+    H5FD_direct_open,           /*open          */
+    H5FD_direct_close,          /*close         */
+    H5FD_direct_cmp,            /*cmp           */
+    H5FD_direct_query,          /*query         */
+    NULL,                       /*get_type_map  */
+    NULL,                       /*alloc         */
+    NULL,                       /*free          */
+    H5FD_direct_get_eoa,        /*get_eoa       */
+    H5FD_direct_set_eoa,        /*set_eoa       */
+    H5FD_direct_get_eof,        /*get_eof       */
+    H5FD_direct_get_handle,     /*get_handle    */
+    H5FD_direct_read,           /*read          */
+    H5FD_direct_write,          /*write         */
+    NULL,                       /*flush         */
+    H5FD_direct_truncate,       /*truncate      */
+    H5FD_direct_lock,           /*lock          */
+    H5FD_direct_unlock,         /*unlock        */
+    H5FD_FLMAP_DICHOTOMY        /*fl_map        */
 };
 
 /* Declare a free list to manage the H5FD_direct_t struct */

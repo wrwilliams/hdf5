@@ -924,8 +924,8 @@ H5FD_log_query(const H5FD_t *_file, unsigned long *flags /* out */)
 static haddr_t
 H5FD_log_alloc(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, hsize_t size)
 {
-    H5FD_log_t	*file = (H5FD_log_t *)_file;
-    haddr_t addr;
+    H5FD_log_t *file = (H5FD_log_t *)_file;
+    haddr_t addr = HADDR_UNDEF;
     haddr_t ret_value = HADDR_UNDEF;    /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR

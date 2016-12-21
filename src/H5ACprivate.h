@@ -340,14 +340,14 @@ H5_DLLVAR hid_t H5AC_rawdata_dxpl_id;
  * H5AC_get_entry_status() call.
  */
 
-#define H5AC_ES__IN_CACHE		0x0001
-#define H5AC_ES__IS_DIRTY		0x0002
-#define H5AC_ES__IS_PROTECTED		0x0004
-#define H5AC_ES__IS_PINNED		0x0008
-#define H5AC_ES__IS_FLUSH_DEP_PARENT	0x0010
-#define H5AC_ES__IS_FLUSH_DEP_CHILD	0x0020
-#define H5AC_ES__IMAGE_IS_UP_TO_DATE	0x0040
-#define H5AC_ES__IS_CORKED		0x0080
+#define H5AC_ES__IN_CACHE               0x0001
+#define H5AC_ES__IS_DIRTY               0x0002
+#define H5AC_ES__IS_PROTECTED           0x0004
+#define H5AC_ES__IS_PINNED              0x0008
+#define H5AC_ES__IS_FLUSH_DEP_PARENT    0x0010
+#define H5AC_ES__IS_FLUSH_DEP_CHILD     0x0020
+#define H5AC_ES__IS_CORKED              0x0040
+#define H5AC_ES__IMAGE_IS_UP_TO_DATE    0x0080
 
 
 /* external function declarations: */

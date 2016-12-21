@@ -115,8 +115,8 @@ H5MF_sects_debug_cb(H5FS_section_info_t *_sect, void *_udata)
 
     /* Print generic section information */
     HDfprintf(udata->stream, "%*s%-*s %s\n", udata->indent, "", udata->fwidth,
-	      "Section type:",
-	      (sect->sect_info.type == H5MF_FSPACE_SECT_SIMPLE ? "simple" : "unknown"));
+          "Section type:",
+          (sect->sect_info.type == H5MF_FSPACE_SECT_SIMPLE ? "simple" : "unknown"));
     HDfprintf(udata->stream, "%*s%-*s %a\n", udata->indent, "", udata->fwidth,
 	      "Section address:",
 	      sect->sect_info.addr);
@@ -287,14 +287,13 @@ HDfprintf(stderr, "%s: sda_addr = %a, sda_size = %Hu, end of sda = %a\n", FUNC, 
                 if(H5FS_sect_iterate(f, dxpl_id, f->shared->fs_man[type], H5MF_sects_debug_cb, &udata) < 0)
                     HGOTO_ERROR(H5E_HEAP, H5E_BADITER, FAIL, "can't iterate over heap's free space")
             } /* end if */
-            else {
+            else
                 /* No sections of this type */
                 HDfprintf(stream, "%*s<none>\n", indent + 6, "");
-            } /* end else */
         } /* end if */
-        else {
+        else
             HDfprintf(stream, "%*sMapped to type = %u\n", indent, "", (unsigned)f->shared->fs_type_map[type]);
-        } /* end else */
+
     } /* end for */
 
 done:
