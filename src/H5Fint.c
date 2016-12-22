@@ -809,7 +809,8 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
             if(H5F_flush(f, dxpl_id, TRUE) < 0)
                 /* Push error, but keep going*/
                 HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
-        } else {
+        }
+        else {
             /* notify the metadata cache that the file is about to be closed.
              * This allows the cache to set up for creating a metadata cache 
              * image if this has been requested.
@@ -817,12 +818,19 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
              * must do this here, as this will not be done otherwise in the
              * read only case.
              */
-        if(H5AC_prep_for_file_close(f, dxpl_id) < 0)
-            /* Push error, but keep going*/
-            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "metadata cache prep for close failed")
+            if(H5AC_prep_for_file_close(f, dxpl_id) < 0)
+                /* Push error, but keep going*/
+                HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "metadata cache prep for close failed")
 
-        }
+        } /* end else */
 
+        /* With the shutdown modifications, the contents of the metadata cache
+         * should be clean at this point, with the possible exception of the 
+         * the superblock and superblock extension.
+         *
+         * Verify this.
+         */
+        HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
 
         /* Release the external file cache */
         if(f->shared->efc) {
@@ -832,13 +840,14 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
             f->shared->efc = NULL;
         } /* end if */
 
-	/* With the shutdown modifications, the contents of the metadata cache
+        /* With the shutdown modifications, the contents of the metadata cache
          * should be clean at this point, with the possible exception of the 
          * the superblock and superblock extension.
          *
          * Verify this.
          */
-	HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
+        // XXX: duplicate?
+        HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
 
         /* Release objects that depend on the superblock being initialized */
         if(f->shared->sblock) {
