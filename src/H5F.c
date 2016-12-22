@@ -1467,9 +1467,9 @@ done:
  * Function:    H5Fget_free_sections
  *
  * Purpose:     To get free-space section information for free-space manager with
- *		TYPE that is associated with file FILE_ID.
- *		If SECT_INFO is null, this routine returns the total # of free-space
- *		sections.
+ *              TYPE that is associated with file FILE_ID.
+ *              If SECT_INFO is null, this routine returns the total # of free-space
+ *              sections.
  *
  * Return:      Success:        non-negative, the total # of free space sections
  *              Failure:        negative
@@ -1747,4 +1747,3 @@ H5Fformat_convert(hid_t fid)
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Fformat_convert() */
-

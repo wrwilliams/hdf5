@@ -40,7 +40,6 @@
 #include "H5FDprivate.h"	/* File drivers				*/
 #include "H5Iprivate.h"		/* IDs			  		*/
 
-
 /****************/
 /* Local Macros */
 /****************/

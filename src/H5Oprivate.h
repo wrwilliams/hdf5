@@ -203,7 +203,7 @@ typedef struct H5O_copy_t {
 #define H5O_DRVINFO_ID  0x0014          /* Driver info message.  */
 #define H5O_AINFO_ID    0x0015          /* Attribute info message.  */
 #define H5O_REFCOUNT_ID 0x0016          /* Reference count message.  */
-#define H5O_FSINFO_ID   0x0017          /* Free-space manager info message.  */
+#define H5O_FSINFO_ID   0x0017          /* File space info message.  */
 #define H5O_MDCI_MSG_ID 0x0018		/* Metadata Cache Image Message */
 #define H5O_UNKNOWN_ID  0x0019          /* Placeholder message ID for unknown message.  */
                                         /* (this should never exist in a file) */
@@ -212,6 +212,8 @@ typedef struct H5O_copy_t {
  *      in H5O.c when creating a new message type.  Also bump the value of
  *      H5O_BOGUS_INVALID_ID, below, to be one greater than the value of
  *      H5O_UNKNOWN_ID.
+ *
+ * (this should never exist in a file)
  */
 #define H5O_BOGUS_INVALID_ID	0x001A  /* "Bogus invalid" Message.  */
 
@@ -782,7 +784,7 @@ typedef uint32_t H5O_refcount_t;        /* Contains # of links to object, if >1 
 typedef unsigned H5O_unknown_t;         /* Original message type ID */
 
 /*
- * Free space manager info Message.
+ * File space info Message.
  * Contains file space management info and
  * addresses of free space managers for file memory
  * (Data structure in memory)

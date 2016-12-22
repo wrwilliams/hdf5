@@ -51,9 +51,7 @@
 /* type ID for epoch markers */
 #define H5C__EPOCH_MARKER_TYPE  H5C__MAX_NUM_TYPE_IDS
 
-
 /* Cache configuration settings */
-
 #define H5C__HASH_TABLE_LEN     (64 * 1024) /* must be a power of 2 */
 #define H5C__H5C_T_MAGIC	0x005CAC0E
 
@@ -4881,9 +4879,8 @@ struct H5C_t {
     int32_t                     max_entries_skipped_in_msic;
     int32_t                     max_entries_scanned_in_msic;
     int64_t                     entries_scanned_to_make_space;
-
  
-    /* Fields for tracking list scan restarts */
+    /* Fields for tracking skip list scan restarts */
     int64_t			slist_scan_restarts;
     int64_t			LRU_scan_restarts;
     int64_t			index_scan_restarts;

@@ -41,8 +41,8 @@
 /**************************/
 
 /* Cache configuration settings */
-#define H5C__MAX_NUM_TYPE_IDS	29
-#define H5C__PREFIX_LEN		32
+#define H5C__MAX_NUM_TYPE_IDS   29
+#define H5C__PREFIX_LEN         32
 
 /* This sanity checking constant was picked out of the air.  Increase
  * or decrease it if appropriate.  Its purposes is to detect corrupt
@@ -68,7 +68,6 @@
 /* Flags for cache client class behavior */
 #define H5C__CLASS_NO_FLAGS_SET             ((unsigned)0x0)
 #define H5C__CLASS_SPECULATIVE_LOAD_FLAG    ((unsigned)0x1)
-
 /* The following flags may only appear in test code */
 #define H5C__CLASS_SKIP_READS               ((unsigned)0x2)
 #define H5C__CLASS_SKIP_WRITES              ((unsigned)0x4)
@@ -968,15 +967,15 @@ typedef herr_t (*H5C_log_flush_func_t)(H5C_t *cache_ptr, haddr_t addr,
  * debugging.
  */
 
-#define H5C_RING_UNDEFINED	0 /* shouldn't appear in the cache */
-#define H5C_RING_USER		1 /* outermost ring */
-#define H5C_RING_RDFSM		2
-#define H5C_RING_MDFSM		3
-#define H5C_RING_SBE		4 
-#define H5C_RING_SB		5 /* innermost ring */
-#define H5C_RING_NTYPES		6 
+#define H5C_RING_UNDEFINED  0 /* shouldn't appear in the cache */
+#define H5C_RING_USER       1 /* outermost ring */
+#define H5C_RING_RDFSM      2
+#define H5C_RING_MDFSM      3
+#define H5C_RING_SBE        4 
+#define H5C_RING_SB         5 /* innermost ring */
+#define H5C_RING_NTYPES     6 
 
-#define H5C_MAX_RING_IN_IMAGE	3
+#define H5C_MAX_RING_IN_IMAGE   3
 
 typedef int H5C_ring_t;
 
@@ -1575,31 +1574,30 @@ typedef int H5C_ring_t;
  * 		been pinned in cache in its life time.
  *
  ****************************************************************************/
-
 typedef struct H5C_cache_entry_t {
-    uint32_t		magic;
-    H5C_t          *cache_ptr;
-    haddr_t			addr;
-    size_t			size;
-    void  		   *image_ptr;
-    hbool_t			image_up_to_date;
-    const H5C_class_t	      *	type;
-    hbool_t			is_dirty;
-    hbool_t			dirtied;
-    hbool_t			is_protected;
-    hbool_t			is_read_only;
-    int				ro_ref_count;
-    hbool_t			is_pinned;
-    hbool_t			in_slist;
-    hbool_t			flush_marker;
-    hbool_t         flush_me_last;
+    uint32_t                    magic;
+    H5C_t                      *cache_ptr;
+    haddr_t                     addr;
+    size_t                      size;
+    void                       *image_ptr;
+    hbool_t                     image_up_to_date;
+    const H5C_class_t          *type;
+    hbool_t                     is_dirty;
+    hbool_t                     dirtied;
+    hbool_t                     is_protected;
+    hbool_t                     is_read_only;
+    int                         ro_ref_count;
+    hbool_t                     is_pinned;
+    hbool_t                     in_slist;
+    hbool_t                     flush_marker;
+    hbool_t                     flush_me_last;
 #ifdef H5_HAVE_PARALLEL
-    hbool_t			clear_on_unprotect;
-    hbool_t			flush_immediately;
-    hbool_t			coll_access;
+    hbool_t                     clear_on_unprotect;
+    hbool_t                     flush_immediately;
+    hbool_t                     coll_access;
 #endif /* H5_HAVE_PARALLEL */
-    hbool_t			flush_in_progress;
-    hbool_t			destroy_in_progress;
+    hbool_t                     flush_in_progress;
+    hbool_t                     destroy_in_progress;
 
     /* fields supporting rings for purposes of flush ordering */
     H5C_ring_t                  ring;
@@ -1615,52 +1613,51 @@ typedef struct H5C_cache_entry_t {
     hbool_t                     pinned_from_cache;
 
     /* fields supporting the hash table: */
-    struct H5C_cache_entry_t  *	ht_next;
-    struct H5C_cache_entry_t  *	ht_prev;
-    struct H5C_cache_entry_t  *	il_next;
-    struct H5C_cache_entry_t  *	il_prev;
+    struct H5C_cache_entry_t   *ht_next;
+    struct H5C_cache_entry_t   *ht_prev;
+    struct H5C_cache_entry_t   *il_next;
+    struct H5C_cache_entry_t   *il_prev;
 
     /* fields supporting replacement policies: */
-    struct H5C_cache_entry_t  *	next;
-    struct H5C_cache_entry_t  *	prev;
-    struct H5C_cache_entry_t  *	aux_next;
-    struct H5C_cache_entry_t  *	aux_prev;
+    struct H5C_cache_entry_t   *next;
+    struct H5C_cache_entry_t   *prev;
+    struct H5C_cache_entry_t   *aux_next;
+    struct H5C_cache_entry_t   *aux_prev;
 #ifdef H5_HAVE_PARALLEL
-    struct H5C_cache_entry_t  *	coll_next;
-    struct H5C_cache_entry_t  *	coll_prev;
+    struct H5C_cache_entry_t   *coll_next;
+    struct H5C_cache_entry_t   *coll_prev;
 #endif /* H5_HAVE_PARALLEL */
 
     /* fields supporting cache image */
-    hbool_t			include_in_image;
-    int32_t			lru_rank;
-    int32_t			image_index;
-    hbool_t			image_dirty;
+    hbool_t                     include_in_image;
+    int32_t                     lru_rank;
+    int32_t                     image_index;
+    hbool_t                     image_dirty;
     uint64_t                    fd_parent_count;
-    haddr_t		      * fd_parent_addrs;
-    uint64_t			fd_child_count;
-    uint64_t			fd_dirty_child_count;
-    uint32_t			image_fd_height;
-    hbool_t			prefetched;
-    int				prefetch_type_id;
-    int32_t			age;
+    haddr_t                    *fd_parent_addrs;
+    uint64_t                    fd_child_count;
+    uint64_t                    fd_dirty_child_count;
+    uint32_t                    image_fd_height;
+    hbool_t                     prefetched;
+    int                         prefetch_type_id;
+    int32_t                     age;
 
 #ifndef NDEBUG	/* debugging field */
-    int				serialization_count;
+    int                         serialization_count;
 #endif /* NDEBUG */
 
     /* fields supporting tag lists */
-    struct H5C_cache_entry_t  *	tl_next;
-    struct H5C_cache_entry_t  *	tl_prev;
-    struct H5C_tag_info_t     * tag_info;
+    struct H5C_cache_entry_t   *tl_next;
+    struct H5C_cache_entry_t   *tl_prev;
+    struct H5C_tag_info_t      *tag_info;
 
 #if H5C_COLLECT_CACHE_ENTRY_STATS
     /* cache entry stats fields */
-    int32_t			accesses;
-    int32_t			clears;
-    int32_t			flushes;
-    int32_t			pins;
+    int32_t                     accesses;
+    int32_t                     clears;
+    int32_t                     flushes;
+    int32_t                     pins;
 #endif /* H5C_COLLECT_CACHE_ENTRY_STATS */
-
 } H5C_cache_entry_t;
 
 
@@ -1813,21 +1810,21 @@ typedef struct H5C_cache_entry_t {
  ****************************************************************************/
 
 typedef struct H5C_image_entry_t {
-    uint32_t			magic;
-    haddr_t			addr;
-    size_t			size;
-    H5C_ring_t			ring;
-    int32_t			age;
-    int32_t			type_id;
-    int32_t			image_index;
-    int32_t			lru_rank;
-    hbool_t			is_dirty;
-    unsigned			image_fd_height;
+    uint32_t                    magic;
+    haddr_t                     addr;
+    size_t                      size;
+    H5C_ring_t                  ring;
+    int32_t                     age;
+    int32_t                     type_id;
+    int32_t                     image_index;
+    int32_t                     lru_rank;
+    hbool_t                     is_dirty;
+    unsigned                    image_fd_height;
     uint64_t                    fd_parent_count;
-    haddr_t                   * fd_parent_addrs;
-    uint64_t			fd_child_count;
+    haddr_t                    *fd_parent_addrs;
+    uint64_t                    fd_child_count;
     uint64_t                    fd_dirty_child_count;
-    void  		      *	image_ptr;
+    void                       *image_ptr;
 } H5C_image_entry_t;
 
 /****************************************************************************
@@ -2237,6 +2234,7 @@ H5_DLL herr_t H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags);
 H5_DLL herr_t H5C_flush_tagged_entries(H5F_t * f, hid_t dxpl_id, haddr_t tag); 
 H5_DLL herr_t H5C_evict_tagged_entries(H5F_t * f, hid_t dxpl_id, haddr_t tag, hbool_t match_global);
 H5_DLL herr_t H5C_expunge_tag_type_metadata(H5F_t *f, hid_t dxpl_id, haddr_t tag, int type_id, unsigned flags);
+H5_DLL herr_t H5C_get_tag(const void *thing, /*OUT*/ haddr_t *tag);
 #if H5C_DO_TAGGING_SANITY_CHECKS
 herr_t H5C_verify_tag(int id, haddr_t tag);
 #endif
@@ -2322,4 +2320,3 @@ H5_DLL herr_t H5C_validate_index_list(H5C_t * cache_ptr);
 #endif /* NDEBUG */
 
 #endif /* !_H5Cprivate_H */
-
