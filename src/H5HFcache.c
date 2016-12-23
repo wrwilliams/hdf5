@@ -1511,6 +1511,8 @@ H5HF__cache_iblock_notify(H5C_notify_action_t action, void *_thing)
         case H5AC_NOTIFY_ACTION_ENTRY_CLEANED:
         case H5AC_NOTIFY_ACTION_CHILD_DIRTIED:
         case H5AC_NOTIFY_ACTION_CHILD_CLEANED:
+        case H5AC_NOTIFY_ACTION_CHILD_UNSERIALIZED:
+        case H5AC_NOTIFY_ACTION_CHILD_SERIALIZED:
 	    /* do nothing */
 	    break;
 
@@ -2524,6 +2526,8 @@ H5HF__cache_dblock_notify(H5C_notify_action_t action, void *_thing)
         case H5AC_NOTIFY_ACTION_ENTRY_CLEANED:
         case H5AC_NOTIFY_ACTION_CHILD_DIRTIED:
         case H5AC_NOTIFY_ACTION_CHILD_CLEANED:
+        case H5AC_NOTIFY_ACTION_CHILD_UNSERIALIZED:
+        case H5AC_NOTIFY_ACTION_CHILD_SERIALIZED:
 	    /* do nothing */
 	    break;
 

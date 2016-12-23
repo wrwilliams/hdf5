@@ -223,9 +223,10 @@ const H5FD_mem_t class_mem_types[H5C__MAX_NUM_TYPE_IDS + 1] =
    /* 24 H5AC_FARRAY_DBLK_PAGE_ID */ H5FD_MEM_FARRAY_DBLK_PAGE,
    /* 25 H5AC_SUPERBLOCK_ID       */ H5FD_MEM_SUPER,
    /* 26 H5AC_DRVRINFO_ID         */ H5FD_MEM_SUPER,
-   /* 27 H5AC_TEST_ID             */ H5FD_MEM_DEFAULT,
+   /* 27 H5AC_PROXY_ENTRY_ID      */ H5FD_MEM_SUPER,
    /* 28 H5AC_PREFETCHED_ENTRY_ID */ H5FD_MEM_DEFAULT,
-   /* 29 H5AC_NTYPES              */ H5FD_MEM_DEFAULT
+   /* 29 H5AC_TEST_ID             */ H5FD_MEM_DEFAULT,
+   /* 30 H5AC_NTYPES              */ H5FD_MEM_DEFAULT
 };
 
 /* Declare a free list to manage the tag info struct */
@@ -300,10 +301,10 @@ H5C_create(size_t		      max_cache_size,
     for ( i = 0; i <= max_type_id; i++ ) {
         HDassert( (type_name_table_ptr)[i] );
         HDassert( HDstrlen(( type_name_table_ptr)[i]) > 0 );
-    }
+    } /* end for */
 
     if(NULL == (cache_ptr = H5FL_CALLOC(H5C_t)))
-	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     if(NULL == (cache_ptr->slist_ptr = H5SL_create(H5SL_TYPE_HADDR, NULL)))
         HGOTO_ERROR(H5E_CACHE, H5E_CANTCREATE, NULL, "can't create skip list.")
@@ -872,7 +873,39 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5C_evict
  *
+ * Purpose:     Evict all except pinned entries in the cache
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Vailin Choi
+ *		Dec 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C_evict(H5F_t * f, hid_t dxpl_id)
+{
+    H5C_t *cache_ptr = f->shared->cache;
+    herr_t ret_value = SUCCEED;      /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity check */
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+
+    /* Flush and invalidate all cache entries except the pinned entries */
+    if(H5C_flush_invalidate_cache(f, dxpl_id, H5C__EVICT_ALLOW_LAST_PINS_FLAG) < 0 )
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to evict entries in the cache")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C_evict() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5C_expunge_entry
  *
  * Purpose:     Use this function to tell the cache to expunge an entry
@@ -1792,6 +1825,178 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5C_mark_entry_clean
+ *
+ * Purpose:	Mark a pinned entry as clean.  The target entry MUST be pinned.
+ *
+ * 		If the entry is not
+ * 		already clean, the function places function marks the entry
+ * 		clean and removes it from the skip list.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Quincey Koziol
+ *              7/23/16
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C_mark_entry_clean(void *_thing)
+{
+    H5C_t *             cache_ptr;
+    H5C_cache_entry_t * entry_ptr = (H5C_cache_entry_t *)_thing;
+    herr_t              ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity checks */
+    HDassert(entry_ptr);
+    HDassert(H5F_addr_defined(entry_ptr->addr));
+    cache_ptr = entry_ptr->cache_ptr;
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+
+    /* Operate on pinned entry */
+    if(entry_ptr->is_protected)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKCLEAN, FAIL, "entry is protected")
+    else if(entry_ptr->is_pinned) {
+        hbool_t		was_dirty;      /* Whether the entry was previously dirty */
+
+        /* Remember previous dirty status */
+        was_dirty = entry_ptr->is_dirty;
+
+        /* Mark the entry as clean if it isn't already */
+        entry_ptr->is_dirty = FALSE;
+
+        /* Also reset the 'flush_marker' flag, since the entry shouldn't be flushed now */
+        entry_ptr->flush_marker = FALSE;
+
+        /* Modify cache data structures */
+        if(was_dirty)
+            H5C__UPDATE_INDEX_FOR_ENTRY_CLEAN(cache_ptr, entry_ptr)
+        if(entry_ptr->in_slist)
+            H5C__REMOVE_ENTRY_FROM_SLIST(cache_ptr, entry_ptr, FALSE)
+
+        /* Update stats for entry being marked clean */
+        H5C__UPDATE_STATS_FOR_CLEAR(cache_ptr, entry_ptr)
+
+        /* Check for entry changing status and do notifications, etc. */
+        if(was_dirty) {
+            /* If the entry's type has a 'notify' callback send a 'entry cleaned'
+             * notice now that the entry is fully integrated into the cache.
+             */
+            if(entry_ptr->type->notify &&
+                    (entry_ptr->type->notify)(H5C_NOTIFY_ACTION_ENTRY_CLEANED, entry_ptr) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry dirty flag cleared")
+
+            /* Propagate the clean up the flush dependency chain, if appropriate */
+            if(entry_ptr->flush_dep_nparents > 0)
+                if(H5C__mark_flush_dep_clean(entry_ptr) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKCLEAN, FAIL, "Can't propagate flush dep clean")
+        } /* end if */
+    } /* end if */
+    else
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKCLEAN, FAIL, "Entry is not pinned??")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C_mark_entry_clean() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5C_mark_entry_unserialized
+ *
+ * Purpose:	Mark a pinned or protected entry as unserialized.  The target
+ *		entry MUST be either pinned or protected, and MAY be both.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Quincey Koziol
+ *              12/23/16
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C_mark_entry_unserialized(void *thing)
+{
+    H5C_cache_entry_t  *entry = (H5C_cache_entry_t *)thing;
+    herr_t              ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity checks */
+    HDassert(entry);
+    HDassert(H5F_addr_defined(entry->addr));
+
+    if(entry->is_protected || entry->is_pinned) {
+        HDassert(!entry->is_read_only);
+
+        /* Reset image_up_to_date */
+        if(entry->image_up_to_date) {
+	    entry->image_up_to_date = FALSE;
+
+            if(entry->flush_dep_nparents > 0)
+                if(H5C__mark_flush_dep_unserialized(entry) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTSET, FAIL, "Can't propagate serialization status to fd parents")
+        }/* end if */
+    } /* end if */
+    else
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKUNSERIALIZED, FAIL, "Entry to unserialize is neither pinned nor protected??")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C_mark_entry_unserialized() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5C_mark_entry_serialized
+ *
+ * Purpose:	Mark a pinned entry as serialized.  The target entry MUST be
+ *		pinned.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Quincey Koziol
+ *              12/23/16
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C_mark_entry_serialized(void *_thing)
+{
+    H5C_cache_entry_t  *entry = (H5C_cache_entry_t *)_thing;
+    herr_t              ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity checks */
+    HDassert(entry);
+    HDassert(H5F_addr_defined(entry->addr));
+
+    /* Operate on pinned entry */
+    if(entry->is_protected)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKSERIALIZED, FAIL, "entry is protected")
+    else if(entry->is_pinned) {
+        /* Check for entry changing status and do notifications, etc. */
+        if(!entry->image_up_to_date) {
+	    /* Set the image_up_to_date flag */
+            entry->image_up_to_date = TRUE;
+
+            /* Propagate the serialize up the flush dependency chain, if appropriate */
+            if(entry->flush_dep_nparents > 0)
+                if(H5C__mark_flush_dep_serialized(entry) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKSERIALIZED, FAIL, "Can't propagate flush dep serialize")
+        } /* end if */
+    } /* end if */
+    else
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKSERIALIZED, FAIL, "Entry is not pinned??")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C_mark_entry_serialized() */
+
+
+/*-------------------------------------------------------------------------
  *
  * Function:    H5C_move_entry
  *
@@ -1839,9 +2044,6 @@ H5C_move_entry(H5C_t *	     cache_ptr,
 
     HDassert(entry_ptr->addr == old_addr);
     HDassert(entry_ptr->type == type);
-
-    if(entry_ptr->is_protected)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTMOVE, FAIL, "target entry is protected.")
 
     H5C__SEARCH_INDEX(cache_ptr, new_addr, test_entry_ptr, FAIL)
 
@@ -3906,12 +4108,15 @@ H5C_create_flush_dependency(void * parent_thing, void * child_thing)
     /* adjust the parent's number of unserialized children.  Note
      * that it is possible for and entry to be clean and unserialized.
      */
-    if ( ! child_entry->image_up_to_date ) {
-
-        HDassert(parent_entry->flush_dep_nunser_children <
-                 parent_entry->flush_dep_nchildren);
+    if(!child_entry->image_up_to_date) {
+        HDassert(parent_entry->flush_dep_nunser_children < parent_entry->flush_dep_nchildren);
         parent_entry->flush_dep_nunser_children++;
-    }
+
+        /* If the parent has a 'notify' callback, send a 'child entry unserialized' notice */
+        if(parent_entry->type->notify &&
+                (parent_entry->type->notify)(H5C_NOTIFY_ACTION_CHILD_UNSERIALIZED, parent_entry) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify parent about child entry serialized flag reset")
+    } /* end if */
 
     /* Post-conditions, for successful operation */
     HDassert(parent_entry->is_pinned);
@@ -4027,12 +4232,15 @@ H5C_destroy_flush_dependency(void *parent_thing, void * child_thing)
     } /* end if */
 
     /* adjust parent entry's number of unserialized children */
-    if ( ! child_entry->image_up_to_date ) {
-
+    if(!child_entry->image_up_to_date) {
         HDassert(parent_entry->flush_dep_nunser_children > 0);
-
         parent_entry->flush_dep_nunser_children--;
-    }
+
+        /* If the parent has a 'notify' callback, send a 'child entry serialized' notice */
+        if(parent_entry->type->notify &&
+                (parent_entry->type->notify)(H5C_NOTIFY_ACTION_CHILD_SERIALIZED, parent_entry) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify parent about child entry serialized flag set")
+    } /* end if */
 
     /* Shrink or free the parent array if apporpriate */
     if(child_entry->flush_dep_nparents == 0) {
@@ -5505,17 +5713,19 @@ H5C_flush_invalidate_cache(const H5F_t * f, hid_t dxpl_id, unsigned flags)
     } /* end while */
 
     /* Invariants, after destroying all entries in the hash table */
-    HDassert(cache_ptr->index_size == 0);
-    HDassert(cache_ptr->clean_index_size == 0);
-    HDassert(cache_ptr->dirty_index_size == 0);
-    HDassert(cache_ptr->slist_len == 0);
-    HDassert(cache_ptr->slist_size == 0);
-    HDassert(cache_ptr->pel_len == 0);
-    HDassert(cache_ptr->pel_size == 0);
-    HDassert(cache_ptr->pl_len == 0);
-    HDassert(cache_ptr->pl_size == 0);
-    HDassert(cache_ptr->LRU_list_len == 0);
-    HDassert(cache_ptr->LRU_list_size == 0);
+    if(!(flags & H5C__EVICT_ALLOW_LAST_PINS_FLAG)) {
+        HDassert(cache_ptr->index_size == 0);
+        HDassert(cache_ptr->clean_index_size == 0);
+        HDassert(cache_ptr->dirty_index_size == 0);
+        HDassert(cache_ptr->slist_len == 0);
+        HDassert(cache_ptr->slist_size == 0);
+        HDassert(cache_ptr->pel_len == 0);
+        HDassert(cache_ptr->pel_size == 0);
+        HDassert(cache_ptr->pl_len == 0);
+        HDassert(cache_ptr->pl_size == 0);
+        HDassert(cache_ptr->LRU_list_len == 0);
+        HDassert(cache_ptr->LRU_list_size == 0);
+    } /* end if */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -5857,12 +6067,16 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
                          * into the cache, or moved to a new location
                          * in the file as a side effect of the flush.
                          *
-                         * If this happens, and one of the target 
-                         * entries happens to be the next entry in 
-                         * the hash bucket, we could find ourselves 
-                         * either find ourselves either scanning a 
-                         * non-existant entry, scanning through a 
-                         * different bucket, or skipping an entry.
+                         * It's also possible that removing a clean
+                         * entry will remove the last child of a proxy
+                         * entry, allowing it to be removed also and
+                         * invalidating the next_entry_ptr.
+                         *
+                         * If either of these happen, and one of the target 
+                         * or proxy entries happens to be the next entry in 
+                         * the hash bucket, we could either find ourselves
+                         * either scanning a non-existant entry, scanning
+                         * through a different bucket, or skipping an entry.
                          *
                          * Neither of these are good, so restart the 
                          * the scan at the head of the hash bucket 
@@ -6497,6 +6711,11 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
         /* only log a flush if we actually wrote to disk */
         H5C__UPDATE_STATS_FOR_FLUSH(cache_ptr, entry_ptr)
     } /* end else if */
+
+    /* Note that the algorithm below is (very) similar to the set of operations
+     * in H5C_remove_entry() and should be kept in sync with changes
+     * to that code. - QAK, 2016/11/30
+     */
 
     /* Update the cache internal data structures. */
     if(destroy) {
@@ -8614,8 +8833,9 @@ herr_t
 H5C__mark_flush_dep_serialized(H5C_cache_entry_t * entry_ptr)
 {
     unsigned u;                         /* Local index variable */
+    herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_STATIC_NOERR
+    FUNC_ENTER_STATIC
 
     /* Sanity checks */
     HDassert(entry_ptr);
@@ -8630,10 +8850,14 @@ H5C__mark_flush_dep_serialized(H5C_cache_entry_t * entry_ptr)
         /* decrement the parents number of unserialized children */
         entry_ptr->flush_dep_parent[u]->flush_dep_nunser_children--;
 
+        /* If the parent has a 'notify' callback, send a 'child entry serialized' notice */
+        if(entry_ptr->flush_dep_parent[u]->type->notify &&
+                (entry_ptr->flush_dep_parent[u]->type->notify)(H5C_NOTIFY_ACTION_CHILD_SERIALIZED, entry_ptr->flush_dep_parent[u]) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify parent about child entry serialized flag set")
     } /* end for */
 
+done:
     FUNC_LEAVE_NOAPI(SUCCEED)
-
 } /* H5C__mark_flush_dep_serialized() */
 
 
@@ -8655,8 +8879,9 @@ herr_t
 H5C__mark_flush_dep_unserialized(H5C_cache_entry_t * entry_ptr)
 {
     unsigned u;                         /* Local index variable */
+    herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_STATIC_NOERR
+    FUNC_ENTER_STATIC
 
     /* Sanity checks */
     HDassert(entry_ptr);
@@ -8671,8 +8896,14 @@ H5C__mark_flush_dep_unserialized(H5C_cache_entry_t * entry_ptr)
 
         /* increment parents number of usserialized children */
         entry_ptr->flush_dep_parent[u]->flush_dep_nunser_children++;
+
+        /* If the parent has a 'notify' callback, send a 'child entry unserialized' notice */
+        if(entry_ptr->flush_dep_parent[u]->type->notify &&
+                (entry_ptr->flush_dep_parent[u]->type->notify)(H5C_NOTIFY_ACTION_CHILD_UNSERIALIZED, entry_ptr->flush_dep_parent[u]) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify parent about child entry serialized flag reset")
     } /* end for */
 
+done:
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5C__mark_flush_dep_unserialized() */
 
@@ -8877,7 +9108,6 @@ H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_p
 #endif /* H5C_DO_MEMORY_SANITY_CHECKS */
     entry_ptr->image_up_to_date = TRUE;
 
-    /* XXX: DER - Do we need this? Not in develop... */
     if(entry_ptr->flush_dep_nparents > 0)
         if(H5C__mark_flush_dep_serialized(entry_ptr) < 0)
             HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "Can't propagate serialization status to fd parents")
@@ -8885,4 +9115,121 @@ H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_p
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5C__generate_image */
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Function:    H5C_remove_entry
+ *
+ * Purpose:     Remove an entry from the cache.  Must be not protected, pinned,
+ *		dirty, involved in flush dependencies, etc.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Quincey Koziol
+ *              September 17, 2016
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C_remove_entry(void *_entry)
+{
+    H5C_cache_entry_t *entry = (H5C_cache_entry_t *)_entry;     /* Entry to remove */
+    H5C_t *cache;               /* Cache for file */
+    herr_t ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity checks */
+    HDassert(entry);
+    HDassert(entry->ring != H5C_RING_UNDEFINED);
+    cache = entry->cache_ptr;
+    HDassert(cache);
+    HDassert(cache->magic == H5C__H5C_T_MAGIC);
+
+    /* Check for error conditions */
+    if(entry->is_dirty)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove dirty entry from cache")
+    if(entry->is_protected)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove protected entry from cache")
+    if(entry->is_pinned)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove pinned entry from cache")
+    if(entry->flush_dep_nparents > 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove entry with flush dependency parents from cache")
+    if(entry->flush_dep_nchildren > 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove entry with flush dependency children from cache")
+
+    /* Additional internal cache consistency checks */
+    HDassert(!entry->in_slist);
+    HDassert(!entry->flush_marker);
+    HDassert(!entry->flush_in_progress);
+
+    /* Note that the algorithm below is (very) similar to the set of operations
+     * in H5C__flush_single_entry() and should be kept in sync with changes
+     * to that code. - QAK, 2016/11/30
+     */
+
+    /* Update stats, as if we are "destroying" and taking ownership of the entry */
+    H5C__UPDATE_STATS_FOR_EVICTION(cache, entry, TRUE)
+
+    /* If the entry's type has a 'notify' callback, send a 'before eviction'
+     * notice while the entry is still fully integrated in the cache.
+     */
+    if(entry->type->notify && (entry->type->notify)(H5C_NOTIFY_ACTION_BEFORE_EVICT, entry) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry to evict")
+
+    /* Update the cache internal data structures as appropriate for a destroy.
+     * Specifically:
+     *	1) Delete it from the index
+     *	2) Update the replacement policy for eviction
+     *	3) Remove it from the tag list for this object
+     */
+
+    H5C__DELETE_FROM_INDEX(cache, entry, FAIL)
+
+    H5C__UPDATE_RP_FOR_EVICTION(cache, entry, FAIL)
+
+    /* Remove entry from tag list */
+    if(H5C__untag_entry(cache, entry) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove entry from tag list")
+
+    /* Increment entries_removed_counter and set last_entry_removed_ptr.
+     * As we me be about to free the entry, recall that last_entry_removed_ptr
+     * must NEVER be dereferenced.
+     *
+     * Recall that these fields are maintained to allow functions that perform
+     * scans of lists of entries to detect the unexpected removal of entries
+     * (via expunge, eviction, or take ownership at present), so that they can
+     * re-start their scans if necessary.
+     *
+     * Also check if the entry we are watching for removal is being
+     * removed (usually the 'next' entry for an iteration) and reset
+     * it to indicate that it was removed.
+     */
+    cache->entries_removed_counter++;
+    cache->last_entry_removed_ptr = entry;
+    if(entry == cache->entry_watched_for_removal)
+        cache->entry_watched_for_removal = NULL;
+
+    /* Internal cache data structures should now be up to date, and 
+     * consistant with the status of the entry.  
+     *
+     * Now clean up internal cache fields if appropriate.
+     */
+
+    /* Free the buffer for the on disk image */
+    if(entry->image_ptr != NULL)
+        entry->image_ptr = H5MM_xfree(entry->image_ptr);
+
+    /* Reset the pointer to the cache the entry is within */
+    entry->cache_ptr = NULL;
+
+    /* Client is taking ownership of the entry.  Set bad magic here so the
+     * cache will choke unless the entry is re-inserted properly
+     */
+    entry->magic = H5C__H5C_CACHE_ENTRY_T_BAD_MAGIC;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C__remove_entry() */
 
