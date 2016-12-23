@@ -2425,61 +2425,6 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS_sect_try_shrink_eoa() */
 
-
-/*-------------------------------------------------------------------------
- * Function:	H5FS_sect_query_last
- *
- * Purpose:	Retrieve address and size of the last section on the merge list
- *
- * Return:	Success:	non-negative
- *		Failure:	negative
- *
- * Programmer:	Vailin Choi
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5FS_sect_query_last(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, haddr_t *sect_addr, hsize_t *sect_size)
-{
-    hbool_t sinfo_valid = FALSE;                /* Whether the section info is valid */
-    herr_t ret_value = SUCCEED;                 /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT
-
-    /* Check arguments. */
-    HDassert(fspace);
-
-    if(fspace->tot_sect_count) {
-	/* Get a pointer to the section info */
-        if(H5FS_sinfo_lock(f, dxpl_id, fspace, H5AC__READ_ONLY_FLAG) < 0)
-            HGOTO_ERROR(H5E_FSPACE, H5E_CANTGET, FAIL, "can't get section info")
-        sinfo_valid = TRUE;
-
-	if(fspace->sinfo && fspace->sinfo->merge_list) {
-	    H5SL_node_t *last_node;             /* Last node in merge list */
-
-        /* Check for last node in the merge list */
-        if(NULL != (last_node = H5SL_last(fspace->sinfo->merge_list))) {
-            H5FS_section_info_t *tmp_sect;      /* Temporary free space section */
-
-            /* Get the pointer to the last section, from the last node */
-            tmp_sect = (H5FS_section_info_t *)H5SL_item(last_node);
-            HDassert(tmp_sect);
-	    if(sect_addr)
-                *sect_addr = tmp_sect->addr;
-	    if(sect_size)
-                *sect_size = tmp_sect->size;
-	    } /* end if */
-	} /* end if */
-    } /* end if */
-
-done:
-    /* Release the section info */
-    if(sinfo_valid && H5FS_sinfo_unlock(f, dxpl_id, fspace, FALSE) < 0)
-        HDONE_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't release section info")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5FS_sect_query_last() */
 
 
 /*-------------------------------------------------------------------------

@@ -1196,20 +1196,24 @@ main(void)
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0) TEST_ERROR
     if((fcpl2 = H5Pcopy(fcpl)) < 0) TEST_ERROR
     
-    if(!contig_addr_vfd)
-	if(H5Pset_file_space_page_size(fcpl2, (hsize_t)0) < 0)
-	    TEST_ERROR
+    /* Set to use paged aggregation strategy and persisting free-space */
+    /* Skip testing for multi/split drivers */
+    if(H5Pset_file_space_strategy(fcpl2, H5F_FSPACE_STRATEGY_PAGE, 1, (hsize_t)1) < 0)
+        TEST_ERROR
 
     /* Loop over using new group format */
     for(new_format = FALSE; new_format <= TRUE; new_format++) {
-	hid_t my_fapl = fapl;
-	hid_t my_fcpl = fcpl;
+        hid_t my_fapl = fapl;
+        hid_t my_fcpl = fcpl;
 
-	if(new_format) {
-	    my_fapl = fapl2;
-	    if(!contig_addr_vfd)
-                my_fcpl = fcpl2;
-	}
+        if(!contig_addr_vfd)
+            continue;
+
+        if(new_format) {
+            my_fapl = fapl2;
+            my_fcpl = fcpl2;    /* Set to use paged aggregation and persisting free-space */
+        }
+
         /* Perform basic tests, with old & new style groups */
         nerrors += test_misc(my_fcpl, my_fapl, new_format);
         nerrors += test_long(my_fcpl, my_fapl, new_format);
@@ -1218,11 +1222,13 @@ main(void)
 
     /* New format group specific tests (require new format features) */
 
-    nerrors += lifecycle(fcpl2, fapl2);
-    nerrors += long_compact(fcpl2, fapl2);
-    nerrors += read_old();
-    nerrors += no_compact(fcpl2, fapl2);
-    nerrors += gcpl_on_root(fapl2);
+    if(contig_addr_vfd) {
+        nerrors += lifecycle(fcpl2, fapl2);
+        nerrors += long_compact(fcpl2, fapl2);
+        nerrors += read_old();
+        nerrors += no_compact(fcpl2, fapl2);
+        nerrors += gcpl_on_root(fapl2);
+    }
 
     /* Old group API specific tests */
     nerrors += old_api(fapl);

@@ -178,7 +178,7 @@ H5F_get_access_plist(H5F_t *f, hbool_t app_ref)
         efc_size = H5F_efc_max_nfiles(f->shared->efc);
     if(H5P_set(new_plist, H5F_ACS_EFC_SIZE_NAME, &efc_size) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set elink file cache size")
-    if(f->shared->page_buf) {
+    if(f->shared->page_buf != NULL) {
         if(H5P_set(new_plist, H5F_ACS_PAGE_BUFFER_SIZE_NAME, &(f->shared->page_buf->max_size)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set page buffer size")
         if(H5P_set(new_plist, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_NAME, &(f->shared->page_buf->min_meta_perc)) < 0)
@@ -643,6 +643,14 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get free-space section threshold")
         if(H5P_get(plist, H5F_CRT_FILE_SPACE_PAGE_SIZE_NAME, &f->shared->fs_page_size) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get file space page size")
+        HDassert(f->shared->fs_page_size >= H5F_FILE_SPACE_PAGE_SIZE_MIN);
+
+        /* Temporary for multi/split drivers: fail file creation 
+             when persisting free-space or using paged aggregation strategy */
+        if(H5F_HAS_FEATURE(f, H5FD_FEAT_PAGED_AGGR)) {
+            if(f->shared->fs_strategy == H5F_FSPACE_STRATEGY_PAGE || f->shared->fs_persist)
+                HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't open with this strategy or persistent fs")
+        }
 
         /* Get the FAPL values to cache */
         if(NULL == (plist = (H5P_genplist_t *)H5I_object(fapl_id)))
@@ -941,7 +949,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
             HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "problems closing file")
 
         /* shutdown the page buffer cache if it exists */
-        if(f->shared->page_buf)
+        if(f->shared->page_buf != NULL)
             if(H5PB_dest(f, dxpl_id) < 0)
                 /* Push error, but keep going*/
                 HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "problems closing file")
@@ -1172,8 +1180,12 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
             } /* end if */
         } /* end if */
 
-        if(NULL == (file = H5F_new(NULL, flags, fcpl_id, fapl_id, lf)))
-            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to create new file object")
+        if(NULL == (file = H5F_new(NULL, flags, fcpl_id, fapl_id, lf))) {
+            /* Got this fix from develop: fix for a valgrind problem */
+            if(H5FD_close(lf) < 0) 
+                HDONE_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to initialize file structure")
+        }
     } /* end else */
 
     /* Retain the name the file was opened with */
@@ -1196,8 +1208,10 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
         if(file->coll_md_write)
             HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, 
                         "Collective metadata writes are not supported with page buffering.")
-#endif /* H5_HAVE_PARALLEL */
 
+        /* Tempoarary: fail file create when page buffering feature is enabled for parallel */
+        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "Page buffering is disabled for parallel.")
+#endif /* H5_HAVE_PARALLEL */
         /* Query for other page buffer cache properties */
         if(H5P_get(a_plist, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_NAME, &page_buf_min_meta_perc) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get minimum metadata fraction of page buffer")
@@ -1394,7 +1408,7 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
         HDONE_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "low level flush failed")
 
     /* flush the page buffer if we are not closing (if we are, the flush is called in H5F_dest). */
-    if(!closing && f->shared->page_buf)
+    if(!closing && f->shared->page_buf != NULL)
         if(H5PB_flush(f, dxpl_id, closing) < 0)
             /* Push error, but keep going*/
             HDONE_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "page buffer flush failed")
