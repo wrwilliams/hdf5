@@ -529,6 +529,8 @@
 
 /* For paged aggregation: default file space page size when not set */
 #define H5F_FILE_SPACE_PAGE_SIZE_DEF     	4096    
+/* For paged aggregation: minimum value for file space page size */
+#define H5F_FILE_SPACE_PAGE_SIZE_MIN     	512
 
 /* For paged aggregation: drop free-space with size <= this threshold for small meta section */
 #define H5F_FILE_SPACE_PGEND_META_THRES  10    

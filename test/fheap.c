@@ -2433,7 +2433,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static unsigned
-test_id_limits(hid_t fapl, H5HF_create_t *cparam)
+test_id_limits(hid_t fcpl, hid_t fapl, H5HF_create_t *cparam)
 {
     hid_t	file = -1;              /* File ID */
     hid_t       dxpl = H5AC_ind_read_dxpl_id;     /* DXPL to use */
@@ -2451,7 +2451,7 @@ test_id_limits(hid_t fapl, H5HF_create_t *cparam)
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Get a pointer to the internal file object */
@@ -16353,13 +16353,26 @@ main(void)
     H5HF_create_t small_cparam;         /* Creation parameters for "small" heap */
     H5HF_create_t large_cparam;         /* Creation parameters for "large" heap */
     hid_t	fapl = -1;              /* File access property list for data files */
-    fheap_test_type_t curr_test;        /* Current test being worked on */
-    unsigned    u;                      /* Local index variable */
-    unsigned	nerrors = 0;            /* Cumulative error count */
+    hid_t	fcpl = -1;              /* File creation property list for data files */
+    hid_t	fcpl2 = -1;             /* File creation property list for data files */
+    fheap_test_type_t curr_test;    /* Current test being worked on */
+    unsigned    u;                  /* Local index variable */
+    unsigned	nerrors = 0;        /* Cumulative error count */
     int		ExpressMode;            /* Express testing level */
+    hbool_t contig_addr_vfd;        /* Whether VFD used has a contigous address space */
+    const char *envval;
 
     /* Reset library */
     h5_reset();
+
+    /* Don't run this test using certain file drivers */
+    envval = HDgetenv("HDF5_DRIVER");
+    if(envval == NULL)
+        envval = "nomatch";
+
+    /* Current VFD that does not support contigous address space */
+    contig_addr_vfd = (hbool_t)(HDstrcmp(envval, "split") && HDstrcmp(envval, "multi"));
+
     fapl = h5_fileaccess();
     ExpressMode = GetTestExpress();
     if(ExpressMode > 1)
@@ -16374,6 +16387,16 @@ main(void)
     shared_wobj_g = (unsigned char *)H5MM_malloc(shared_obj_size_g);
     shared_robj_g = (unsigned char *)H5MM_malloc(shared_obj_size_g);
 
+    /* create a file creation property list */
+    if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
+        TEST_ERROR
+    if((fcpl2 = H5Pcopy(fcpl)) < 0) TEST_ERROR
+
+    /* Set file space strategy to paged aggregation and persisting free-space */
+    /* Later: modify more tests to test with paged aggregation enabled */
+    if(H5Pset_file_space_strategy(fcpl2, H5F_FSPACE_STRATEGY_PAGE, TRUE, (hsize_t)1) < 0)
+        TEST_ERROR
+
     /* Initialize the shared write buffer for objects */
     for(u = 0; u < shared_obj_size_g; u++)
         shared_wobj_g[u] = (unsigned char)u;
@@ -16381,6 +16404,13 @@ main(void)
     /* Iterate over the testing parameters */
 #ifndef QAK
     for(curr_test = FHEAP_TEST_NORMAL; curr_test < FHEAP_TEST_NTESTS; H5_INC_ENUM(fheap_test_type_t, curr_test)) {
+
+        hid_t my_fcpl;
+        if(contig_addr_vfd)
+            my_fcpl = fcpl2;
+        else
+            my_fcpl = fcpl;
+
 #else /* QAK */
 HDfprintf(stderr, "Uncomment test loop!\n");
 curr_test = FHEAP_TEST_NORMAL;
@@ -16415,7 +16445,9 @@ curr_test = FHEAP_TEST_NORMAL;
         nerrors += test_reopen(fapl, &small_cparam, &tparam);
         nerrors += test_open_twice(fapl, &small_cparam, &tparam);
         nerrors += test_delete_open(fapl, &small_cparam, &tparam);
-        nerrors += test_id_limits(fapl, &small_cparam);
+
+        nerrors += test_id_limits(my_fcpl, fapl, &small_cparam);
+
         nerrors += test_filtered_create(fapl, &small_cparam);
         nerrors += test_size(fapl, &small_cparam);
         nerrors += test_reopen_hdr(fapl, &small_cparam);
@@ -16833,6 +16865,9 @@ HDfprintf(stderr, "Uncomment tests!\n");
     H5MM_xfree(shared_ids_g);
     H5MM_xfree(shared_lens_g);
     H5MM_xfree(shared_offs_g);
+
+    if(H5Pclose(fcpl) < 0) TEST_ERROR
+    if(H5Pclose(fcpl2) < 0) TEST_ERROR
 
     /* Clean up file used */
 #ifndef QAK

@@ -1475,9 +1475,12 @@ H5Pset_file_space_page_size(hid_t plist_id, hsize_t fsp_size)
     if(NULL == (plist = H5P_object_verify(plist_id,H5P_FILE_CREATE)))
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
+    if(fsp_size < H5F_FILE_SPACE_PAGE_SIZE_MIN)
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "cannot set file space page size to less than 512")
+
     /* Set the value*/
     if(H5P_set(plist, H5F_CRT_FILE_SPACE_PAGE_SIZE_NAME, &fsp_size) < 0)
-	HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set file space block size")
+	HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set file space page size")
 
 done:
     FUNC_LEAVE_API(ret_value)

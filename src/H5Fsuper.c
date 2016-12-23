@@ -597,6 +597,9 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
                     if(H5P_set(c_plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, &fsinfo.threshold) < 0)
                         HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space strategy")
                 } /* end if */
+
+                HDassert(f->shared->fs_page_size >= H5F_FILE_SPACE_PAGE_SIZE_MIN);
+                HDassert(fsinfo.page_size >= H5F_FILE_SPACE_PAGE_SIZE_MIN);
                 if(f->shared->fs_page_size != fsinfo.page_size) {
                     f->shared->fs_page_size = fsinfo.page_size;
 
