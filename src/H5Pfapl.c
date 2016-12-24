@@ -377,7 +377,7 @@ H5P__facc_reg_prop(H5P_genclass_t *pclass)
 
     FUNC_ENTER_STATIC
 
-    /* Register the initial metadata cache resize configuration */
+    /* Register the initial metadata cache image configuration */
     if(H5P_register_real(pclass, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_SIZE, &H5F_def_mdc_initCacheImageCfg_g, 
             NULL, NULL, NULL, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_ENC, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEC, 
             NULL, NULL, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_CMP, NULL) < 0)
@@ -3914,13 +3914,13 @@ H5Pget_metadata_read_attempts(hid_t plist_id, unsigned *attempts/*out*/)
         if(NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
             HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
-	/* Get the # of read attempts set */
+        /* Get the # of read attempts set */
         if(H5P_get(plist, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, attempts) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get the number of metadata read attempts")
 
-	/* If not set, return the default value */
-	if(*attempts == H5F_ACS_METADATA_READ_ATTEMPTS_DEF)	/* 0 */
-	    *attempts = H5F_METADATA_READ_ATTEMPTS;
+        /* If not set, return the default value */
+        if(*attempts == H5F_ACS_METADATA_READ_ATTEMPTS_DEF)	/* 0 */
+            *attempts = H5F_METADATA_READ_ATTEMPTS;
     } /* end if */
 
 done:
@@ -4679,4 +4679,3 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Pget_coll_metadata_write() */
 #endif /* H5_HAVE_PARALLEL */
-

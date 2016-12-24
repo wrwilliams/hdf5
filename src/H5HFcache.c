@@ -2725,10 +2725,10 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, hid_t dxpl_id,
 
         /* make note of the on disk address of the root iblock */
         if(root_iblock == NULL)
-	    /* hdr->man_dtable.table_addr must contain address of root
-         * iblock.  Check to see if it is in cache.  If it is, 
-         * protect it and put its address in root_iblock.
-         */
+            /* hdr->man_dtable.table_addr must contain address of root
+             * iblock.  Check to see if it is in cache.  If it is, 
+             * protect it and put its address in root_iblock.
+             */
             root_iblock_addr = hdr->man_dtable.table_addr;
         else
             root_iblock_addr = root_iblock->addr;
@@ -3074,24 +3074,24 @@ done:
 
 
 /*------------------------------------------------------------------------
- * Function:	H5HF__cache_verify_iblocks_dblocks_clean
+ * Function:    H5HF__cache_verify_iblocks_dblocks_clean
  *
- * Purpose:	Sanity checking routine that attempts to verify that all
- *		    direct blocks pointed to by the supplied indirect block
- *		    are either clean, or not in the cache.
+ * Purpose:     Sanity checking routine that attempts to verify that all
+ *              direct blocks pointed to by the supplied indirect block
+ *              are either clean, or not in the cache.
  *
- *		    In passing, the function also does a cursory check to 
- *		    spot any obvious errors in the flush dependency setup.  
- *		    If any problems are found, the function returns failure.  
- *		    Note that these checks are not exhaustive, thus passing 
- *		    them does not mean that the flush dependencies are 
- *		    correct -- only that there is nothing obviously wrong
- *		    with them.
+ *              In passing, the function also does a cursory check to 
+ *              spot any obvious errors in the flush dependency setup.  
+ *              If any problems are found, the function returns failure.  
+ *              Note that these checks are not exhaustive, thus passing 
+ *              them does not mean that the flush dependencies are 
+ *              correct -- only that there is nothing obviously wrong
+ *              with them.
  *
- *		WARNING:  This function presumes that the supplied 
- *		iblock is in the cache, and will not be removed 
- *		during the call.  Caller must ensure that this is 
- *		the case before the call.
+ *              WARNING:  This function presumes that the supplied 
+ *              iblock is in the cache, and will not be removed 
+ *              during the call.  Caller must ensure that this is 
+ *              the case before the call.
  *
  *      Update -- 8/24/15
  *
@@ -3140,10 +3140,10 @@ done:
  *		of the specified flush dependency parent.  In passing, 
  *		they also walk the data structure, and verify it.
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:	John Mainzer
- *		5/25/14
+ * Programmer:  John Mainzer
+ *              5/25/14
  *
  *-------------------------------------------------------------------------
  */

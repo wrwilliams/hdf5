@@ -19,7 +19,7 @@
  *			Jan  3 2008
  *			Quincey Koziol <koziol@hdfgroup.org>
  *
- * Purpose:		Space allocation routines for the file.
+ * Purpose:		Space allocation routines for the file driver code.
  *
  *-------------------------------------------------------------------------
  */
@@ -125,11 +125,11 @@ H5FD_extend(H5FD_t *file, H5FD_mem_t type, hbool_t new_block, hsize_t size, hadd
         /* Check for EOA already aligned */
         if((mis_align = (eoa % file->alignment)) > 0) {
             extra = file->alignment - mis_align;
-	    if(frag_addr)
+            if(frag_addr)
                 *frag_addr = eoa - file->base_addr;     /* adjust for file's base address */
-	    if(frag_size)
+            if(frag_size)
                 *frag_size = extra;
-	} /* end if */
+        } /* end if */
     } /* end if */
 
     /* Add in extra allocation amount */
@@ -149,7 +149,7 @@ H5FD_extend(H5FD_t *file, H5FD_mem_t type, hbool_t new_block, hsize_t size, hadd
 
     /* Post-condition sanity check */
     if(new_block && file->alignment && orig_size >= file->threshold)
-	HDassert(!(ret_value % file->alignment));
+        HDassert(!(ret_value % file->alignment));
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

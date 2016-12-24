@@ -846,6 +846,13 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                 HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "metadata cache prep for close failed")
         } /* end else */
 
+        /* With the shutdown modifications, the contents of the metadata cache
+         * should be clean at this point, with the possible exception of the 
+         * the superblock and superblock extension.
+         *
+         * Verify this.
+         */
+        HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
 
         /* Release the external file cache */
         if(f->shared->efc) {
@@ -893,43 +900,13 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                 HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
 
                 if(flush) {
-
                     /* Clear status_flags */
                     f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_WRITE_ACCESS);
                     f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_SWMR_WRITE_ACCESS);
 
-                    /* Release any space allocated to space aggregators, 
-                     * so that the eoa value corresponds to the end of the 
-                     * space written to in the file.
-                     *
-                     * At most, this should change the superblock or the 
-                     * superblock extension messages.
-                     */
-                    if(H5MF_free_aggrs(f, dxpl_id) < 0)
-                        /* Push error, but keep going*/
-                        HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file space")
-
-                    /* Truncate the file to the current allocated size */
-                    if(H5FD_truncate(f->shared->lf, dxpl_id, TRUE) < 0)
-                        HDONE_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "low level truncate failed")
-
                     /* Mark superblock dirty in cache, so change will get encoded */
                     if(H5F_super_dirty(f) < 0)
                         HDONE_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
-
-                    if(H5F_flush(f, dxpl_id, TRUE) < 0)
-                        /* Push error, but keep going*/
-                        HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
-
-                    /* at this point, only the superblock and superblock 
-                     * extension should be dirty.
-                     */
-                    HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
-                } /* end if(flush) */
-
-#if 0
-<<<<<<< HEAD
-                if(flush) {
 
                     /* Release any space allocated to space aggregators, 
                      * so that the eoa value corresponds to the end of the 
@@ -951,22 +928,6 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                      */
                     HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
                 } /* end if(flush) */
-=======
-                if(flush) {
-                    /* Clear status_flags */
-                    f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_WRITE_ACCESS);
-                    f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_SWMR_WRITE_ACCESS);
-                    /* Mark superblock dirty in cache, so change will get encoded */
-                    /* Push error, but keep going*/
-                    if(H5F_super_dirty(f) < 0)
-                        HDONE_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
-
-                    if(H5F_flush(f, dxpl_id, TRUE) < 0)
-                        /* Push error, but keep going*/
-                        HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
-                } /* end if(flush) */
->>>>>>> 64a3391... Bring SWMR support in to the main development branch.  (Finally!)  More tests
-#endif /* XXX: DER */
             } /* end if */
 
             /* if it exists, unpin the driver information block cache entry,

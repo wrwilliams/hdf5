@@ -1063,7 +1063,7 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
          * be tuned if more information is added to the superblock
          * extension.
          */
-	if(H5F_super_ext_create(f, dxpl_id, &ext_loc) < 0)
+        if(H5F_super_ext_create(f, dxpl_id, &ext_loc) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTCREATE, FAIL, "unable to create superblock extension")
         ext_created = TRUE;
 
@@ -1111,31 +1111,31 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
              * to get the correct size of the driver info superblock 
              * extension message.
              */
-	    HDassert(H5F_DRVINFOBLOCK_HDR_SIZE < driver_size);
-	    info.len = driver_size - H5F_DRVINFOBLOCK_HDR_SIZE;
+            HDassert(H5F_DRVINFOBLOCK_HDR_SIZE < driver_size);
+            info.len = driver_size - H5F_DRVINFOBLOCK_HDR_SIZE;
             info.buf = dbuf;
             if(H5O_msg_create(&ext_loc, H5O_DRVINFO_ID, H5O_MSG_FLAG_DONTSHARE, H5O_UPDATE_TIME, &info, dxpl_id) < 0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to update driver info header message")
 
-	    HDassert(FALSE == f->shared->drvinfo_sb_msg_exists);
-	    f->shared->drvinfo_sb_msg_exists = TRUE;
+            HDassert(FALSE == f->shared->drvinfo_sb_msg_exists);
+            f->shared->drvinfo_sb_msg_exists = TRUE;
         } /* end if */
 
         /* Check for non-default free space settings */
-	if(f->shared->fs_strategy != H5F_FILE_SPACE_STRATEGY_DEF ||
+        if(f->shared->fs_strategy != H5F_FILE_SPACE_STRATEGY_DEF ||
                 f->shared->fs_threshold != H5F_FREE_SPACE_THRESHOLD_DEF) {
-	    H5FD_mem_t   type;         	/* Memory type for iteration */
+            H5FD_mem_t   type;         	/* Memory type for iteration */
             H5O_fsinfo_t fsinfo;	/* Free space manager info message */
 
-	    /* Write free-space manager info message to superblock extension object header if needed */
-	    fsinfo.strategy = f->shared->fs_strategy;
-	    fsinfo.threshold = f->shared->fs_threshold;
-	    for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
+            /* Write free-space manager info message to superblock extension object header if needed */
+            fsinfo.strategy = f->shared->fs_strategy;
+            fsinfo.threshold = f->shared->fs_threshold;
+            for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
                 fsinfo.fs_addr[type-1] = HADDR_UNDEF;
 
-	    if(H5O_msg_create(&ext_loc, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE, H5O_UPDATE_TIME, &fsinfo, dxpl_id) < 0)
+            if(H5O_msg_create(&ext_loc, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE, H5O_UPDATE_TIME, &fsinfo, dxpl_id) < 0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to update free-space info header message")
-	} /* end if */
+        } /* end if */
     } /* end if */
     else {
         /* Check for creating an "old-style" driver info block */

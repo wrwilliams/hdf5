@@ -34,10 +34,10 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"		/* Generic Functions            */
+#include "H5private.h"      /* Generic Functions            */
 #include "H5ACprivate.h"    /* Metadata Cache               */
 #include "H5Cpkg.h"         /* Cache                        */
-#include "H5Eprivate.h"		/* Error Handling               */
+#include "H5Eprivate.h"     /* Error Handling               */
 
 
 /****************/
@@ -899,9 +899,9 @@ H5C_stats__reset(H5C_t H5_ATTR_UNUSED * cache_ptr)
     cache_ptr->max_entries_scanned_in_msic      = 0;
     cache_ptr->entries_scanned_to_make_space    = 0;
 
-    cache_ptr->slist_scan_restarts      = 0;
-    cache_ptr->LRU_scan_restarts        = 0;
-    cache_ptr->index_scan_restarts      = 0;
+    cache_ptr->slist_scan_restarts              = 0;
+    cache_ptr->LRU_scan_restarts                = 0;
+    cache_ptr->index_scan_restarts              = 0;
 
     cache_ptr->images_created           = 0;
     cache_ptr->images_loaded            = 0;

@@ -237,14 +237,14 @@ H5MF_sect_simple_can_merge(const H5FS_section_info_t *_sect1,
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5MF_sect_simple_merge
+ * Function:    H5MF_sect_simple_merge
  *
- * Purpose:	Merge two sections of this type
+ * Purpose:     Merge two sections of this type
  *
  * Note:        Second section always merges into first node
  *
- * Return:	Success:	non-negative
- *		Failure:	negative
+ * Return:      Success:    non-negative
+ *              Failure:    negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -281,12 +281,12 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5MF_sect_simple_can_shrink
+ * Function:    H5MF_sect_simple_can_shrink
  *
- * Purpose:	Can this section shrink the container?
+ * Purpose:     Can this section shrink the container?
  *
- * Return:	Success:	non-negative (TRUE/FALSE)
- *		Failure:	negative
+ * Return:      Success:    non-negative (TRUE/FALSE)
+ *              Failure:    negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -380,12 +380,12 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5MF_sect_simple_shrink
+ * Function:    H5MF_sect_simple_shrink
  *
- * Purpose:	Shrink container with section
+ * Purpose:     Shrink container with section
  *
- * Return:	Success:	non-negative
- *		Failure:	negative
+ * Return:      Success:    non-negative
+ *              Failure:    negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008

@@ -379,9 +379,8 @@ HDfprintf(stderr, "%s: Allocating block\n", FUNC);
     HDassert(H5F_addr_le((ret_value + size), f->shared->tmp_addr));
 
     /* Post-condition sanity check */
-    if(f->shared->alignment && size >= f->shared->threshold) {
+    if(f->shared->alignment && size >= f->shared->threshold)
         HDassert(!((ret_value + H5FD_get_base_addr(f->shared->lf)) % f->shared->alignment));
-    } /* end if */
 
 done:
 #ifdef H5MF_AGGR_DEBUG
@@ -440,7 +439,7 @@ H5MF_aggr_try_extend(H5F_t *f, hid_t dxpl_id, H5F_blk_aggr_t *aggr,
 
             /* Get the EOA for the file */
             if(HADDR_UNDEF == (eoa = H5F_get_eoa(f, type)))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "Unable to get eoa")
+                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "Unable to get eoa")
 
             /* If the aggregator is at the end of file: */
             if(H5F_addr_eq(eoa, aggr->addr + aggr->size)) {
@@ -451,7 +450,7 @@ H5MF_aggr_try_extend(H5F_t *f, hid_t dxpl_id, H5F_blk_aggr_t *aggr,
 
                     /* Indicate success */
                     HGOTO_DONE(TRUE);
-                } /* end if */ 
+                } /* end if */
                 /* 
                  * If extra_requested is above percentage threshold:
                  * 1) "bubble" up the aggregator by aggr->alloc_size or extra_requested
@@ -464,7 +463,7 @@ H5MF_aggr_try_extend(H5F_t *f, hid_t dxpl_id, H5F_blk_aggr_t *aggr,
                         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTEXTEND, FAIL, "error extending file")
                     else if(ret_value == TRUE) {
                         /* Shift the aggregator block by the extra requested */
-                                    /* (allocates the space for the extra_requested) */
+                        /* (allocates the space for the extra_requested) */
                         aggr->addr += extra_requested;
 
                         /* Add extra to the aggregator's total allocated amount */
@@ -928,4 +927,3 @@ H5MF_aggrs_try_shrink_eoa(H5F_t *f, hid_t dxpl_id)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5MF_aggrs_try_shrink_eoa() */
-

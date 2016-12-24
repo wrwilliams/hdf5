@@ -6313,25 +6313,25 @@ test_mf_fs_gone(hid_t fapl_new, hid_t fcpl)
     /* Allocate 4 blocks */
     type = H5FD_MEM_SUPER;
     if(HADDR_UNDEF == (addr1 = H5MF_alloc(f, type, H5AC_ind_read_dxpl_id, (hsize_t)TEST_BLOCK_SIZE1)))
-	FAIL_STACK_ERROR
+        FAIL_STACK_ERROR
     if(HADDR_UNDEF == (addr2 = H5MF_alloc(f, type, H5AC_ind_read_dxpl_id, (hsize_t)TEST_BLOCK_SIZE2)))
-	FAIL_STACK_ERROR
+        FAIL_STACK_ERROR
     if(HADDR_UNDEF == (addr3 = H5MF_alloc(f, type, H5AC_ind_read_dxpl_id, (hsize_t)TEST_BLOCK_SIZE3)))
-	FAIL_STACK_ERROR
+        FAIL_STACK_ERROR
     if(HADDR_UNDEF == (addr4 = H5MF_alloc(f, type, H5AC_ind_read_dxpl_id, (hsize_t)TEST_BLOCK_SIZE4)))
-	FAIL_STACK_ERROR
+        FAIL_STACK_ERROR
 
     /* Put block #1, #3 to H5FD_MEM_SUPER free-space manager */
     if(H5MF_xfree(f, type, H5AC_ind_read_dxpl_id, addr1, (hsize_t)TEST_BLOCK_SIZE1) < 0)
-	FAIL_STACK_ERROR
+        FAIL_STACK_ERROR
     if(H5MF_xfree(f, type, H5AC_ind_read_dxpl_id, addr3, (hsize_t)TEST_BLOCK_SIZE3) < 0)
-	FAIL_STACK_ERROR
+        FAIL_STACK_ERROR
 
     /* Retrieve block #1, #3 from H5FD_MEM_SUPER free-space manager */
     if(HADDR_UNDEF == (addr3 = H5MF_alloc(f, type, H5AC_ind_read_dxpl_id, (hsize_t)TEST_BLOCK_SIZE3)))
-	FAIL_STACK_ERROR
+        FAIL_STACK_ERROR
     if(HADDR_UNDEF == (addr1 = H5MF_alloc(f, type, H5AC_ind_read_dxpl_id, (hsize_t)TEST_BLOCK_SIZE1)))
-	FAIL_STACK_ERROR
+        FAIL_STACK_ERROR
 
     if(H5Fclose(file) < 0)
         FAIL_STACK_ERROR
@@ -6379,7 +6379,7 @@ test_mf_fs_gone(hid_t fapl_new, hid_t fcpl)
     if(!H5F_addr_defined(fs_stat.addr) || !H5F_addr_defined(fs_stat.sect_addr))
         TEST_ERROR
     if(fs_stat.tot_space < TEST_BLOCK_SIZE3)
-	TEST_ERROR
+        TEST_ERROR
 
     /* Put block #4 to H5FD_MEM_SUPER free-space manager */
     if(H5MF_xfree(f, type, H5AC_ind_read_dxpl_id, addr4, (hsize_t)TEST_BLOCK_SIZE4) < 0)
@@ -6406,13 +6406,13 @@ test_mf_fs_gone(hid_t fapl_new, hid_t fcpl)
 
     PASSED()
 
-    return(0);
+    return 0;
 
 error:
     H5E_BEGIN_TRY {
-	H5Fclose(file);
+        H5Fclose(file);
     } H5E_END_TRY;
-    return(1);
+    return 1;
 } /* test_mf_fs_gone() */
 
 

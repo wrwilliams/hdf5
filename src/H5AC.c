@@ -433,7 +433,7 @@ H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr, H5AC_cache_image_co
         aux_ptr->candidate_slist_ptr = NULL;
         aux_ptr->write_done = NULL;
         aux_ptr->sync_point_done = NULL;
-	aux_ptr->p0_image_len = 0;
+        aux_ptr->p0_image_len = 0;
 
         sprintf(prefix, "%d:", mpi_rank);
 
@@ -3175,6 +3175,40 @@ H5AC_expunge_tag_type_metadata(H5F_t *f, hid_t dxpl_id, haddr_t tag, int type_id
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC_expunge_tag_type_metadata*/
+
+
+/*------------------------------------------------------------------------------
+ * Function:    H5AC_get_tag()
+ *
+ * Purpose:     Get the tag for a metadata cache entry.
+ * 
+ * Return:      SUCCEED/FAIL
+ *
+ * Programmer:  Dana Robinson
+ *              Fall 2016
+ *
+ *------------------------------------------------------------------------------
+ */
+herr_t
+H5AC_get_tag(const void *thing, haddr_t *tag)
+{
+    /* Variable Declarations */
+    herr_t ret_value = SUCCEED;
+ 
+    /* Function Enter Macro */   
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Assertions */
+    HDassert(thing);
+    HDassert(tag);
+
+    /* Call cache level function to get the tag */
+    if(H5C_get_tag(thing, tag) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "Cannot get tag for metadata cache entry")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5AC_get_tag() */
 
 
 /*-------------------------------------------------------------------------

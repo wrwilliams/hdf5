@@ -3060,7 +3060,7 @@ cache_image_smoke_check_1(void)
 {
     const char * fcn_name = "cache_image_smoke_check_1()";
     char filename[512];
-    hbool_t show_progress = TRUE;
+    hbool_t show_progress = FALSE;
     hid_t file_id = -1;
     H5F_t *file_ptr = NULL;
     H5C_t *cache_ptr = NULL;
