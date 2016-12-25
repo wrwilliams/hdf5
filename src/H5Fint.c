@@ -843,7 +843,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
              */
             if(H5AC_prep_for_file_close(f, dxpl_id) < 0)
                 /* Push error, but keep going */
-                HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "metadata cache prep for close failed")
+                HDONE_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "metadata cache prep for close failed")
         } /* end else */
 
         /* With the shutdown modifications, the contents of the metadata cache
@@ -900,6 +900,14 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                 HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
 
                 if(flush) {
+                    /* Clear status_flags */
+                    f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_WRITE_ACCESS);
+                    f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_SWMR_WRITE_ACCESS);
+
+                    /* Mark superblock dirty in cache, so change will get encoded */
+                    if(H5F_super_dirty(f) < 0)
+                        HDONE_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
+
                     /* Clear status_flags */
                     f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_WRITE_ACCESS);
                     f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_SWMR_WRITE_ACCESS);
