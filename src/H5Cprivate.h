@@ -2029,9 +2029,6 @@ H5_DLL herr_t H5C_cork(H5C_t *cache_ptr, haddr_t obj_addr, unsigned action, hboo
 H5_DLL herr_t H5C_get_entry_ring(const H5F_t *f, haddr_t addr, H5C_ring_t *ring);
 H5_DLL herr_t H5C_unsettle_ring(H5F_t * f, H5C_ring_t ring);
 
-H5_DLL herr_t H5C_serialize_cache(const H5F_t * f, hid_t dxpl_id);
-H5_DLL herr_t H5C_settle(const H5F_t *f, hid_t dxpl_id);
-
 #ifdef H5_HAVE_PARALLEL
 H5_DLL herr_t H5C_apply_candidate_list(H5F_t *f, hid_t dxpl_id,
     H5C_t *cache_ptr, int num_candidates, haddr_t *candidates_list_ptr,
