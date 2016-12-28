@@ -886,6 +886,7 @@
 ./test/H5srcdir_str.h.in
 ./test/Makefile.am
 ./test/accum.c
+./test/accum_swmr_reader.c
 ./test/app_ref.c
 ./test/bad_compound.h5
 ./test/be_data.h5
@@ -945,6 +946,7 @@
 ./test/filter_fail.c
 ./test/flush1.c
 ./test/flush2.c
+./test/flushrefresh.c
 ./test/genall5.c
 ./test/genall5.h
 ./test/gen_bad_ohdr.c
@@ -1014,6 +1016,7 @@
 ./test/testcheck_version.sh.in
 ./test/testerror.sh.in
 ./test/testlinks_env.sh.in
+./test/testflushrefresh.sh.in
 ./test/testframe.c
 ./test/testhdf5.c
 ./test/testhdf5.h
@@ -2893,6 +2896,7 @@
 ./java/test/TestH5Fparams.java
 ./java/test/TestH5Fbasic.java
 ./java/test/TestH5F.java
+./java/test/TestH5Fswmr.java
 ./java/test/TestH5Gbasic.java
 ./java/test/TestH5G.java
 ./java/test/TestH5Giterate.java
@@ -3116,6 +3120,15 @@
 ./hl/tools/gif2h5/Makefile.in
 ./hl/tools/h5watch/Makefile.in
 ./hl/tools/Makefile.in
+./java/examples/intro/Makefile.in
+./java/examples/datasets/Makefile.in
+./java/examples/datatypes/Makefile.in
+./java/examples/Makefile.in
+./java/examples/groups/Makefile.in
+./java/Makefile.in
+./java/test/Makefile.in
+./java/src/Makefile.in
+./java/src/jni/Makefile.in
 ./m4/libtool.m4
 ./m4/lt~obsolete.m4
 ./m4/ltoptions.m4
