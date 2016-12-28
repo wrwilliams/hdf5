@@ -4704,11 +4704,11 @@ struct H5C_t {
     size_t			clean_index_ring_size[H5C_RING_NTYPES];
     size_t			dirty_index_size;
     size_t			dirty_index_ring_size[H5C_RING_NTYPES];
-    H5C_cache_entry_t *	    index[H5C__HASH_TABLE_LEN];
-    int32_t                 il_len;
-    size_t                  il_size;
-    H5C_cache_entry_t *	    il_head;
-    H5C_cache_entry_t *	    il_tail;
+    H5C_cache_entry_t *	        index[H5C__HASH_TABLE_LEN];
+    int32_t                     il_len;
+    size_t                      il_size;
+    H5C_cache_entry_t *	        il_head;
+    H5C_cache_entry_t *	        il_tail;
 
     /* Fields to detect entries removed during scans */
     int64_t			entries_removed_counter;
@@ -4920,13 +4920,13 @@ typedef int (*H5C_tag_iter_cb_t)(H5C_cache_entry_t *entry, void *ctx);
 
 /* Metadata cache epoch class */
 H5_DLLVAR const H5C_class_t H5C__epoch_marker_class;
+H5_DLLVAR const H5FD_mem_t H5C__class_mem_types[];
+
 
 
 /******************************/
 /* Package Private Prototypes */
 /******************************/
-H5_DLL herr_t H5C__flash_increase_cache_size(H5C_t * cache_ptr,
-    size_t old_entry_size, size_t new_entry_size);
 H5_DLL herr_t H5C_construct_cache_image_buffer(H5F_t * f, H5C_t * cache_ptr);
 H5_DLL herr_t H5C_deserialize_prefetched_entry(H5F_t * f, hid_t dxpl_id,
     H5C_t * cache_ptr, H5C_cache_entry_t** entry_ptr_ptr, 

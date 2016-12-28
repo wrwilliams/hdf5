@@ -437,7 +437,7 @@ H5_DLL herr_t H5AC_get_entry_ring(const H5F_t *f, haddr_t addr, H5AC_ring_t *rin
 H5_DLL herr_t H5AC_set_ring(hid_t dxpl_id, H5AC_ring_t ring, H5P_genplist_t **dxpl,
     H5AC_ring_t *orig_ring);
 H5_DLL herr_t H5AC_reset_ring(H5P_genplist_t *dxpl, H5AC_ring_t orig_ring);
-H5_DLL herr_t H5AC_unsettle_ring(H5F_t * f, H5C_ring_t ring);
+H5_DLL herr_t H5AC_unsettle_ring(H5F_t * f, H5AC_ring_t ring);
 H5_DLL herr_t H5AC_expunge_tag_type_metadata(H5F_t *f, hid_t dxpl_id, haddr_t tag, int type_id, unsigned flags);
 H5_DLL herr_t H5AC_get_tag(const void *thing, /*OUT*/ haddr_t *tag);
 
@@ -465,7 +465,7 @@ H5_DLL herr_t H5AC_flush_dependency_exists(H5F_t *f, haddr_t parent_addr,
 H5_DLL herr_t H5AC_verify_entry_type(const H5F_t * f, haddr_t addr,
     const H5AC_class_t * expected_type, hbool_t * in_cache_ptr,
     hbool_t * type_ok_ptr);
-H5_DLL hbool_t H5AC_cache_is_clean(const H5F_t *f, H5C_ring_t inner_ring);
+H5_DLL hbool_t H5AC_cache_is_clean(const H5F_t *f, H5AC_ring_t inner_ring);
 #endif /* NDEBUG */ /* end debugging functions */
 
 #endif /* !_H5ACprivate_H */

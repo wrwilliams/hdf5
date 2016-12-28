@@ -381,17 +381,15 @@ H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr, H5AC_cache_image_co
     HDassert(NULL == f->shared->cache);
     HDassert(config_ptr != NULL) ;
     HDassert(image_config_ptr != NULL) ;
-    HDassert(image_config_ptr->version == \
-             H5AC__CURR_CACHE_IMAGE_CONFIG_VERSION);
+    HDassert(image_config_ptr->version == H5AC__CURR_CACHE_IMAGE_CONFIG_VERSION);
     HDcompile_assert(NELMTS(H5AC_entry_type_names) == H5AC_NTYPES);
     HDcompile_assert(H5C__MAX_NUM_TYPE_IDS == H5AC_NTYPES);
 
+    /* Validate configurations */
     if(H5AC_validate_config(config_ptr) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Bad cache configuration")
-
     if(H5AC_validate_cache_image_config(image_config_ptr) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, \
-                    "Bad cache image configuration")
+        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Bad cache image configuration")
 
 #ifdef H5_HAVE_PARALLEL
     if(H5F_HAS_FEATURE(f, H5FD_FEAT_HAS_MPI)) {
@@ -907,7 +905,7 @@ done:
  *-------------------------------------------------------------------------
  */
 hbool_t
-H5AC_get_serialization_in_progress(H5F_t * f)
+H5AC_get_serialization_in_progress(H5F_t *f)
 {
     hbool_t ret_value = FALSE;      /* Return value */
 
@@ -917,7 +915,6 @@ H5AC_get_serialization_in_progress(H5F_t * f)
     ret_value = H5C_get_serialization_in_progress(f);
 
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5AC_get_serialization_in_progress() */
 
 
@@ -966,7 +963,7 @@ H5AC_insert_entry(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t add
 
     /* Check for invalid access request */
     if(0 == (H5F_INTENT(f) & H5F_ACC_RDWR))
-        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "no write intent on file")
+	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "no write intent on file")
 
 #if H5AC__TRACE_FILE_ENABLED
     /* For the insert, only the addr, size, type id and flags are really
@@ -1042,24 +1039,23 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5AC_load_cache_image_on_next_protect(H5F_t * f, haddr_t addr, size_t len, hbool_t rw)
+H5AC_load_cache_image_on_next_protect(H5F_t * f, haddr_t addr, size_t len,
+    hbool_t rw)
 {
     herr_t              ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert( f );
-    HDassert( f->shared );
-    HDassert( f->shared->cache );
+    /* Sanity checks */
+    HDassert(f);
+    HDassert(f->shared);
+    HDassert(f->shared->cache);
 
     if(H5C_load_cache_image_on_next_protect(f, addr, len, rw) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, FAIL, \
-                    "call to H5C_load_cache_image_on_next_protect failed");
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, FAIL, "call to H5C_load_cache_image_on_next_protect failed")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5AC_load_cache_image_on_next_protect() */
 
 
@@ -1528,23 +1524,20 @@ done:
 herr_t
 H5AC_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
 {
-    herr_t                      ret_value = SUCCEED;      /* Return value */
+    herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    /* sanity checks */
+    /* Sanity checks */
     HDassert(f);
     HDassert(f->shared);
     HDassert(f->shared->cache);
 
     if(H5C_prep_for_file_close(f, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                    "cache prep for file close failed")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "cache prep for file close failed")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5C_prep_for_file_close() */
 
 
@@ -1741,8 +1734,8 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5AC_read_cache_image(H5F_t * f, hid_t dxpl_id, haddr_t image_addr, 
-    size_t image_len, void * image_buffer)
+H5AC_read_cache_image(H5F_t *f, hid_t dxpl_id, haddr_t image_addr, 
+    size_t image_len, void *image_buffer)
 {
 #ifdef H5_HAVE_PARALLEL
     H5AC_t *cache_ptr = NULL;
@@ -1752,6 +1745,7 @@ H5AC_read_cache_image(H5F_t * f, hid_t dxpl_id, haddr_t image_addr,
 
     FUNC_ENTER_NOAPI(FAIL)
 
+    /* Sanity checks */
     HDassert(f);
     HDassert(H5F_addr_defined(image_addr));
     HDassert(image_len > 0);
@@ -1759,51 +1753,34 @@ H5AC_read_cache_image(H5F_t * f, hid_t dxpl_id, haddr_t image_addr,
 
 #ifdef H5_HAVE_PARALLEL
     HDassert(f->shared);
-
     cache_ptr = f->shared->cache;
-
     HDassert(cache_ptr);
-
     aux_ptr = (H5AC_aux_t *)H5C_get_aux_ptr(cache_ptr);
 
-    if ( ( NULL == aux_ptr ) ||
-         ( aux_ptr->mpi_rank == 0 ) ) {
-
-	HDassert((NULL == aux_ptr) || \
-                 (aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC));
-
+    if((NULL == aux_ptr) || (aux_ptr->mpi_rank == 0)) {
+	HDassert((NULL == aux_ptr) || (aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC));
 #endif /* H5_HAVE_PARALLEL */
-	/* read the buffer */
-        if ( H5F_block_read(f, H5FD_MEM_SUPER, image_addr, image_len,
-                            dxpl_id, image_buffer) < 0)
 
-            HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL,
-                        "Can't read metadata cache image block")
+	/* Read the buffer (if serial access, or rank 0 of parallel access) */
+        if(H5F_block_read(f, H5FD_MEM_SUPER, image_addr, image_len, dxpl_id, image_buffer) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read metadata cache image block")
 
 #ifdef H5_HAVE_PARALLEL
-	if ( aux_ptr ) {
-
-	    /* broadcast cache image */
-	    if ( H5AC__broadcast_cache_image(cache_ptr, image_len, 
-                                             image_buffer) < 0 )
-
-		HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                            "Can't broadcast cache image contents.")
-        }
-    } else if ( aux_ptr ) {
-
-	/* receive metadata cache image */
-	if ( H5AC__receive_cache_image(cache_ptr, image_len, image_buffer) < 0 )
-
-	    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                        "Can't receive cache image contents.")
-
-    }
+	if(aux_ptr) {
+	    /* Broadcast cache image */
+	    if(H5AC__broadcast_cache_image(cache_ptr, image_len, image_buffer) < 0)
+		HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Can't broadcast cache image contents.")
+        } /* end if */
+    } /* end if */
+    else if(aux_ptr) {
+	/* Receive metadata cache image */
+	if(H5AC__receive_cache_image(cache_ptr, image_len, image_buffer) < 0)
+	    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Can't receive cache image contents.")
+    } /* end else-if */
 #endif /* H5_HAVE_PARALLEL */
+
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5AC_read_cache_image() */
 
 
@@ -1967,8 +1944,8 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5AC_write_cache_image(H5F_t * f, hid_t dxpl_id, haddr_t image_addr, 
-    size_t image_len, void * image_buffer)
+H5AC_write_cache_image(H5F_t *f, hid_t dxpl_id, haddr_t image_addr, 
+    size_t image_len, void *image_buffer)
 {
 #ifdef H5_HAVE_PARALLEL
     H5AC_t *cache_ptr = NULL;
@@ -1978,6 +1955,7 @@ H5AC_write_cache_image(H5F_t * f, hid_t dxpl_id, haddr_t image_addr,
 
     FUNC_ENTER_NOAPI(FAIL)
 
+    /* Sanity checks */
     HDassert(f);
     HDassert(H5F_addr_defined(image_addr));
     HDassert(image_len > 0);
@@ -1985,35 +1963,23 @@ H5AC_write_cache_image(H5F_t * f, hid_t dxpl_id, haddr_t image_addr,
 
 #ifdef H5_HAVE_PARALLEL
     HDassert(f->shared);
-
     cache_ptr = f->shared->cache;
-
     HDassert(cache_ptr);
-
     aux_ptr = (H5AC_aux_t *)H5C_get_aux_ptr(cache_ptr);
 
-    if ( ( NULL == aux_ptr ) ||
-         ( aux_ptr->mpi_rank == 0 ) ) {
-
-	HDassert((NULL == aux_ptr) || \
-                 (aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC));
-
+    if((NULL == aux_ptr) || (aux_ptr->mpi_rank == 0)) {
+	HDassert((NULL == aux_ptr) || (aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC));
 #endif /* H5_HAVE_PARALLEL */
-	/* write the buffer */
-	if ( H5F_block_write(f, H5FD_MEM_SUPER, image_addr, image_len, 
-                             dxpl_id, image_buffer) < 0 ) {
 
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                           "Can't write metadata cache image block to file.")
-        }
+	/* Write the buffer (if serial access, or rank 0 for parallel access) */
+	if(H5F_block_write(f, H5FD_MEM_SUPER, image_addr, image_len, dxpl_id, image_buffer) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't write metadata cache image block to file.")
 #ifdef H5_HAVE_PARALLEL
-    }
+    } /* end if */
 #endif /* H5_HAVE_PARALLEL */
 	
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5AC_write_cache_image() */
 
 
@@ -2656,188 +2622,26 @@ H5AC_validate_cache_image_config(H5AC_cache_image_config_t *config_ptr)
 
     /* Check args */
     if(config_ptr == NULL)
-        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "NULL config_ptr on entry.")
+        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "NULL config_ptr on entry")
 
     if(config_ptr->version != H5AC__CURR_CACHE_IMAGE_CONFIG_VERSION)
-        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, \
-                    "Unknown image config version.")
+        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Unknown image config version")
 
     /* don't need to get the current H5C image config here since the
      * default values of fields not in the H5AC config will always be 
      * valid.
      */
-
     internal_config.version            = config_ptr->version;
     internal_config.generate_image     = config_ptr->generate_image;
     internal_config.save_resize_status = config_ptr->save_resize_status;
     internal_config.entry_ageout       = config_ptr->entry_ageout;
 
     if(H5C_validate_cache_image_config(&internal_config) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, \
-                    "error(s) in new cache image config.")
+        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "error(s) in new cache image config")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5AC_validate_cache_image_config() */
-
-
-/*-------------------------------------------------------------------------
- *
- * Function:    H5AC_get_entry_ptr_from_addr()
- *
- * Purpose:     Debugging function that attempts to look up an entry in the
- *              cache by its file address, and if found, returns a pointer
- *              to the entry in *entry_ptr_ptr.  If the entry is not in the
- *              cache, *entry_ptr_ptr is set to NULL.
- *
- *              WARNING: This call should be used only in debugging
- *                       routines, and it should be avoided when
- *                       possible.
- *
- *                       Further, if we ever multi-thread the cache,
- *                       this routine will have to be either discarded
- *                       or heavily re-worked.
- *
- *                       Finally, keep in mind that the entry whose
- *                       pointer is obtained in this fashion may not
- *                       be in a stable state.
- *
- *              Note that this function is only defined if NDEBUG
- *              is not defined.
- *
- *              As heavy use of this function is almost certainly a
- *              bad idea, the metadata cache tracks the number of
- *              successful calls to this function, and (if
- *              H5C_DO_SANITY_CHECKS is defined) displays any
- *              non-zero count on cache shutdown.
- *
- *              This function is just a wrapper that calls the H5C
- *              version of the function.
- *
- * Return:      FAIL if error is detected, SUCCEED otherwise.
- *
- * Programmer:  John Mainzer, 5/30/14
- *
- *-------------------------------------------------------------------------
- */
-#ifndef NDEBUG
-herr_t
-H5AC_get_entry_ptr_from_addr(const H5F_t *f, haddr_t addr, void **entry_ptr_ptr)
-{
-    herr_t              ret_value = SUCCEED;      /* Return value */
-
-    FUNC_ENTER_NOAPI(FAIL)
-
-    if(H5C_get_entry_ptr_from_addr(f, addr, entry_ptr_ptr) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_get_entry_ptr_from_addr() failed")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5AC_get_entry_ptr_from_addr() */
-#endif /* NDEBUG */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5AC_flush_dependency_exists()
- *
- * Purpose:     Test to see if a flush dependency relationship exists
- *              between the supplied parent and child.  Both parties
- *              are indicated by addresses so as to avoid the necessity
- *              of protect / unprotect calls prior to this call.
- *
- *              If either the parent or the child is not in the metadata
- *              cache, the function sets *fd_exists_ptr to FALSE.
- *
- *              If both are in the cache, the childs list of parents is
- *              searched for the proposed parent.  If the proposed parent
- *              is found in the childs parent list, the function sets
- *              *fd_exists_ptr to TRUE.  In all other non-error cases,
- *              the function sets *fd_exists_ptr FALSE.
- *
- * Return:      SUCCEED on success/FAIL on failure.  Note that
- *              *fd_exists_ptr is undefined on failure.
- *
- * Programmer:  John Mainzer
- *              9/28/16
- *
- *-------------------------------------------------------------------------
- */
-#ifndef NDEBUG
-herr_t
-H5AC_flush_dependency_exists(H5F_t *f, haddr_t parent_addr, haddr_t child_addr,
-    hbool_t *fd_exists_ptr)
-{
-    herr_t  ret_value = FAIL;       /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
-
-    ret_value = H5C_flush_dependency_exists(f, parent_addr, child_addr, 
-                                            fd_exists_ptr);
-
-    FUNC_LEAVE_NOAPI(ret_value)
-
-} /* H5AC_flush_dependency_exists() */
-#endif /* NDEBUG */
-
-
-/*-------------------------------------------------------------------------
- *
- * Function:    H5AC_verify_entry_type()
- *
- * Purpose:     Debugging function that attempts to look up an entry in the
- *              cache by its file address, and if found, test to see if its
- *              type field contains the expected value.
- *
- *              If the specified entry is in cache, *in_cache_ptr is set
- *              to TRUE, and *type_ok_ptr is set to TRUE or FALSE depending 
- *		on whether the entries type field matches the 
- *		expected_type parameter
- *
- *              If the target entry is not in cache, *in_cache_ptr is
- *              set to FALSE, and *type_ok_ptr is undefined.
- *
- *              Note that this function is only defined if NDEBUG
- *              is not defined.
- *
- *              This function is just a wrapper that calls the H5C
- *              version of the function.
- *
- * Return:      FAIL if error is detected, SUCCEED otherwise.
- *
- * Programmer:  John Mainzer, 5/30/14
- *
- * Changes:	None.
- *
- *						JRM -- 9/17/16
- *
- *-------------------------------------------------------------------------
- */
-#ifndef NDEBUG
-herr_t
-H5AC_verify_entry_type(const H5F_t *f, haddr_t addr, 
-    const H5AC_class_t *expected_type, hbool_t *in_cache_ptr, 
-    hbool_t *type_ok_ptr)
-{
-    herr_t              ret_value = SUCCEED;      /* Return value */
-
-    FUNC_ENTER_NOAPI(FAIL)
-
-    if(H5C_verify_entry_type(f, addr, expected_type, in_cache_ptr, type_ok_ptr) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_verify_entry_type() failed")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5AC_verify_entry_type() */
-#endif /* NDEBUG */
-
-
-
-
-/*************************************************************************/
-/**************************** Private Functions: *************************/
-/*************************************************************************/
 
 
 /*-------------------------------------------------------------------------
@@ -3402,17 +3206,17 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5AC_unsettle_ring()
  *
- * Purpose:     Advise the metadata cache that the specified free space
+ * Purpose:     Advise the metadata cache that the specified metadata cache
  *              manager ring is no longer settled (if it was on entry).
  *
- *              If the target free space manager ring is already
+ *              If the target metadata cache  manager ring is already
  *              unsettled, do nothing, and return SUCCEED.
  *
- *              If the target free space manager ring is settled, and
+ *              If the target metadata cache  manager ring is settled, and
  *              we are not in the process of a file shutdown, mark
  *              the ring as unsettled, and return SUCCEED.
  *
- *              If the target free space manager is settled, and we
+ *              If the target metadata cache  manager is settled, and we
  *              are in the process of a file shutdown, post an error
  *              message, and return FAIL.
  *
@@ -3427,52 +3231,18 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5AC_unsettle_ring(H5F_t * f, H5C_ring_t ring)
+H5AC_unsettle_ring(H5F_t *f, H5AC_ring_t ring)
 {
-    herr_t              ret_value = SUCCEED;    /* Return value */
+    herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
     if(FAIL == (ret_value = H5C_unsettle_ring(f, ring)))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_unsettle_ring() failed.")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_unsettle_ring() failed")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5AC_unsettle_ring() */
-
-
-/*-------------------------------------------------------------------------
- *
- * Function:    H5AC_cache_is_clean()
- *
- * Purpose:     Debugging function that verifies that all rings in the
- *              metadata cache are clean from the outermost ring, inwards
- *              to the inner ring specified.
- *
- *              Returns TRUE if all specified rings are clean, and FALSE
- *              if not.  Throws an assertion failure on error.
- *
- * Return:      TRUE if the indicated ring(s) are clean, and FALSE otherwise.
- *
- * Programmer:  John Mainzer, 6/18/16
- *
- * Changes:     None.
- *
- *-------------------------------------------------------------------------
- */
-#ifndef NDEBUG
-hbool_t
-H5AC_cache_is_clean(const H5F_t *f, H5C_ring_t inner_ring)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
-
-    FUNC_LEAVE_NOAPI(H5C_cache_is_clean(f, inner_ring))
-
-}/* H5AC_cache_is_clean() */
-
-#endif /* NDEBUG */
 
 
 /*-------------------------------------------------------------------------

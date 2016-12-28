@@ -181,9 +181,7 @@ static herr_t H5C__write_cache_image_superblock_msg(H5F_t *f, hid_t dxpl_id,
 /* Package Variables */
 /*********************/
 
-extern const H5FD_mem_t class_mem_types[H5C__MAX_NUM_TYPE_IDS + 1];
-
-const H5C_class_t prefetched_entry_class =
+static const H5C_class_t H5C__prefetched_entry_class =
 {
     /* id                       = */ H5AC_PREFETCHED_ENTRY_ID,
     /* name                     = */ "prefetched entry",
@@ -521,7 +519,7 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
     HDassert(pf_entry_ptr->addr == addr);
     HDassert(type);
     HDassert(type->id == pf_entry_ptr->prefetch_type_id);
-    HDassert(type->mem_type == class_mem_types[type->id]);
+    HDassert(type->mem_type == H5C__class_mem_types[type->id]);
 
     /* verify absence of prohibited or unsupported type flag combinations */
     HDassert(!(type->flags & H5C__CLASS_SKIP_READS));
@@ -952,27 +950,24 @@ done:
  *-------------------------------------------------------------------------
  */
 hbool_t
-H5C_get_serialization_in_progress(H5F_t * f)
+H5C_get_serialization_in_progress(H5F_t *f)
 {
     H5C_t * cache_ptr;
-    hbool_t ret_value = FALSE;   /* Return value */
+    hbool_t ret_value;          /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
+    /* Sanity check */
     HDassert(f);
     HDassert(f->shared);
-
     cache_ptr = f->shared->cache;
-
     HDassert(cache_ptr);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
-
 
     /* Set return value */
     ret_value = cache_ptr->serialization_in_progress;
 
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5C_get_serialization_in_progress() */
 
 
@@ -4372,7 +4367,7 @@ H5C_reconstruct_cache_entry(H5C_t * cache_ptr, int i)
     pf_entry_ptr->age				= ie_ptr->age;
     pf_entry_ptr->image_ptr			= ie_ptr->image_ptr;
     pf_entry_ptr->image_up_to_date		= TRUE;
-    pf_entry_ptr->type				= &prefetched_entry_class;
+    pf_entry_ptr->type				= &H5C__prefetched_entry_class;
     pf_entry_ptr->tag_info          = NULL;
 
     /* force dirty entries to clean if the file read only -- must do 

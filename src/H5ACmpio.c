@@ -369,7 +369,7 @@ done:
  */
 herr_t
 H5AC__broadcast_cache_image(H5AC_t *cache_ptr, size_t image_len,
-    void * image_buffer)
+    void *image_buffer)
 {
     H5AC_aux_t         * aux_ptr = NULL;
     int                  mpi_result;
@@ -386,16 +386,12 @@ H5AC__broadcast_cache_image(H5AC_t *cache_ptr, size_t image_len,
     HDassert(image_len > 0);
     HDassert(image_buffer);
 
-    if ( MPI_SUCCESS != (mpi_result = MPI_Bcast(image_buffer, (int)image_len, 
-                                                MPI_BYTE, 0, 
-                                                aux_ptr->mpi_comm)) )
-
-            HMPI_GOTO_ERROR(FAIL, "MPI_Bcast failed", mpi_result)
+    if(MPI_SUCCESS != (mpi_result = MPI_Bcast(image_buffer, (int)image_len, 
+            MPI_BYTE, 0, aux_ptr->mpi_comm)))
+        HMPI_GOTO_ERROR(FAIL, "MPI_Bcast failed", mpi_result)
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5AC__broadcast_cache_image() */
 
 
@@ -1681,10 +1677,10 @@ done:
  */
 herr_t
 H5AC__receive_cache_image(const H5AC_t *cache_ptr, size_t image_len,
-    void * image_buffer)
+    void *image_buffer)
 {
-    int                  mpi_result;
     H5AC_aux_t         * aux_ptr;
+    int                  mpi_result;
     herr_t               ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_STATIC
@@ -1699,17 +1695,12 @@ H5AC__receive_cache_image(const H5AC_t *cache_ptr, size_t image_len,
     HDassert(image_buffer);
 
     /* Retrieve the contents of the metadata cache image from process 0 */
-
-    if ( MPI_SUCCESS != (mpi_result = MPI_Bcast(image_buffer, (int)image_len, 
-                                                MPI_BYTE, 0, 
-                                                aux_ptr->mpi_comm)) )
-
+    if(MPI_SUCCESS != (mpi_result = MPI_Bcast(image_buffer, (int)image_len, 
+            MPI_BYTE, 0, aux_ptr->mpi_comm)))
         HMPI_GOTO_ERROR(FAIL, "can't receive cache image MPI_Bcast", mpi_result)
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5AC__receive_cache_image() */
 
 

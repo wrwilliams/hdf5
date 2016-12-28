@@ -98,7 +98,7 @@ static herr_t H5HF__cache_iblock_pre_serialize(const H5F_t *f, hid_t dxpl_id,
     unsigned *flags); 
 static herr_t H5HF__cache_iblock_serialize(const H5F_t *f, void *image,
     size_t len, void *thing); 
-static herr_t H5HF__cache_iblock_notify(H5C_notify_action_t action, void *thing); 
+static herr_t H5HF__cache_iblock_notify(H5AC_notify_action_t action, void *thing); 
 static herr_t H5HF__cache_iblock_free_icr(void *thing);
 
 static herr_t H5HF__cache_dblock_get_initial_load_size(void *udata, size_t *image_len);
@@ -111,7 +111,7 @@ static herr_t H5HF__cache_dblock_pre_serialize(const H5F_t *f, hid_t dxpl_id,
     unsigned *flags); 
 static herr_t H5HF__cache_dblock_serialize(const H5F_t *f, void *image,
     size_t len, void *thing); 
-static herr_t H5HF__cache_dblock_notify(H5C_notify_action_t action, void *thing);
+static herr_t H5HF__cache_dblock_notify(H5AC_notify_action_t action, void *thing);
 static herr_t H5HF__cache_dblock_free_icr(void *thing);
 
 /* Debugging Function Prototypes */
@@ -1301,7 +1301,7 @@ H5HF__cache_iblock_pre_serialize(const H5F_t *f, hid_t dxpl_id, void *_thing,
         } /* end if */
 
 	*new_addr = iblock_addr;
-        *flags = H5C__SERIALIZE_MOVED_FLAG;
+        *flags = H5AC__SERIALIZE_MOVED_FLAG;
     } /* end if */
     else 
 	*flags = 0;
@@ -1448,7 +1448,7 @@ H5HF__cache_iblock_serialize(const H5F_t *f, void *_image, size_t len,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5HF__cache_iblock_notify(H5C_notify_action_t action, void *_thing)
+H5HF__cache_iblock_notify(H5AC_notify_action_t action, void *_thing)
 {
     H5HF_indirect_t     *iblock = (H5HF_indirect_t *)_thing;    /* Indirect block info */
     herr_t      	 ret_value = SUCCEED;    /* Return value */
@@ -2391,12 +2391,12 @@ H5HF__cache_dblock_pre_serialize(const H5F_t *f, hid_t dxpl_id, void *_thing,
 
     /* finally, pass data back to the metadata cache as appropriate */
     if(!H5F_addr_eq(addr, dblock_addr)) {
-        dblock_flags |= H5C__SERIALIZE_MOVED_FLAG;
+        dblock_flags |= H5AC__SERIALIZE_MOVED_FLAG;
         *new_addr = dblock_addr;
     } /* end if */
 
     if((hdr->filter_len > 0) && (len != write_size)) {
-        dblock_flags |= H5C__SERIALIZE_RESIZED_FLAG;
+        dblock_flags |= H5AC__SERIALIZE_RESIZED_FLAG;
         *new_len = write_size;
     } /* end if */
 
@@ -2490,7 +2490,7 @@ H5HF__cache_dblock_serialize(const H5F_t *f, void *image, size_t len,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5HF__cache_dblock_notify(H5C_notify_action_t action, void *_thing)
+H5HF__cache_dblock_notify(H5AC_notify_action_t action, void *_thing)
 {
     H5HF_direct_t 	*dblock = (H5HF_direct_t *)_thing;      /* Fractal heap direct block */
     herr_t 		 ret_value = SUCCEED;         /* Return value */
@@ -2752,10 +2752,8 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, hid_t dxpl_id,
             /* verify that a flush dependency exists between the header and
              * the root inode.
              */
-            if(H5C_flush_dependency_exists(f, hdr->heap_addr, root_iblock_addr,
-                                           &fd_exists) < 0)
-                HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, \
-                            "can't check flush dependency(1)")
+            if(H5AC_flush_dependency_exists(f, hdr->heap_addr, root_iblock_addr, &fd_exists) < 0)
+                HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't check flush dependency")
 
             HDassert(fd_exists);
 
@@ -2794,7 +2792,7 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, hid_t dxpl_id,
                      */
                     H5_BEGIN_TAG(dxpl_id, hdr->heap_addr, FAIL)
 
-                    if(NULL == (root_iblock = (H5HF_indirect_t *)H5AC_protect(f, dxpl_id, H5AC_FHEAP_IBLOCK, root_iblock_addr, NULL, H5C__READ_ONLY_FLAG)))
+                    if(NULL == (root_iblock = (H5HF_indirect_t *)H5AC_protect(f, dxpl_id, H5AC_FHEAP_IBLOCK, root_iblock_addr, NULL, H5AC__READ_ONLY_FLAG)))
                         HGOTO_ERROR_TAG(H5E_HEAP, H5E_CANTPROTECT, FAIL, "H5AC_protect() faild.")
 
                     H5_END_TAG(FAIL)
@@ -2868,7 +2866,7 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, hid_t dxpl_id,
                      */
                     H5_BEGIN_TAG(dxpl_id, hdr->heap_addr, FAIL)
 
-                    if(NULL == (iblock = (H5HF_indirect_t *)H5AC_protect(f, dxpl_id, H5AC_FHEAP_IBLOCK, root_iblock_addr, NULL, H5C__READ_ONLY_FLAG)))
+                    if(NULL == (iblock = (H5HF_indirect_t *)H5AC_protect(f, dxpl_id, H5AC_FHEAP_IBLOCK, root_iblock_addr, NULL, H5AC__READ_ONLY_FLAG)))
                         HGOTO_ERROR_TAG(H5E_HEAP, H5E_CANTPROTECT, FAIL, "H5AC_protect() faild.")
 
                     H5_END_TAG(FAIL)
@@ -2924,14 +2922,10 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, hid_t dxpl_id,
              * the root iblock is a child in a flush dependency
              * relationship with the header.
              */
-            if(H5C_flush_dependency_exists(f, hdr->heap_addr, root_dblock_addr,
-                                           &fd_exists) < 0)
-                HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, \
-                            "can't check flush dependency(2)")
-
+            if(H5AC_flush_dependency_exists(f, hdr->heap_addr, root_dblock_addr, &fd_exists) < 0)
+                HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't check flush dependency")
             if(!fd_exists)
-                HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL,
-                            "root dblock is not a flush dep parent of header.")
+                HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "root dblock is not a flush dep parent of header.")
 
             if(0 != (root_dblock_status & H5AC_ES__IS_FLUSH_DEP_PARENT))
                 HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "root dblock in cache and is a flush dep parent.")
@@ -3211,19 +3205,19 @@ H5HF__cache_verify_iblocks_dblocks_clean(H5F_t *f, haddr_t fd_parent_addr,
 
                     *clean = FALSE;
 		    
-                    if(H5C_flush_dependency_exists(f, fd_parent_addr, dblock_addr, &fd_exists) < 0)
-                        HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't check flush dependency(1)")
+                    if(H5AC_flush_dependency_exists(f, fd_parent_addr, dblock_addr, &fd_exists) < 0)
+                        HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't check flush dependency")
 
                     if(fd_exists) 
                         *fd_clean = FALSE;
-                }
+                } /* end if */
 
                 /* If a child dblock is in cache, it must have a flush 
                  * dependency relationship with this iblock.  Test this 
                  * here.
                  */
-                 if ( H5C_flush_dependency_exists(f, iblock_addr, dblock_addr, &fd_exists) < 0 )
-                    HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't check flush dependency(2)")
+                 if(H5AC_flush_dependency_exists(f, iblock_addr, dblock_addr, &fd_exists) < 0)
+                    HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't check flush dependency")
 
                 if(!fd_exists)
                     HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "dblock in cache and not a flush dep child of iblock.")
@@ -3368,12 +3362,12 @@ H5HF__cache_verify_descendant_iblocks_clean(H5F_t *f, hid_t dxpl_id,
 
                     *clean = FALSE;
 
-                    if(H5C_flush_dependency_exists(f, fd_parent_addr, child_iblock_addr, &fd_exists) < 0)
-                        HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't check flush dependency(1)")
+                    if(H5AC_flush_dependency_exists(f, fd_parent_addr, child_iblock_addr, &fd_exists) < 0)
+                        HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't check flush dependency")
 
                     if(fd_exists)
                         *fd_clean = FALSE;
-                }
+                } /* end if */
 
                 /* if the child iblock is in cache and *fd_clean is TRUE, 
                  * we must continue to explore down the fractal heap tree
@@ -3454,7 +3448,7 @@ H5HF__cache_verify_descendant_iblocks_clean(H5F_t *f, hid_t dxpl_id,
 
                             H5_BEGIN_TAG(dxpl_id, iblock->hdr->heap_addr, FAIL)
 
-                            if(NULL == (child_iblock = (H5HF_indirect_t *) H5AC_protect(f, dxpl_id, H5AC_FHEAP_IBLOCK, child_iblock_addr, NULL, H5C__READ_ONLY_FLAG)))
+                            if(NULL == (child_iblock = (H5HF_indirect_t *) H5AC_protect(f, dxpl_id, H5AC_FHEAP_IBLOCK, child_iblock_addr, NULL, H5AC__READ_ONLY_FLAG)))
                                 HGOTO_ERROR_TAG(H5E_HEAP, H5E_CANTPROTECT, FAIL, "H5AC_protect() faild.")
 
                             H5_END_TAG(FAIL)
@@ -3496,19 +3490,17 @@ H5HF__cache_verify_descendant_iblocks_clean(H5F_t *f, hid_t dxpl_id,
                      * the child iblock.
                      */
                     if(fd_parent_addr != iblock_addr) {
-
-                        if(H5C_flush_dependency_exists(f, iblock_addr, child_iblock_addr, &fd_exists) < 0)
-                            HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't check flush dependency(2)")
+                        if(H5AC_flush_dependency_exists(f, iblock_addr, child_iblock_addr, &fd_exists) < 0)
+                            HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't check flush dependency")
 
                         if(!fd_exists)
                             HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock is not a flush dep parent of child_iblock.")
-                    }
+                    } /* end if */
 
                     /* if we protected the child iblock, unprotect it now */
                     if(unprotect_child_iblock) {
                         if(H5AC_unprotect(f, dxpl_id, H5AC_FHEAP_IBLOCK, child_iblock_addr, child_iblock, H5AC__NO_FLAGS_SET) < 0)
                             HGOTO_ERROR(H5E_HEAP, H5E_CANTUNPROTECT, FAIL, "H5AC_unprotect() faild.")
-
                     } /* end if */
                 } /* end if */
             } /* end if */
