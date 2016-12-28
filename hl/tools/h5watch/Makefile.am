@@ -36,7 +36,7 @@ h5watch_LDFLAGS = $(LT_STATIC_EXEC) $(AM_LDFLAGS)
 
 # Programs all depend on the hdf5 library, the tools library, and the HL
 # library.
-LDADD=$(LIBH5_HL) $(LIBH5TOOLS) $(LIBH5TEST) $(LIBHDF5)
+LDADD=$(LIBH5_HL) $(LIBH5TOOLS) $(LIBHDF5)
 
 # Add extend_dset specific preprocessor flags here
 # (add the main test subdirectory to the include file path)
