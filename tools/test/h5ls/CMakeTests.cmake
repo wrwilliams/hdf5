@@ -31,6 +31,7 @@
       ${HDF5_TOOLS_DIR}/testfiles/tstr.h5
       ${HDF5_TOOLS_DIR}/testfiles/tudlink.h5
       ${HDF5_TOOLS_DIR}/testfiles/tvldtypes1.h5
+      ${HDF5_TOOLS_DIR}/testfiles/tdset_idx.h5
   )
 
   set (LIST_OTHER_TEST_FILES
@@ -90,6 +91,7 @@
       ${HDF5_TOOLS_DIR}/testfiles/tvldtypes1.ls
       ${HDF5_TOOLS_DIR}/testfiles/tvldtypes2le.ls
       ${HDF5_TOOLS_DIR}/testfiles/tvldtypes2be.ls
+      ${HDF5_TOOLS_DIR}/testfiles/tdset_idx.ls
   )
 
   file (MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles")
@@ -259,6 +261,19 @@
     set (last_test "H5LS-clearall-objects")
   endif (HDF5_ENABLE_USING_MEMCHECKER)
 
+# See which filters are usable (and skip tests for filters we
+# don't have).  Do this by searching H5pubconf.h to see which
+# filters are defined.
+
+# detect whether the encoder is present.
+  if (H5_HAVE_FILTER_DEFLATE)
+    set (USE_FILTER_DEFLATE "true")
+  endif (H5_HAVE_FILTER_DEFLATE)
+
+  if (H5_HAVE_FILTER_SZIP)
+    set (USE_FILTER_SZIP "true")
+  endif (H5_HAVE_FILTER_SZIP)
+
   # test the help syntax
   ADD_H5_TEST (help-1 0 -w80 -h)
   ADD_H5_TEST (help-2 0 -w80 --help)
@@ -388,3 +403,10 @@
   else (H5_WORDS_BIGENDIAN)
     ADD_H5_TEST (tdataregle 0 -v tdatareg.h5)
   endif (H5_WORDS_BIGENDIAN)
+
+# test for file with datasets that use Fixed Array chunk indices
+  if (USE_FILTER_DEFLATE)
+    # data read internal filters
+    ADD_H5_TEST (tdset_idx 0 -w80 -d tdset_idx.h5)
+  endif (USE_FILTER_DEFLATE)
+
