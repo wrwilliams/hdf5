@@ -293,11 +293,17 @@ done:
 herr_t
 H5AC_get_entry_ptr_from_addr(const H5F_t *f, haddr_t addr, void **entry_ptr_ptr)
 {
-    herr_t              ret_value = SUCCEED;      /* Return value */
+    H5C_t *cache_ptr;               /* Ptr to cache */
+    herr_t ret_value = SUCCEED;     /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(H5C_get_entry_ptr_from_addr(f, addr, entry_ptr_ptr) < 0)
+    /* Sanity checks */
+    HDassert(f);
+    HDassert(f->shared);
+    cache_ptr = f->shared->cache;
+
+    if(H5C_get_entry_ptr_from_addr(cache_ptr, addr, entry_ptr_ptr) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_get_entry_ptr_from_addr() failed")
 
 done:
@@ -336,11 +342,17 @@ herr_t
 H5AC_flush_dependency_exists(H5F_t *f, haddr_t parent_addr, haddr_t child_addr,
     hbool_t *fd_exists_ptr)
 {
+    H5C_t *cache_ptr;               /* Ptr to cache */
     herr_t  ret_value = FAIL;       /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    ret_value = H5C_flush_dependency_exists(f, parent_addr, child_addr, fd_exists_ptr);
+    /* Sanity checks */
+    HDassert(f);
+    HDassert(f->shared);
+    cache_ptr = f->shared->cache;
+
+    ret_value = H5C_flush_dependency_exists(cache_ptr, parent_addr, child_addr, fd_exists_ptr);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC_flush_dependency_exists() */
@@ -385,11 +397,17 @@ H5AC_verify_entry_type(const H5F_t *f, haddr_t addr,
     const H5AC_class_t *expected_type, hbool_t *in_cache_ptr, 
     hbool_t *type_ok_ptr)
 {
+    H5C_t             * cache_ptr;
     herr_t              ret_value = SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(H5C_verify_entry_type(f, addr, expected_type, in_cache_ptr, type_ok_ptr) < 0)
+    /* Sanity checks */
+    HDassert(f);
+    HDassert(f->shared);
+    cache_ptr = f->shared->cache;
+
+    if(H5C_verify_entry_type(cache_ptr, addr, expected_type, in_cache_ptr, type_ok_ptr) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_verify_entry_type() failed")
 
 done:
@@ -421,9 +439,19 @@ done:
 hbool_t
 H5AC_cache_is_clean(const H5F_t *f, H5AC_ring_t inner_ring)
 {
+    H5C_t *cache_ptr;
+    hbool_t ret_value;          /* Return value */
+
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    FUNC_LEAVE_NOAPI(H5C_cache_is_clean(f, inner_ring))
-}/* H5AC_cache_is_clean() */
+    /* Sanity checks */
+    HDassert(f);
+    HDassert(f->shared);
+    cache_ptr = f->shared->cache;
+
+    ret_value = H5C_cache_is_clean(cache_ptr, inner_ring);
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5AC_cache_is_clean() */
 #endif /* NDEBUG */
 

@@ -30,6 +30,7 @@
 /****************/
 
 #include "H5Cmodule.h"          /* This source code file is part of the H5C module */
+#define H5F_FRIEND		/*suppress error about including H5Fpkg	  */
 
 
 /***********/
@@ -42,15 +43,12 @@
 #endif /* H5_HAVE_PARALLEL */
 #include "H5Cpkg.h"		/* Cache				*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
-#define H5F_FRIEND		/*suppress error about including H5Fpkg	  */
 #include "H5Fpkg.h"		/* Files				*/
 #include "H5FDprivate.h"	/* File drivers				*/
 #include "H5FLprivate.h"	/* Free Lists                           */
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5MFprivate.h"	/* File memory management		*/
 #include "H5MMprivate.h"	/* Memory management			*/
-#include "H5Pprivate.h"         /* Property lists                       */
-#include "H5SLprivate.h"	/* Skip lists				*/
 
 
 /****************/
@@ -90,114 +88,51 @@
 /* Local Prototypes */
 /********************/
 
-static herr_t H5C__prefetched_entry_get_initial_load_size(void *udata_ptr,
-    size_t *image_len_ptr);
-
-static herr_t H5C__prefetched_entry_get_final_load_size(const void *image_ptr,
-    size_t image_len, void *udata_ptr, size_t *actual_len_ptr);
-
-static htri_t H5C__prefetched_entry_verify_chksum(const void *image_ptr,
-    size_t len, void *udata_ptr);
-
-static void * H5C__prefetched_entry_deserialize(const void * image_ptr,
-    size_t len, void * udata, hbool_t * dirty_ptr);
-
-static herr_t H5C__prefetched_entry_image_len(const void * thing,
-    size_t *image_len_ptr);
-
-static herr_t H5C__prefetched_entry_pre_serialize(const H5F_t *f,
-    hid_t dxpl_id, void * thing, haddr_t addr, size_t len,
-    haddr_t * new_addr_ptr, size_t * new_len_ptr, unsigned * flags_ptr);
-
-static herr_t H5C__prefetched_entry_serialize(const H5F_t *f, void * image_ptr,
-    size_t len, void * thing);
-
-static herr_t H5C__prefetched_entry_notify(H5C_notify_action_t action, 
-    void *thing);
-
-static herr_t H5C__prefetched_entry_free_icr(void * thing);
-
-static herr_t H5C__prefetched_entry_fsf_size(const void H5_ATTR_UNUSED * thing,
-    size_t H5_ATTR_UNUSED * fsf_size_ptr);
-
-static size_t H5C_cache_image_block_entry_header_size(H5F_t * f);
-
-static size_t H5C_cache_image_block_header_size(H5F_t * f);
-
-static herr_t H5C_decode_cache_image_buffer(H5F_t * f, H5C_t * cache_ptr);
-
-static const uint8_t * H5C_decode_cache_image_header(H5F_t * f,
+/* Helper routines */
+static size_t H5C_cache_image_block_entry_header_size(H5F_t *f);
+static size_t H5C_cache_image_block_header_size(H5F_t *f);
+static herr_t H5C_decode_cache_image_buffer(H5F_t *f, H5C_t *cache_ptr);
+static const uint8_t * H5C_decode_cache_image_header(H5F_t *f,
     H5C_t *cache_ptr, const uint8_t *buf);
-
-static const uint8_t *
-H5C_decode_cache_image_entry(H5F_t * f, H5C_t * cache_ptr, const uint8_t * buf,
-    int entry_num, size_t expected_entry_header_len);
-
+static const uint8_t *H5C_decode_cache_image_entry(H5F_t *f, H5C_t *cache_ptr,
+    const uint8_t *buf, int entry_num, size_t expected_entry_header_len);
 static herr_t H5C_destroy_pf_entry_child_flush_deps(H5C_t *cache_ptr, 
-    H5C_cache_entry_t * pf_entry_ptr, H5C_cache_entry_t ** fd_children);
-
-static uint8_t * H5C_encode_cache_image_header(H5F_t * f, H5C_t *cache_ptr, 
+    H5C_cache_entry_t *pf_entry_ptr, H5C_cache_entry_t **fd_children);
+static uint8_t * H5C_encode_cache_image_header(H5F_t *f, H5C_t *cache_ptr, 
     uint8_t *buf);
-
-static uint8_t * H5C_encode_cache_image_entry(H5F_t * f, H5C_t * cache_ptr, 
-    uint8_t * buf, int entry_num, size_t expected_entry_header_len);
-
-static herr_t H5C_prep_for_file_close__compute_fd_heights(H5C_t * cache_ptr);
-
+static uint8_t * H5C_encode_cache_image_entry(H5F_t *f, H5C_t *cache_ptr, 
+    uint8_t *buf, int entry_num, size_t expected_entry_header_len);
+static herr_t H5C_prep_for_file_close__compute_fd_heights(H5C_t *cache_ptr);
 static void H5C_prep_for_file_close__compute_fd_heights_real(
     H5C_cache_entry_t  *entry_ptr, uint32_t fd_height);
-
 static void H5C_prep_for_file_close__partition_image_entries_array(
-    H5C_t * cache_ptr, int bottom, int * middle_ptr, int top);
-
+    H5C_t *cache_ptr, int bottom, int *middle_ptr, int top);
 static void H5C_prep_for_file_close__qsort_image_entries_array(
-    H5C_t * cache_ptr, int bottom, int top);
-
+    H5C_t *cache_ptr, int bottom, int top);
 static herr_t H5C_prep_for_file_close__setup_image_entries_array(
-    H5C_t * cache_ptr);
-
+    H5C_t *cache_ptr);
 static herr_t H5C_prep_for_file_close__scan_entries(H5F_t *f, hid_t dxpl_id,
-    H5C_t * cache_ptr);
-
-static herr_t H5C_reconstruct_cache_contents(H5F_t * f, hid_t dxpl_id, 
-    H5C_t * cache_ptr);
-
-static H5C_cache_entry_t * H5C_reconstruct_cache_entry(H5C_t * cache_ptr, 
+    H5C_t *cache_ptr);
+static herr_t H5C_reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, 
+    H5C_t *cache_ptr);
+static H5C_cache_entry_t * H5C_reconstruct_cache_entry(H5C_t *cache_ptr, 
     int i);
-
-static herr_t H5C_serialize_cache(const H5F_t * f, hid_t dxpl_id);
-
-static herr_t H5C_serialize_ring(const H5F_t * f, hid_t dxpl_id, 
+static herr_t H5C_serialize_cache(H5F_t *f, hid_t dxpl_id);
+static herr_t H5C_serialize_ring(const H5F_t *f, hid_t dxpl_id, 
     H5C_ring_t ring);
-
 static herr_t H5C_serialize_single_entry(const H5F_t *f, hid_t dxpl_id, 
     H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, 
     hbool_t *restart_list_scan_ptr);
-
 static herr_t H5C__write_cache_image_superblock_msg(H5F_t *f, hid_t dxpl_id, 
     hbool_t create);
+
 
 /*********************/
 /* Package Variables */
 /*********************/
 
-static const H5C_class_t H5C__prefetched_entry_class =
-{
-    /* id                       = */ H5AC_PREFETCHED_ENTRY_ID,
-    /* name                     = */ "prefetched entry",
-    /* mem_type                 = */ H5FD_MEM_DEFAULT, /* value doesn't matter */
-    /* flags                    = */ H5AC__CLASS_NO_FLAGS_SET,
-    /* get_initial_load_size    = */ H5C__prefetched_entry_get_initial_load_size,
-    /* get_final_load_size      = */ H5C__prefetched_entry_get_final_load_size,
-    /* verify_chksum            = */ H5C__prefetched_entry_verify_chksum,
-    /* deserialize              = */ H5C__prefetched_entry_deserialize,
-    /* image_len                = */ H5C__prefetched_entry_image_len,
-    /* pre_serialize            = */ H5C__prefetched_entry_pre_serialize,
-    /* serialize                = */ H5C__prefetched_entry_serialize,
-    /* notify                   = */ H5C__prefetched_entry_notify,
-    /* free_icr                 = */ H5C__prefetched_entry_free_icr,
-    /* fsf_size                 = */ H5C__prefetched_entry_fsf_size,
-};
+/* Declare a free list to manage H5C_cache_entry_t objects */
+H5FL_DEFINE(H5C_cache_entry_t);
 
 
 /*****************************/
@@ -1761,270 +1696,6 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 
 } /* H5C_validate_cache_image_config() */
-
-
-/***************************************************************************/
-/*************** Class functions for H5C__PREFETCHED_ENTRY_TYPE ************/
-/***************************************************************************/
-
-/***************************************************************************
- * With two exceptions, these functions should never be called, and thus 
- * there is little point in documenting them separately as they all simply
- * throw an error.
- *
- * See header comments for the two exceptions (free_icr and notify).
- * 
- *                                                     JRM - 8/13/15
- *
- ***************************************************************************/
-
-static herr_t
-H5C__prefetched_entry_get_initial_load_size(void H5_ATTR_UNUSED *udata_ptr,
-    size_t H5_ATTR_UNUSED *image_len_ptr)
-{
-    FUNC_ENTER_STATIC_NOERR /* Yes, even though this pushes an error on the stack */
-
-    HERROR(H5E_CACHE, H5E_SYSTEM, "called unreachable fcn.");
-
-    FUNC_LEAVE_NOAPI(FAIL)
-} /* end H5C__prefetched_entry_get_initial_load_size() */
-
-static herr_t
-H5C__prefetched_entry_get_final_load_size(const void H5_ATTR_UNUSED *image_ptr,
-    size_t H5_ATTR_UNUSED image_len, void H5_ATTR_UNUSED *udata_ptr,
-    size_t H5_ATTR_UNUSED *actual_len_ptr)
-{
-    FUNC_ENTER_STATIC_NOERR /* Yes, even though this pushes an error on the stack */
-
-    HERROR(H5E_CACHE, H5E_SYSTEM, "called unreachable fcn.");
-
-    FUNC_LEAVE_NOAPI(FAIL)
-} /* end H5C__prefetched_entry_get_final_load_size() */
-
-static htri_t
-H5C__prefetched_entry_verify_chksum(const void H5_ATTR_UNUSED *image_ptr,
-    size_t H5_ATTR_UNUSED len, void H5_ATTR_UNUSED *udata_ptr)
-{
-    FUNC_ENTER_STATIC_NOERR /* Yes, even though this pushes an error on the stack */
-
-    HERROR(H5E_CACHE, H5E_SYSTEM, "called unreachable fcn.");
-
-    FUNC_LEAVE_NOAPI(FAIL)
-} /* end H5C__prefetched_verify_chksum() */
-
-
-static void *
-H5C__prefetched_entry_deserialize(const void H5_ATTR_UNUSED * image_ptr, 
-    size_t H5_ATTR_UNUSED len, void H5_ATTR_UNUSED * udata, 
-    hbool_t H5_ATTR_UNUSED * dirty_ptr)
-{
-    FUNC_ENTER_STATIC_NOERR /* Yes, even though this pushes an error on the stack */
-
-    HERROR(H5E_CACHE, H5E_SYSTEM, "called unreachable fcn.");
-
-    FUNC_LEAVE_NOAPI(NULL)
-} /* end H5C__prefetched_entry_deserialize() */
-
-
-static herr_t
-H5C__prefetched_entry_image_len(const void H5_ATTR_UNUSED *thing,
-    size_t H5_ATTR_UNUSED *image_len_ptr)
-{
-    FUNC_ENTER_STATIC_NOERR /* Yes, even though this pushes an error on the stack */
-
-    HERROR(H5E_CACHE, H5E_SYSTEM, "called unreachable fcn.");
-
-    FUNC_LEAVE_NOAPI(FAIL)
-} /* end H5C__prefetched_entry_image_len() */
-
-
-static herr_t
-H5C__prefetched_entry_pre_serialize(const H5F_t H5_ATTR_UNUSED *f, 
-    hid_t H5_ATTR_UNUSED dxpl_id, void H5_ATTR_UNUSED *thing, 
-    haddr_t H5_ATTR_UNUSED addr, size_t H5_ATTR_UNUSED len,
-    haddr_t H5_ATTR_UNUSED *new_addr_ptr, 
-    size_t H5_ATTR_UNUSED *new_len_ptr, 
-    unsigned H5_ATTR_UNUSED *flags_ptr)
-{
-    FUNC_ENTER_STATIC_NOERR /* Yes, even though this pushes an error on the stack */
-
-    HERROR(H5E_CACHE, H5E_SYSTEM, "called unreachable fcn.");
-
-    FUNC_LEAVE_NOAPI(FAIL)
-} /* end H5C__prefetched_entry_pre_serialize() */
-
-
-static herr_t
-H5C__prefetched_entry_serialize(const H5F_t H5_ATTR_UNUSED *f, 
-    void H5_ATTR_UNUSED *image_ptr,
-    size_t H5_ATTR_UNUSED len, void H5_ATTR_UNUSED *thing)
-{
-    FUNC_ENTER_STATIC_NOERR /* Yes, even though this pushes an error on the stack */
-
-    HERROR(H5E_CACHE, H5E_SYSTEM, "called unreachable fcn.");
-
-    FUNC_LEAVE_NOAPI(FAIL)
-} /* end H5C__prefetched_entry_serialize() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5C__prefetched_entry_notify
- *
- * Purpose:     On H5AC_NOTIFY_ACTION_BEFORE_EVICT, check to see if the 
- *		target entry is a child in a flush dependency relationship.
- *		If it is, destroy that flush dependency relationship.
- *
- *		Ignore on all other notifications.
- *
- * Return:      Success:        SUCCEED
- *              Failure:        FAIL
- *
- * Programmer:  John Mainzer
- *              8/13/15
- *
- *-------------------------------------------------------------------------
- */
-
-static herr_t
-H5C__prefetched_entry_notify(H5C_notify_action_t action, void * thing)
-{
-    int 		i;
-    H5C_cache_entry_t * entry_ptr; 
-    H5C_cache_entry_t * parent_ptr; 
-    herr_t              ret_value = SUCCEED;
-
-    FUNC_ENTER_STATIC
-
-    HDassert(thing);
-
-    entry_ptr = (H5C_cache_entry_t *)thing;
-
-    HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
-    HDassert(entry_ptr->prefetched);
-
-    switch(action) {
-        case H5C_NOTIFY_ACTION_AFTER_INSERT:
-        case H5C_NOTIFY_ACTION_AFTER_LOAD:
-        case H5C_NOTIFY_ACTION_AFTER_FLUSH:
-        case H5C_NOTIFY_ACTION_ENTRY_DIRTIED: 
-        case H5C_NOTIFY_ACTION_ENTRY_CLEANED: 
-        case H5C_NOTIFY_ACTION_CHILD_DIRTIED: 
-        case H5C_NOTIFY_ACTION_CHILD_CLEANED: 
-        case H5C_NOTIFY_ACTION_CHILD_UNSERIALIZED: 
-        case H5C_NOTIFY_ACTION_CHILD_SERIALIZED: 
-            /* do nothing */
-            break;
-
-        case H5C_NOTIFY_ACTION_BEFORE_EVICT:
-	        for ( i = 0; i < (int)(entry_ptr->flush_dep_nparents); i++ ) {
-
-                HDassert(entry_ptr->flush_dep_parent);
-
-                parent_ptr = entry_ptr->flush_dep_parent[i];
-
-                HDassert(parent_ptr);
-                HDassert(parent_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
-                HDassert(parent_ptr->flush_dep_nchildren > 0);
-
-                /* destroy flush dependency with flush dependency parent */
-                if ( H5C_destroy_flush_dependency(parent_ptr, entry_ptr) < 0)
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL, "unable to destroy prefetched entry flush dependency")
-
-                if ( parent_ptr->prefetched ) {
-
-                    /* In prefetchec entries, the fd_child_count field is 
-                     * used in sanity checks elsewhere.  Thus update this 
-                     * field to reflect the destruction of the flush 
-                     * dependency relationship.
-                             */
-                    HDassert(parent_ptr->fd_child_count > 0);
-                    (parent_ptr->fd_child_count)--;
-                } /* end if */
-            } /* end for */
-            break;
-
-        default:
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown action from metadata cache")
-            break;
-    } /* end switch */
-
-done:
-
-    FUNC_LEAVE_NOAPI(ret_value)
-
-} /* end H5C__prefetched_entry_notify() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5C__prefetched_entry_free_icr
- *
- * Purpose:     Free the in core representation of the prefetched entry.
- *		Verify that the image buffer associated with the entry
- *		has been either transferred or freed.
- *
- * Return:      Success:        SUCCEED
- *              Failure:        FAIL
- *
- * Programmer:  John Mainzer
- *              8/13/15
- *
- * Changes:	Updated routine to free the fd parent addrs array if 
- *		appropriate.
- *						JRM -- 9/13/16
- *
- *-------------------------------------------------------------------------
- */
-
-static herr_t
-H5C__prefetched_entry_free_icr(void * thing)
-{
-    H5C_cache_entry_t *  entry_ptr; 
-    herr_t               ret_value = SUCCEED;
-
-    FUNC_ENTER_STATIC
-
-    HDassert(thing);
-
-    entry_ptr = (H5C_cache_entry_t *)thing;
-
-    HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_BAD_MAGIC);
-    HDassert(entry_ptr->prefetched);
-
-    if ( entry_ptr->fd_parent_addrs != NULL ) {
-
-	HDassert(entry_ptr->fd_parent_count > 0);
-	entry_ptr->fd_parent_addrs = 
-	    (haddr_t *)H5MM_xfree((void *)entry_ptr->fd_parent_addrs);
-
-    } else {
-	HDassert(entry_ptr->fd_parent_count == 0);
-    }
-
-    if ( entry_ptr->image_ptr != NULL )
-
-	HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                    "prefetched entry image buffer still attatched?")
-
-    entry_ptr = (H5C_cache_entry_t *)H5MM_xfree((void *)entry_ptr);
-
-done:
-
-    FUNC_LEAVE_NOAPI(ret_value)
-
-} /* end H5C__prefetched_entry_free_icr() */
-
-
-static herr_t 
-H5C__prefetched_entry_fsf_size(const void H5_ATTR_UNUSED * thing, 
-    size_t H5_ATTR_UNUSED *fsf_size_ptr)
-{
-    FUNC_ENTER_STATIC_NOERR /* Yes, even though this pushes an error on the stack */
-
-    HERROR(H5E_CACHE, H5E_SYSTEM, "called unreachable fcn.");
-
-    FUNC_LEAVE_NOAPI(FAIL)
-} /* end H5C__prefetched_entry_fsf_size() */
-
 
 
 /*************************************************************************/
@@ -4027,7 +3698,7 @@ H5C_prep_for_file_close__scan_entries(H5F_t *f,
          * Do not set lru_rank or increment lru_rank for entries 
          * that will not be included in the cache image.
          */
-	if ( entry_ptr->type->id == H5C__EPOCH_MARKER_TYPE ) {
+	if ( entry_ptr->type->id == H5AC_EPOCH_MARKER_ID ) {
 
 	    lru_rank++;
 
@@ -4350,12 +4021,8 @@ H5C_reconstruct_cache_entry(H5C_t * cache_ptr, int i)
     file_is_rw = cache_ptr->delete_image;
 
     /* allocate space for the prefetched cache entry */
-    pf_entry_ptr = (H5C_cache_entry_t *)H5MM_malloc(sizeof(H5C_cache_entry_t));
-
-    if ( NULL == pf_entry_ptr )
-
-	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, \
-                        "memory allocation failed for prefetched cache entry")
+    if(NULL == (pf_entry_ptr = H5FL_MALLOC(H5C_cache_entry_t)))
+	HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, NULL, "memory allocation failed for prefetched cache entry")
 
 
     /* initialize the prefetched entry from the entry image */
@@ -4515,7 +4182,7 @@ done:
  */
 
 static herr_t
-H5C_serialize_cache(const H5F_t *f, hid_t dxpl_id)
+H5C_serialize_cache(H5F_t *f, hid_t dxpl_id)
 {
 #if H5C_DO_SANITY_CHECKS
     int                 i;
@@ -5312,9 +4979,7 @@ H5C__write_cache_image_superblock_msg(H5F_t *f, hid_t dxpl_id, hbool_t create)
     H5O_mdci_msg_t 	mdci_msg;	/* metadata cache image message */
 					/* to insert in the superblock  */
 					/* extension.			*/
-    unsigned	   	mesg_flags = 
-			(H5O_MSG_FLAG_FAIL_IF_UNKNOWN_AND_OPEN_FOR_WRITE | 
-		 	H5O_MSG_FLAG_FAIL_IF_UNKNOWN_ALWAYS);
+    unsigned	   	mesg_flags = H5O_MSG_FLAG_FAIL_IF_UNKNOWN_ALWAYS;
     herr_t              ret_value = SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT

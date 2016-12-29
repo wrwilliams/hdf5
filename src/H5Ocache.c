@@ -618,7 +618,6 @@ H5O__cache_notify(H5AC_notify_action_t action, void *_thing)
     } /* end switch */
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__cache_notify() */
 

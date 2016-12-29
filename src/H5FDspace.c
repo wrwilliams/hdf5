@@ -125,11 +125,11 @@ H5FD_extend(H5FD_t *file, H5FD_mem_t type, hbool_t new_block, hsize_t size, hadd
         /* Check for EOA already aligned */
         if((mis_align = (eoa % file->alignment)) > 0) {
             extra = file->alignment - mis_align;
-            if(frag_addr)
+	    if(frag_addr)
                 *frag_addr = eoa - file->base_addr;     /* adjust for file's base address */
-            if(frag_size)
+	    if(frag_size)
                 *frag_size = extra;
-        } /* end if */
+	} /* end if */
     } /* end if */
 
     /* Add in extra allocation amount */
@@ -149,7 +149,7 @@ H5FD_extend(H5FD_t *file, H5FD_mem_t type, hbool_t new_block, hsize_t size, hadd
 
     /* Post-condition sanity check */
     if(new_block && file->alignment && orig_size >= file->threshold)
-        HDassert(!(ret_value % file->alignment));
+	HDassert(!(ret_value % file->alignment));
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -246,7 +246,7 @@ H5FD_alloc(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type, H5F_t *f, hsize_t size,
     /* update the driver information message in the superblock extension
      * if it exists.  If it doesn't exist, this call is a no-op.
      */
-    if (H5F_update_super_ext_driver_msg(f, dxpl_id) < 0)
+    if(H5F_update_super_ext_driver_msg(f, dxpl_id) < 0)
         HGOTO_ERROR(H5E_VFL, H5E_CANTUPDATE, HADDR_UNDEF, "error updating driver info superblock extension message")
 
     /* Mark superblock dirty in cache, so change to EOA will get encoded */
@@ -376,8 +376,8 @@ H5FD_free(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type, H5F_t *f, haddr_t addr,
     /* update the driver information message in the superblock extension
      * if it exists.  If it doesn't exist, this call is a no-op.
      */
-    if (H5F_update_super_ext_driver_msg(f, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTUPDATE, HADDR_UNDEF, "error updating driver info superblock extension message")
+    if(H5F_update_super_ext_driver_msg(f, dxpl_id) < 0)
+        HGOTO_ERROR(H5E_VFL, H5E_CANTUPDATE, FAIL, "error updating driver info superblock extension message")
 
     /* Mark superblock dirty in cache, so change to EOA will get encoded */
     if(H5F_super_dirty(f) < 0)
@@ -438,8 +438,7 @@ H5FD_try_extend(H5FD_t *file, H5FD_mem_t type, H5F_t *f, hid_t dxpl_id,
         /* update the driver information message in the superblock extension
          * if it exists.  If it doesn't exist, this call is a no-op.
          */
-
-        if (H5F_update_super_ext_driver_msg(f, dxpl_id) < 0)
+        if(H5F_update_super_ext_driver_msg(f, dxpl_id) < 0)
             HGOTO_ERROR(H5E_VFL, H5E_CANTUPDATE, FAIL, "error updating driver info superblock extension message")
 
         /* Mark superblock dirty in cache, so change to EOA will get encoded */

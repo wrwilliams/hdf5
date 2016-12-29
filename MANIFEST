@@ -507,6 +507,7 @@
 ./src/H5Cmodule.h
 ./src/H5Cmpio.c
 ./src/H5Cpkg.h
+./src/H5Cprefetched.c
 ./src/H5Cprivate.h
 ./src/H5Cpublic.h
 ./src/H5Cquery.c

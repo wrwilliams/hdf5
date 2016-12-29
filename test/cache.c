@@ -261,7 +261,7 @@ smoke_check_1(int express_test)
 	default:
             SKIPPED();
             HDfprintf(stdout, "	Long tests disabled.\n");
-            return 0;  /* <========== note return */
+	    return 0;  /* <========== note return */
 	    break;
     }
 
@@ -460,7 +460,7 @@ smoke_check_2(int express_test)
 	default:
             SKIPPED();
             HDfprintf(stdout, "	Long tests disabled.\n");
-            return 0;  /* <========== note return */
+	    return 0;  /* <========== note return */
 	    break;
     }
 
@@ -658,7 +658,7 @@ smoke_check_3(int express_test)
 	default:
             SKIPPED();
             HDfprintf(stdout, "	Long tests disabled.\n");
-            return 0;  /* <========== note return */
+	    return 0;  /* <========== note return */
 	    break;
     }
 
@@ -857,7 +857,7 @@ smoke_check_4(int express_test)
 	default:
             SKIPPED();
             HDfprintf(stdout, "	Long tests disabled.\n");
-            return 0;  /* <========== note return */
+	    return 0;  /* <========== note return */
 	    break;
     }
 
@@ -1104,7 +1104,7 @@ smoke_check_5(int express_test)
 	default:
             SKIPPED();
             HDfprintf(stdout, "	Long tests disabled.\n");
-            return 0;  /* <========== note return */
+	    return 0;  /* <========== note return */
 	    break;
     }
 
@@ -1342,7 +1342,7 @@ smoke_check_6(int express_test)
 	default:
             SKIPPED();
             HDfprintf(stdout, "	Long tests disabled.\n");
-            return 0;  /* <========== note return */
+	    return 0;  /* <========== note return */
 	    break;
     }
 
@@ -1577,7 +1577,7 @@ smoke_check_7(int express_test)
 	default:
             SKIPPED();
             HDfprintf(stdout, "	Long tests disabled.\n");
-            return 0;  /* <========== note return */
+	    return 0;  /* <========== note return */
 	    break;
     }
 
@@ -1814,7 +1814,7 @@ smoke_check_8(int express_test)
 	default:
             SKIPPED();
             HDfprintf(stdout, "	Long tests disabled.\n");
-            return 0;  /* <========== note return */
+	    return 0;  /* <========== note return */
 	    break;
     }
 
@@ -2011,7 +2011,7 @@ smoke_check_9(int express_test)
 	default:
             SKIPPED();
             HDfprintf(stdout, "	Long tests disabled.\n");
-            return 0;  /* <========== note return */
+	    return 0;  /* <========== note return */
 	    break;
     }
 
@@ -2331,7 +2331,7 @@ smoke_check_10(int express_test)
 	default:
             SKIPPED();
             HDfprintf(stdout, "	Long tests disabled.\n");
-            return 0;  /* <========== note return */
+	    return 0;  /* <========== note return */
 	    break;
     }
 
@@ -2647,7 +2647,7 @@ express_test)
 	default:
             SKIPPED();
             HDfprintf(stdout, "	Long tests disabled.\n");
-            return 0;  /* <========== note return */
+	    return 0;  /* <========== note return */
 	    break;
     }
 
@@ -15910,7 +15910,7 @@ check_destroy_pinned_err(void)
                                 (size_t)(1 * 1024));
 
         protect_entry(file_ptr, 0, 0);
-        unprotect_entry(file_ptr, 0, 0, H5C__PIN_ENTRY_FLAG);
+	unprotect_entry(file_ptr, 0, 0, H5C__PIN_ENTRY_FLAG);
 
         if(H5C_prep_for_file_close(file_ptr, H5P_DATASET_XFER_DEFAULT) < 0 ) {
             pass = FALSE;
@@ -15921,16 +15921,16 @@ check_destroy_pinned_err(void)
             pass = FALSE;
             failure_mssg = "destroy succeeded on cache with pinned entry.\n";
         } /* end if */
-        else {
-            unpin_entry(0, 0);
+	else {
+	    unpin_entry(0, 0);
 
             if(H5C_dest(file_ptr, H5AC_ind_read_dxpl_id) < 0) {
                 pass = FALSE;
                 failure_mssg = "destroy failed after unpin.\n";
             } /* end if */
-            else {
+	    else {
                 file_ptr->shared->cache = NULL;
-            } /* end else */
+	    } /* end else */
         } /* end else */
 
         if(saved_cache != NULL) {
@@ -15938,11 +15938,11 @@ check_destroy_pinned_err(void)
             saved_cache = NULL;
         } /* end if */
 
-        /* call takedown_cache() with a NULL file_ptr parameter.
-         * This causes the function to close and delete the file,
-         * while skipping the call to H5C_dest().
-         */
-        takedown_cache(NULL, FALSE, FALSE);
+	/* call takedown_cache() with a NULL file_ptr parameter.
+	 * This causes the function to close and delete the file,
+	 * while skipping the call to H5C_dest().
+	 */
+	takedown_cache(NULL, FALSE, FALSE);
     } /* end if */
 
     if(pass) { PASSED(); } else { H5_FAILED(); }
@@ -16012,27 +16012,27 @@ check_destroy_protected_err(void)
             pass = FALSE;
             failure_mssg = "destroy succeeded on cache with protected entry.\n";
         } /* end if */
-        else {
+	else {
             unprotect_entry(file_ptr, 0, 0, H5C__DIRTIED_FLAG);
             if(H5C_dest(file_ptr, H5AC_ind_read_dxpl_id) < 0) {
                 pass = FALSE;
                 failure_mssg = "destroy failed after unprotect.\n";
             } /* end if */
-            else {
+	    else {
                 file_ptr->shared->cache = NULL;
-            } /* end else */
-        } /* end else */
+	    } /* end else */
+	} /* end else */
 
         if(saved_cache != NULL) {
             file_ptr->shared->cache = saved_cache;
             saved_cache = NULL;
         } /* end if */
 
-        /* call takedown_cache() with a NULL file_ptr parameter.
-         * This causes the function to close and delete the file,
-         * while skipping the call to H5C_dest().
-         */
-        takedown_cache(NULL, FALSE, FALSE);
+	/* call takedown_cache() with a NULL file_ptr parameter.
+	 * This causes the function to close and delete the file,
+	 * while skipping the call to H5C_dest().
+	 */
+	takedown_cache(NULL, FALSE, FALSE);
     } /* end if */
 
     if(pass) { PASSED(); } else { H5_FAILED(); }
@@ -34533,7 +34533,7 @@ cedds__expunge_dirty_entry_in_flush_test(H5F_t * file_ptr)
      * values.
      */
     if(pass)
-        if((cache_ptr->insertions[HUGE_ENTRY_TYPE] != 0) ||
+	if((cache_ptr->insertions[HUGE_ENTRY_TYPE] != 0) ||
              (cache_ptr->pinned_insertions[HUGE_ENTRY_TYPE] != 0) ||
              (cache_ptr->clears[HUGE_ENTRY_TYPE] != 1) ||
              (cache_ptr->flushes[HUGE_ENTRY_TYPE] != 3) ||
@@ -34557,7 +34557,7 @@ cedds__expunge_dirty_entry_in_flush_test(H5F_t * file_ptr)
         } /* end if */
 
     if(pass)
-        if((cache_ptr->slist_scan_restarts != 1) ||
+	if((cache_ptr->slist_scan_restarts != 1) ||
              (cache_ptr->LRU_scan_restarts != 0) ||
              (cache_ptr->index_scan_restarts != 0)) {
             pass = FALSE;
@@ -34912,7 +34912,7 @@ cedds__H5C_make_space_in_cache(H5F_t * file_ptr)
     }
 
     if(pass)
-        if((cache_ptr->insertions[MONSTER_ENTRY_TYPE] != 0) ||
+	if((cache_ptr->insertions[MONSTER_ENTRY_TYPE] != 0) ||
              (cache_ptr->pinned_insertions[MONSTER_ENTRY_TYPE] != 0) ||
              (cache_ptr->clears[MONSTER_ENTRY_TYPE] != 0) ||
              (cache_ptr->flushes[MONSTER_ENTRY_TYPE] != 32) ||
@@ -34936,7 +34936,7 @@ cedds__H5C_make_space_in_cache(H5F_t * file_ptr)
         } /* end if */
 
     if(pass)
-        if((cache_ptr->slist_scan_restarts != 0) ||
+	if((cache_ptr->slist_scan_restarts != 0) ||
              (cache_ptr->LRU_scan_restarts != 1) ||
              (cache_ptr->index_scan_restarts != 0)) {
 
@@ -35322,7 +35322,7 @@ cedds__H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * file_ptr)
      */
 
     if(pass)
-        if((cache_ptr->insertions[MONSTER_ENTRY_TYPE] != 0) ||
+	if((cache_ptr->insertions[MONSTER_ENTRY_TYPE] != 0) ||
              (cache_ptr->pinned_insertions[MONSTER_ENTRY_TYPE] != 0) ||
              (cache_ptr->clears[MONSTER_ENTRY_TYPE] != 0) ||
              (cache_ptr->flushes[MONSTER_ENTRY_TYPE] != 1) ||
@@ -35346,9 +35346,9 @@ cedds__H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * file_ptr)
         } /* end if */
 
     if(pass)
-        if((cache_ptr->slist_scan_restarts != 0) ||
-             ( cache_ptr->LRU_scan_restarts != 1) ||
-             ( cache_ptr->index_scan_restarts != 0)) {
+	if((cache_ptr->slist_scan_restarts != 0) ||
+             (cache_ptr->LRU_scan_restarts != 1) ||
+             (cache_ptr->index_scan_restarts != 0)) {
 
             pass = FALSE;
             failure_mssg = "unexpected scan restart stats in cedds__H5C__autoadjust__ageout__evict_aged_out_entries().";
@@ -35709,7 +35709,7 @@ cedds__H5C_flush_invalidate_cache__bucket_scan(H5F_t * file_ptr)
      */
 
     if(pass)
-        if((cache_ptr->insertions[MONSTER_ENTRY_TYPE] != 0) ||
+	if((cache_ptr->insertions[MONSTER_ENTRY_TYPE] != 0) ||
              (cache_ptr->pinned_insertions[MONSTER_ENTRY_TYPE] != 0) ||
              (cache_ptr->clears[MONSTER_ENTRY_TYPE] != 0) ||
              (cache_ptr->flushes[MONSTER_ENTRY_TYPE] != 2) ||
@@ -35737,7 +35737,7 @@ cedds__H5C_flush_invalidate_cache__bucket_scan(H5F_t * file_ptr)
          * the following has been modified to check this instead of 
          * hash bucket scan restarts.
          */
-        if((cache_ptr->slist_scan_restarts != 0) ||
+	if((cache_ptr->slist_scan_restarts != 0) ||
              (cache_ptr->LRU_scan_restarts != 0) ||
              (cache_ptr->index_scan_restarts != 1)) {
             pass = FALSE;
@@ -35882,15 +35882,15 @@ check_stats__smoke_check_1(H5F_t * file_ptr)
         else if((cache_ptr->max_cache_size != (2 * 1024 * 1024)) ||
                   (cache_ptr->min_clean_size != (1 * 1024 * 1024))) {
 
-            pass = FALSE;
-            failure_mssg = "unexpected cache config at start of check_stats__smoke_check_1().";
+	    pass = FALSE;
+	    failure_mssg = "unexpected cache config at start of check_stats__smoke_check_1().";
 
         } /* end else-if */
-        else {
+	else {
 
             /* set min clean size to zero for this test as it simplifies
-             * computing the expected cache size after each operation.
-             */
+	     * computing the expected cache size after each operation.
+	     */
             cache_ptr->min_clean_size = 0;
         } /* end else */
 
@@ -35980,8 +35980,8 @@ check_stats__smoke_check_1(H5F_t * file_ptr)
          * entered the cache via insertion
          */
         for(i = 0; i < 32; i++) {
-            protect_entry(file_ptr, MONSTER_ENTRY_TYPE, i);
-            unprotect_entry(file_ptr, MONSTER_ENTRY_TYPE, i, H5C__NO_FLAGS_SET);
+	    protect_entry(file_ptr, MONSTER_ENTRY_TYPE, i);
+	    unprotect_entry(file_ptr, MONSTER_ENTRY_TYPE, i, H5C__NO_FLAGS_SET);
         } /* end for */
 
     if(pass)

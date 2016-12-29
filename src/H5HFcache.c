@@ -2662,7 +2662,7 @@ done:
 #ifndef NDEBUG
 static herr_t
 H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, hid_t dxpl_id,
-    H5HF_hdr_t * hdr, hbool_t *fd_clean, hbool_t *clean)
+    H5HF_hdr_t *hdr, hbool_t *fd_clean, hbool_t *clean)
 {
     hbool_t     fd_exists = FALSE;      /* whether flush dependency exists. */
     haddr_t	hdr_addr;               /* Address of header */
@@ -2725,26 +2725,27 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, hid_t dxpl_id,
 
         /* make note of the on disk address of the root iblock */
         if(root_iblock == NULL)
-            /* hdr->man_dtable.table_addr must contain address of root
+	    /* hdr->man_dtable.table_addr must contain address of root
              * iblock.  Check to see if it is in cache.  If it is, 
              * protect it and put its address in root_iblock.
              */
-            root_iblock_addr = hdr->man_dtable.table_addr;
+	    root_iblock_addr = hdr->man_dtable.table_addr;
         else
-            root_iblock_addr = root_iblock->addr;
+	    root_iblock_addr = root_iblock->addr;
 
-        /* get the status of the root iblock */
-        HDassert(root_iblock_addr != HADDR_UNDEF);
+	/* get the status of the root iblock */
+	HDassert(root_iblock_addr != HADDR_UNDEF);
         if(H5AC_get_entry_status(f, root_iblock_addr, &root_iblock_status) < 0)
             HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't get root iblock status")
 
-        root_iblock_in_cache = ( (root_iblock_status & H5AC_ES__IN_CACHE) != 0);
-        HDassert(root_iblock_in_cache || (root_iblock == NULL));
+	root_iblock_in_cache = ( (root_iblock_status & H5AC_ES__IN_CACHE) != 0);
+	HDassert(root_iblock_in_cache || (root_iblock == NULL));
 
         if(!root_iblock_in_cache) { /* we are done */
             *clean = TRUE;
             *fd_clean = TRUE;
-        } else if((root_iblock_status & H5AC_ES__IS_DIRTY) &&
+        } /* end if */
+        else if((root_iblock_status & H5AC_ES__IS_DIRTY) &&
                   (((root_iblock_status & H5AC_ES__IMAGE_IS_UP_TO_DATE) == 0) ||
                    (!H5AC_get_serialization_in_progress(f)))) {
             *clean = FALSE;
@@ -2754,12 +2755,11 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, hid_t dxpl_id,
              */
             if(H5AC_flush_dependency_exists(f, hdr->heap_addr, root_iblock_addr, &fd_exists) < 0)
                 HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't check flush dependency")
-
             HDassert(fd_exists);
 
             *fd_clean = FALSE;
-
-        } else { /* must examine children */
+        } /* end else-if */
+        else { /* must examine children */
             hbool_t     unprotect_root_iblock = FALSE;
 
             /* At this point, the root iblock may be pinned, protected,
@@ -2886,7 +2886,7 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, hid_t dxpl_id,
              if(H5HF__cache_verify_iblock_descendants_clean(f, dxpl_id, hdr->heap_addr, root_iblock, &root_iblock_status, fd_clean, clean) < 0)
                  HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "can't verify root iblock & descendants clean.")
 
-             /* unprotect the root indirect block if required */
+             /* Unprotect the root indirect block if required */
              if(unprotect_root_iblock) {
                 HDassert(root_iblock);
                 if(H5AC_unprotect(f, dxpl_id, H5AC_FHEAP_IBLOCK, root_iblock_addr, root_iblock, H5AC__NO_FLAGS_SET) < 0)
@@ -2895,18 +2895,18 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, hid_t dxpl_id,
         } /* end else */
     } /* end if */
     else if((hdr->man_dtable.curr_root_rows == 0) &&
-            (HADDR_UNDEF != hdr->man_dtable.table_addr)) {
+		(HADDR_UNDEF != hdr->man_dtable.table_addr)) {
         haddr_t		root_dblock_addr;
         unsigned	root_dblock_status = 0;
         hbool_t         in_cache;
         hbool_t         type_ok;
 
-        /* this is scenario 2 -- we have a root dblock */
-        root_dblock_addr = hdr->man_dtable.table_addr;
+	/* this is scenario 2 -- we have a root dblock */
+	root_dblock_addr = hdr->man_dtable.table_addr;
         if(H5AC_get_entry_status(f, root_dblock_addr, &root_dblock_status) < 0)
             HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't get root dblock status")
 
-        if(root_dblock_status & H5AC_ES__IN_CACHE) {
+	if(root_dblock_status & H5AC_ES__IN_CACHE) {
             if(H5AC_verify_entry_type(f, root_dblock_addr, &H5AC_FHEAP_DBLOCK[0], &in_cache, &type_ok) < 0)
                 HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't check dblock type")
             HDassert(in_cache);
@@ -2940,7 +2940,7 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, hid_t dxpl_id,
         else {    /* root dblock not in cache */
             *fd_clean = TRUE;
             *clean = TRUE;
-        }
+        } /* end else */
     } /* end else-if */
     else {
         /* this is scenario 3 -- the fractal heap is empty, and we 
@@ -2948,7 +2948,7 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, hid_t dxpl_id,
          */
         *fd_clean = TRUE;
         *clean = TRUE;
-    }
+    } /* end else */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -3055,11 +3055,11 @@ H5HF__cache_verify_iblock_descendants_clean(H5F_t *f, hid_t dxpl_id,
 
     /* verify that flush dependency setup is plausible */
     if(0 == (*iblock_status & H5AC_ES__IS_FLUSH_DEP_CHILD))
-        HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock is not a flush dep child.")
+	HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock is not a flush dep child.")
     if(((has_dblocks || has_iblocks)) && (0 == (*iblock_status & H5AC_ES__IS_FLUSH_DEP_PARENT)))
-        HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock has children and is not a flush dep parent.")
+	HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock has children and is not a flush dep parent.")
     if(((has_dblocks || has_iblocks)) && (0 == (*iblock_status & H5AC_ES__IS_PINNED)))
-        HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock has children and is not pinned.")
+	HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock has children and is not pinned.")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -3068,24 +3068,24 @@ done:
 
 
 /*------------------------------------------------------------------------
- * Function:    H5HF__cache_verify_iblocks_dblocks_clean
+ * Function:	H5HF__cache_verify_iblocks_dblocks_clean
  *
- * Purpose:     Sanity checking routine that attempts to verify that all
- *              direct blocks pointed to by the supplied indirect block
- *              are either clean, or not in the cache.
+ * Purpose:	Sanity checking routine that attempts to verify that all
+ *		direct blocks pointed to by the supplied indirect block
+ *		are either clean, or not in the cache.
  *
- *              In passing, the function also does a cursory check to 
- *              spot any obvious errors in the flush dependency setup.  
- *              If any problems are found, the function returns failure.  
- *              Note that these checks are not exhaustive, thus passing 
- *              them does not mean that the flush dependencies are 
- *              correct -- only that there is nothing obviously wrong
- *              with them.
+ *		In passing, the function also does a cursory check to 
+ *		spot any obvious errors in the flush dependency setup.  
+ *		If any problems are found, the function returns failure.  
+ *		Note that these checks are not exhaustive, thus passing 
+ *		them does not mean that the flush dependencies are 
+ *		correct -- only that there is nothing obviously wrong
+ *		with them.
  *
- *              WARNING:  This function presumes that the supplied 
- *              iblock is in the cache, and will not be removed 
- *              during the call.  Caller must ensure that this is 
- *              the case before the call.
+ *		WARNING:  This function presumes that the supplied 
+ *		iblock is in the cache, and will not be removed 
+ *		during the call.  Caller must ensure that this is 
+ *		the case before the call.
  *
  *      Update -- 8/24/15
  *
@@ -3134,10 +3134,10 @@ done:
  *		of the specified flush dependency parent.  In passing, 
  *		they also walk the data structure, and verify it.
  *
- * Return:      Non-negative on success/Negative on failure
+ * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:  John Mainzer
- *              5/25/14
+ * Programmer:	John Mainzer
+ *		5/25/14
  *
  *-------------------------------------------------------------------------
  */
@@ -3177,12 +3177,11 @@ H5HF__cache_verify_iblocks_dblocks_clean(H5F_t *f, haddr_t fd_parent_addr,
         haddr_t     dblock_addr;
 
         dblock_addr = iblock->ents[i].addr;
-        if(H5F_addr_defined(dblock_addr)) {
+	if(H5F_addr_defined(dblock_addr)) {
             hbool_t	in_cache;
             hbool_t	type_ok;
 
-            if(H5AC_verify_entry_type(f, dblock_addr, &H5AC_FHEAP_DBLOCK[0], 
-                                        &in_cache, &type_ok) < 0)
+            if(H5AC_verify_entry_type(f, dblock_addr, &H5AC_FHEAP_DBLOCK[0], &in_cache, &type_ok) < 0)
                 HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't check dblock type")
 
             if(in_cache) { /* dblock is in cache */
@@ -3200,9 +3199,8 @@ H5HF__cache_verify_iblocks_dblocks_clean(H5F_t *f, haddr_t fd_parent_addr,
                 *has_dblocks = TRUE;
 
                 if((dblock_status & H5AC_ES__IS_DIRTY) &&
-                    (((dblock_status & H5AC_ES__IMAGE_IS_UP_TO_DATE) == 0) ||
-                    (!H5AC_get_serialization_in_progress(f)))) {
-
+                        (((dblock_status & H5AC_ES__IMAGE_IS_UP_TO_DATE) == 0) ||
+                        (!H5AC_get_serialization_in_progress(f)))) {
                     *clean = FALSE;
 		    
                     if(H5AC_flush_dependency_exists(f, fd_parent_addr, dblock_addr, &fd_exists) < 0)
@@ -3344,21 +3342,20 @@ H5HF__cache_verify_descendant_iblocks_clean(H5F_t *f, hid_t dxpl_id,
     while((*fd_clean) && (i <= last_iblock_index)) {
         haddr_t           child_iblock_addr = iblock->ents[i].addr;
 
-        if(H5F_addr_defined(child_iblock_addr)) {
+	if(H5F_addr_defined(child_iblock_addr)) {
             unsigned 	      child_iblock_status = 0;
 
             if(H5AC_get_entry_status(f, child_iblock_addr, &child_iblock_status) < 0)
                 HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't get iblock status")
 
-            if(child_iblock_status & H5AC_ES__IN_CACHE) {
-
+	    if(child_iblock_status & H5AC_ES__IN_CACHE) {
                 hbool_t         fd_exists;
 
-                *has_iblocks = TRUE;
+	        *has_iblocks = TRUE;
 
                 if((child_iblock_status & H5AC_ES__IS_DIRTY) &&
-                   (((child_iblock_status & H5AC_ES__IMAGE_IS_UP_TO_DATE) == 0) ||
-                    (!H5AC_get_serialization_in_progress(f)))) {
+                        (((child_iblock_status & H5AC_ES__IMAGE_IS_UP_TO_DATE) == 0) ||
+                        (!H5AC_get_serialization_in_progress(f)))) {
 
                     *clean = FALSE;
 

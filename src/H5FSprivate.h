@@ -208,9 +208,7 @@ H5_DLL herr_t H5FS_stat_info(const H5F_t *f, const H5FS_t *frsp, H5FS_stat_t *st
 
 /* free space manager settling routines */
 H5_DLL herr_t H5FS_vfd_alloc_hdr_and_section_info_if_needed(H5F_t *f, 
-                                                          hid_t dxpl_id, 
-                                                          H5FS_t *fspace,
-                                                          haddr_t *fs_addr_ptr);
+    hid_t dxpl_id, H5FS_t *fspace, haddr_t *fs_addr_ptr);
 
 /* Debugging routines for dumping file structures */
 H5_DLL herr_t H5FS_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr,

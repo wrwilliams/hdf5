@@ -48,9 +48,6 @@
 /* Number of epoch markers active */
 #define H5C__MAX_EPOCH_MARKERS                  10
 
-/* type ID for epoch markers */
-#define H5C__EPOCH_MARKER_TYPE  H5C__MAX_NUM_TYPE_IDS
-
 /* Cache configuration settings */
 #define H5C__HASH_TABLE_LEN     (64 * 1024) /* must be a power of 2 */
 #define H5C__H5C_T_MAGIC	0x005CAC0E
@@ -3805,7 +3802,6 @@ typedef struct H5C_tag_info_t {
  *              (This functions similarly to a "dead man's switch")
  *
  *
- *
  * When we flush the cache, we need to write entries out in increasing
  * address order.  An instance of a skip list is used to store dirty entries in
  * sorted order.  Whether it is cheaper to sort the dirty entries as needed,
@@ -4918,10 +4914,12 @@ typedef int (*H5C_tag_iter_cb_t)(H5C_cache_entry_t *entry, void *ctx);
 /* Package Private Variables */
 /*****************************/
 
-/* Metadata cache epoch class */
+/* Internal metadata cache classes */
 H5_DLLVAR const H5C_class_t H5C__epoch_marker_class;
-H5_DLLVAR const H5FD_mem_t H5C__class_mem_types[];
+H5_DLLVAR const H5C_class_t H5C__prefetched_entry_class;
 
+/* Memory type for each client */
+H5_DLLVAR const H5FD_mem_t H5C__class_mem_types[];
 
 
 /******************************/

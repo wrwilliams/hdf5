@@ -488,11 +488,11 @@ H5FA__cache_hdr_notify(H5AC_notify_action_t action, void *_thing))
                     /* Sanity check */
                     HDassert(hdr->top_proxy);
 
-                    /* Destroy flush dependency on object header proxy */
-                    if(H5AC_proxy_entry_remove_child((H5AC_proxy_entry_t *)hdr->parent, (void *)hdr->top_proxy) < 0)
-                        H5E_THROW(H5E_CANTUNDEPEND, "unable to destroy flush dependency between fixed array and proxy")
+		    /* Destroy flush dependency on object header proxy */
+		    if(H5AC_proxy_entry_remove_child((H5AC_proxy_entry_t *)hdr->parent, (void *)hdr->top_proxy) < 0)
+		        H5E_THROW(H5E_CANTUNDEPEND, "unable to destroy flush dependency between fixed array and proxy")
                     hdr->parent = NULL;
-                } /* end if */
+		} /* end if */
 
                 /* Detach from 'top' proxy for fixed array */
                 if(hdr->top_proxy) {

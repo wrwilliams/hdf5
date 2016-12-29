@@ -3914,13 +3914,13 @@ H5Pget_metadata_read_attempts(hid_t plist_id, unsigned *attempts/*out*/)
         if(NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
             HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
-        /* Get the # of read attempts set */
+	/* Get the # of read attempts set */
         if(H5P_get(plist, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, attempts) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get the number of metadata read attempts")
 
-        /* If not set, return the default value */
-        if(*attempts == H5F_ACS_METADATA_READ_ATTEMPTS_DEF)	/* 0 */
-            *attempts = H5F_METADATA_READ_ATTEMPTS;
+	/* If not set, return the default value */
+	if(*attempts == H5F_ACS_METADATA_READ_ATTEMPTS_DEF)	/* 0 */
+	    *attempts = H5F_METADATA_READ_ATTEMPTS;
     } /* end if */
 
 done:
@@ -4679,3 +4679,4 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Pget_coll_metadata_write() */
 #endif /* H5_HAVE_PARALLEL */
+

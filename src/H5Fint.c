@@ -743,6 +743,10 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
                 f->shared->mdc_log_location = NULL;
         } /* end block */
 
+        /* Get object flush callback information */
+        if(H5P_get(plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &(f->shared->object_flush)) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "can't get object flush cb info")
+
         /*
          * Create a metadata cache with the specified number of elements.
          * The cache might be created with a different number of elements and
@@ -750,10 +754,6 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
          */
         if(H5AC_create(f, &(f->shared->mdc_initCacheCfg), &(f->shared->mdc_initCacheImageCfg)) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to create metadata cache")
-
-        /* Get object flush callback information */
-        if(H5P_get(plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &(f->shared->object_flush)) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "can't get object flush cb info")
 
         /* Create the file's "open object" information */
         if(H5FO_create(f) < 0)
@@ -889,7 +889,6 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
              *                                          -- JRM 
              */
             if(H5F_ACC_RDWR & H5F_INTENT(f)) {
-
                 if(H5MF_close(f, dxpl_id) < 0)
                     /* Push error, but keep going*/
                     HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file free space info")
@@ -900,20 +899,13 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                 HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
 
                 if(flush) {
-                    /* Clear status_flags */
+		    /* Clear status_flags */
                     f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_WRITE_ACCESS);
                     f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_SWMR_WRITE_ACCESS);
 
                     /* Mark superblock dirty in cache, so change will get encoded */
                     if(H5F_super_dirty(f) < 0)
-                        HDONE_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
-
-                    /* Clear status_flags */
-                    f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_WRITE_ACCESS);
-                    f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_SWMR_WRITE_ACCESS);
-
-                    /* Mark superblock dirty in cache, so change will get encoded */
-                    if(H5F_super_dirty(f) < 0)
+                        /* Push error, but keep going*/
                         HDONE_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
 
                     /* Release any space allocated to space aggregators, 
@@ -929,13 +921,14 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
 
                     /* Truncate the file to the current allocated size */
                     if(H5FD_truncate(f->shared->lf, dxpl_id, TRUE) < 0)
+                        /* Push error, but keep going*/
                         HDONE_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "low level truncate failed")
 
                     /* at this point, only the superblock and superblock 
                      * extension should be dirty.
                      */
                     HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
-                } /* end if(flush) */
+		} /* end if */
             } /* end if */
 
             /* if it exists, unpin the driver information block cache entry,

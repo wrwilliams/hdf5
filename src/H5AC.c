@@ -102,6 +102,7 @@ hid_t H5AC_rawdata_dxpl_id = (-1);
 hbool_t H5_coll_api_sanity_check_g = false;
 #endif /* H5_HAVE_PARALLEL */
 
+
 /*******************/
 /* Local Variables */
 /*******************/
@@ -135,8 +136,9 @@ static const char *H5AC_entry_type_names[H5AC_NTYPES] =
     "fixed array data block pages",
     "superblock",
     "driver info",
+    "epoch marker",     /* internal to cache only */
     "proxy entry",
-    "prefetched entry",  /* internal to cache only */
+    "prefetched entry", /* internal to cache only */
     "test entry"	/* for testing only -- not used for actual files */
 };
 

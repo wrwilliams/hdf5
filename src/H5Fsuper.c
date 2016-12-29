@@ -242,7 +242,7 @@ done:
 herr_t
 H5F_update_super_ext_driver_msg(H5F_t *f, hid_t dxpl_id)
 {
-    H5F_super_t *sblock = NULL; /* Pointer to the super block */
+    H5F_super_t *sblock;        /* Pointer to the super block */
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -250,29 +250,22 @@ H5F_update_super_ext_driver_msg(H5F_t *f, hid_t dxpl_id)
     /* Sanity check */
     HDassert(f);
     HDassert(f->shared);
-
     sblock = f->shared->sblock;
-
     HDassert(sblock);
     HDassert(sblock->cache_info.magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
     HDassert(sblock->cache_info.type == H5AC_SUPERBLOCK);
 
+    /* Update the driver information message in the superblock extension
+     * if appropriate.
+     */
     if(sblock->super_vers >= HDF5_SUPERBLOCK_VERSION_2) {
-
-        /* Update the driver information message in the superblock extension
-         * if appropriate.
-         */
         if(H5F_addr_defined(sblock->ext_addr)) {
             size_t     driver_size;    /* Size of driver info block (bytes)*/
 
-            HDassert(sblock->super_vers >= HDF5_SUPERBLOCK_VERSION_2);
-
             /* Check for ignoring the driver info for this file */
             if(!H5F_HAS_FEATURE(f, H5FD_FEAT_IGNORE_DRVRINFO)) {
-
                 /* Check for driver info */
-                H5_CHECKED_ASSIGN(driver_size, size_t, 
-                                  H5FD_sb_size(f->shared->lf), hsize_t);
+                H5_CHECKED_ASSIGN(driver_size, size_t, H5FD_sb_size(f->shared->lf), hsize_t);
 
 		/* nothing to do unless there is both driver info and 
                  * the driver info superblock extension message has 
@@ -280,8 +273,7 @@ H5F_update_super_ext_driver_msg(H5F_t *f, hid_t dxpl_id)
                  */
                 if((driver_size > 0) && (f->shared->drvinfo_sb_msg_exists)) {
                     H5O_drvinfo_t drvinfo;      /* Driver info */
-                    uint8_t dbuf[H5F_MAX_DRVINFOBLOCK_SIZE];  
-                                      /* Driver info block encoding buffer */
+                    uint8_t dbuf[H5F_MAX_DRVINFOBLOCK_SIZE];  /* Driver info block encoding buffer */
 
                     /* Sanity check */
                     HDassert(driver_size <= H5F_MAX_DRVINFOBLOCK_SIZE);
@@ -290,14 +282,14 @@ H5F_update_super_ext_driver_msg(H5F_t *f, hid_t dxpl_id)
                     if(H5FD_sb_encode(f->shared->lf, drvinfo.name, dbuf) < 0)
                         HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to encode driver information")
 
-                    /* write the message to the superblock extension.
+                    /* Write the message to the superblock extension.
                      *
-                     * note that the superblock extension and the 
+                     * Note that the superblock extension and the 
                      * file driver info message must already exist.
                      */
                     drvinfo.len = driver_size;
                     drvinfo.buf = dbuf;
-                    if(H5F_super_ext_write_msg(f, dxpl_id, H5O_DRVINFO_ID, &drvinfo, FALSE, 0) < 0 )
+                    if(H5F_super_ext_write_msg(f, dxpl_id, H5O_DRVINFO_ID, &drvinfo, FALSE, 0) < 0)
                         HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "unable to update driver info header message")
                 } /* end if driver_size > 0 */
             } /* end if !H5F_HAS_FEATURE(f, H5FD_FEAT_IGNORE_DRVRINFO) */
@@ -305,9 +297,7 @@ H5F_update_super_ext_driver_msg(H5F_t *f, hid_t dxpl_id)
     } /* end if sblock->super_vers >= HDF5_SUPERBLOCK_VERSION_2 */
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* end H5F_update_super_ext_driver_msg() */
 
 
@@ -725,8 +715,9 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
 	    if(NULL == H5O_msg_read(&ext_loc, H5O_MDCI_MSG_ID, &mdci_msg, dxpl_id))
                 HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to get metadata cache image message")
 
+            /* Indicate to the cache that there's an image to load on first protect call */
             if(H5AC_load_cache_image_on_next_protect(f, mdci_msg.addr, mdci_msg.size, rw) < 0)
-		HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, FAIL, "call to H5AC_load_cache_image_on_next_protect failed");
+		HGOTO_ERROR(H5E_FILE, H5E_CANTLOAD, FAIL, "call to H5AC_load_cache_image_on_next_protect failed");
         } /* end if */
 
         /* Close superblock extension */
@@ -1063,7 +1054,7 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
          * be tuned if more information is added to the superblock
          * extension.
          */
-        if(H5F_super_ext_create(f, dxpl_id, &ext_loc) < 0)
+	if(H5F_super_ext_create(f, dxpl_id, &ext_loc) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTCREATE, FAIL, "unable to create superblock extension")
         ext_created = TRUE;
 
@@ -1122,20 +1113,20 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
         } /* end if */
 
         /* Check for non-default free space settings */
-        if(f->shared->fs_strategy != H5F_FILE_SPACE_STRATEGY_DEF ||
+	if(f->shared->fs_strategy != H5F_FILE_SPACE_STRATEGY_DEF ||
                 f->shared->fs_threshold != H5F_FREE_SPACE_THRESHOLD_DEF) {
-            H5FD_mem_t   type;         	/* Memory type for iteration */
+	    H5FD_mem_t   type;         	/* Memory type for iteration */
             H5O_fsinfo_t fsinfo;	/* Free space manager info message */
 
-            /* Write free-space manager info message to superblock extension object header if needed */
-            fsinfo.strategy = f->shared->fs_strategy;
-            fsinfo.threshold = f->shared->fs_threshold;
-            for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
+	    /* Write free-space manager info message to superblock extension object header if needed */
+	    fsinfo.strategy = f->shared->fs_strategy;
+	    fsinfo.threshold = f->shared->fs_threshold;
+	    for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
                 fsinfo.fs_addr[type-1] = HADDR_UNDEF;
 
-            if(H5O_msg_create(&ext_loc, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE, H5O_UPDATE_TIME, &fsinfo, dxpl_id) < 0)
+	    if(H5O_msg_create(&ext_loc, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE, H5O_UPDATE_TIME, &fsinfo, dxpl_id) < 0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to update free-space info header message")
-        } /* end if */
+	} /* end if */
     } /* end if */
     else {
         /* Check for creating an "old-style" driver info block */

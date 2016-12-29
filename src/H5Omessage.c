@@ -1323,9 +1323,9 @@ done:
          *  object header, the header will be condensed after each
          *  message removal)
          */
-        if(oh_modified & H5O_MODIFY_CONDENSE)
-            if(H5O_condense_header(f, oh, dxpl_id) < 0)
-                HDONE_ERROR(H5E_OHDR, H5E_CANTPACK, FAIL, "can't pack object header")
+	if(oh_modified & H5O_MODIFY_CONDENSE)
+	    if(H5O_condense_header(f, oh, dxpl_id) < 0)
+		HDONE_ERROR(H5E_OHDR, H5E_CANTPACK, FAIL, "can't pack object header")
 
         /* Mark object header as changed */
         if(H5O_touch_oh(f, dxpl_id, oh, FALSE) < 0)
@@ -2252,3 +2252,4 @@ H5O_flush_msgs(H5F_t *f, H5O_t *oh)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_flush_msgs() */
+
