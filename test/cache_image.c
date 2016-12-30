@@ -42,6 +42,9 @@ static void open_hdf5_file(const hbool_t create_file,
     const char * hdf_file_name, const unsigned cache_image_flags, 
     hid_t * file_id_ptr, H5F_t ** file_ptr_ptr, H5C_t ** cache_ptr_ptr);
 
+static void attempt_swmr_open_hdf5_file(const hbool_t create_file,
+    const hbool_t set_mdci_fapl, const char * hdf_file_name);
+
 static void verify_data_sets(hid_t file_id, int min_dset, int max_dset);
 
 /* local test function declarations */
@@ -62,6 +65,7 @@ static unsigned cache_image_smoke_check_6(void);
 
 static unsigned cache_image_api_error_check_1(void);
 static unsigned cache_image_api_error_check_2(void);
+static unsigned cache_image_api_error_check_3(void);
 
 
 /****************************************************************************/
@@ -899,6 +903,127 @@ open_hdf5_file(const hbool_t create_file,
     return;
 
 } /* open_hdf5_file() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    attempt_swmr_open_hdf5_file()
+ *
+ * Purpose:     If pass is true on entry, attempt to create or open the 
+ *		specified HDF5 file with SWMR, and also with cache image 
+ *              creation if requested.
+ *
+ *              In all cases, the attempted open or create should fail.
+ *
+ *              Do nothing if pass is FALSE on entry.
+ *
+ * Return:      void
+ *
+ * Programmer:  John Mainzer
+ *              7/14/15
+ *
+ * Modifications:
+ *
+ *              None.
+ *
+ *-------------------------------------------------------------------------
+ */
+
+static void
+attempt_swmr_open_hdf5_file(const hbool_t create_file,
+	                    const hbool_t set_mdci_fapl,
+	                    const char * hdf_file_name)
+{
+    const char * fcn_name = "attempt_swmr_open_hdf5_file()";
+    hbool_t show_progress = FALSE;
+    hbool_t verbose = FALSE;
+    int cp = 0;
+    hid_t fapl_id = -1;
+    hid_t file_id = -1;
+    herr_t result;
+    H5F_t * file_ptr = NULL;
+    H5C_t * cache_ptr = NULL;
+    H5C_cache_image_ctl_t image_ctl;
+    H5AC_cache_image_config_t cache_image_config = {
+        H5AC__CURR_CACHE_IMAGE_CONFIG_VERSION,
+        TRUE,
+        FALSE,
+        H5AC__CACHE_IMAGE__ENTRY_AGEOUT__NONE};
+
+    /* create a file access propertly list. */
+    if ( pass ) {
+
+        fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+
+        if ( fapl_id < 0 ) {
+
+            pass = FALSE;
+            failure_mssg = "H5Pcreate() failed.\n";
+        }
+    }
+
+    if ( show_progress ) HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+
+    /* call H5Pset_libver_bounds() on the fapl_id */
+    if ( pass ) {
+
+        if ( H5Pset_libver_bounds(fapl_id, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) 
+                < 0 ) {
+
+            pass = FALSE;
+            failure_mssg = "H5Pset_libver_bounds() failed.\n";
+        }
+    }
+
+    if ( show_progress ) HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+
+    /* set metadata cache image fapl entry if indicated */
+    if ( ( pass ) && ( set_mdci_fapl ) ) {
+
+        /* set cache image config fields to taste */
+        cache_image_config.generate_image = TRUE;
+        cache_image_config.save_resize_status = FALSE;
+        cache_image_config.entry_ageout = H5AC__CACHE_IMAGE__ENTRY_AGEOUT__NONE;
+
+        result = H5Pset_mdc_image_config(fapl_id, &cache_image_config);
+
+        if ( result < 0 ) {
+
+            pass = FALSE;
+            failure_mssg = "H5Pset_mdc_image_config() failed.\n";
+        }
+    }
+
+    if ( show_progress ) HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+
+    /* open the file */
+    if ( pass ) {
+
+        if ( create_file ) {
+
+            H5E_BEGIN_TRY {
+                file_id = H5Fcreate(hdf_file_name, H5F_ACC_TRUNC | H5F_ACC_SWMR_WRITE, 
+			            H5P_DEFAULT, fapl_id);
+            } H5E_END_TRY;
+        } else {
+
+            H5E_BEGIN_TRY {
+                file_id = H5Fopen(hdf_file_name, H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE, fapl_id);
+            } H5E_END_TRY;
+        }
+
+        if ( file_id >= 0 ) {
+
+            pass = FALSE;
+            failure_mssg = "SWMR H5Fcreate() or H5Fopen() succeeded.\n";
+
+        } 
+    }
+
+    if ( show_progress ) HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+
+    return;
+
+} /* attempt_swmr_open_hdf5_file() */
 
 
 /*-------------------------------------------------------------------------
@@ -6172,6 +6297,259 @@ cache_image_api_error_check_2(void)
 
 
 /*-------------------------------------------------------------------------
+ * Function:    cache_image_api_error_check_3()
+ *
+ * Purpose:     This test is one of a sequence of tests intended
+ *		to verify correct management of API errors.
+ *
+ *		At present, SWMR and cache image may not be active 
+ *		at the same time.  The purpose of this test is to 
+ *		verify that attempts to run SWMR and cache image 
+ *		at the same time will fail.
+ *
+ *		The test is set up as follows:
+ *
+ *		1) Create a HDF5 file with a cache image requested..  
+ *
+ *		2) Try to start SWMR write -- should fail.
+ *
+ *              3) Discard the file if necessary
+ *
+ *              4) Attempt to create a HDF5 file with SWMR write 
+ *		   access and cache image requested -- should fail.
+ *
+ *              5) Discard the file if necessary
+ *
+ *              6) Create a HDF5 file with a cache image requested.
+ *
+ *		7) Create some data sets in the file. 
+ *
+ *		8) Close the file.
+ *
+ *              9) Attempt to open the file with SWMR write access --
+ *                 should fail.
+ *
+ *             10) Discard the file if necessary.
+ *
+ * Return:      void
+ *
+ * Programmer:  John Mainzer
+ *              12/29/16
+ *
+ * Modifications:
+ *
+ *		None.
+ *
+ *-------------------------------------------------------------------------
+ */
+
+static unsigned
+cache_image_api_error_check_3(void)
+{
+    const char * fcn_name = "cache_image_api_error_check_3()";
+    char filename[512];
+    hbool_t show_progress = FALSE;
+    hid_t file_id = -1;
+    H5F_t *file_ptr = NULL;
+    H5C_t *cache_ptr = NULL;
+    int cp = 0;
+
+    TESTING("metadata cache image api error check 3");
+
+    pass = TRUE;
+
+    if ( show_progress ) 
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+
+
+    /* setup the file name */
+    if ( pass ) {
+
+        if ( h5_fixname(FILENAMES[0], H5P_DEFAULT, filename, sizeof(filename))
+            == NULL ) {
+
+            pass = FALSE;
+            failure_mssg = "h5_fixname() failed.\n";
+        }
+    }
+
+    if ( show_progress ) 
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+
+
+    /* 1) Create a HDF5 file with a cache image requested. */
+
+    if ( pass ) {
+
+        open_hdf5_file(/* create_file        */ TRUE,
+                       /* mdci_sbem_expected */ FALSE,
+                       /* read_only          */ FALSE,
+                       /* set_mdci_fapl      */ TRUE,
+		       /* config_fsm         */ TRUE,
+                       /* hdf_file_name      */ filename,
+                       /* cache_image_flags  */ H5C_CI__ALL_FLAGS,
+                       /* file_id_ptr        */ &file_id,
+                       /* file_ptr_ptr       */ &file_ptr,
+                       /* cache_ptr_ptr      */ &cache_ptr);
+    }
+
+    if ( show_progress ) 
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+ 
+
+    /* 2) Try to start SWMR write -- should fail. */
+
+    if ( pass ) {
+
+        H5E_BEGIN_TRY {
+            if ( H5Fstart_swmr_write(file_id) == SUCCEED ) {
+
+                pass = FALSE;
+                failure_mssg = "metadata cache image block loaded(1).";
+            }
+        } H5E_END_TRY;
+    }
+
+    if ( show_progress ) 
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+ 
+
+    /* 3) Discard the file if necessary */
+
+    if ( pass ) {
+
+        if ( HDremove(filename) < 0 ) {
+
+            pass = FALSE;
+            failure_mssg = "HDremove() failed.\n";
+        }
+    }
+
+    if ( show_progress ) 
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+
+ 
+    /* 4) Attempt to create a HDF5 file with SWMR write 
+     *    access and cache image requested -- should fail.
+     */
+ 
+     attempt_swmr_open_hdf5_file(/* create_file   */ TRUE,
+                                 /* set_mdci_fapl */ TRUE, 
+                                 /* hdf_file_name */ filename);
+
+    if ( show_progress ) 
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+
+
+    /* 5) Discard the file if necessary */
+
+    if ( pass ) {
+
+        /* file probably doesn't exist, so don't 
+         * error check the remove call.
+         */
+        HDremove(filename);
+    }
+
+    if ( show_progress ) 
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+
+ 
+    /* 6) Create a HDF5 file with a cache image requested. */
+
+    if ( pass ) {
+
+        open_hdf5_file(/* create_file        */ TRUE,
+                       /* mdci_sbem_expected */ FALSE,
+                       /* read_only          */ FALSE,
+                       /* set_mdci_fapl      */ TRUE,
+		       /* config_fsm         */ TRUE,
+                       /* hdf_file_name      */ filename,
+                       /* cache_image_flags  */ H5C_CI__ALL_FLAGS,
+                       /* file_id_ptr        */ &file_id,
+                       /* file_ptr_ptr       */ &file_ptr,
+                       /* cache_ptr_ptr      */ &cache_ptr);
+    }
+
+    if ( show_progress ) 
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+
+ 
+    /* 7) Create some data sets in the file. */
+
+    if ( pass ) {
+
+        create_data_sets(file_id, 0, 5);
+    }
+
+#if H5C_COLLECT_CACHE_STATS
+    if ( pass ) {
+
+        if ( cache_ptr->images_loaded != 0 ) {
+
+            pass = FALSE;
+            failure_mssg = "metadata cache image block loaded(1).";
+        }
+    }
+#endif /* H5C_COLLECT_CACHE_STATS */
+
+    if ( show_progress ) 
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+ 
+
+    /* 8) Close the file. */
+
+    if ( pass ) {
+
+        if ( H5Fclose(file_id) < 0  ) {
+
+            pass = FALSE;
+            failure_mssg = "H5Fclose() failed.\n";
+
+        }
+    }
+
+    if ( show_progress ) 
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+ 
+ 
+    /* 9) Attempt to open the file with SWMR write access -- should fail. */
+ 
+    attempt_swmr_open_hdf5_file(/* create_file   */ FALSE,
+                                /* set_mdci_fapl */ TRUE, 
+                                /* hdf_file_name */ filename);
+
+    if ( show_progress ) 
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+
+ 
+    /* 10) Discard the file if necessary. */
+
+    if ( pass ) {
+
+        if ( HDremove(filename) < 0 ) {
+
+            pass = FALSE;
+            failure_mssg = "HDremove() failed.\n";
+        }
+    }
+
+    if ( show_progress ) 
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+
+
+    if ( pass ) { PASSED(); } else { H5_FAILED(); }
+
+    if ( ! pass )
+        HDfprintf(stdout, "%s: failure_mssg = \"%s\".\n",
+                  FUNC, failure_mssg);
+
+    return !pass;
+
+} /* cache_image_api_error_check_3() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    main
  *
  * Purpose:     Run tests on the cache code contained in H5C.c
@@ -6219,6 +6597,7 @@ main(void)
 
     nerrs += cache_image_api_error_check_1();
     nerrs += cache_image_api_error_check_2();
+    nerrs += cache_image_api_error_check_3();
 
     return(nerrs > 0);
 

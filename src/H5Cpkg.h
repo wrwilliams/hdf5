@@ -4245,6 +4245,10 @@ typedef struct H5C_tag_info_t {
  *		read, and the image block read and decoded on the next
  *		call to H5C_protect().  
  *
+ * image_loaded:  Boolean flag indicating that the metadata cache has 
+ *              loaded the metadata cache image as directed by the 
+ *              MDC cache image superblock extension message.
+ *
  * delete_image: Boolean flag indicating whether the metadata cache image
  *		superblock message should be deleted and the cache image
  *		file space freed after they have been read and decoded.
@@ -4798,6 +4802,7 @@ struct H5C_t {
     hbool_t			serialization_in_progress;
     hbool_t			close_warning_received;
     hbool_t			load_image;
+    hbool_t                     image_loaded;
     hbool_t			delete_image;
     haddr_t 			image_addr;
     size_t			image_len;

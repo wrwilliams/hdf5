@@ -146,6 +146,53 @@ H5FL_DEFINE(H5C_cache_entry_t);
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5C_cache_image_status()
+ *
+ *              Examine the metadata cache associated with the supplied 
+ *              instance of H5F_t to determine whether the load of a 
+ *              cache image has either been queued ir executed, and if 
+ *              construction of a cache image has been requested.
+ *
+ *              This done, it set *load_ci_ptr to TRUE if a cache image
+ *              has either been loaded or a load has been requested, and
+ *              to FALSE otherwise.
+ *
+ *              Similarly, set *write_ci_ptr to TRUE if construction of 
+ *              a cache image has been requested, and to FALSE otherwise.
+ *
+ * Return:      SUCCEED on success, and FAIL on failure.
+ *
+ * Programmer:  John Mainzer
+ *              12/29/16
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C_cache_image_status(H5F_t * f, hbool_t *load_ci_ptr, hbool_t *write_ci_ptr)
+{
+    H5C_t *     cache_ptr = NULL;
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    HDassert(f);
+    HDassert(f->shared);
+
+    cache_ptr = f->shared->cache;
+
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+    HDassert(load_ci_ptr);
+    HDassert(write_ci_ptr);
+ 
+    *load_ci_ptr = cache_ptr->load_image || cache_ptr->image_loaded;
+    *write_ci_ptr = cache_ptr->image_ctl.generate_image;
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+
+} /* H5C_cache_image_status() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5C_construct_cache_image_buffer()
  *
  *		Allocate a buffer of size cache_ptr->image_len, and 
@@ -1138,6 +1185,8 @@ H5C_load_cache_image(H5F_t *    f,
 	cache_ptr->image_entries =
                 (H5C_image_entry_t *)H5MM_xfree(cache_ptr->image_entries);
 	cache_ptr->num_entries_in_image = 0;
+
+        cache_ptr->image_loaded = TRUE;
     }
 
 done:

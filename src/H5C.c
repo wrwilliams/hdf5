@@ -489,6 +489,7 @@ H5C_create(size_t		      max_cache_size,
     cache_ptr->serialization_in_progress= FALSE;
     cache_ptr->close_warning_received   = FALSE;
     cache_ptr->load_image		= FALSE;
+    cache_ptr->image_loaded             = FALSE;
     cache_ptr->delete_image		= FALSE;
     cache_ptr->image_addr		= HADDR_UNDEF;
     cache_ptr->image_len		= 0;
@@ -5625,22 +5626,22 @@ static herr_t
 H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
     unsigned flags)
 {
-    H5C_t *		cache_ptr;
+    H5C_t              *cache_ptr;
     hbool_t             restart_slist_scan;
-    int32_t		protected_entries = 0;
-    int32_t		i;
-    int32_t		cur_ring_pel_len;
-    int32_t		old_ring_pel_len;
-    unsigned		cooked_flags;
-    unsigned		evict_flags;
-    H5SL_node_t * 	node_ptr = NULL;
-    H5C_cache_entry_t *	entry_ptr = NULL;
-    H5C_cache_entry_t *	next_entry_ptr = NULL;
+    int32_t             protected_entries = 0;
+    int32_t             i;
+    int32_t             cur_ring_pel_len;
+    int32_t             old_ring_pel_len;
+    unsigned            cooked_flags;
+    unsigned            evict_flags;
+    H5SL_node_t        *node_ptr = NULL;
+    H5C_cache_entry_t  *entry_ptr = NULL;
+    H5C_cache_entry_t  *next_entry_ptr = NULL;
 #if H5C_DO_SANITY_CHECKS
     int64_t             initial_slist_len = 0;
     size_t              initial_slist_size = 0;
 #endif /* H5C_DO_SANITY_CHECKS */
-    herr_t		ret_value = SUCCEED;
+    herr_t              ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
@@ -5886,77 +5887,114 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
          *
          * Writes to disk are possible here.
          */
-        for(i = 0; i < H5C__HASH_TABLE_LEN; i++) {
-            next_entry_ptr = cache_ptr->index[i];
 
-            while(next_entry_ptr != NULL) {
-                entry_ptr = next_entry_ptr;
-                HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
-                HDassert(entry_ptr->ring >= ring);
+        /* reset the counters so that we can detect insertions, loads,
+         * and moves caused by the pre_serialize and serialize calls.
+         */
+        cache_ptr->entries_loaded_counter         = 0;
+        cache_ptr->entries_inserted_counter       = 0;
+        cache_ptr->entries_relocated_counter      = 0;
 
-                next_entry_ptr = entry_ptr->ht_next;
-                HDassert((next_entry_ptr == NULL) ||
-                        (next_entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC));
+        next_entry_ptr = cache_ptr->il_head;
 
-                if(((!entry_ptr->flush_me_last) ||
-                       ((entry_ptr->flush_me_last) &&
-                            (cache_ptr->num_last_entries >= cache_ptr->slist_len))) &&
-                       (entry_ptr->flush_dep_nchildren == 0) &&
-                       (entry_ptr->ring == ring)) {
+        while(next_entry_ptr != NULL) {
 
-                    if(entry_ptr->is_protected) {
-                        /* we have major problems -- but lets flush and 
-                         * destroy everything we can before we flag an 
-                         * error.
-                         */
-                        protected_entries++;
-                        if(!entry_ptr->in_slist)
-                            HDassert(!(entry_ptr->is_dirty));
-                    } else if(!(entry_ptr->is_pinned)) {
+            entry_ptr = next_entry_ptr;
+            HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+            HDassert(entry_ptr->ring >= ring);
 
-                        /* if *entry_ptr is dirty, it is possible 
-                         * that one or more other entries may be 
-                         * either removed from the cache, loaded 
-                         * into the cache, or moved to a new location
-                         * in the file as a side effect of the flush.
-                         *
-                         * It's also possible that removing a clean
-                         * entry will remove the last child of a proxy
-                         * entry, allowing it to be removed also and
-                         * invalidating the next_entry_ptr.
-                         *
-                         * If either of these happen, and one of the target 
-                         * or proxy entries happens to be the next entry in 
-                         * the hash bucket, we could either find ourselves
-                         * either scanning a non-existant entry, scanning
-                         * through a different bucket, or skipping an entry.
-                         *
-                         * Neither of these are good, so restart the 
-                         * the scan at the head of the hash bucket 
-                         * after the flush if we detect that the next_entry_ptr
-                         * becomes invalid.
-                         *
-                         * This is not as inefficient at it might seem,
-                         * as hash buckets typically have at most two
-                         * or three entries.
-                         */
-                        cache_ptr->entry_watched_for_removal = next_entry_ptr;
-                        if(H5C__flush_single_entry(f, dxpl_id, entry_ptr, (cooked_flags | H5C__DURING_FLUSH_FLAG | H5C__FLUSH_INVALIDATE_FLAG | H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG)) < 0)
-                            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Entry flush destroy failed.")
+            next_entry_ptr = entry_ptr->il_next;
 
-                        /* Check for the next entry getting removed */
-                        if(NULL != next_entry_ptr && NULL == cache_ptr->entry_watched_for_removal) {
-                            /* update stats for hash bucket scan restart here.
-                             *                   -- JRM 
-                             */
-                            next_entry_ptr = cache_ptr->index[i];
-                            H5C__UPDATE_STATS_FOR_INDEX_SCAN_RESTART(cache_ptr)
-                        } /* end if */
-                        else
-                            cache_ptr->entry_watched_for_removal = NULL;
+            HDassert((next_entry_ptr == NULL) ||
+                     (next_entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC));
+
+            if ( ( ( ! entry_ptr->flush_me_last ) 
+                   ||
+                   ( ( entry_ptr->flush_me_last ) 
+                     &&
+                     ( cache_ptr->num_last_entries >= cache_ptr->slist_len ) 
+                   )
+                 ) 
+                 &&
+                 ( entry_ptr->flush_dep_nchildren == 0 ) 
+                 &&
+                 ( entry_ptr->ring == ring )
+               ) {
+
+                if(entry_ptr->is_protected) {
+                    /* we have major problems -- but lets flush and 
+                     * destroy everything we can before we flag an 
+                     * error.
+                     */
+                    protected_entries++;
+
+                    if(!entry_ptr->in_slist)
+                        HDassert(!(entry_ptr->is_dirty));
+
+                } else if(!(entry_ptr->is_pinned)) {
+
+                    /* if *entry_ptr is dirty, it is possible 
+                     * that one or more other entries may be 
+                     * either removed from the cache, loaded 
+                     * into the cache, or moved to a new location
+                     * in the file as a side effect of the flush.
+                     *
+                     * It's also possible that removing a clean
+                     * entry will remove the last child of a proxy
+                     * entry, allowing it to be removed also and
+                     * invalidating the next_entry_ptr.
+                     *
+                     * If either of these happen, and one of the target 
+                     * or proxy entries happens to be the next entry in 
+                     * the hash bucket, we could either find ourselves
+                     * either scanning a non-existant entry, scanning
+                     * through a different bucket, or skipping an entry.
+                     *
+                     * Neither of these are good, so restart the 
+                     * the scan at the head of the hash bucket 
+                     * after the flush if we detect that the next_entry_ptr
+                     * becomes invalid.
+                     *
+                     * This is not as inefficient at it might seem,
+                     * as hash buckets typically have at most two
+                     * or three entries.
+                     */
+                    cache_ptr->entry_watched_for_removal = next_entry_ptr;
+
+                   if(H5C__flush_single_entry(f, dxpl_id, entry_ptr, 
+                                   (cooked_flags 
+                                       | H5C__DURING_FLUSH_FLAG 
+                                       | H5C__FLUSH_INVALIDATE_FLAG 
+                                       | H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG)) < 0)
+                       HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
+                                   "Entry flush destroy failed.")
+
+                    /* restart the index list scan if necessary.  Must
+                     * do this if the next entry is evicted, and also if 
+                     * one or more entries are inserted, loaded, or moved
+                     * as these operations can result in part of the scan
+                     * being skipped -- which can cause a spurious failure
+                     * if this results in the size of the pinned entry 
+                     * failing to decline during the pass.
+                     */
+                    if ( ( ( NULL != next_entry_ptr ) &&
+                           ( NULL == cache_ptr->entry_watched_for_removal ) ) ||
+                         ( cache_ptr->entries_loaded_counter > 0 ) ||
+                         ( cache_ptr->entries_inserted_counter > 0 ) ||
+                         ( cache_ptr->entries_relocated_counter > 0 ) ) {
+
+                        next_entry_ptr = cache_ptr->il_head;
+
+                        cache_ptr->entries_loaded_counter         = 0;
+                        cache_ptr->entries_inserted_counter       = 0;
+                        cache_ptr->entries_relocated_counter      = 0;
+
+                        H5C__UPDATE_STATS_FOR_INDEX_SCAN_RESTART(cache_ptr)
                     } /* end if */
+                    else
+                       cache_ptr->entry_watched_for_removal = NULL;
                 } /* end if */
-            } /* end while loop scanning hash table bin */
+            } /* end if */
         } /* end for loop scanning hash table */
 
         /* We can't do anything if entries are pinned.  The
@@ -5967,33 +6005,41 @@ H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
          * of pinned entries from pass to pass.  If it stops
          * shrinking before it hits zero, we scream and die.
          */
-	old_ring_pel_len = cur_ring_pel_len;
+        old_ring_pel_len = cur_ring_pel_len;
         entry_ptr = cache_ptr->pel_head_ptr;
         cur_ring_pel_len = 0;
+
         while(entry_ptr != NULL) {
+
             HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
             HDassert(entry_ptr->ring >= ring);
 
-	    if(entry_ptr->ring == ring)
+            if(entry_ptr->ring == ring)
                 cur_ring_pel_len++;
 
             entry_ptr = entry_ptr->next;
         } /* end while */
 
-	if((cur_ring_pel_len > 0) && (cur_ring_pel_len >= old_ring_pel_len)) {
+        if((cur_ring_pel_len > 0) && (cur_ring_pel_len >= old_ring_pel_len)) {
+
             /* Don't error if allowed to have pinned entries remaining */
-	    if(evict_flags)
+            if(evict_flags)
                 HGOTO_DONE(TRUE)
 
-	   /* The number of pinned entries in the ring is positive, and 
+           /* The number of pinned entries in the ring is positive, and 
             * it is not declining.  Scream and die.
-	    */
+            */
             HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Pinned entry count not decreasing, cur_ring_pel_len = %d, old_ring_pel_len = %d, ring = %d", (int)cur_ring_pel_len, (int)old_ring_pel_len, (int)ring)
         } /* end if */
 
         HDassert(protected_entries == cache_ptr->pl_len);
-        if((protected_entries > 0) && (protected_entries == cache_ptr->index_len))
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Only protected entries left in cache, protected_entries = %d", (int)protected_entries)
+
+        if ( ( protected_entries > 0 ) && 
+             ( protected_entries == cache_ptr->index_len ) )
+
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
+                "Only protected entries left in cache, protected_entries = %d", \
+                (int)protected_entries)
     } /* main while loop */
 
     /* Invariants, after destroying all entries in the ring */
@@ -6076,7 +6122,7 @@ H5C_flush_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,  unsigned flags)
     if((H5C_validate_protected_entry_list(cache_ptr) < 0) ||
             (H5C_validate_pinned_entry_list(cache_ptr) < 0) ||
             (H5C_validate_lru_list(cache_ptr) < 0))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "an extreme sanity check failed on entry.\n")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "an extreme sanity check failed on entry.\n");
 #endif /* H5C_DO_EXTREME_SANITY_CHECKS */
 
     ignore_protected = ( (flags & H5C__FLUSH_IGNORE_PROTECTED_FLAG) != 0 );
@@ -6207,19 +6253,44 @@ H5C_flush_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,  unsigned flags)
                 if(NULL == next_entry_ptr)
                     HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "next_entry_ptr == NULL ?!?!")
 
+                HDassert(next_entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+                HDassert(next_entry_ptr->is_dirty);
+                HDassert(next_entry_ptr->in_slist);
+
+                if(!flush_marked_entries || next_entry_ptr->flush_marker)
+                    HDassert(next_entry_ptr->ring >= ring);
+
                 HDassert(entry_ptr != next_entry_ptr);
             } /* end if */
             else
                 next_entry_ptr = NULL;
 
-            if(((!flush_marked_entries) || (entry_ptr->flush_marker)) &&
-                    ((!entry_ptr->flush_me_last) ||
-                       (entry_ptr->flush_me_last &&
-                         ((cache_ptr->num_last_entries >= cache_ptr->slist_len) ||
-                           (flush_marked_entries && entry_ptr->flush_marker)))) &&
-                       ( ( entry_ptr->flush_dep_nchildren == 0 ) ||
-                         ( entry_ptr->flush_dep_ndirty_children == 0 ) ) &&
-                     (entry_ptr->ring == ring)) {
+            HDassert(entry_ptr != NULL);
+            HDassert(entry_ptr->in_slist);
+
+            if ( ( ( ! flush_marked_entries ) 
+                   || 
+                   ( entry_ptr->flush_marker )
+                 ) 
+                 &&
+                 ( ( !entry_ptr->flush_me_last ) 
+                   ||
+                   ( entry_ptr->flush_me_last 
+                     &&
+                     ( ( cache_ptr->num_last_entries >= cache_ptr->slist_len ) 
+                       ||
+                       ( flush_marked_entries && entry_ptr->flush_marker )
+                     )
+                   )
+                 ) 
+                 &&
+                 ( ( entry_ptr->flush_dep_nchildren == 0 ) 
+                   ||
+                   ( entry_ptr->flush_dep_ndirty_children == 0 ) 
+                 ) 
+                 &&
+                 ( entry_ptr->ring == ring ) 
+               ) {
 
                 HDassert(entry_ptr->flush_dep_nunser_children == 0);
 
@@ -6409,9 +6480,11 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
      * Set suppress_image_entry_writes to TRUE if indicated by the 
      * image_ctl flags.
      */
-    if(cache_ptr->close_warning_received && cache_ptr->image_ctl.generate_image
-            && (cache_ptr->num_entries_in_image > 0) && cache_ptr->image_entries) {
-        /* Sanity checks */
+    if ( ( cache_ptr->close_warning_received ) &&
+         ( cache_ptr->image_ctl.generate_image ) &&
+         ( cache_ptr->num_entries_in_image > 0 ) &&
+         ( cache_ptr->image_entries ) ) {
+
         HDassert(entry_ptr->image_up_to_date || !(entry_ptr->include_in_image));
         HDassert(entry_ptr->image_ptr || !(entry_ptr->include_in_image));
         HDassert((!clear_only) || !(entry_ptr->include_in_image));
@@ -6441,7 +6514,7 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
 #endif /* H5C_DO_SANITY_CHECKS */
 
     if(entry_ptr->is_protected) {
-	HDassert(!entry_ptr->is_protected);
+        HDassert(!entry_ptr->is_protected);
 
         /* Attempt to flush a protected entry -- scream and die. */
         HGOTO_ERROR(H5E_CACHE, H5E_PROTECT, FAIL, "Attempt to flush a protected entry.")
@@ -6508,8 +6581,10 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
          * H5AC__CLASS_SKIP_WRITES is set in the entry's type.  This
          * flag should only be used in test code
          */
-        if((!suppress_image_entry_writes || !entry_ptr->include_in_image)
-                && (((entry_ptr->type->flags) & H5C__CLASS_SKIP_WRITES) == 0)) {
+        if((!suppress_image_entry_writes || !(entry_ptr->include_in_image))
+             &&
+             (((entry_ptr->type->flags) & H5C__CLASS_SKIP_WRITES) == 0)) {
+
             H5FD_mem_t mem_type = H5FD_MEM_DEFAULT;
 
 #ifdef H5_HAVE_PARALLEL
@@ -6649,11 +6724,11 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry dirty flag cleared")
 
             /* Propagate the clean flag up the flush dependency chain if appropriate */
-	    HDassert(entry_ptr->flush_dep_ndirty_children == 0);
-	    if(entry_ptr->flush_dep_nparents > 0)
-		if(H5C__mark_flush_dep_clean(entry_ptr) < 0)
-		    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "Can't propagate flush dep clean flag")
-	} /* end if */
+            HDassert(entry_ptr->flush_dep_ndirty_children == 0);
+            if(entry_ptr->flush_dep_nparents > 0)
+                if(H5C__mark_flush_dep_clean(entry_ptr) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "Can't propagate flush dep clean flag")
+        } /* end if */
     } /* end else */
 
     /* reset the flush_in progress flag */
@@ -6690,10 +6765,10 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
          * If the entry is prefetched, the free_isr routine will dispose of
          * the flush dependency parents adresses array if necessary.
          */
-        if(!entry_ptr->prefetched) {
+        if ( ! entry_ptr->prefetched ) {
             HDassert(0 == entry_ptr->fd_parent_count);
             HDassert(NULL == entry_ptr->fd_parent_addrs);
-        } /* end if */
+        }
 
         /* Check whether we should free the space in the file that 
          * the entry occupies 
