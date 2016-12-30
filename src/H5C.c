@@ -1769,17 +1769,10 @@ H5C_mark_entry_dirty(void *thing)
                 if(H5C__mark_flush_dep_dirty(entry_ptr) < 0)
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "Can't propagate flush dep dirty flag")
         } /* end if */
-
         if(image_was_up_to_date)
             if(entry_ptr->flush_dep_nparents > 0)
                 if(H5C__mark_flush_dep_unserialized(entry_ptr) < 0)
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "Can't propagate serialization status to fd parents")
-
-        if(!entry_ptr->in_slist)
-            H5C__INSERT_ENTRY_IN_SLIST(cache_ptr, entry_ptr, FAIL)
-
-
-        H5C__UPDATE_STATS_FOR_DIRTY_PIN(cache_ptr, entry_ptr)
     } /* end if */
     else
         HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "Entry is neither pinned nor protected??")
@@ -3948,16 +3941,6 @@ H5C_create_flush_dependency(void * parent_thing, void * child_thing)
     HDassert(cache_ptr);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
     HDassert(cache_ptr == child_entry->cache_ptr);
-#ifndef NDEBUG
-    /* Make sure the parent is not already a parent */
-    {
-        unsigned u;
-
-        for(u = 0; u < child_entry->flush_dep_nparents; u++)
-            HDassert(child_entry->flush_dep_parent[u] != parent_entry);
-    } /* end block */
-#endif /* NDEBUG */
-
 #ifndef NDEBUG
     /* Make sure the parent is not already a parent */
     {
@@ -8502,16 +8485,15 @@ H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_p
 
             /* We must update cache data structures for the change in address */
             if(entry_ptr->addr == old_addr) {
-
-                /* we must update cache data structures for the 
+                /* We must update cache data structures for the 
                  * change in address.
                  */
 
-                /* update stats and entries relocated counter */
+                /* Update stats and entries relocated counter */
                 H5C__UPDATE_STATS_FOR_MOVE(cache_ptr, entry_ptr)
                 cache_ptr->entries_relocated_counter++;
 
-                /* delete the entry from the hash table and the slist */
+                /* Delete the entry from the hash table and the slist */
                 H5C__DELETE_FROM_INDEX(cache_ptr, entry_ptr, FAIL);
                 H5C__REMOVE_ENTRY_FROM_SLIST(cache_ptr, entry_ptr, FALSE);
 
