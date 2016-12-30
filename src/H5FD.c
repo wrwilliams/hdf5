@@ -2031,3 +2031,4 @@ H5FD_get_base_addr(const H5FD_t *file)
     /* Return the file's base address */
     FUNC_LEAVE_NOAPI(file->base_addr)
 } /* end H5FD_get_base_addr() */
+

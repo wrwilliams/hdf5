@@ -795,7 +795,6 @@ typedef struct H5O_fsinfo_t {
     haddr_t     	  fs_addr[H5FD_MEM_NTYPES-1]; /* Addresses of free space managers */
 } H5O_fsinfo_t;
 
-
 /*
  * Metadata Cache Image Message.
  * Contains base address and length of the metadata cache image.
@@ -808,7 +807,6 @@ typedef struct H5O_mdci_msg_t {
 
 /* only one version of the metadata cache image message at present */
 #define H5O_MDCI_VERSION_0 	0
-
 
 /* Typedef for "application" iteration operations */
 typedef herr_t (*H5O_operator_t)(const void *mesg/*in*/, unsigned idx,
