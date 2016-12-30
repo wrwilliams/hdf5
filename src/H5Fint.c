@@ -852,7 +852,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
          *
          * Verify this.
          */
-        HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
+        HDassert(H5AC_cache_is_clean(f, H5AC_RING_MDFSM));
 
         /* Release the external file cache */
         if(f->shared->efc) {
@@ -868,7 +868,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
          *
          * Verify this.
          */
-        HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
+        HDassert(H5AC_cache_is_clean(f, H5AC_RING_MDFSM));
 
         /* Release objects that depend on the superblock being initialized */
         if(f->shared->sblock) {
@@ -896,7 +896,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                 /* at this point, only the superblock and superblock 
                  * extension should be dirty.
                  */
-                HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
+                HDassert(H5AC_cache_is_clean(f, H5AC_RING_MDFSM));
 
                 if(flush) {
 		    /* Clear status_flags */
@@ -927,7 +927,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                     /* at this point, only the superblock and superblock 
                      * extension should be dirty.
                      */
-                    HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
+                    HDassert(H5AC_cache_is_clean(f, H5AC_RING_MDFSM));
 		} /* end if */
             } /* end if */
 
@@ -951,7 +951,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
          *
          * Verify this.
          */
-        HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
+        HDassert(H5AC_cache_is_clean(f, H5AC_RING_MDFSM));
  
         /* Remove shared file struct from list of open files */
         if(H5F_sfile_remove(f->shared) < 0)

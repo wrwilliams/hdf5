@@ -260,11 +260,10 @@ H5MF_alloc_open(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type)
 
     /* Set the ring type in the DXPL */
     if((type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_HDR))
-            ||
-            (type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
-        fsm_ring = H5C_RING_MDFSM;
+            || (type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
+        fsm_ring = H5AC_RING_MDFSM;
     else
-        fsm_ring = H5C_RING_RDFSM;
+        fsm_ring = H5AC_RING_RDFSM;
 
     if(H5AC_set_ring(dxpl_id, fsm_ring, &dxpl, &orig_ring) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, FAIL, "unable to set ring value")
@@ -468,11 +467,10 @@ HDfprintf(stderr, "%s: alloc_type = %u, size = %Hu\n", FUNC, (unsigned)alloc_typ
 
     /* Set the ring type in the DXPL */
     if((fs_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_HDR))
-            ||
-            (fs_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
-        fsm_ring = H5C_RING_MDFSM;
+            || (fs_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
+        fsm_ring = H5AC_RING_MDFSM;
     else
-        fsm_ring = H5C_RING_RDFSM;
+        fsm_ring = H5AC_RING_RDFSM;
 
     if(H5AC_set_ring(dxpl_id, fsm_ring, &dxpl, &orig_ring) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, HADDR_UNDEF, "unable to set ring value")
@@ -678,11 +676,10 @@ HDfprintf(stderr, "%s: Entering - alloc_type = %u, addr = %a, size = %Hu\n", FUN
 
     /* Set the ring type in the DXPL */	
     if((fs_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_HDR))
-            ||
-            (fs_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
-        fsm_ring = H5C_RING_MDFSM;
+            || (fs_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
+        fsm_ring = H5AC_RING_MDFSM;
     else
-        fsm_ring = H5C_RING_RDFSM;
+        fsm_ring = H5AC_RING_RDFSM;
 
     if(H5AC_set_ring(dxpl_id, fsm_ring, &dxpl, &orig_ring) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, FAIL, "unable to set ring value")
@@ -874,11 +871,10 @@ HDfprintf(stderr, "%s: Entering: alloc_type = %u, addr = %a, size = %Hu, extra_r
 
     /* Set the ring type in the DXPL */
     if((fs_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_HDR))
-            ||
-            (fs_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
-        fsm_ring = H5C_RING_MDFSM;
+            || (fs_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
+        fsm_ring = H5AC_RING_MDFSM;
     else
-        fsm_ring = H5C_RING_RDFSM;
+        fsm_ring = H5AC_RING_RDFSM;
 
     if(H5AC_set_ring(dxpl_id, fsm_ring, &dxpl, &orig_ring) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, FAIL, "unable to set ring value")
@@ -974,9 +970,9 @@ H5MF_get_freespace(H5F_t *f, hid_t dxpl_id, hsize_t *tot_space, hsize_t *meta_si
 	HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "driver get_eoa request failed")
 
     /* Set the ring type in the DXPL */
-    if(H5AC_set_ring(dxpl_id, H5C_RING_RDFSM, &dxpl, &orig_ring) < 0)
+    if(H5AC_set_ring(dxpl_id, H5AC_RING_RDFSM, &dxpl, &orig_ring) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, FAIL, "unable to set ring value")
-    curr_ring = H5C_RING_RDFSM;
+    curr_ring = H5AC_RING_RDFSM;
 
     /* Retrieve metadata aggregator info, if available */
     if(H5MF_aggr_query(f, &(f->shared->meta_aggr), &ma_addr, &ma_size) < 0)
@@ -993,11 +989,10 @@ H5MF_get_freespace(H5F_t *f, hid_t dxpl_id, hsize_t *tot_space, hsize_t *meta_si
 
         /* test to see if we need to switch rings -- do so if required */
         if((type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_HDR))
-                || 
-                (type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
-            needed_ring = H5C_RING_MDFSM;
+                || (type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
+            needed_ring = H5AC_RING_MDFSM;
         else
-            needed_ring = H5C_RING_RDFSM;
+            needed_ring = H5AC_RING_RDFSM;
 
         if(needed_ring != curr_ring) {
             if(H5AC_set_ring(dxpl_id, needed_ring, &dxpl, &curr_ring) < 0)
@@ -1071,11 +1066,10 @@ H5MF_get_freespace(H5F_t *f, hid_t dxpl_id, hsize_t *tot_space, hsize_t *meta_si
 
             /* test to see if we need to switch rings -- do so if required */
             if((type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_HDR))
-                    || 
-	                (type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
-                needed_ring = H5C_RING_MDFSM;
+                    || (type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
+                needed_ring = H5AC_RING_MDFSM;
             else
-                needed_ring = H5C_RING_RDFSM;
+                needed_ring = H5AC_RING_RDFSM;
 
             if(needed_ring != curr_ring) {
                 if(H5AC_set_ring(dxpl_id, needed_ring, &dxpl, &curr_ring) < 0)
@@ -1211,13 +1205,12 @@ H5MF_close_shrink_eoa(H5F_t *f, hid_t dxpl_id)
     udata.allow_eoa_shrink_only = TRUE; 
 
     /* Set the ring type in the DXPL.  In most cases, we will 
-     * need H5C_RING_RDFSM, so initialy set the ring type in 
+     * need H5AC_RING_RDFSM, so initialy set the ring type in 
      * the DXPL to that value.  We will alter this later if needed.
      */
-    if(H5AC_set_ring(dxpl_id, H5C_RING_RDFSM, &dxpl, &orig_ring) < 0)
+    if(H5AC_set_ring(dxpl_id, H5AC_RING_RDFSM, &dxpl, &orig_ring) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, FAIL, "unable to set ring value(1)")
-    curr_ring = H5C_RING_RDFSM;
-
+    curr_ring = H5AC_RING_RDFSM;
 
     /* Iterate until no more EOA shrinking occurs */
     do {
@@ -1228,11 +1221,10 @@ H5MF_close_shrink_eoa(H5F_t *f, hid_t dxpl_id)
 
             /* test to see if we need to switch rings -- do so if required */
             if((H5MF_ALLOC_TO_FS_TYPE(f, type) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_HDR))
-                    || 
-		            (H5MF_ALLOC_TO_FS_TYPE(f, type) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
-                needed_ring = H5C_RING_MDFSM;
+                    || (H5MF_ALLOC_TO_FS_TYPE(f, type) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
+                needed_ring = H5AC_RING_MDFSM;
             else
-                needed_ring = H5C_RING_RDFSM;
+                needed_ring = H5AC_RING_RDFSM;
 
             if(needed_ring != curr_ring) {
                 if(H5AC_set_ring(dxpl_id, needed_ring, &dxpl, &curr_ring) < 0)
@@ -1305,11 +1297,10 @@ HDfprintf(stderr, "%s: Check 1.0 - f->shared->fs_man[%u] = %p, f->shared->fs_add
 
         /* test to see if we need to switch rings -- do so if required */
         if((H5MF_ALLOC_TO_FS_TYPE(f, type) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_HDR))
-                ||
-                (H5MF_ALLOC_TO_FS_TYPE(f, type) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
-            needed_ring = H5C_RING_MDFSM;
+                || (H5MF_ALLOC_TO_FS_TYPE(f, type) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
+            needed_ring = H5AC_RING_MDFSM;
         else
-            needed_ring = H5C_RING_RDFSM;
+            needed_ring = H5AC_RING_RDFSM;
 
         if(needed_ring != curr_ring) {
             if(H5AC_set_ring(dxpl_id, needed_ring, dxpl, &curr_ring) < 0)
@@ -1400,7 +1391,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
     HDassert(f);
 
     /* Set the ring type in the DXPL */
-    if(H5AC_set_ring(dxpl_id, H5C_RING_RDFSM, &dxpl, &orig_ring) < 0)
+    if(H5AC_set_ring(dxpl_id, H5AC_RING_RDFSM, &dxpl, &orig_ring) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, FAIL, "unable to set ring value")
 
     /* Close and delete freespace managers from the file */
@@ -1461,13 +1452,13 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
     HDassert(f->shared->sblock);
 
     /* Set the ring type in the DXPL.  In most cases, we will
-     * need H5C_RING_RDFSM, so initialy set the ring in
+     * need H5AC_RING_RDFSM, so initialy set the ring in
      * the DXPL to that value.  We will alter this later if 
      * needed.
      */
-    if(H5AC_set_ring(dxpl_id, H5C_RING_RDFSM, &dxpl, &orig_ring) < 0)
+    if(H5AC_set_ring(dxpl_id, H5AC_RING_RDFSM, &dxpl, &orig_ring) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, FAIL, "unable to set ring value")
-    curr_ring = H5C_RING_RDFSM;
+    curr_ring = H5AC_RING_RDFSM;
 
     /* Free the space in aggregators */
     /* (for space not at EOF, it may be put into free space managers) */
@@ -1518,11 +1509,10 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
 
                 /* test to see if we need to switch rings -- do so if required */
                 if((H5MF_ALLOC_TO_FS_TYPE(f, type) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_HDR))
-                        || 
-	                    (H5MF_ALLOC_TO_FS_TYPE(f, type) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
-                    needed_ring = H5C_RING_MDFSM;
+                        || (H5MF_ALLOC_TO_FS_TYPE(f, type) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
+                    needed_ring = H5AC_RING_MDFSM;
                 else
-                    needed_ring = H5C_RING_RDFSM;
+                    needed_ring = H5AC_RING_RDFSM;
 
                 if(needed_ring != curr_ring) {
                     if(H5AC_set_ring(dxpl_id, needed_ring, &dxpl, &curr_ring) < 0)
@@ -1544,7 +1534,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
         /* verify that we haven't dirtied any metadata cache entries 
          * from the metadata free space manager ring out.
          */
-        HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
+        HDassert(H5AC_cache_is_clean(f, H5AC_RING_MDFSM));
 
         /* verify that the aggregators are still shutdown. */
         HDassert(f->shared->sdata_aggr.tot_size == 0);
@@ -1678,11 +1668,10 @@ H5MF_get_free_sections(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type, size_t nsects, 
      * we may have to change the ring
      */
     if((H5MF_ALLOC_TO_FS_TYPE(f, start_type) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_HDR))
-            || 
-            (H5MF_ALLOC_TO_FS_TYPE(f, start_type) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
-        needed_ring = H5C_RING_MDFSM;
+            || (H5MF_ALLOC_TO_FS_TYPE(f, start_type) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
+        needed_ring = H5AC_RING_MDFSM;
     else
-        needed_ring = H5C_RING_RDFSM;
+        needed_ring = H5AC_RING_RDFSM;
 
     curr_ring = needed_ring;
 
@@ -1695,11 +1684,10 @@ H5MF_get_free_sections(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type, size_t nsects, 
 
         /* test to see if we need to switch rings -- do so if required */
         if((H5MF_ALLOC_TO_FS_TYPE(f, ty) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_HDR))
-                || 
-                (H5MF_ALLOC_TO_FS_TYPE(f, ty) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
-            needed_ring = H5C_RING_MDFSM;
+                || (H5MF_ALLOC_TO_FS_TYPE(f, ty) == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
+            needed_ring = H5AC_RING_MDFSM;
         else
-            needed_ring = H5C_RING_RDFSM;
+            needed_ring = H5AC_RING_RDFSM;
 
         if(needed_ring != curr_ring) {
             if(H5AC_set_ring(dxpl_id, needed_ring, &dxpl, &curr_ring) < 0)
@@ -1881,13 +1869,13 @@ H5MF_settle_raw_data_fsm(H5F_t *f, hid_t dxpl_id)
 
 
     /* Set the ring type in the DXPL.  In most cases, we will
-     * need H5C_RING_MDFSM first, so initialy set the ring in
+     * need H5AC_RING_MDFSM first, so initialy set the ring in
      * the DXPL to that value.  We will alter this later if
      * needed.
      */
-    if(H5AC_set_ring(dxpl_id, H5C_RING_MDFSM, &dxpl, &orig_ring) < 0)
+    if(H5AC_set_ring(dxpl_id, H5AC_RING_MDFSM, &dxpl, &orig_ring) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, FAIL, "unable to set ring value(0)")
-    curr_ring = H5C_RING_MDFSM;
+    curr_ring = H5AC_RING_MDFSM;
 
     /* b) Free the file space (if any) allocated to each free space manager.
      *
@@ -1950,11 +1938,10 @@ H5MF_settle_raw_data_fsm(H5F_t *f, hid_t dxpl_id)
                  * if required 
                  */
                 if((fsm_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_HDR))
-                       ||
-                       (fsm_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
-                    needed_ring = H5C_RING_MDFSM;
+                       || (fsm_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
+                    needed_ring = H5AC_RING_MDFSM;
                 else
-                    needed_ring = H5C_RING_RDFSM;
+                    needed_ring = H5AC_RING_RDFSM;
 
                 if(needed_ring != curr_ring) {
                     if(H5AC_set_ring(dxpl_id, needed_ring, &dxpl, &curr_ring)< 0)
@@ -2057,11 +2044,10 @@ H5MF_settle_raw_data_fsm(H5F_t *f, hid_t dxpl_id)
 
         /* test to see if we need to switch rings -- do so if required */
         if((fsm_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_HDR))
-                ||
-                (fsm_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
-            needed_ring = H5C_RING_MDFSM;
+                || (fsm_type == H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO)))
+            needed_ring = H5AC_RING_MDFSM;
         else
-            needed_ring = H5C_RING_RDFSM;
+            needed_ring = H5AC_RING_RDFSM;
 
         if(needed_ring != curr_ring) {
             if(H5AC_set_ring(dxpl_id, needed_ring, &dxpl, &curr_ring)< 0)
@@ -2085,11 +2071,10 @@ H5MF_settle_raw_data_fsm(H5F_t *f, hid_t dxpl_id)
                  * in in the raw data FSM ring.
                  */
                 if((fsm_type != H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_HDR)) 
-                        &&
-                        (fsm_type != H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO))) {
+                        && (fsm_type != H5MF_ALLOC_TO_FS_TYPE(f, H5FD_MEM_FSPACE_SINFO))) {
 
-                    /* the current ring should be H5C_RING_RDFSM */
-                    HDassert(curr_ring == H5C_RING_RDFSM);
+                    /* the current ring should be H5AC_RING_RDFSM */
+                    HDassert(curr_ring == H5AC_RING_RDFSM);
 
                     /* Query free space manager info for this type */
                     if(H5FS_stat_info(f, f->shared->fs_man[fsm_type], &fs_stat) < 0 )
@@ -2297,7 +2282,7 @@ H5MF_settle_meta_data_fsm(H5F_t *f, hid_t dxpl_id)
     sinfo_fspace = f->shared->fs_man[sinfo_fsm_alloc_type];
 
     /* set the ring in the dxpl appropriately for subsequent calls */
-    if(H5AC_set_ring(dxpl_id, H5C_RING_MDFSM, &dxpl, &orig_ring) < 0)
+    if(H5AC_set_ring(dxpl_id, H5AC_RING_MDFSM, &dxpl, &orig_ring) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, FAIL, "unable to set ring value")
     reset_ring = TRUE;
 
