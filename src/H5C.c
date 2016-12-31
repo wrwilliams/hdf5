@@ -960,11 +960,21 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
         ring = H5C_RING_USER;
 	while(ring < H5C_RING_NTYPES) {
 
-            /* only call the free space manager settle routines when close
+            /* Only call the free space manager settle routines when close
              * warning has been received.
              *
              * Observe that the FSM rings should only be populated if
-             * persistant free space managers are enabled.
+             * persistant free space managers are enabled.  Thus don't
+             * call the settle routines unless persistant free space 
+             * managers are enabled.
+             *
+             * Note that if f->shared->fs_persist and 
+             * f->shared->first_alloc_dealloc are both TRUE, there
+             * have been no file space allocations or deallocations since
+             * file open.  Thus all free space managers are still settled 
+             * from the last file close.  In this case, we must not call
+             * the settle routines as they assume that this is not the 
+             * case.
              */
             if ( cache_ptr->close_warning_received ) {
 
@@ -975,6 +985,7 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 
                     case H5C_RING_RDFSM:
                         if ( ( f->shared->fs_persist ) &&
+                             ( ! f->shared->first_alloc_dealloc ) &&
                              ( ! cache_ptr->rdfsm_settled ) ) {
 
                             if ( H5MF_settle_raw_data_fsm(f, dxpl_id) < 0 )
@@ -987,6 +998,7 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 
                     case H5C_RING_MDFSM:
                         if ( ( f->shared->fs_persist ) &&
+                             ( ! f->shared->first_alloc_dealloc ) &&
                              ( ! cache_ptr->mdfsm_settled ) ) {
 
                             if ( H5MF_settle_meta_data_fsm(f, dxpl_id) < 0 )
@@ -3278,8 +3290,7 @@ H5C_unsettle_ring(H5F_t * f, H5C_ring_t ring)
         case H5C_RING_RDFSM:
             if ( cache_ptr->rdfsm_settled ) {
 
-                if ( ( cache_ptr->flush_in_progress ) ||
-                     ( cache_ptr->close_warning_received ) ) {
+                if ( cache_ptr->close_warning_received ) {
 
                     HDassert(FALSE);
                     HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
@@ -3292,8 +3303,7 @@ H5C_unsettle_ring(H5F_t * f, H5C_ring_t ring)
         case H5C_RING_MDFSM:
             if ( cache_ptr->mdfsm_settled ) {
 
-                if ( ( cache_ptr->flush_in_progress ) ||
-                     ( cache_ptr->close_warning_received ) ) {
+                if ( cache_ptr->close_warning_received ) {
 
                     HDassert(FALSE);
                     HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
