@@ -49,6 +49,8 @@ set (CTEST_CUSTOM_MEMCHECK_IGNORE
     H5DUMP_PACKED_BITS-clearall-objects
     H5DUMP-XML-clearall-objects
     H5DUMP_VDS-clearall-objects
+    ######### tools/h5format_convert #########
+    H5FC-clearall-objects
     ######### tools/h5import #########
     H5IMPORT-h5importtest-clear-objects
     H5IMPORT-clear-objects
@@ -185,6 +187,7 @@ set (CTEST_CUSTOM_MEMCHECK_IGNORE
     H5JAM-NONE_COPY-ta_u513
     ######### tools/h5ls #########
     H5LS-clearall-objects
+    H5LS_VDS-clearall-objects
     ######### tools/h5repack #########
     H5REPACK-clearall-objects
     H5REPACK-gzip_verbose_filters                       #uses runTest.cmake
@@ -208,6 +211,7 @@ set (CTEST_CUSTOM_MEMCHECK_IGNORE
     H5REPACK_VERIFY_LAYOUT_ALL-layout_long_switches     #uses grepTest.cmake
     H5REPACK_VERIFY_LAYOUT_ALL-layout_short_switches    #uses grepTest.cmake
     H5REPACK-plugin
+    H5REPACK_CMP-plugin_zero
     ######### tools/h5stat #########
     H5STAT-clearall-objects
     ######### tools/misc #########

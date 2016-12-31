@@ -41,14 +41,15 @@ check_SCRIPTS = $(TEST_SCRIPT)
 # executed, generally most specific tests to least specific tests.
 # As an exception, long-running tests should occur earlier in the list.
 # This gives them more time to run when tests are executing in parallel.
-TEST_PROG= testhdf5 cache cache_api cache_tagging lheap ohdr stab gheap \
+TEST_PROG= testhdf5 \
+           cache cache_api cache_tagging lheap ohdr stab gheap \
            evict_on_close farray earray btree2 fheap \
            pool accum hyperslab istore bittests dt_arith tpage_buffer\
            dtypes dsets cmpd_dset filter_fail extend external efc objcopy links unlink \
            big mtime fillval mount flush1 flush2 app_ref enum \
            set_extent ttsafe enc_dec_plist enc_dec_plist_cross_platform\
            getname vfd ntypes dangle dtransform reserved cross_read \
-           freespace mf vds file_image unregister cork
+           freespace mf vds file_image unregister cache_logging cork
 
 # List programs to be built when testing here.
 # error_test and err_compat are built at the same time as the other tests, but executed by testerror.sh.
@@ -160,7 +161,9 @@ CHECK_CLEANFILES+=accum.h5 cmpd_dset.h5 compact_dataset.h5 dataset.h5 dset_offse
     new_multi_file_v16-r.h5 new_multi_file_v16-s.h5                  \
     split_get_file_image_test-m.h5 split_get_file_image_test-r.h5    \
     file_image_core_test.h5.copy unregister_filter_1.h5 unregister_filter_2.h5 \
-    vds_virt.h5 vds_dapl.h5 vds_src_[0-1].h5
+    vds_virt.h5 vds_dapl.h5 vds_src_[0-1].h5 \
+    cache_logging.h5 cache_logging.out
+
 # Sources for testhdf5 executable
 testhdf5_SOURCES=testhdf5.c tarray.c tattr.c tchecksum.c tconfig.c tfile.c \
     tgenprop.c th5o.c th5s.c tcoords.c theap.c tid.c titerate.c tmeta.c tmisc.c \

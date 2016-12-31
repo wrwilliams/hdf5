@@ -855,9 +855,9 @@ test_mf_tmp(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
     hid_t   fcpl = -1;      /* File creation property list */
 
     if(new_format)
-        HDputs("Testing 'temporary' file space allocation with new library format...");
+        TESTING("'temporary' file space allocation with new library format")
     else
-        HDputs("Testing 'temporary' file space allocation with old library format...");
+        TESTING("'temporary' file space allocation with old library format")
 
     /* Can't run this test with multi-file VFDs */
     if(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi") && HDstrcmp(env_h5_drvr, "family")) {
@@ -6146,7 +6146,17 @@ test_mf_fs_persist_split(void)
     haddr_t baddr5, baddr6, baddr7, baddr8; /* File address for H5FD_MEM_BTREE */
     haddr_t tmp_addr;                   /* temporary variable for address */
 
-    TESTING("file's free-space managers are persistent for split-file");
+    TESTING("File's free-space managers are persistent for split-file");
+
+    /* for now, we don't support persistant free space managers 
+     * with the split file driver.
+     */
+    SKIPPED();
+    HDfprintf(stdout, " Persistant FSMs disabled in multi file driver.\n");
+    return 0;  /* <========== note return */
+
+    /* File creation property list template */
+    if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
 
     /* for now, we don't support persistant free space managers 
      * with the split file driver.
@@ -6458,7 +6468,14 @@ test_mf_fs_persist_multi(void)
     haddr_t     memb_addr[H5FD_MEM_NTYPES]; /* Member starting address */
 
 
-    TESTING("file's free-space managers are persistent for multi-file");
+    TESTING("File's free-space managers are persistent for multi-file");
+
+    /* for now, we don't support persistant free space managers 
+     * with the multi file driver.
+     */
+    SKIPPED();
+    HDfprintf(stdout, " Persistant FSMs disabled in multi file driver.\n");
+    return 0;  /* <========== note return */
 
     /* for now, we don't support persistant free space managers 
      * with the multi file driver.
@@ -6851,9 +6868,9 @@ test_mf_fs_gone(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
     hbool_t ran_H5MF_tidy_self_referential_fsm_hack = FALSE;
 
     if(new_format)
-        HDputs("Testing file's free-space is going away with new library format...");
+        TESTING("File's free-space is going away with new library format")
     else
-        HDputs("Testing file's free-space is going away with old library format...");
+        TESTING("File's free-space is going away with old library format")
 
     /* Current VFD that does not support contigous address space */
     contig_addr_vfd = (hbool_t)(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi"));
@@ -7046,9 +7063,9 @@ test_mf_strat_thres_gone(const char *env_h5_drvr, hid_t fapl, hbool_t new_format
     hbool_t contig_addr_vfd;
 
     if(new_format)
-        HDputs("Testing file space merge/shrink for section size < threshold with new library format...");
+        TESTING("File space merge/shrink for section size < threshold with new library format")
     else
-        HDputs("Testing file space merge/shrink for section size < threshold with old library format...");
+        TESTING("File space merge/shrink for section size < threshold with old library format")
 
     /* Current VFD that does not support contigous address space */
     contig_addr_vfd = (hbool_t)(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi"));
@@ -7231,9 +7248,9 @@ test_mf_strat_thres_persist(const char *env_h5_drvr, hid_t fapl, hbool_t new_for
     hbool_t contig_addr_vfd;
 
     if(new_format)
-        HDputs("Testing file space strategy/persisting/threshold with new library format...");
+        TESTING("File space strategy/persisting/threshold with new library format")
     else
-        HDputs("Testing file space strategy/persisting/threshold with old library format...");
+        TESTING("File space strategy/persisting/threshold with old library format")
 
     /* Current VFD that does not support contigous address space */
     contig_addr_vfd = (hbool_t)(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi"));
@@ -7396,9 +7413,9 @@ test_mf_fs_persist(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
     haddr_t tmp_addr;               /* Temporary variable for address */
 
     if(new_format)
-        HDputs("Testing file's free-space is persistent with new library format");
+        TESTING("File's free-space is persistent with new library format")
     else
-        HDputs("Testing file's free-space is persistent with old library format");
+        TESTING("File's free-space is persistent with old library format")
     
     if(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi")) {
 

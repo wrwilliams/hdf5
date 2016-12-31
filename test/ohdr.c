@@ -131,9 +131,9 @@ test_cont(char *filename, hid_t fapl)
     if(hdr_info.nchunks >= nchunks)
         TEST_ERROR
 
-    if(H5O_close(&oh_locA) < 0)
+    if(H5O_close(&oh_locA, NULL) < 0)
         FAIL_STACK_ERROR
-    if(H5O_close(&oh_locB) < 0)
+    if(H5O_close(&oh_locB, NULL) < 0)
         FAIL_STACK_ERROR
     if(H5Fclose(file) < 0)
         FAIL_STACK_ERROR
@@ -145,8 +145,8 @@ test_cont(char *filename, hid_t fapl)
 
 error:
     H5E_BEGIN_TRY {
-        H5O_close(&oh_locA);
-        H5O_close(&oh_locB);
+        H5O_close(&oh_locA, NULL);
+        H5O_close(&oh_locB, NULL);
         H5Fclose(file);
     } H5E_END_TRY;
 
@@ -272,7 +272,7 @@ test_ohdr_cache(char *filename, hid_t fapl)
         FAIL_STACK_ERROR
 
     /* Close object header created */
-    if(H5O_close(&oh_loc) < 0)
+    if(H5O_close(&oh_loc, NULL) < 0)
         FAIL_STACK_ERROR
 
     /* Unprotect local heap (which actually unpins it from the cache) */
@@ -609,9 +609,8 @@ main(void)
     H5F_t	*f = NULL;
     char	filename[1024];
     H5O_hdr_info_t hdr_info;            /* Object info */
-    H5O_loc_t	oh_loc, oh_loc2;        /* Object header locations */
+    H5O_loc_t	oh_loc;                 /* Object header locations */
     time_t	time_new, ro;
-    int         chunkno;                /* Chunk index for message */
     int		i;                      /* Local index variable */
     unsigned    b;                      /* Index for "new format" loop */
     const char  *envval;      		/* File Driver value from environment */
@@ -743,7 +742,7 @@ main(void)
          *  works correctly - QAK)
          */
         TESTING("close & re-open object header");
-        if(H5O_close(&oh_loc) < 0)
+        if(H5O_close(&oh_loc, NULL) < 0)
             FAIL_STACK_ERROR
         if(H5Fclose(file) < 0)
             FAIL_STACK_ERROR
@@ -818,150 +817,8 @@ main(void)
 
         /* release resources */
         TESTING("object header closing");
-        if(H5O_close(&oh_loc) < 0)
+        if(H5O_close(&oh_loc, NULL) < 0)
             FAIL_STACK_ERROR
-        PASSED();
-
-        /*
-         * Test moving message to first chunk
-         */
-        TESTING("locking messages");
-        HDmemset(&oh_loc, 0, sizeof(oh_loc));
-        if(H5O_create(f, H5AC_ind_read_dxpl_id, (size_t)64, (size_t)0, H5P_GROUP_CREATE_DEFAULT, &oh_loc/*out*/) < 0)
-            FAIL_STACK_ERROR
-        if(1 != H5O_link(&oh_loc, 1, H5AC_ind_read_dxpl_id))
-            FAIL_STACK_ERROR
-
-        /* Create second object header, to guarantee that first object header uses multiple chunks */
-        HDmemset(&oh_loc2, 0, sizeof(oh_loc2));
-        if(H5O_create(f, H5AC_ind_read_dxpl_id, (size_t)64, (size_t)0, H5P_GROUP_CREATE_DEFAULT, &oh_loc2/*out*/) < 0)
-            FAIL_STACK_ERROR
-        if(1 != H5O_link(&oh_loc2, 1, H5AC_ind_read_dxpl_id))
-            FAIL_STACK_ERROR
-
-        /* Fill object header with messages, creating multiple chunks */
-        for(i = 0; i < 10; i++) {
-            time_new = (i + 1) * 1000 + 10;
-            if(H5O_msg_create(&oh_loc, H5O_MTIME_NEW_ID, 0, 0, &time_new, H5AC_ind_read_dxpl_id) < 0)
-                FAIL_STACK_ERROR
-        } /* end for */
-
-        /* Get # of object header chunks */
-        if(H5O_get_hdr_info(&oh_loc, H5AC_ind_read_dxpl_id, &hdr_info) < 0)
-            FAIL_STACK_ERROR
-        if(hdr_info.nchunks != 2)
-            TEST_ERROR
-
-        /* Add message to lock to object header */
-        time_new = 11111111;
-        if(H5O_msg_create(&oh_loc, H5O_MTIME_ID, 0, 0, &time_new, H5AC_ind_read_dxpl_id) < 0)
-            FAIL_STACK_ERROR
-
-        /* Verify chunk index for message */
-        if((chunkno = H5O_msg_get_chunkno(&oh_loc, H5O_MTIME_ID, H5AC_ind_read_dxpl_id)) < 0)
-            FAIL_STACK_ERROR
-        if(chunkno != 1)
-            TEST_ERROR
-
-        /* Lock the message into the chunk */
-        if(H5O_msg_lock(&oh_loc, H5O_MTIME_ID, H5AC_ind_read_dxpl_id) < 0)
-            FAIL_STACK_ERROR
-
-        /* Attempt to lock the message twice */
-        H5E_BEGIN_TRY {
-            ret = H5O_msg_lock(&oh_loc, H5O_MTIME_ID, H5AC_ind_read_dxpl_id);
-        } H5E_END_TRY;
-        if(ret >= 0)
-            TEST_ERROR
-
-        /* Delete all the other messages, which would move the message into
-         * chunk #0, if it wasn't locked
-         */
-        if(H5O_msg_remove(&oh_loc, H5O_MTIME_NEW_ID, H5O_ALL, TRUE, H5AC_ind_read_dxpl_id) < 0)
-            FAIL_STACK_ERROR
-
-        /* Verify chunk index for message */
-        if((chunkno = H5O_msg_get_chunkno(&oh_loc, H5O_MTIME_ID, H5AC_ind_read_dxpl_id)) < 0)
-            FAIL_STACK_ERROR
-        if(chunkno != 1)
-            TEST_ERROR
-
-        /* Unlock the message */
-        if(H5O_msg_unlock(&oh_loc, H5O_MTIME_ID, H5AC_ind_read_dxpl_id) < 0)
-            FAIL_STACK_ERROR
-
-        /* Attempt to unlock the message twice */
-        H5E_BEGIN_TRY {
-            ret = H5O_msg_unlock(&oh_loc, H5O_MTIME_ID, H5AC_ind_read_dxpl_id);
-        } H5E_END_TRY;
-        if(ret >= 0)
-            TEST_ERROR
-
-        /* Close object headers */
-        if(H5O_close(&oh_loc2) < 0)
-            FAIL_STACK_ERROR
-        if(H5O_close(&oh_loc) < 0)
-            FAIL_STACK_ERROR
-
-        /* Open first object header */
-        HDmemset(&oh_loc, 0, sizeof(oh_loc));
-        if(H5O_create(f, H5AC_ind_read_dxpl_id, (size_t)64, (size_t)0, H5P_GROUP_CREATE_DEFAULT, &oh_loc/*out*/) < 0)
-            FAIL_STACK_ERROR
-        if(1 != H5O_link(&oh_loc, 1, H5AC_ind_read_dxpl_id))
-            FAIL_STACK_ERROR
-
-        /* Create second object header, to guarantee that first object header uses multiple chunks */
-        HDmemset(&oh_loc2, 0, sizeof(oh_loc2));
-        if(H5O_create(f, H5AC_ind_read_dxpl_id, (size_t)64, (size_t)0, H5P_GROUP_CREATE_DEFAULT, &oh_loc2/*out*/) < 0)
-            FAIL_STACK_ERROR
-        if(1 != H5O_link(&oh_loc2, 1, H5AC_ind_read_dxpl_id))
-            FAIL_STACK_ERROR
-
-        /* Add message to move to object header */
-        time_new = 11111111;
-        if(H5O_msg_create(&oh_loc, H5O_MTIME_ID, 0, 0, &time_new, H5AC_ind_read_dxpl_id) < 0)
-            FAIL_STACK_ERROR
-
-        /* Verify chunk index for message */
-        if((chunkno = H5O_msg_get_chunkno(&oh_loc, H5O_MTIME_ID, H5AC_ind_read_dxpl_id)) < 0)
-            FAIL_STACK_ERROR
-        if(chunkno != 0)
-            TEST_ERROR
-
-        /* Lock the message into the chunk */
-        if(H5O_msg_lock(&oh_loc, H5O_MTIME_ID, H5AC_ind_read_dxpl_id) < 0)
-            FAIL_STACK_ERROR
-
-        /* Fill object header with messages, creating multiple chunks */
-        /* (would normally move locked message to new chunk) */
-        for(i = 0; i < 10; i++) {
-            time_new = (i + 1) * 1000 + 10;
-            if(H5O_msg_create(&oh_loc, H5O_MTIME_NEW_ID, 0, 0, &time_new, H5AC_ind_read_dxpl_id) < 0)
-                FAIL_STACK_ERROR
-        } /* end for */
-
-        /* Get # of object header chunks */
-        if(H5O_get_hdr_info(&oh_loc, H5AC_ind_read_dxpl_id, &hdr_info) < 0)
-            FAIL_STACK_ERROR
-        if(hdr_info.nchunks != 2)
-            TEST_ERROR
-
-        /* Verify chunk index for message */
-        if((chunkno = H5O_msg_get_chunkno(&oh_loc, H5O_MTIME_ID, H5AC_ind_read_dxpl_id)) < 0)
-            FAIL_STACK_ERROR
-        if(chunkno != 0)
-            TEST_ERROR
-
-        /* Unlock the message */
-        if(H5O_msg_unlock(&oh_loc, H5O_MTIME_ID, H5AC_ind_read_dxpl_id) < 0)
-            FAIL_STACK_ERROR
-
-        /* Close object headers */
-        if(H5O_close(&oh_loc2) < 0)
-            FAIL_STACK_ERROR
-        if(H5O_close(&oh_loc) < 0)
-            FAIL_STACK_ERROR
-
         PASSED();
 
         /* Close the file we created */

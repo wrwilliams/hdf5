@@ -580,7 +580,7 @@ H5Fopen(const char *filename, unsigned flags, hid_t fapl_id)
     new_file->file_id = ret_value;
 
 done:
-    if(ret_value < 0 && new_file && H5F_try_close(new_file) < 0)
+    if(ret_value < 0 && new_file && H5F_try_close(new_file, NULL) < 0)
         HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "problems closing file")
 
     FUNC_LEAVE_API(ret_value)
@@ -1367,6 +1367,103 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5Fget_metadata_read_retry_info
+ *
+ * Purpose:     To retrieve the collection of read retries for metadata items with checksum.
+ *
+ * Return:      Success:        non-negative on success
+ *              Failure:        Negative
+ *
+ * Programmer:  Vailin Choi; October 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Fget_metadata_read_retry_info(hid_t file_id, H5F_retry_info_t *info)
+{
+    H5F_t    	*file;           	/* File object for file ID */
+    unsigned 	i, j;			/* Local index variable */
+    size_t	tot_size;		/* Size of each retries[i] */
+    herr_t   	ret_value = SUCCEED;   	/* Return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE2("e", "i*x", file_id, info);
+
+    /* Check args */
+    if(!info)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no info struct")
+
+    /* Get the file pointer */
+    if(NULL == (file = (H5F_t *)H5I_object_verify(file_id, H5I_FILE)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "not a file ID")
+
+    /* Copy the # of bins for "retries" array */
+    info->nbins = file->shared->retries_nbins;
+
+    /* Initialize the array of "retries" */
+    HDmemset(info->retries, 0, sizeof(info->retries));
+
+    /* Return if there are no bins -- no retries */
+    if(!info->nbins) 
+	HGOTO_DONE(SUCCEED);
+
+    /* Calculate size for each retries[i] */
+    tot_size = info->nbins * sizeof(uint32_t);
+
+    /* Map and copy information to info's retries for metadata items with tracking for read retries */
+    j = 0;
+    for(i = 0; i < H5AC_NTYPES; i++) {
+        switch(i) {
+            case H5AC_OHDR_ID:
+            case H5AC_OHDR_CHK_ID:
+            case H5AC_BT2_HDR_ID:
+            case H5AC_BT2_INT_ID:
+            case H5AC_BT2_LEAF_ID:
+            case H5AC_FHEAP_HDR_ID:
+            case H5AC_FHEAP_DBLOCK_ID:
+            case H5AC_FHEAP_IBLOCK_ID:
+            case H5AC_FSPACE_HDR_ID:
+            case H5AC_FSPACE_SINFO_ID:
+            case H5AC_SOHM_TABLE_ID:
+            case H5AC_SOHM_LIST_ID:
+            case H5AC_EARRAY_HDR_ID:
+            case H5AC_EARRAY_IBLOCK_ID:
+            case H5AC_EARRAY_SBLOCK_ID:
+            case H5AC_EARRAY_DBLOCK_ID:
+            case H5AC_EARRAY_DBLK_PAGE_ID:
+            case H5AC_FARRAY_HDR_ID:
+            case H5AC_FARRAY_DBLOCK_ID:
+            case H5AC_FARRAY_DBLK_PAGE_ID:
+            case H5AC_SUPERBLOCK_ID:
+                HDassert(j < H5F_NUM_METADATA_READ_RETRY_TYPES);
+                if(file->shared->retries[i] != NULL) {
+                    /* Allocate memory for retries[i]
+                     *
+                     * This memory should be released by the user with
+                     * the H5free_memory() call.
+                     */
+                    if(NULL == (info->retries[j] = (uint32_t *)H5MM_malloc(tot_size)))
+                        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
+
+                    /* Copy the information */
+                    HDmemcpy(info->retries[j], file->shared->retries[i], tot_size);
+                } /* end if */
+
+                /* Increment location in info->retries[] array */
+                j++;
+                break;
+
+            default:
+                break;
+        } /* end switch */
+    } /* end for */
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* end H5Fget_metadata_read_retry_info() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5Fget_free_sections
  *
  * Purpose:     To get free-space section information for free-space manager with
@@ -1443,6 +1540,105 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5Fstart_mdc_logging
+ *
+ * Purpose:     Start metadata cache logging operations for a file.
+ *                  - Logging must have been set up via the fapl.
+ *
+ * Return:      Non-negative on success/Negative on errors
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Fstart_mdc_logging(hid_t file_id)
+{
+    H5F_t *file;                /* File info */
+    herr_t ret_value = SUCCEED;	/* Return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE1("e", "i", file_id);
+
+    /* Sanity check */
+    if(NULL == (file = (H5F_t *)H5I_object_verify(file_id, H5I_FILE)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "hid_t identifier is not a file ID")
+
+    /* Call mdc logging function */
+    if(H5C_start_logging(file->shared->cache) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_LOGFAIL, FAIL, "unable to start mdc logging")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Fstart_mdc_logging() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Fstop_mdc_logging
+ *
+ * Purpose:     Stop metadata cache logging operations for a file.
+ *                  - Does not close the log file.
+ *                  - Logging must have been set up via the fapl.
+ *
+ * Return:      Non-negative on success/Negative on errors
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Fstop_mdc_logging(hid_t file_id)
+{
+    H5F_t *file;                /* File info */
+    herr_t ret_value = SUCCEED;	/* Return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE1("e", "i", file_id);
+
+    /* Sanity check */
+    if(NULL == (file = (H5F_t *)H5I_object_verify(file_id, H5I_FILE)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "hid_t identifier is not a file ID")
+
+    /* Call mdc logging function */
+    if(H5C_stop_logging(file->shared->cache) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_LOGFAIL, FAIL, "unable to stop mdc logging")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Fstop_mdc_logging() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Fget_mdc_logging_status
+ *
+ * Purpose:     Get the logging flags. is_enabled determines if logging was
+ *              set up via the fapl. is_currently_logging determines if
+ *              log messages are being recorded at this time.
+ *
+ * Return:      Non-negative on success/Negative on errors
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Fget_mdc_logging_status(hid_t file_id, hbool_t *is_enabled,
+                          hbool_t *is_currently_logging)
+{
+    H5F_t *file;                /* File info */
+    herr_t ret_value = SUCCEED;	/* Return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE3("e", "i*b*b", file_id, is_enabled, is_currently_logging);
+
+    /* Sanity check */
+    if(NULL == (file = (H5F_t *)H5I_object_verify(file_id, H5I_FILE)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "hid_t identifier is not a file ID")
+
+    /* Call mdc logging function */
+    if(H5C_get_logging_status(file->shared->cache, is_enabled, is_currently_logging) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_LOGFAIL, FAIL, "unable to get logging status")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Fget_mdc_logging_status() */
+
+
+/*-------------------------------------------------------------------------
  * Function:	H5Fformat_convert_super (Internal)
  *
  * Purpose:	Downgrade the superblock version to v2 and
@@ -1514,4 +1710,3 @@ H5Fformat_convert(hid_t fid)
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Fformat_convert() */
-

@@ -145,7 +145,7 @@ static herr_t H5D__farray_idx_reset(H5O_storage_chunk_t *storage, hbool_t reset_
 static herr_t H5D__farray_idx_dump(const H5O_storage_chunk_t *storage, FILE *stream);
 static herr_t H5D__farray_idx_dest(const H5D_chk_idx_info_t *idx_info);
 
-/* Generic extensible array routines */
+/* Generic fixed array routines */
 static herr_t H5D__farray_idx_open(const H5D_chk_idx_info_t *idx_info);
 
 /*********************/
@@ -497,7 +497,7 @@ H5D__farray_crt_dbg_context(H5F_t *f, hid_t dxpl_id, haddr_t obj_addr)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, NULL, "can't get layout info")
 
     /* close the object header */
-    if(H5O_close(&obj_loc) < 0)
+    if(H5O_close(&obj_loc, NULL) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTCLOSEOBJ, NULL, "can't close object header")
 
     /* Create user data */
@@ -516,7 +516,7 @@ done:
 
         /* Close object header */
         if(obj_opened) {
-            if(H5O_close(&obj_loc) < 0)
+            if(H5O_close(&obj_loc, NULL) < 0)
                 HDONE_ERROR(H5E_DATASET, H5E_CANTCLOSEOBJ, NULL, "can't close object header")
         } /* end if */
     } /* end if */

@@ -737,6 +737,7 @@ h5tools_str_indent(h5tools_str_t *str, const h5tool_format_t *info,
  *  32-bit or more. For every kind of native integers, I changed the code
  *  to make it zero if PACKED_DATA_OFFSET is greater than or equal to the
  *  size of integer.
+ *
  *-------------------------------------------------------------------------
  */
 char *
@@ -803,7 +804,7 @@ h5tools_str_sprint(h5tools_str_t *str, const h5tool_format_t *info, hid_t contai
                     long double templdouble;
 
                     HDmemcpy(&templdouble, vp, sizeof(long double));
-                    h5tools_str_append(str, "%Lf", templdouble);
+                    h5tools_str_append(str, OPT(info->fmt_double, "%Lf"), templdouble);
 #endif
                 }
                 break;

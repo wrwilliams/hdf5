@@ -35,6 +35,7 @@
 #include "H5Cprivate.h"		/* Cache				*/
 #include "H5Fprivate.h"		/* File access				*/
 #include "H5Pprivate.h"		/* Property lists			*/
+#include "H5SLprivate.h"        /* Skip lists 				*/
 
 #ifdef H5_METADATA_TRACE_FILE
 #define H5AC__TRACE_FILE_ENABLED	1
@@ -45,11 +46,16 @@
 /* Global metadata tag values */
 #define H5AC__INVALID_TAG      (haddr_t)0
 #define H5AC__IGNORE_TAG       (haddr_t)1
-#define H5AC__SUPERBLOCK_TAG   (haddr_t)2
-#define H5AC__FREESPACE_TAG    (haddr_t)3
-#define H5AC__SOHM_TAG         (haddr_t)4
-#define H5AC__GLOBALHEAP_TAG   (haddr_t)5
-#define H5AC__COPIED_TAG       (haddr_t)6
+#define H5AC__COPIED_TAG       (haddr_t)2
+#define H5AC__SUPERBLOCK_TAG   (haddr_t)3
+#define H5AC__FREESPACE_TAG    (haddr_t)4
+#define H5AC__SOHM_TAG         (haddr_t)5
+#define H5AC__GLOBALHEAP_TAG   (haddr_t)6
+
+/* Definitions for cache "tag" property */
+#define H5AC_TAG_NAME          "H5AC_tag"
+#define H5AC_TAG_SIZE          sizeof(haddr_t)
+#define H5AC_TAG_DEF           (H5AC__INVALID_TAG)
 
 /* Types of metadata objects cached */
 typedef enum {
@@ -136,7 +142,6 @@ typedef enum {
 
 #define H5AC__SERIALIZE_RESIZED_FLAG	H5C__SERIALIZE_RESIZED_FLAG
 #define H5AC__SERIALIZE_MOVED_FLAG	H5C__SERIALIZE_MOVED_FLAG
-#define H5AC__SERIALIZE_COMPRESSED_FLAG	H5C__SERIALIZE_COMPRESSED_FLAG
 
 /* Cork actions: cork/uncork/get cork status of an object */
 #define H5AC__SET_CORK             	H5C__SET_CORK
@@ -158,17 +163,21 @@ typedef H5C_notify_action_t     H5AC_notify_action_t;
 #define H5AC_NOTIFY_ACTION_AFTER_LOAD   H5C_NOTIFY_ACTION_AFTER_LOAD
 #define H5AC_NOTIFY_ACTION_AFTER_FLUSH	H5C_NOTIFY_ACTION_AFTER_FLUSH
 #define H5AC_NOTIFY_ACTION_BEFORE_EVICT H5C_NOTIFY_ACTION_BEFORE_EVICT
+#define H5AC_NOTIFY_ACTION_ENTRY_DIRTIED H5C_NOTIFY_ACTION_ENTRY_DIRTIED
+#define H5AC_NOTIFY_ACTION_ENTRY_CLEANED H5C_NOTIFY_ACTION_ENTRY_CLEANED
+#define H5AC_NOTIFY_ACTION_CHILD_DIRTIED H5C_NOTIFY_ACTION_CHILD_DIRTIED
+#define H5AC_NOTIFY_ACTION_CHILD_CLEANED H5C_NOTIFY_ACTION_CHILD_CLEANED
 
 #define H5AC__CLASS_NO_FLAGS_SET 	H5C__CLASS_NO_FLAGS_SET
 #define H5AC__CLASS_SPECULATIVE_LOAD_FLAG H5C__CLASS_SPECULATIVE_LOAD_FLAG
-#define H5AC__CLASS_COMPRESSED_FLAG	H5C__CLASS_COMPRESSED_FLAG
 
 /* The following flags should only appear in test code */
-#define H5AC__CLASS_NO_IO_FLAG		H5C__CLASS_NO_IO_FLAG
-#define H5AC__CLASS_SKIP_READS		H5C__CLASS_SKIP_READS
-#define H5AC__CLASS_SKIP_WRITES		H5C__CLASS_SKIP_WRITES
+#define H5AC__CLASS_SKIP_READS              H5C__CLASS_SKIP_READS
+#define H5AC__CLASS_SKIP_WRITES             H5C__CLASS_SKIP_WRITES
 
-typedef H5C_get_load_size_func_t	H5AC_get_load_size_func_t;
+typedef H5C_get_initial_load_size_func_t	H5AC_get_initial_load_size_func_t;
+typedef H5C_get_final_load_size_func_t	H5AC_get_final_load_size_func_t;
+typedef H5C_verify_chksum_func_t	H5AC_verify_chksum_func_t;
 typedef H5C_deserialize_func_t		H5AC_deserialize_func_t;
 typedef H5C_image_len_func_t		H5AC_image_len_func_t;
 
@@ -180,14 +189,12 @@ typedef H5C_pre_serialize_func_t	H5AC_pre_serialize_func_t;
 typedef H5C_serialize_func_t		H5AC_serialize_func_t;
 typedef H5C_notify_func_t		H5AC_notify_func_t;
 typedef H5C_free_icr_func_t		H5AC_free_icr_func_t;
-typedef H5C_clear_func_t		H5AC_clear_func_t;
 typedef H5C_get_fsf_size_t		H5AC_get_fsf_size_t;
 
 typedef H5C_class_t			H5AC_class_t;
 
 /* Cache entry info */
 typedef H5C_cache_entry_t		H5AC_info_t;
-
 
 /* Typedef for metadata cache (defined in H5Cpkg.h) */
 typedef H5C_t	H5AC_t;
@@ -318,13 +325,13 @@ H5_DLLVAR hid_t H5AC_rawdata_dxpl_id;
  * H5AC_get_entry_status() call.
  */
 
-#define H5AC_ES__IN_CACHE	0x0001
-#define H5AC_ES__IS_DIRTY	0x0002
-#define H5AC_ES__IS_PROTECTED	0x0004
-#define H5AC_ES__IS_PINNED	0x0008
-#define H5AC_ES__IS_FLUSH_DEP_PARENT	0x0010
-#define H5AC_ES__IS_FLUSH_DEP_CHILD	0x0020
-#define H5AC_ES__IS_CORKED	0x0040
+#define H5AC_ES__IN_CACHE               0x0001
+#define H5AC_ES__IS_DIRTY               0x0002
+#define H5AC_ES__IS_PROTECTED           0x0004
+#define H5AC_ES__IS_PINNED              0x0008
+#define H5AC_ES__IS_FLUSH_DEP_PARENT    0x0010
+#define H5AC_ES__IS_FLUSH_DEP_CHILD     0x0020
+#define H5AC_ES__IS_CORKED              0x0040
 
 
 /* external function declarations: */
@@ -380,11 +387,10 @@ H5_DLL herr_t H5AC_expunge_tag_type_metadata(H5F_t *f, hid_t dxpl_id, haddr_t ta
 H5_DLL herr_t H5AC_add_candidate(H5AC_t * cache_ptr, haddr_t addr);
 #endif /* H5_HAVE_PARALLEL */
 
-#ifndef NDEBUG  /* debugging functions */
+/* Debugging functions */
 H5_DLL herr_t H5AC_stats(const H5F_t *f);
 H5_DLL herr_t H5AC_dump_cache(const H5F_t *f);
 H5_DLL hbool_t H5AC_cache_is_clean(const H5F_t *f, H5C_ring_t inner_ring);
-#endif /* NDEBUG */ /* end debugging functions */
 
 #endif /* !_H5ACprivate_H */
 

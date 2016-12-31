@@ -93,7 +93,11 @@
  *-------------------------------------------------------------------------
  */
 herr_t
-H5FD_locate_signature(H5FD_t *file, const H5P_genplist_t *dxpl, haddr_t *sig_addr)
+H5FD_locate_signature(H5FD_t *file,
+#ifndef H5_DEBUG_BUILD
+const
+#endif /* H5_DEBUG_BUILD */
+H5P_genplist_t *dxpl, haddr_t *sig_addr)
 {
     haddr_t         addr, eoa, eof;
     uint8_t         buf[H5F_SIGNATURE_LEN];
@@ -158,7 +162,11 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5FD_read(H5FD_t *file, const H5P_genplist_t *dxpl, H5FD_mem_t type, haddr_t addr,
+H5FD_read(H5FD_t *file,
+#ifndef H5_DEBUG_BUILD
+const
+#endif /* H5_DEBUG_BUILD */
+H5P_genplist_t *dxpl, H5FD_mem_t type, haddr_t addr,
     size_t size, void *buf/*out*/)
 {
     haddr_t     eoa = HADDR_UNDEF;
@@ -169,7 +177,7 @@ H5FD_read(H5FD_t *file, const H5P_genplist_t *dxpl, H5FD_mem_t type, haddr_t add
     HDassert(file && file->cls);
     HDassert(TRUE == H5P_class_isa(H5P_CLASS(dxpl), H5P_CLS_DATASET_XFER_g));
     HDassert(buf);
-    //fprintf(stderr, "%s: addr %llu, size %zu\n", FUNC, addr, size);
+
     /* Sanity check the dxpl type against the mem type */
 #ifdef H5_DEBUG_BUILD
     {
@@ -226,7 +234,11 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5FD_write(H5FD_t *file, const H5P_genplist_t *dxpl, H5FD_mem_t type, haddr_t addr,
+H5FD_write(H5FD_t *file,
+#ifndef H5_DEBUG_BUILD
+const
+#endif /* H5_DEBUG_BUILD */
+H5P_genplist_t *dxpl, H5FD_mem_t type, haddr_t addr,
     size_t size, const void *buf)
 {
     haddr_t     eoa = HADDR_UNDEF;
@@ -237,7 +249,7 @@ H5FD_write(H5FD_t *file, const H5P_genplist_t *dxpl, H5FD_mem_t type, haddr_t ad
     HDassert(file && file->cls);
     HDassert(TRUE == H5P_class_isa(H5P_CLASS(dxpl), H5P_CLS_DATASET_XFER_g));
     HDassert(buf);
-    //fprintf(stderr, "%s: addr %llu, size %zu\n", FUNC, addr, size);
+
     /* Sanity check the dxpl type against the mem type */
 #ifdef H5_DEBUG_BUILD
     {

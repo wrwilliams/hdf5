@@ -119,6 +119,7 @@ H5FA__hdr_alloc(H5F_t *f))
     ret_value = hdr;
 
 CATCH
+
     if(!ret_value)
         if(hdr && H5FA__hdr_dest(hdr) < 0)
             H5E_THROW(H5E_CANTFREE, "unable to destroy fixed array header")
@@ -184,10 +185,6 @@ H5FA__hdr_create(H5F_t *f, hid_t dxpl_id, const H5FA_create_t *cparam,
     /* Local variables */
     H5FA_hdr_t *hdr = NULL;     /* Fixed array header */
 
-#ifdef H5FA_DEBUG
-HDfprintf(stderr, "%s: Called\n", FUNC);
-#endif /* H5FA_DEBUG */
-
     /* Check arguments */
     HDassert(f);
     HDassert(cparam);
@@ -229,6 +226,7 @@ HDfprintf(stderr, "%s: Called\n", FUNC);
     ret_value = hdr->addr;
 
 CATCH
+
     if(!H5F_addr_defined(ret_value))
         if(hdr) {
             /* Release header's disk space */
@@ -505,10 +503,6 @@ H5FA__hdr_delete(H5FA_hdr_t *hdr, hid_t dxpl_id))
 
     /* Check for Fixed Array Data block */
     if(H5F_addr_defined(hdr->dblk_addr)) {
-#ifdef H5FA_DEBUG
-HDfprintf(stderr, "%s: hdr->dblk_addr = %a\n", FUNC, hdr->dblk_addr);
-#endif /* H5FA_DEBUG */
-
         /* Delete Fixed Array Data block */
         if(H5FA__dblock_delete(hdr, dxpl_id, hdr->dblk_addr) < 0)
             H5E_THROW(H5E_CANTDELETE, "unable to delete fixed array data block")

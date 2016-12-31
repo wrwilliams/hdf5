@@ -27,6 +27,7 @@
 #define H5D_TESTING
 #define H5F_FRIEND		/*suppress error about including H5Fpkg	  */
 #define H5F_TESTING
+#define H5G_FRIEND		/*suppress error about including H5Gpkg	  */
 #define H5I_FRIEND		/*suppress error about including H5Ipkg	  */
 #define H5I_TESTING
 
@@ -35,6 +36,7 @@
 #include "H5Cpkg.h"
 #include "H5Dpkg.h"
 #include "H5Fpkg.h"
+#include "H5Gpkg.h"
 #include "H5Ipkg.h"
 
 /* Uncomment to manually inspect cache states */
@@ -46,6 +48,10 @@ const char *FILENAMES[] = {
 };
 #define FILENAME_BUF_SIZE       1024
 
+/* Group names */
+#define GROUP_OLD_STYLE_NAME        "old_style_groups"
+#define GROUP_NEW_STYLE_NAME        "new_style_groups"
+
 /* Dataset names */
 #define DSET_COMPACT_NAME           "compact"
 #define DSET_CONTIGUOUS_NAME        "contiguous"
@@ -55,13 +61,21 @@ const char *FILENAMES[] = {
 #define DSET_FARRAY_NAME            "farray"
 #define DSET_SINGLE_NAME            "single"
 
-/* All datasets store 1000 elements */
+/* Number of data elements in a dataset */
 #define NELEMENTS                   1024
 
+/* Number of subgroups in each style of group */
+#define NSUBGROUPS                  128
+
+/* Max size of subgroup name, not including NULL */
+#define SUBGROUP_NAME_SIZE          16
+
+/* Prototypes */
 static hbool_t verify_tag_not_in_cache(H5F_t *f, haddr_t tag);
 static herr_t check_evict_on_close_api(void);
 static hid_t generate_eoc_test_file(hid_t fapl_id);
-static herr_t check_configuration(hid_t fid, const char *dset_name);
+static herr_t check_dset_scheme(hid_t fid, const char *dset_name);
+static herr_t check_group_layout(hid_t fid, const char *group_name);
 
 
 /*-------------------------------------------------------------------------
@@ -82,26 +96,23 @@ verify_tag_not_in_cache(H5F_t *f, haddr_t tag)
 {
     H5C_t *cache_ptr = NULL;                /* cache pointer                */
     int i = 0;                              /* iterator                     */
-    H5C_cache_entry_t *entry_ptr = NULL;    /* entry pointer                */
 
+    /* Get Internal Cache Pointers */
     cache_ptr = f->shared->cache;
 
     for(i = 0; i < H5C__HASH_TABLE_LEN; i++) {
+        H5C_cache_entry_t *entry_ptr;    /* entry pointer                */
 
         entry_ptr = cache_ptr->index[i];
-
         while(entry_ptr != NULL) {
-
-            if(tag == entry_ptr->tag)
+            if(tag == entry_ptr->tag_info->tag)
                 return TRUE;
             else
                 entry_ptr = entry_ptr->ht_next;
-
         } /* end while */
     } /* end for */
 
     return FALSE;
-
 } /* end verify_tag_not_in_cache() */
 
 
@@ -124,6 +135,7 @@ generate_eoc_test_file(hid_t fapl_id)
     char    filename[FILENAME_BUF_SIZE];    /* decorated file name          */
     hid_t   fid = -1;                       /* file ID (returned)           */
     hid_t   fapl_copy_id = -1;              /* ID of copied fapl            */
+    hid_t   gid1 = -1, gid2 = -1;           /* group IDs                    */
     hid_t   sid = -1;                       /* dataspace ID                 */
     hid_t   dcpl_id = -1;                   /* dataset creation plist       */
     hid_t   did = -1;                       /* dataset ID                   */
@@ -135,27 +147,73 @@ generate_eoc_test_file(hid_t fapl_id)
     H5D_layout_t layout_type;               /* dataset layout type          */
     int     *data = NULL;                   /* buffer for fake data         */
     int     n;                              /* # of data elements           */
+    int     i;                              /* iterator (# subgroups)       */
 
     TESTING("generating evict-on-close test file");
 
     /* Get a VFD-specific filename */
     h5_fixname(FILENAMES[0], fapl_id, filename, sizeof(filename));
 
+    /* Copy the fapl and set the latest file format */
+    if((fapl_copy_id = H5Pcopy(fapl_id)) < 0)
+        TEST_ERROR;
+    if(H5Pset_libver_bounds(fapl_copy_id, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
+        TEST_ERROR;
+
+    /* Create a data buffer for dataset writes */
+    if(NULL == (data = (int *)HDcalloc(NELEMENTS, sizeof(int))))
+        TEST_ERROR;
+
     /* Create file */
     if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0)
         TEST_ERROR;
 
-    /***********************************************************/
-    /* Generate datasets and ensure that the scheme is correct */
-    /***********************************************************/
 
-    /* Create the data buffer */
-    if(NULL == (data = (int *)HDcalloc(NELEMENTS, sizeof(int))))
+    /*******************************************/
+    /* CREATE OBJECTS WITH THE OLD FILE FORMAT */
+    /*******************************************/
+
+    /*******************/
+    /* Generate groups */
+    /*******************/
+
+    /*********************************************/
+    /* Old-style (version 1 B-tree + local heap) */
+    /*********************************************/
+
+    /* A single group is created in the root group, followed
+     * by a large number of groups in the new group. This will
+     * ensure that the file data structures for groups include
+     * multiple cache entries.
+     */
+    if((gid1 = H5Gcreate2(fid, GROUP_OLD_STYLE_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
         TEST_ERROR;
 
-    /****************************************************/
-    /* Old file format data structures (v1 B-tree only) */
-    /****************************************************/
+    /* Create sub-groups */
+    for(i = 0; i < NSUBGROUPS; i++) {
+        char subgroup_name[SUBGROUP_NAME_SIZE];
+
+        /* Create the group name */
+        HDmemset(subgroup_name, '\0', SUBGROUP_NAME_SIZE);
+        if(HDsnprintf(subgroup_name, (size_t)(SUBGROUP_NAME_SIZE - 1), "%d", i) < 0)
+            TEST_ERROR
+
+        if((gid2 = H5Gcreate2(gid1, subgroup_name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+            TEST_ERROR;
+        if(H5Gclose(gid2) < 0)
+            TEST_ERROR;
+    } /* end for */
+
+    if(H5Gclose(gid1) < 0)
+        TEST_ERROR;
+
+    /********************************************************************/
+    /* Generate datasets and ensure that the chunking scheme is correct */
+    /********************************************************************/
+
+    /***********************************/
+    /* Old file format data structures */
+    /***********************************/
 
     /********************/
     /* Version 1 B-tree */
@@ -198,23 +256,58 @@ generate_eoc_test_file(hid_t fapl_id)
     if(H5Pclose(dcpl_id) < 0)
         TEST_ERROR;
 
-    /***********************************/
-    /* New file format data structures */
-    /***********************************/
+
+    /**********************************************/
+    /* CREATE OBJECTS WITH THE LATEST FILE FORMAT */
+    /**********************************************/
 
     /* Close the file */
     if(H5Fclose(fid) < 0)
         TEST_ERROR;
 
-    /* Copy the fapl and set the latest file format */
-    if((fapl_copy_id = H5Pcopy(fapl_id)) < 0)
-        TEST_ERROR;
-    if(H5Pset_libver_bounds(fapl_copy_id, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
-        TEST_ERROR;
-
-    /* Reopen the file */
+    /* Reopen the file with the "latest file format" fapl */
     if((fid = H5Fopen(filename, H5F_ACC_RDWR, fapl_copy_id)) < 0)
         TEST_ERROR;
+
+    /*******************/
+    /* Generate groups */
+    /*******************/
+
+    /***********************************************/
+    /* New-style (version 2 B-tree + fractal heap) */
+    /***********************************************/
+
+    /* A single group is created in the root group, followed
+     * by a large number of groups in the new group. This will
+     * ensure that the file data structures for groups include
+     * multiple cache entries.
+     */
+    if((gid1 = H5Gcreate2(fid, GROUP_NEW_STYLE_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+        TEST_ERROR;
+
+    /* Create sub-groups */
+    for(i = 0; i < NSUBGROUPS; i++) {
+        char subgroup_name[SUBGROUP_NAME_SIZE];
+
+        /* Create the group name */
+        HDmemset(subgroup_name, '\0', SUBGROUP_NAME_SIZE);
+        if(HDsnprintf(subgroup_name, (size_t)(SUBGROUP_NAME_SIZE - 1), "%d", i) < 0)
+            TEST_ERROR
+
+/* DER - Restore when EoC new-style group bug is resolved.
+        if((gid2 = H5Gcreate2(gid1, subgroup_name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+            TEST_ERROR;
+        if(H5Gclose(gid2) < 0)
+            TEST_ERROR;
+*/
+    } /* end for */
+
+    if(H5Gclose(gid1) < 0)
+        TEST_ERROR;
+
+    /********************************************************************/
+    /* Generate datasets and ensure that the chunking scheme is correct */
+    /********************************************************************/
 
     /********************/
     /* Extensible Array */
@@ -472,6 +565,8 @@ generate_eoc_test_file(hid_t fapl_id)
 
 error:
     H5E_BEGIN_TRY {
+        H5Gclose(gid1);
+        H5Gclose(gid2);
         H5Fclose(fid);
         H5Dclose(did);
         H5Sclose(sid);
@@ -488,7 +583,124 @@ error:
 
 
 /*-------------------------------------------------------------------------
- * Function:    check_configuration()
+ * Function:    check_group_layout()
+ *
+ * Purpose:     Verify that the evict-on-close feature works for a given
+ *              group layout (new-style vs. old-style).
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ * Programmer:  Dana Robinson
+ *              Fall 2016
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+check_group_layout(hid_t fid, const char *group_name)
+{
+    H5F_t   *file_ptr = NULL;               /* ptr to internal file struct  */
+    hid_t   gid1 = -1, gid2 = -1;           /* group IDs                    */
+    H5G_t   *grp_ptr = NULL;                /* ptr to internal group struct */
+    haddr_t tag1, tag2;                     /* MD cache tags for groups     */
+    int32_t before, during, after;          /* cache sizes                  */
+    int i;                                  /* iterator                     */
+
+    /* NOTE: The TESTING() macro is called in main() */
+
+    /* Get a pointer to the file struct */
+    if(NULL == (file_ptr = (H5F_t *)H5I_object_verify(fid, H5I_FILE)))
+        TEST_ERROR;
+
+    /* Record the number of cache entries */
+    before = file_ptr->shared->cache->index_len;
+
+#ifdef EOC_MANUAL_INSPECTION
+    HDprintf("\nCACHE BEFORE GROUP OPEN:\n");
+    if(H5AC_dump_cache(file_ptr) < 0)
+        TEST_ERROR;
+    HDprintf("NUMBER OF CACHE ENTRIES: %d\n", before);
+#endif
+
+    /* Open the main group and get its tag */
+    if((gid1 = H5Gopen2(fid, group_name, H5P_DEFAULT)) < 0)
+        TEST_ERROR;
+    if(NULL == (grp_ptr = (H5G_t *)H5I_object_verify(gid1, H5I_GROUP)))
+        TEST_ERROR;
+    tag1 = grp_ptr->oloc.addr;
+
+
+    /* Open and close all sub-groups */
+    for(i = 0; i < NSUBGROUPS; i++) {
+        char subgroup_name[SUBGROUP_NAME_SIZE];
+
+        /* Create the group name */
+        HDmemset(subgroup_name, '\0', SUBGROUP_NAME_SIZE);
+        if(HDsnprintf(subgroup_name, (size_t)(SUBGROUP_NAME_SIZE - 1), "%d", i) < 0)
+            TEST_ERROR
+
+        if((gid2 = H5Gopen2(gid1, subgroup_name, H5P_DEFAULT)) < 0)
+            TEST_ERROR;
+
+        if(NULL == (grp_ptr = (H5G_t *)H5I_object_verify(gid2, H5I_GROUP)))
+            TEST_ERROR;
+        tag2 = grp_ptr->oloc.addr;
+
+        if(H5Gclose(gid2) < 0)
+            TEST_ERROR;
+
+        if(TRUE == verify_tag_not_in_cache(file_ptr, tag2))
+            TEST_ERROR;
+    } /* end for */
+
+    /* Record the number of cache entries */
+    during = file_ptr->shared->cache->index_len;
+
+#ifdef EOC_MANUAL_INSPECTION
+    HDprintf("\nCACHE AFTER OPENING GROUPS (WHILE OPEN):\n");
+    if(H5AC_dump_cache(file_ptr) < 0)
+        TEST_ERROR;
+    HDprintf("MAIN GROUP TAG: %#X\n", tag1);
+    HDprintf("NUMBER OF CACHE ENTRIES: %d\n", during);
+#endif
+
+    /* Close the main group */
+    if(H5Gclose(gid1) < 0)
+        TEST_ERROR;
+
+    /* Record the number of cache entries */
+    after = file_ptr->shared->cache->index_len;
+
+#ifdef EOC_MANUAL_INSPECTION
+    HDprintf("\nCACHE AFTER CLOSING GROUPS:\n");
+    if(H5AC_dump_cache(file_ptr) < 0)
+        TEST_ERROR;
+    HDprintf("NUMBER OF CACHE ENTRIES: %d\n", after);
+#endif
+
+    /* Ensure that the cache does not contain entries with the tag */
+    if(TRUE == verify_tag_not_in_cache(file_ptr, tag1))
+        TEST_ERROR;
+    /* Compare the number of cache entries */
+    if(before != after || before == during)
+        TEST_ERROR;
+
+    PASSED();
+    return SUCCEED;
+
+error:
+    H5E_BEGIN_TRY {
+        H5Gclose(gid1);
+        H5Gclose(gid2);
+    } H5E_END_TRY;
+
+    H5_FAILED();
+    return FAIL;
+
+} /* end check_group_layout() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    check_dset_scheme()
  *
  * Purpose:     Verify that the evict-on-close feature works for a given
  *              dataset layout and/or chunk index.
@@ -501,7 +713,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static herr_t
-check_configuration(hid_t fid, const char *dset_name)
+check_dset_scheme(hid_t fid, const char *dset_name)
 {
     H5F_t   *file_ptr = NULL;               /* ptr to internal file struct  */
     hid_t   did = -1;                       /* dataset ID                   */
@@ -537,7 +749,7 @@ check_configuration(hid_t fid, const char *dset_name)
         TEST_ERROR;
     tag = dset_ptr->oloc.addr;
 
-    /* Read data from the dataset so the cache gets populated with chunk
+    /* Read data from the dataset so the cache gets populated with chunk entries
      * and the like.
      */
     if(H5Dread(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data) < 0)
@@ -568,7 +780,7 @@ check_configuration(hid_t fid, const char *dset_name)
     HDprintf("NUMBER OF CACHE ENTRIES: %d\n", after);
 #endif
 
-    /* Ensure that the cache does not contain data items with the tag */
+    /* Ensure that the cache does not contain entries with the tag */
     if(TRUE == verify_tag_not_in_cache(file_ptr, tag))
         TEST_ERROR;
 
@@ -589,7 +801,7 @@ error:
     H5_FAILED();
     return FAIL;
 
-} /* check_configuration() */
+} /* check_dset_scheme() */
 
 
 /*-------------------------------------------------------------------------
@@ -694,7 +906,7 @@ main(void)
     hid_t       fid = -1;           /* file ID                              */
     unsigned    nerrors = 0;        /* number of test errors                */
 
-    HDprintf("Testing evict-on-close cache behavior.\n");
+    HDprintf("Testing evict-on-close cache behavior\n");
 
     /* Initialize */
     h5_reset();
@@ -714,10 +926,6 @@ main(void)
         PUTS_ERROR("Unable to set evict-on-close property\n");
     } /* end if */
 
-    /*************************/
-    /* Test EoC for datasets */
-    /*************************/
-
     /* Generate the test file */
     if((fid = generate_eoc_test_file(fapl_id)) < 0) {
         nerrors++;
@@ -728,19 +936,29 @@ main(void)
      * PASSED() and H5_FAILED() are handled in check_configuration()
      */
     TESTING("evict on close with version 1 B-tree chunk index");
-        nerrors += check_configuration(fid, DSET_BTREE_NAME) < 0 ? 1 : 0;
+        nerrors += check_dset_scheme(fid, DSET_BTREE_NAME) < 0 ? 1 : 0;
     TESTING("evict on close with extensible array chunk index");
-        nerrors += check_configuration(fid, DSET_EARRAY_NAME) < 0 ? 1 : 0;
+        nerrors += check_dset_scheme(fid, DSET_EARRAY_NAME) < 0 ? 1 : 0;
     TESTING("evict on close with version 2 B-tree chunk index");
-        nerrors += check_configuration(fid, DSET_BT2_NAME) < 0 ? 1 : 0;
+        nerrors += check_dset_scheme(fid, DSET_BT2_NAME) < 0 ? 1 : 0;
     TESTING("evict on close with fixed array chunk index");
-        nerrors += check_configuration(fid, DSET_FARRAY_NAME) < 0 ? 1 : 0;
+        nerrors += check_dset_scheme(fid, DSET_FARRAY_NAME) < 0 ? 1 : 0;
     TESTING("evict on close with \'single chunk\' chunk index");
-        nerrors += check_configuration(fid, DSET_SINGLE_NAME) < 0 ? 1 : 0;
+        nerrors += check_dset_scheme(fid, DSET_SINGLE_NAME) < 0 ? 1 : 0;
     TESTING("evict on close with contiguous layout");
-        nerrors += check_configuration(fid, DSET_CONTIGUOUS_NAME) < 0 ? 1 : 0;
+        nerrors += check_dset_scheme(fid, DSET_CONTIGUOUS_NAME) < 0 ? 1 : 0;
     TESTING("evict on close with compact layout");
-        nerrors += check_configuration(fid, DSET_COMPACT_NAME) < 0 ? 1 : 0;
+        nerrors += check_dset_scheme(fid, DSET_COMPACT_NAME) < 0 ? 1 : 0;
+
+    /* Run tests with old- and new-style groups
+     * PASSED() and H5_FAILED() are handled in check_configuration()
+     */
+    TESTING("evict on close with old-style groups");
+        nerrors += check_group_layout(fid, GROUP_OLD_STYLE_NAME) < 0 ? 1 : 0;
+/* DER - Enable when EoC new-style groups bug is fixed
+    TESTING("evict on close with new-style groups");
+        nerrors += check_group_layout(fid, GROUP_NEW_STYLE_NAME) < 0 ? 1 : 0;
+*/
 
     /* Close the test file */
     if(H5Fclose(fid) < 0) {

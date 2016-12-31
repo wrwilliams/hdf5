@@ -699,7 +699,7 @@ if test "X$HDF_CXX" = "Xyes"; then
   ## if C++ can handle static cast
   PAC_PROG_CXX_STATIC_CAST
 
-  ## Checking if C++ has offsetof extension, 
+  ## Checking if C++ has offsetof extension,
   ## note: this test has to be the last of the C++ tests because it sets a definition
   ## which would be used in the other tests, causing them to fail.
   PAC_PROG_CXX_OFFSETOF
@@ -2869,7 +2869,7 @@ if test ${ac_cv_sizeof_long_double} = 0; then
    hdf5_cv_ldouble_to_llong_accurate=${hdf5_cv_ldouble_to_llong_accurate=no}
 else
    AC_CACHE_VAL([hdf5_cv_ldouble_to_llong_accurate],
-        [AC_RUN_IFELSE([AC_LANG_SOURCE([$TEST_SRC])], 
+        [AC_RUN_IFELSE([AC_LANG_SOURCE([$TEST_SRC])],
         [hdf5_cv_ldouble_to_llong_accurate=yes], [hdf5_cv_ldouble_to_llong_accurate=no],[])])
 fi
 
@@ -3323,37 +3323,49 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  test/test_plugin.sh
                  testpar/Makefile
                  tools/Makefile
-                 tools/h5dump/Makefile
-                 tools/h5dump/testh5dump.sh
-                 tools/h5dump/testh5dumppbits.sh
-                 tools/h5dump/testh5dumpvds.sh
-                 tools/h5dump/testh5dumpxml.sh
-                 tools/h5ls/testh5ls.sh
-                 tools/h5ls/testh5lsvds.sh
-                 tools/h5import/Makefile
-                 tools/h5import/h5importtestutil.sh
-                 tools/h5diff/Makefile
-                 tools/h5diff/testh5diff.sh
-                 tools/h5diff/testph5diff.sh
-                 tools/h5jam/Makefile
-                 tools/h5jam/testh5jam.sh
-                 tools/h5repack/Makefile
-                 tools/h5repack/h5repack.sh
-                 tools/h5repack/h5repack_plugin.sh
-                 tools/h5ls/Makefile
-                 tools/h5copy/Makefile
-                 tools/h5copy/testh5copy.sh
                  tools/lib/Makefile
-                 tools/misc/Makefile
-                 tools/misc/h5cc
-                 tools/misc/testh5mkgrp.sh
-                 tools/misc/testh5repart.sh
-                 tools/misc/vds/Makefile
-                 tools/h5stat/testh5stat.sh
-                 tools/h5stat/Makefile
-                 tools/h5format_convert/Makefile
-                 tools/h5format_convert/testh5fc.sh
-                 tools/perform/Makefile
+                 tools/src/Makefile
+                 tools/src/h5dump/Makefile
+                 tools/src/h5import/Makefile
+                 tools/src/h5diff/Makefile
+                 tools/src/h5jam/Makefile
+                 tools/src/h5repack/Makefile
+                 tools/src/h5ls/Makefile
+                 tools/src/h5copy/Makefile
+                 tools/src/misc/Makefile
+                 tools/src/misc/h5cc
+                 tools/src/h5stat/Makefile
+                 tools/test/Makefile
+                 tools/test/h5dump/Makefile
+                 tools/test/h5dump/testh5dump.sh
+                 tools/test/h5dump/testh5dumppbits.sh
+                 tools/test/h5dump/testh5dumpvds.sh
+                 tools/test/h5dump/testh5dumpxml.sh
+                 tools/test/h5ls/Makefile
+                 tools/test/h5ls/testh5ls.sh
+                 tools/test/h5ls/testh5lsvds.sh
+                 tools/test/h5import/Makefile
+                 tools/test/h5import/h5importtestutil.sh
+                 tools/test/h5diff/Makefile
+                 tools/test/h5diff/testh5diff.sh
+                 tools/test/h5diff/testph5diff.sh
+                 tools/src/h5format_convert/Makefile
+                 tools/test/h5format_convert/Makefile
+                 tools/test/h5format_convert/testh5fc.sh
+                 tools/test/h5jam/Makefile
+                 tools/test/h5jam/testh5jam.sh
+                 tools/test/h5repack/Makefile
+                 tools/test/h5repack/h5repack.sh
+                 tools/test/h5repack/h5repack_plugin.sh
+                 tools/test/h5copy/Makefile
+                 tools/test/h5copy/testh5copy.sh
+                 tools/test/misc/Makefile
+                 tools/test/misc/testh5mkgrp.sh
+                 tools/test/misc/testh5repart.sh
+                 tools/test/misc/vds/Makefile
+                 tools/test/h5stat/Makefile
+                 tools/test/h5stat/testh5stat.sh
+                 tools/test/perform/Makefile
                  examples/Makefile
                  examples/run-c-ex.sh
                  examples/testh5cc.sh
@@ -3417,7 +3429,7 @@ AC_CONFIG_COMMANDS([.classes], [], [$MKDIR_P java/src/.classes;
 
 AC_OUTPUT
 
-chmod 755 tools/misc/h5cc
+chmod 755 tools/src/misc/h5cc
 
 if test "X$HDF_FORTRAN" = "Xyes"; then
   chmod 755 fortran/src/h5fc

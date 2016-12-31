@@ -99,9 +99,9 @@ static unsigned long H5FD_file_serial_no_g;
 
 /* File driver ID class */
 static const H5I_class_t H5I_VFL_CLS[1] = {{
-    H5I_VFL,        /* ID class value */
-    0,              /* Class flags */
-    0,              /* # of reserved IDs for class */
+    H5I_VFL,                    /* ID class value */
+    0,                          /* Class flags */
+    0,                          /* # of reserved IDs for class */
     (H5I_free_t)H5FD_free_cls   /* Callback routine for closing objects of this class */
 }};
 
@@ -498,8 +498,7 @@ H5FD_sb_encode(H5FD_t *file, char *name/*out*/, uint8_t *buf)
     FUNC_ENTER_NOAPI(FAIL)
 
     HDassert(file && file->cls);
-    if(file->cls->sb_encode &&
-            (file->cls->sb_encode)(file, name/*out*/, buf/*out*/) < 0)
+    if(file->cls->sb_encode && (file->cls->sb_encode)(file, name/*out*/, buf/*out*/) < 0)
         HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "driver sb_encode request failed")
 
 done:
@@ -2028,4 +2027,3 @@ H5FD_set_paged_aggr(H5FD_t *file, hbool_t paged)
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5FD_set_paged_aggr() */
-

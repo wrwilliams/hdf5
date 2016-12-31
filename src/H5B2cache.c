@@ -65,29 +65,29 @@
 /********************/
 
 /* Metadata cache callbacks */
-static herr_t H5B2__cache_hdr_get_load_size(const void *udata, size_t *image_len);
+static herr_t H5B2__cache_hdr_get_initial_load_size(void *udata, size_t *image_len);
+static htri_t H5B2__cache_hdr_verify_chksum(const void *image_ptr, size_t len, void *udata);
 static void *H5B2__cache_hdr_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
-static herr_t H5B2__cache_hdr_image_len(const void *thing, size_t *image_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+static herr_t H5B2__cache_hdr_image_len(const void *thing, size_t *image_len);
 static herr_t H5B2__cache_hdr_serialize(const H5F_t *f, void *image, size_t len,
     void *thing);
 static herr_t H5B2__cache_hdr_free_icr(void *thing);
 
-static herr_t H5B2__cache_int_get_load_size(const void *udata, size_t *image_len);
+static herr_t H5B2__cache_int_get_initial_load_size(void *udata, size_t *image_len);
+static htri_t H5B2__cache_int_verify_chksum(const void *image_ptr, size_t len, void *udata);
 static void *H5B2__cache_int_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
-static herr_t H5B2__cache_int_image_len(const void *thing, size_t *image_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+static herr_t H5B2__cache_int_image_len(const void *thing, size_t *image_len);
 static herr_t H5B2__cache_int_serialize(const H5F_t *f, void *image, size_t len,
     void *thing);
 static herr_t H5B2__cache_int_free_icr(void *thing);
 
-static herr_t H5B2__cache_leaf_get_load_size(const void *udata, size_t *image_len);
+static herr_t H5B2__cache_leaf_get_initial_load_size(void *udata, size_t *image_len);
+static htri_t H5B2__cache_leaf_verify_chksum(const void *image_ptr, size_t len, void *udata);
 static void *H5B2__cache_leaf_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
-static herr_t H5B2__cache_leaf_image_len(const void *thing, size_t *image_len,
-    hbool_t *compressed_ptr, size_t *compressed_image_len_ptr);
+static herr_t H5B2__cache_leaf_image_len(const void *thing, size_t *image_len);
 static herr_t H5B2__cache_leaf_serialize(const H5F_t *f, void *image, size_t len,
     void *thing);
 static herr_t H5B2__cache_leaf_free_icr(void *thing);
@@ -102,14 +102,15 @@ const H5AC_class_t H5AC_BT2_HDR[1] = {{
     "v2 B-tree header",                 /* Metadata client name (for debugging) */
     H5FD_MEM_BTREE,                     /* File space memory type for client */
     H5AC__CLASS_NO_FLAGS_SET,           /* Client class behavior flags */
-    H5B2__cache_hdr_get_load_size,      /* 'get_load_size' callback */
+    H5B2__cache_hdr_get_initial_load_size, /* 'get_initial_load_size' callback */
+    NULL,				/* 'get_final_load_size' callback */
+    H5B2__cache_hdr_verify_chksum,      /* 'verify_chksum' callback */
     H5B2__cache_hdr_deserialize,        /* 'deserialize' callback */
     H5B2__cache_hdr_image_len,          /* 'image_len' callback */
     NULL,                               /* 'pre_serialize' callback */
     H5B2__cache_hdr_serialize,          /* 'serialize' callback */
     NULL,                               /* 'notify' callback */
     H5B2__cache_hdr_free_icr,           /* 'free_icr' callback */
-    NULL,				/* 'clear' callback */
     NULL,				/* 'fsf_size' callback */
 }};
 
@@ -119,14 +120,15 @@ const H5AC_class_t H5AC_BT2_INT[1] = {{
     "v2 B-tree internal node",          /* Metadata client name (for debugging) */
     H5FD_MEM_BTREE,                     /* File space memory type for client */
     H5AC__CLASS_NO_FLAGS_SET,           /* Client class behavior flags */
-    H5B2__cache_int_get_load_size,      /* 'get_load_size' callback */
+    H5B2__cache_int_get_initial_load_size, /* 'get_initial_load_size' callback */
+    NULL,				/* 'get_final_load_size' callback */
+    H5B2__cache_int_verify_chksum,	/* 'verify_chksum' callback */
     H5B2__cache_int_deserialize,        /* 'deserialize' callback */
     H5B2__cache_int_image_len,          /* 'image_len' callback */
     NULL,                               /* 'pre_serialize' callback */
     H5B2__cache_int_serialize,          /* 'serialize' callback */
     NULL,                               /* 'notify' callback */
     H5B2__cache_int_free_icr,           /* 'free_icr' callback */
-    NULL,				/* 'clear' callback */
     NULL,				/* 'fsf_size' callback */
 }};
 
@@ -136,14 +138,15 @@ const H5AC_class_t H5AC_BT2_LEAF[1] = {{
     "v2 B-tree leaf node",              /* Metadata client name (for debugging) */
     H5FD_MEM_BTREE,                     /* File space memory type for client */
     H5AC__CLASS_NO_FLAGS_SET,           /* Client class behavior flags */
-    H5B2__cache_leaf_get_load_size,     /* 'get_load_size' callback */
+    H5B2__cache_leaf_get_initial_load_size, /* 'get_initial_load_size' callback */
+    NULL,				/* 'get_final_load_size' callback */
+    H5B2__cache_leaf_verify_chksum,	/* 'verify_chksum' callback */
     H5B2__cache_leaf_deserialize,       /* 'deserialize' callback */
     H5B2__cache_leaf_image_len,         /* 'image_len' callback */
     NULL,                               /* 'pre_serialize' callback */
     H5B2__cache_leaf_serialize,         /* 'serialize' callback */
     NULL,                               /* 'notify' callback */
     H5B2__cache_leaf_free_icr,          /* 'free_icr' callback */
-    NULL,				/* 'clear' callback */
     NULL,				/* 'fsf_size' callback */
 }};
 
@@ -160,7 +163,7 @@ const H5AC_class_t H5AC_BT2_LEAF[1] = {{
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5B2__cache_hdr_get_load_size
+ * Function:    H5B2__cache_hdr_get_initial_load_size
  *
  * Purpose:     Compute the size of the data structure on disk.
  *
@@ -173,21 +176,58 @@ const H5AC_class_t H5AC_BT2_LEAF[1] = {{
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B2__cache_hdr_get_load_size(const void *_udata, size_t *image_len)
+H5B2__cache_hdr_get_initial_load_size(void *_udata, size_t *image_len)
 {
-    const H5B2_hdr_cache_ud_t *udata = (const H5B2_hdr_cache_ud_t *)_udata; /* User data for callback */
+    H5B2_hdr_cache_ud_t *udata = (H5B2_hdr_cache_ud_t *)_udata; /* User data for callback */
 
     FUNC_ENTER_STATIC_NOERR
 
     /* Check arguments */
     HDassert(udata);
+    HDassert(udata->f);
     HDassert(image_len);
 
     /* Set the image length size */
     *image_len = H5B2_HEADER_SIZE_FILE(udata->f);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5B2__cache_hdr_get_load_size() */
+} /* end H5B2__cache_hdr_get_initial_load_size() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5B2__cache_hdr_verify_chksum
+ *
+ * Purpose:     Verify the computed checksum of the data structure is the
+ *              same as the stored chksum.
+ *
+ * Return:      Success:        TRUE/FALSE
+ *              Failure:        Negative
+ *
+ * Programmer:	Vailin Choi; Aug 2015
+ *
+ *-------------------------------------------------------------------------
+ */
+static htri_t
+H5B2__cache_hdr_verify_chksum(const void *_image, size_t len, void H5_ATTR_UNUSED *_udata)
+{
+    const uint8_t *image = (const uint8_t *)_image;       /* Pointer into raw data buffer */
+    uint32_t stored_chksum;     /* Stored metadata checksum value */
+    uint32_t computed_chksum;   /* Computed metadata checksum value */
+    htri_t ret_value = TRUE;	/* Return value */
+
+    FUNC_ENTER_STATIC_NOERR
+
+    /* Check arguments */
+    HDassert(image);
+
+    /* Get stored and computed checksums */
+    H5F_get_checksums(image, len, &stored_chksum, &computed_chksum);
+
+    if(stored_chksum != computed_chksum)
+	ret_value = FALSE;
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5B2__cache_hdr_verify_chksum() */
 
 
 /*-------------------------------------------------------------------------
@@ -214,7 +254,6 @@ H5B2__cache_hdr_deserialize(const void *_image, size_t H5_ATTR_UNUSED len,
     H5B2_subid_t        id;		/* ID of B-tree class, as found in file */
     uint16_t            depth;          /* Depth of B-tree */
     uint32_t            stored_chksum;  /* Stored metadata checksum value */
-    uint32_t            computed_chksum; /* Computed metadata checksum value */
     const uint8_t	*image = (const uint8_t *)_image;       /* Pointer into raw data buffer */
     H5B2_hdr_t		*ret_value = NULL;      /* Return value */
 
@@ -260,18 +299,13 @@ H5B2__cache_hdr_deserialize(const void *_image, size_t H5_ATTR_UNUSED len,
     UINT16DECODE(image, hdr->root.node_nrec);
     H5F_DECODE_LENGTH(udata->f, image, hdr->root.all_nrec);
 
+    /* checksum verification already done in verify_chksum cb */
+
     /* Metadata checksum */
     UINT32DECODE(image, stored_chksum);
 
     /* Sanity check */
     HDassert((size_t)(image - (const uint8_t *)_image) == hdr->hdr_size);
-
-    /* Compute checksum on entire header */
-    computed_chksum = H5_checksum_metadata(_image, (hdr->hdr_size - H5B2_SIZEOF_CHKSUM), 0);
-
-    /* Verify checksum */
-    if(stored_chksum != computed_chksum)
-        HGOTO_ERROR(H5E_BTREE, H5E_BADVALUE, NULL, "incorrect metadata checksum for v2 B-tree header")
 
     /* Initialize B-tree header info */
     cparam.cls = H5B2_client_class_g[id];
@@ -310,8 +344,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B2__cache_hdr_image_len(const void *_thing, size_t *image_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr)
+H5B2__cache_hdr_image_len(const void *_thing, size_t *image_len)
 {
     const H5B2_hdr_t *hdr = (const H5B2_hdr_t *)_thing;      /* Pointer to the B-tree header */
 
@@ -433,7 +466,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5B2__cache_int_get_load_size
+ * Function:    H5B2__cache_int_get_initial_load_size
  *
  * Purpose:     Compute the size of the data structure on disk.
  *
@@ -446,9 +479,9 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B2__cache_int_get_load_size(const void *_udata, size_t *image_len)
+H5B2__cache_int_get_initial_load_size(void *_udata, size_t *image_len)
 {
-    const H5B2_internal_cache_ud_t *udata = (const H5B2_internal_cache_ud_t *)_udata; /* User data for callback */
+    H5B2_internal_cache_ud_t *udata = (H5B2_internal_cache_ud_t *)_udata; /* User data for callback */
 
     FUNC_ENTER_STATIC_NOERR
 
@@ -461,7 +494,49 @@ H5B2__cache_int_get_load_size(const void *_udata, size_t *image_len)
     *image_len = udata->hdr->node_size;
 
     FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5B2__cache_int_get_load_size() */
+} /* end H5B2__cache_int_get_initial_load_size() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5B2__cache_int_verify_chksum
+ *
+ * Purpose:     Verify the computed checksum of the data structure is the
+ *              same as the stored chksum.
+ *
+ * Return:      Success:        TRUE/FALSE
+ *              Failure:        Negative
+ *
+ * Programmer:	Vailin Choi; Aug 2015
+ *
+ *-------------------------------------------------------------------------
+ */
+static htri_t
+H5B2__cache_int_verify_chksum(const void *_image, size_t H5_ATTR_UNUSED len, void *_udata)
+{
+    const uint8_t *image = (const uint8_t *)_image;       			/* Pointer into raw data buffer */
+    H5B2_internal_cache_ud_t *udata = (H5B2_internal_cache_ud_t *)_udata;     	/* Pointer to user data */
+    size_t chk_size;       	/* Exact size of the node with checksum at the end */
+    uint32_t stored_chksum;     /* Stored metadata checksum value */
+    uint32_t computed_chksum;   /* Computed metadata checksum value */
+    htri_t ret_value = TRUE;	/* Return value */
+
+    FUNC_ENTER_STATIC_NOERR
+
+    /* Check arguments */
+    HDassert(image);
+    HDassert(udata);
+
+    /* Internal node prefix header + records + child pointer triplets: size with checksum at the end */
+    chk_size = H5B2_INT_PREFIX_SIZE + (udata->nrec * udata->hdr->rrec_size) + ((size_t)(udata->nrec + 1) * H5B2_INT_POINTER_SIZE(udata->hdr, udata->depth));
+
+    /* Get stored and computed checksums */
+    H5F_get_checksums(image, chk_size, &stored_chksum, &computed_chksum);
+
+    if(stored_chksum != computed_chksum)
+	ret_value = FALSE;
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5B2__cache_int_verify_chksum() */
 
 
 /*-------------------------------------------------------------------------
@@ -488,7 +563,6 @@ H5B2__cache_int_deserialize(const void *_image, size_t H5_ATTR_UNUSED len,
     uint8_t		*native;        /* Pointer to native record info */
     H5B2_node_ptr_t	*int_node_ptr;  /* Pointer to node pointer info */
     uint32_t            stored_chksum;  /* Stored metadata checksum value */
-    uint32_t            computed_chksum; /* Computed metadata checksum value */
     unsigned		u;              /* Local index variable */
     H5B2_internal_t	*ret_value = NULL;      /* Return value */
 
@@ -562,18 +636,13 @@ H5B2__cache_int_deserialize(const void *_image, size_t H5_ATTR_UNUSED len,
         int_node_ptr++;
     } /* end for */
 
-    /* Compute checksum on internal node */
-    computed_chksum = H5_checksum_metadata(_image, (size_t)(image - (const uint8_t *)_image), 0);
+    /* checksum verification already done in verify_chksum cb */
 
     /* Metadata checksum */
     UINT32DECODE(image, stored_chksum);
 
     /* Sanity check parsing */
     HDassert((size_t)(image - (const uint8_t *)_image) <= len);
-
-    /* Verify checksum */
-    if(stored_chksum != computed_chksum)
-        HGOTO_ERROR(H5E_BTREE, H5E_BADVALUE, NULL, "incorrect metadata checksum for v2 internal node")
 
     /* Set return value */
     ret_value = internal;
@@ -601,8 +670,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B2__cache_int_image_len(const void *_thing, size_t *image_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr)
+H5B2__cache_int_image_len(const void *_thing, size_t *image_len)
 {
     const H5B2_internal_t *internal = (const H5B2_internal_t *)_thing;      /* Pointer to the B-tree internal node */
 
@@ -721,17 +789,18 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B2__cache_int_free_icr(void *thing)
+H5B2__cache_int_free_icr(void *_thing)
 {
+    H5B2_internal_t *internal = (H5B2_internal_t *)_thing;
     herr_t ret_value = SUCCEED;     /* Return value */
 
     FUNC_ENTER_STATIC
 
     /* Check arguments */
-    HDassert(thing);
+    HDassert(internal);
 
     /* Release v2 B-tree internal node */
-    if(H5B2__internal_free((H5B2_internal_t *)thing) < 0)
+    if(H5B2__internal_free(internal) < 0)
         HGOTO_ERROR(H5E_BTREE, H5E_CANTFREE, FAIL, "unable to release v2 B-tree internal node")
 
 done:
@@ -740,7 +809,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5B2__cache_leaf_get_load_size
+ * Function:    H5B2__cache_leaf_get_initial_load_size
  *
  * Purpose:     Compute the size of the data structure on disk.
  *
@@ -753,9 +822,9 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B2__cache_leaf_get_load_size(const void *_udata, size_t *image_len)
+H5B2__cache_leaf_get_initial_load_size(void *_udata, size_t *image_len)
 {
-    const H5B2_leaf_cache_ud_t *udata = (const H5B2_leaf_cache_ud_t *)_udata; /* User data for callback */
+    H5B2_leaf_cache_ud_t *udata = (H5B2_leaf_cache_ud_t *)_udata; /* User data for callback */
 
     FUNC_ENTER_STATIC_NOERR
 
@@ -768,7 +837,49 @@ H5B2__cache_leaf_get_load_size(const void *_udata, size_t *image_len)
     *image_len = udata->hdr->node_size;
 
     FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5B2__cache_leaf_get_load_size() */
+} /* end H5B2__cache_leaf_get_initial_load_size() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5B2__cache_leaf_verify_chksum
+ *
+ * Purpose:     Verify the computed checksum of the data structure is the
+ *              same as the stored chksum.
+ *
+ * Return:      Success:        TRUE/FALSE
+ *              Failure:        Negative
+ *
+ * Programmer:	Vailin Choi; Aug 2015
+ *
+ *-------------------------------------------------------------------------
+ */
+static htri_t
+H5B2__cache_leaf_verify_chksum(const void *_image, size_t H5_ATTR_UNUSED len, void *_udata)
+{
+    const uint8_t *image = (const uint8_t *)_image;       			/* Pointer into raw data buffer */
+    H5B2_internal_cache_ud_t *udata = (H5B2_internal_cache_ud_t *)_udata;     	/* Pointer to user data */
+    size_t chk_size;       	/* Exact size of the node with checksum at the end */
+    uint32_t stored_chksum;     /* Stored metadata checksum value */
+    uint32_t computed_chksum;   /* Computed metadata checksum value */
+    htri_t ret_value = TRUE;	/* Return value */
+
+    FUNC_ENTER_STATIC_NOERR
+
+    /* Check arguments */
+    HDassert(image);
+    HDassert(udata);
+
+    /* Leaf node prefix header + records: size with checksum at the end */
+    chk_size = H5B2_LEAF_PREFIX_SIZE + (udata->nrec * udata->hdr->rrec_size);
+
+    /* Get stored and computed checksums */
+    H5F_get_checksums(image, chk_size, &stored_chksum, &computed_chksum);
+
+    if(stored_chksum != computed_chksum)
+	ret_value = FALSE;
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5B2__cache_leaf_verify_chksum() */
 
 
 /*-------------------------------------------------------------------------
@@ -794,7 +905,6 @@ H5B2__cache_leaf_deserialize(const void *_image, size_t H5_ATTR_UNUSED len,
     const uint8_t	*image = (const uint8_t *)_image;       /* Pointer into raw data buffer */
     uint8_t		*native;        /* Pointer to native keys */
     uint32_t            stored_chksum;  /* Stored metadata checksum value */
-    uint32_t            computed_chksum; /* Computed metadata checksum value */
     unsigned		u;              /* Local index variable */
     H5B2_leaf_t		*ret_value = NULL;      /* Return value */
 
@@ -848,18 +958,13 @@ H5B2__cache_leaf_deserialize(const void *_image, size_t H5_ATTR_UNUSED len,
         native += udata->hdr->cls->nrec_size;
     } /* end for */
 
-    /* Compute checksum on leaf node */
-    computed_chksum = H5_checksum_metadata(_image, (size_t)(image - (const uint8_t *)_image), 0);
+    /* checksum verification already done in verify_chksum cb */
 
     /* Metadata checksum */
     UINT32DECODE(image, stored_chksum);
 
     /* Sanity check parsing */
     HDassert((size_t)(image - (const uint8_t *)_image) <= udata->hdr->node_size);
-
-    /* Verify checksum */
-    if(stored_chksum != computed_chksum)
-	HGOTO_ERROR(H5E_BTREE, H5E_BADVALUE, NULL, "incorrect metadata checksum for v2 leaf node")
 
     /* Sanity check */
     HDassert((size_t)(image - (const uint8_t *)_image) <= len);
@@ -890,8 +995,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B2__cache_leaf_image_len(const void *_thing, size_t *image_len,
-    hbool_t H5_ATTR_UNUSED *compressed_ptr, size_t H5_ATTR_UNUSED *compressed_image_len_ptr)
+H5B2__cache_leaf_image_len(const void *_thing, size_t *image_len)
 {
     const H5B2_leaf_t *leaf = (const H5B2_leaf_t *)_thing;      /* Pointer to the B-tree leaf node  */
 
@@ -996,17 +1100,18 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B2__cache_leaf_free_icr(void *thing)
+H5B2__cache_leaf_free_icr(void *_thing)
 {
+    H5B2_leaf_t *leaf = (H5B2_leaf_t *)_thing;
     herr_t ret_value = SUCCEED;     /* Return value */
 
     FUNC_ENTER_STATIC
 
     /* Check arguments */
-    HDassert(thing);
+    HDassert(leaf);
 
     /* Destroy v2 B-tree leaf node */
-    if(H5B2__leaf_free((H5B2_leaf_t *)thing) < 0)
+    if(H5B2__leaf_free(leaf) < 0)
         HGOTO_ERROR(H5E_BTREE, H5E_CANTFREE, FAIL, "unable to destroy B-tree leaf node")
 
 done:
