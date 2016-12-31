@@ -42,6 +42,12 @@ hid_t saved_fapl_id = H5P_DEFAULT; /* store the fapl id here between
 				    * close.
 				    */
 
+hid_t saved_fcpl_id = H5P_DEFAULT; /* store the fcpl id here between
+				    * cache setup and takedown.  Note
+				    * that if saved_fcpl_id == H5P_DEFAULT,
+				    * we assume that there is no fcpl to
+				    * close.
+				    */
 hid_t saved_fid = -1; /* store the file id here between cache setup
 		       * and takedown.
 		       */
@@ -3159,7 +3165,8 @@ verify_unprotected(void)
 
 H5F_t *
 setup_cache(size_t max_cache_size,
-            size_t min_clean_size)
+            size_t min_clean_size,
+            unsigned paged)
 {
     char filename[512];
     hbool_t show_progress = FALSE;
@@ -3171,12 +3178,43 @@ setup_cache(size_t max_cache_size,
     H5F_t * ret_val = NULL;
     haddr_t actual_base_addr;
     hid_t fapl_id = H5P_DEFAULT;
+    hid_t fcpl_id = H5P_DEFAULT;
 
     if(show_progress) /* 1 */
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
                   FUNC, mile_stone++, (int)pass);
 
     saved_fid = -1;
+
+    if(pass) {
+        if((fcpl_id = H5Pcreate(H5P_FILE_CREATE)) == FAIL) {
+            pass = FALSE;
+            failure_mssg = "H5Pcreate(H5P_FILE_CREATE) failed.\n";
+        }
+    }
+
+    if(pass && paged) {
+        /* Set up paged aggregation strategy */
+        if(H5Pset_file_space_strategy(fcpl_id, H5F_FSPACE_STRATEGY_PAGE, 1, (hsize_t)1) == FAIL) {
+            pass = FALSE;
+            failure_mssg = "H5Pset_file_space_strategy() failed.\n";
+            H5Pclose(fcpl_id);
+	    fcpl_id = H5P_DEFAULT;
+        }
+    }
+
+    if(pass && paged) {
+        /* Set up file space page size to BASE_ADDR */
+        if(H5Pset_file_space_page_size(fcpl_id, (hsize_t)BASE_ADDR) == FAIL) {
+            pass = FALSE;
+            failure_mssg = "H5Pset_file_space_page_size() failed.\n";
+            H5Pclose(fcpl_id);
+	    fcpl_id = H5P_DEFAULT;
+        }
+    }
+
+    if(pass) 
+        saved_fcpl_id = fcpl_id;
 
     /* setup the file name */
     if(pass) {
@@ -3201,7 +3239,7 @@ setup_cache(size_t max_cache_size,
 	    pass = FALSE;
 	    failure_mssg = "H5P_set_fapl_core() failed.\n";
         }
-	else if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
+	else if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl_id, fapl_id)) < 0) {
 	    core_file_driver_failed = TRUE;
 
             if(verbose)
@@ -3220,8 +3258,8 @@ setup_cache(size_t max_cache_size,
      * If this fails, we are cooked.
      */
     if(pass && fid < 0) {
-        fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
-	saved_fid = fid;
+        fid = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl_id, fapl_id);
+        saved_fid = fid;
 
         if(fid < 0) {
             pass = FALSE;
@@ -3229,8 +3267,8 @@ setup_cache(size_t max_cache_size,
 
             if(verbose)
                 HDfprintf(stdout, "%s: H5Fcreate() failed.\n", FUNC);
-        }
-    }
+        } /* end if */
+    } /* end if */
 
     if(show_progress) /* 4 */
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
@@ -3429,7 +3467,13 @@ takedown_cache(H5F_t * file_ptr,
     if ( saved_fapl_id != H5P_DEFAULT ) {
 
         H5Pclose(saved_fapl_id);
-	saved_fapl_id = H5P_DEFAULT;
+        saved_fapl_id = H5P_DEFAULT;
+    }
+
+    if ( saved_fcpl_id != H5P_DEFAULT ) {
+
+        H5Pclose(saved_fcpl_id);
+	saved_fcpl_id = H5P_DEFAULT;
     }
 
     if ( saved_fid != -1 ) {

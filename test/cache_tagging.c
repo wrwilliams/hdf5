@@ -1093,7 +1093,6 @@ check_dense_attribute_tags(void)
     hid_t fapl = -1;         /* File access property list */
     haddr_t d_tag = 0;       /* Dataset tag value */
     haddr_t root_tag = 0;    /* Root group tag value */
-    haddr_t fsp_tag = 0;     /* Superblock extension tag value for latest library format/file space page size */
     char attrname[500];	     /* Name of attribute */
 
     /* Testing Macro */
@@ -1888,13 +1887,16 @@ check_attribute_delete_tags(hid_t fcpl, int type)
         if ( verify_tag(fid, H5AC_SOHM_TABLE_ID, H5AC__SOHM_TAG) < 0 ) TEST_ERROR;
 
         /* 
-	 * 2 calls to verify_tag() for verifying free space: 
-	 *   one freespace header tag for H5FD_MEM_DRAW manager,
-	 *   one freespace header tag for H5FD_MEM_SUPER manager 
-	 */
+         * 2 calls to verify_tag() for verifying free space: 
+         *   one freespace header tag for free-space header,
+         *   one freespace header tag for free-space section info
+         */
         if ( verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0 ) 
             TEST_ERROR;
+        if ( verify_tag(fid, H5AC_FSPACE_SINFO_ID, H5AC__FREESPACE_TAG) < 0 ) 
+            TEST_ERROR;
 
+#if 0
         /* If the free space managers are persistant, the 
          * H5MF_tidy_self_referential_fsm_hack() must have been run.
          * Since this function floats all self referential free space 
@@ -1904,6 +1906,7 @@ check_attribute_delete_tags(hid_t fcpl, int type)
         if ( ( ! persistant_fsms ) && 
              ( verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0 ) )
             TEST_ERROR;
+#endif
 
     } /* end if */
 
