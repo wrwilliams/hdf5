@@ -3864,6 +3864,49 @@ typedef struct H5C_tag_info_t {
  *	this field will be reset every automatic resize epoch.
  *
  *
+ * Metadata cache image management related fields.
+ *
+ * close_warning_received: Boolean flag indicating that a file closing
+ *              warning has been received.
+ *
+ *
+ * Free Space Manager Related fields:
+ *
+ * The free space managers must be informed when we are about to close
+ * or flush the file so that they order themselves accordingly.  This used
+ * to be done much later in the close process, but with cache image and
+ * page buffering, this is no longer viable, as we must finalize the on
+ * disk image of all metadata much sooner.
+ *
+ * This is handled by the H5MF_settle_raw_data_fsm() and
+ * H5MF_settle_meta_data_FSM() routines.  As these calls are expensive,
+ * the following fields are used to track whether the target free space
+ * managers are clean.
+ *
+ * They are also used in sanity checking, as once a free space manager is
+ * settled, it should not become unsettled (i.e. be asked to allocate or
+ * free file space) either ever (in the case of a file close) or until the
+ * flush is complete.
+ *
+ * rdfsm_settled:  Boolean flag indicating whether the raw data free space
+ *              manager is settled -- i.e. whether the correct space has
+ *              been allocated for it in the file.
+ *
+ *              Note that the name of this field is deceptive.  In the
+ *              multi file case, the flag applies to all free space
+ *              managers that are not involved in allocating space for
+ *              free space manager metadata.
+ *
+ * mdfsm_settled:  Boolean flag indicating whether the meta data free space
+ *              manager is settled -- i.e. whether the correct space has
+ *              been allocated for it in the file.
+ *
+ *              Note that the name of this field is deceptive.  In the
+ *              multi file case, the flag applies only to free space
+ *              managers that are involved in allocating space for free
+ *              space managers.
+ *
+ *
  * Statistics collection fields:
  *
  * When enabled, these fields are used to collect statistics as described
@@ -4233,6 +4276,13 @@ struct H5C_t {
     int32_t			epoch_marker_ringbuf_last;
     int32_t			epoch_marker_ringbuf_size;
     H5C_cache_entry_t		epoch_markers[H5C__MAX_EPOCH_MARKERS];
+
+    /* fields supporting generation of a cache image on file close */
+    hbool_t                     close_warning_received;
+
+    /* Free Space Manager Related fields */
+    hbool_t                     rdfsm_settled;
+    hbool_t                     mdfsm_settled;
 
     /* Fields for cache hit rate collection */
     int64_t			cache_hits;

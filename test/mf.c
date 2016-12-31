@@ -859,9 +859,9 @@ test_mf_tmp(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
     hid_t   fcpl = -1;      /* File creation property list */
 
     if(new_format)
-        HDputs("Testing 'temporary' file space allocation with new library format...");
+        TESTING("'temporary' file space allocation with new library format")
     else
-        HDputs("Testing 'temporary' file space allocation with old library format...");
+        TESTING("'temporary' file space allocation with old library format")
 
     /* Can't run this test with multi-file VFDs */
     if(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi") && HDstrcmp(env_h5_drvr, "family")) {
@@ -6150,7 +6150,17 @@ test_mf_fs_persist_split(void)
     haddr_t baddr5, baddr6, baddr7, baddr8; /* File address for H5FD_MEM_BTREE */
     haddr_t tmp_addr;                   /* temporary variable for address */
 
-    TESTING("file's free-space managers are persistent for split-file");
+    TESTING("File's free-space managers are persistent for split-file");
+
+    /* for now, we don't support persistant free space managers 
+     * with the split file driver.
+     */
+    SKIPPED();
+    HDfprintf(stdout, " Persistant FSMs disabled in multi file driver.\n");
+    return 0;  /* <========== note return */
+
+    /* File creation property list template */
+    if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
 
     if((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0)
     FAIL_STACK_ERROR
@@ -6452,7 +6462,14 @@ test_mf_fs_persist_multi(void)
     haddr_t     memb_addr[H5FD_MEM_NTYPES]; /* Member starting address */
 
 
-    TESTING("file's free-space managers are persistent for multi-file");
+    TESTING("File's free-space managers are persistent for multi-file");
+
+    /* for now, we don't support persistant free space managers 
+     * with the multi file driver.
+     */
+    SKIPPED();
+    HDfprintf(stdout, " Persistant FSMs disabled in multi file driver.\n");
+    return 0;  /* <========== note return */
 
     /* File creation property list template */
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
@@ -6835,11 +6852,12 @@ test_mf_fs_gone(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
     haddr_t addr1, addr2, addr3, addr4;     /* File address for H5FD_MEM_SUPER */
     H5FD_mem_t  fs_type; 
     hbool_t contig_addr_vfd;
+    hbool_t ran_H5MF_tidy_self_referential_fsm_hack = FALSE;
 
     if(new_format)
-        HDputs("Testing file's free-space is going away with new library format...");
+        TESTING("File's free-space is going away with new library format")
     else
-        HDputs("Testing file's free-space is going away with old library format...");
+        TESTING("File's free-space is going away with old library format")
 
     /* Current VFD that does not support contigous address space */
     contig_addr_vfd = (hbool_t)(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi"));
@@ -6929,6 +6947,17 @@ test_mf_fs_gone(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
     if(!H5F_addr_defined(f->shared->fs_addr[fs_type]))
         TEST_ERROR
 
+    /* Since we are about to open a self referential free space 
+     * manager prior to the first file space allocation / deallocation
+     * call H5MF_tidy_self_referential_fsm_hack() first so as to avoid
+     * assertion failures on the first file space alloc / dealloc.
+     */
+    if(f->shared->first_alloc_dealloc){
+        if(SUCCEED!=H5MF_tidy_self_referential_fsm_hack(f,H5AC_ind_read_dxpl_id))
+            FAIL_STACK_ERROR
+        ran_H5MF_tidy_self_referential_fsm_hack = TRUE;
+    }
+
     /* Start up H5FD_MEM_SUPER free-space manager */
     if(!(f->shared->fs_man[fs_type]))
         if(H5MF_open_fstype(f, H5AC_ind_read_dxpl_id, (H5F_mem_page_t)fs_type) < 0)
@@ -6938,8 +6967,14 @@ test_mf_fs_gone(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
     if(H5FS_stat_info(f, f->shared->fs_man[fs_type], &fs_stat) < 0)
         FAIL_STACK_ERROR
 
-    if(!H5F_addr_defined(fs_stat.addr))
+    /* if we ran H5MF_tidy_self_referential_fsm_hack(), the 
+     * H5FD_MEM_SUPER free space manager must be floating.
+     * Thus fs_stat.addr must be undefined.
+     */
+    if((!ran_H5MF_tidy_self_referential_fsm_hack) &&
+       (!H5F_addr_defined(fs_stat.addr)))
         TEST_ERROR
+
     if(fs_stat.tot_space < TBLOCK_SIZE3)
         TEST_ERROR
 
@@ -7008,9 +7043,9 @@ test_mf_strat_thres_gone(const char *env_h5_drvr, hid_t fapl, hbool_t new_format
     hbool_t contig_addr_vfd;
 
     if(new_format)
-        HDputs("Testing file space merge/shrink for section size < threshold with new library format...");
+        TESTING("File space merge/shrink for section size < threshold with new library format")
     else
-        HDputs("Testing file space merge/shrink for section size < threshold with old library format...");
+        TESTING("File space merge/shrink for section size < threshold with old library format")
 
     /* Current VFD that does not support contigous address space */
     contig_addr_vfd = (hbool_t)(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi"));
@@ -7190,9 +7225,9 @@ test_mf_strat_thres_persist(const char *env_h5_drvr, hid_t fapl, hbool_t new_for
     hbool_t contig_addr_vfd;
 
     if(new_format)
-        HDputs("Testing file space strategy/persisting/threshold with new library format...");
+        TESTING("File space strategy/persisting/threshold with new library format")
     else
-        HDputs("Testing file space strategy/persisting/threshold with old library format...");
+        TESTING("File space strategy/persisting/threshold with old library format")
 
     /* Current VFD that does not support contigous address space */
     contig_addr_vfd = (hbool_t)(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi"));
@@ -7354,9 +7389,9 @@ test_mf_fs_persist(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
     haddr_t tmp_addr;               /* Temporary variable for address */
 
     if(new_format)
-        HDputs("Testing file's free-space is persistent with new library format");
+        TESTING("File's free-space is persistent with new library format")
     else
-        HDputs("Testing file's free-space is persistent with old library format");
+        TESTING("File's free-space is persistent with old library format")
     
     if(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi")) {
 
@@ -7430,6 +7465,16 @@ test_mf_fs_persist(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
         /* Verify that H5FD_MEM_SUPER free-space manager is there */
         if(!H5F_addr_defined(f->shared->fs_addr[tt]))
             TEST_ERROR
+
+        /* Since we are about to open a self referential free space 
+         * manager prior to the first file space allocation / deallocation
+         * call H5MF_tidy_self_referential_fsm_hack() first so as to avoid
+         * assertion failures on the first file space alloc / dealloc.
+         */
+        if((f->shared->first_alloc_dealloc) &&
+           (SUCCEED != 
+            H5MF_tidy_self_referential_fsm_hack(f, H5AC_ind_read_dxpl_id)))
+            FAIL_STACK_ERROR
 
         /* Start up H5FD_MEM_SUPER free-space manager */
         if(!(f->shared->fs_man[tt]))
@@ -7586,6 +7631,8 @@ test_page_alloc_xfree(const char *env_h5_drvr, hid_t fapl)
     unsigned fs_persist;        /* To persist free-space or not */
 
     TESTING("Paged aggregation for file space: H5MF_alloc/H5MF_xfree");
+    SKIPPED();
+    return 0;
 
     /* Check for split or multi driver */
     if(!HDstrcmp(env_h5_drvr, "split"))
@@ -8528,6 +8575,8 @@ test_page_alignment(const char *env_h5_drvr, hid_t fapl)
     hbool_t split = FALSE, multi = FALSE;
 
     TESTING("Paged aggregation and H5Pset_alignment: verify proper alignment is used");
+    SKIPPED();
+    return 0;
 
     /* Check for split or multi driver */
     if(!HDstrcmp(env_h5_drvr, "split"))

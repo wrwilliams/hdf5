@@ -15878,58 +15878,51 @@ check_destroy_pinned_err(void)
      * should fail.  Unpin the entry and flush destroy again -- should
      * succeed.
      */
-
     if(pass) {
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024));
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024));
 
         protect_entry(file_ptr, 0, 0);
-	unprotect_entry(file_ptr, 0, 0, H5C__PIN_ENTRY_FLAG);
+        unprotect_entry(file_ptr, 0, 0, H5C__PIN_ENTRY_FLAG);
+
+        if(H5C_prep_for_file_close(file_ptr, H5P_DATASET_XFER_DEFAULT) < 0) {
+            pass = FALSE;
+            failure_mssg = "unexpected failure of prep for file close.\n";
+        } /* end if */
 
         if(H5C_dest(file_ptr, H5AC_ind_read_dxpl_id) >= 0) {
-
             pass = FALSE;
             failure_mssg = "destroy succeeded on cache with pinned entry.\n";
-
-        } else {
-
-	    unpin_entry(0, 0);
+        } /* end if */
+        else {
+            unpin_entry(0, 0);
 
             if(H5C_dest(file_ptr, H5AC_ind_read_dxpl_id) < 0) {
-
                 pass = FALSE;
                 failure_mssg = "destroy failed after unpin.\n";
-
-            } else {
+            } /* end if */
+            else
                 file_ptr->shared->cache = NULL;
-	    }
-        }
+        } /* end else */
 
         if(saved_cache != NULL) {
-
             file_ptr->shared->cache = saved_cache;
             saved_cache = NULL;
+        } /* end if */
 
-        }
-
-	/* call takedown_cache() with a NULL file_ptr parameter.
-	 * This causes the function to close and delete the file,
-	 * while skipping the call to H5C_dest().
-	 */
-	takedown_cache(NULL, FALSE, FALSE);
-
-    }
+        /* call takedown_cache() with a NULL file_ptr parameter.
+         * This causes the function to close and delete the file,
+         * while skipping the call to H5C_dest().
+         */
+        takedown_cache(NULL, FALSE, FALSE);
+    } /* end if */
 
     if(pass) { PASSED(); } else { H5_FAILED(); }
 
-    if(!pass) {
-
-        HDfprintf(stdout, "%s(): failure_mssg = \"%s\".\n",
-                  FUNC, failure_mssg);
-    }
+    if(!pass)
+        HDfprintf(stdout, "%s(): failure_mssg = \"%s\".\n", FUNC, failure_mssg);
 
     return (unsigned)!pass;
 
@@ -15972,6 +15965,21 @@ check_destroy_protected_err(void)
 
         file_ptr = setup_cache((size_t)(2 * 1024),
                                 (size_t)(1 * 1024));
+
+        /* Note: normally this call would go just before the series of
+         * flushes prior to file close -- in particular, all entries
+         * should be unprotected when this call is made.
+         *
+         * Thus H5C_prep_for_file_close() contains an assert to verify
+         * this.  Since this assert would be triggered by the condition
+         * we are trying to test, put the call to H5C_prep_for_file_close()
+         * prior to the final protect call.
+         */
+        if ( H5C_prep_for_file_close(file_ptr, H5P_DATASET_XFER_DEFAULT) < 0 ) {
+
+            pass = FALSE;
+            failure_mssg = "unexpected failure of prep for file close.\n";
+        }
 
         protect_entry(file_ptr, 0, 0);
 

@@ -343,6 +343,7 @@ H5_DLL herr_t H5AC_get_entry_status(const H5F_t *f, haddr_t addr,
 H5_DLL herr_t H5AC_insert_entry(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
     haddr_t addr, void *thing, unsigned int flags);
 H5_DLL herr_t H5AC_pin_protected_entry(void *thing);
+H5_DLL herr_t H5AC_prep_for_file_close(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5AC_create_flush_dependency(void *parent_thing, void *child_thing);
 H5_DLL void * H5AC_protect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
     haddr_t addr, void *udata, unsigned flags);
@@ -379,6 +380,7 @@ H5_DLL herr_t H5AC_get_entry_ring(const H5F_t *f, haddr_t addr, H5AC_ring_t *rin
 H5_DLL herr_t H5AC_set_ring(hid_t dxpl_id, H5AC_ring_t ring, H5P_genplist_t **dxpl,
     H5AC_ring_t *orig_ring);
 H5_DLL herr_t H5AC_reset_ring(H5P_genplist_t *dxpl, H5AC_ring_t orig_ring);
+H5_DLL herr_t H5AC_unsettle_ring(H5F_t * f, H5C_ring_t ring);
 H5_DLL herr_t H5AC_expunge_tag_type_metadata(H5F_t *f, hid_t dxpl_id, haddr_t tag, int type_id, unsigned flags);
 
 #ifdef H5_HAVE_PARALLEL
@@ -388,6 +390,7 @@ H5_DLL herr_t H5AC_add_candidate(H5AC_t * cache_ptr, haddr_t addr);
 /* Debugging functions */
 H5_DLL herr_t H5AC_stats(const H5F_t *f);
 H5_DLL herr_t H5AC_dump_cache(const H5F_t *f);
+H5_DLL hbool_t H5AC_cache_is_clean(const H5F_t *f, H5C_ring_t inner_ring);
 
 #endif /* !_H5ACprivate_H */
 

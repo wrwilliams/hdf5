@@ -437,6 +437,16 @@ H5C_create(size_t		      max_cache_size,
         ((cache_ptr->epoch_markers)[i]).type		 = &H5C__epoch_marker_class;
     }
 
+    /* Initialize cache image generation on file close related fields.
+     * Initial value of image_ctl must match H5C__DEFAULT_CACHE_IMAGE_CTL
+     * in H5Cprivate.h.
+     */
+    cache_ptr->close_warning_received   = FALSE;
+
+    /* initialize free space manager related fields: */
+    cache_ptr->rdfsm_settled            = FALSE;
+    cache_ptr->mdfsm_settled            = FALSE;
+
     if ( H5C_reset_cache_hit_rate_stats(cache_ptr) != SUCCEED ) {
 
         /* this should be impossible... */
@@ -718,6 +728,7 @@ H5C_dest(H5F_t * f, hid_t dxpl_id)
     /* Sanity check */
     HDassert(cache_ptr);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+    HDassert(cache_ptr->close_warning_received);
 
     /* Flush and invalidate all cache entries */
     if(H5C_flush_invalidate_cache(f, dxpl_id, H5C__NO_FLAGS_SET) < 0 )
@@ -948,6 +959,60 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
          */
         ring = H5C_RING_USER;
 	while(ring < H5C_RING_NTYPES) {
+
+            /* only call the free space manager settle routines when close
+             * warning has been received.
+             *
+             * Observe that the FSM rings should only be populated if
+             * persistant free space managers are enabled.
+             */
+            if ( cache_ptr->close_warning_received ) {
+
+                switch(ring) {
+
+                    case H5C_RING_USER:
+                        break;
+
+                    case H5C_RING_RDFSM:
+                        if ( ( f->shared->fs_persist ) &&
+                             ( ! cache_ptr->rdfsm_settled ) ) {
+
+                            if ( H5MF_settle_raw_data_fsm(f, dxpl_id) < 0 )
+                                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
+                                            "RD FSM settle failed.")
+
+                            cache_ptr->rdfsm_settled = TRUE;
+                        }
+                        break;
+
+                    case H5C_RING_MDFSM:
+                        if ( ( f->shared->fs_persist ) &&
+                             ( ! cache_ptr->mdfsm_settled ) ) {
+
+                            if ( H5MF_settle_meta_data_fsm(f, dxpl_id) < 0 )
+                                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
+                                            "MD FSM settle failed.")
+
+                            cache_ptr->mdfsm_settled = TRUE;
+                        }
+                        break;
+#if 0 /* for bug -- bug fixed in cache image  -- uncomment after merge */
+                    case H5C_RING_SBE:
+                        break;
+#else
+		    case 4:
+			break;
+#endif
+                    case H5C_RING_SB:
+                        break;
+
+                    default:
+                        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+                                    "Unknown ring?!?!")
+                        break;
+                }
+            }
+
 	    if(H5C_flush_ring(f, dxpl_id, ring, flags) < 0)
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "flush ring failed.")
             ring++;
@@ -3164,6 +3229,90 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 
 } /* H5C_unprotect() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5C_unsettle_ring()
+ *
+ * Purpose:     Advise the metadata cache that the specified free space
+ *              manager ring is no longer settled (if it was on entry).
+ *
+ *              If the target free space manager ring is already
+ *              unsettled, do nothing, and return SUCCEED.
+ *
+ *              If the target free space manager ring is settled, and
+ *              we are not in the process of a file shutdown, mark
+ *              the ring as unsettled, and return SUCCEED.
+ *
+ *              If the target free space manager is settled, and we
+ *              are in the process of a file shutdown, post an error
+ *              message, and return FAIL.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              10/15/16
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C_unsettle_ring(H5F_t * f, H5C_ring_t ring)
+{
+    H5C_t *             cache_ptr;
+    herr_t              ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* sanity checks */
+    HDassert(f);
+    HDassert(f->shared);
+    HDassert(f->shared->cache);
+
+    cache_ptr = f->shared->cache;
+
+    HDassert(H5C__H5C_T_MAGIC == cache_ptr->magic);
+    HDassert((H5C_RING_RDFSM == ring) || (H5C_RING_MDFSM == ring));
+
+    switch(ring) {
+
+        case H5C_RING_RDFSM:
+            if ( cache_ptr->rdfsm_settled ) {
+
+                if ( ( cache_ptr->flush_in_progress ) ||
+                     ( cache_ptr->close_warning_received ) ) {
+
+                    HDassert(FALSE);
+                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+                                "unexpected rdfsm ring unsettle")
+                }
+                cache_ptr->rdfsm_settled = FALSE;
+            }
+            break;
+
+        case H5C_RING_MDFSM:
+            if ( cache_ptr->mdfsm_settled ) {
+
+                if ( ( cache_ptr->flush_in_progress ) ||
+                     ( cache_ptr->close_warning_received ) ) {
+
+                    HDassert(FALSE);
+                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+                                "unexpected mdfsm ring unsettle")
+                }
+                cache_ptr->mdfsm_settled = FALSE;
+            }
+            break;
+
+        default:
+            HDassert(FALSE); /* this should be un-reachable */
+            break;
+    }
+
+done:
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5C_unsettle_ring() */
 
 
 /*-------------------------------------------------------------------------
@@ -7318,6 +7467,61 @@ H5C_entry_in_skip_list(H5C_t * cache_ptr, H5C_cache_entry_t *target_ptr)
 
 /*-------------------------------------------------------------------------
  *
+ * Function:    H5C_cache_is_clean()
+ *
+ * Purpose:     Debugging function that verifies that all rings in the
+ *              metadata cache are clean from the outermost ring, inwards
+ *              to the inner ring specified.
+ *
+ *              Returns TRUE if all specified rings are clean, and FALSE
+ *              if not.  Throws an assertion failure on error.
+ *
+ * Return:      TRUE if the indicated ring(s) are clean, and FALSE otherwise.
+ *
+ * Programmer:  John Mainzer, 6/18/16
+ *
+ * Changes:     None.
+ *
+ *-------------------------------------------------------------------------
+ */
+#ifndef NDEBUG
+hbool_t
+H5C_cache_is_clean(const H5F_t *f, H5C_ring_t inner_ring)
+{
+    H5C_t             * cache_ptr;
+    H5C_ring_t          ring = H5C_RING_USER;
+    hbool_t             ret_value = TRUE;      /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    HDassert( f );
+    HDassert( f->shared );
+
+    cache_ptr = f->shared->cache;
+
+    HDassert( cache_ptr != NULL );
+    HDassert( cache_ptr->magic == H5C__H5C_T_MAGIC );
+
+    HDassert(inner_ring >= H5C_RING_USER);
+    HDassert(inner_ring <= H5C_RING_SB);
+
+    while ( ring <= inner_ring ) {
+
+        if ( cache_ptr->dirty_index_ring_size[ring] > 0 )
+            ret_value = FALSE;
+
+        ring++;
+    }
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5C_cache_is_clean() */
+
+#endif /* NDEBUG */
+
+
+/*-------------------------------------------------------------------------
+ *
  * Function:    H5C__flush_marked_entries
  *
  * Purpose:     Flushes all marked entries in the cache.
@@ -8484,3 +8688,55 @@ H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_p
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5C__generate_image */
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Function:    H5C_prep_for_file_close
+ *
+ * Purpose:     This is place holder for the real H5C_prep_for_file_close
+ *              function in H5Cimage.c  Delete this version when cache 
+ *		image is merged.
+ *
+ *						JRM -- 12/9/16
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              7/3/15
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C_prep_for_file_close(H5F_t *f, hid_t H5_ATTR_UNUSED dxpl_id)
+{
+    H5C_t *     cache_ptr = NULL;
+    herr_t	ret_value = SUCCEED;      /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* sanity checks */
+    HDassert(f);
+    HDassert(f->shared);
+    HDassert(f->shared->cache);
+
+    cache_ptr = f->shared->cache;
+
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+
+    /* for now at least, it is possible to receive the 
+     * close warning more than once -- the following 
+     * if statement handles this.
+     */
+    if ( cache_ptr->close_warning_received )
+        HGOTO_DONE(SUCCEED)
+
+    cache_ptr->close_warning_received = TRUE;
+
+done:
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5C_prep_for_file_close() */
+

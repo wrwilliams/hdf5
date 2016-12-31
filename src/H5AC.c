@@ -1160,6 +1160,47 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ *
+ * Function:    H5AC_prep_for_file_close
+ *
+ * Purpose:     This function should be called just prior to the cache
+ *              flushes at file close.
+ *
+ *              The objective of the call is to allow the metadata cache
+ *              to do any preparatory work prior to generation of a
+ *              cache image.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              7/3/15
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5AC_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
+{
+    herr_t                      ret_value = SUCCEED;      /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* sanity checks */
+    HDassert(f);
+    HDassert(f->shared);
+    HDassert(f->shared->cache);
+
+    if(H5C_prep_for_file_close(f, dxpl_id) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+                    "cache prep for file close failed")
+
+done:
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5C_prep_for_file_close() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5AC_create_flush_dependency()
  *
  * Purpose:	Create a flush dependency between two entries in the metadata
@@ -2618,4 +2659,81 @@ H5AC_reset_ring(H5P_genplist_t *dxpl, H5AC_ring_t orig_ring)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5AC_reset_ring() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5AC_unsettle_ring()
+ *
+ * Purpose:     Advise the metadata cache that the specified free space
+ *              manager ring is no longer settled (if it was on entry).
+ *
+ *              If the target free space manager ring is already
+ *              unsettled, do nothing, and return SUCCEED.
+ *
+ *              If the target free space manager ring is settled, and
+ *              we are not in the process of a file shutdown, mark
+ *              the ring as unsettled, and return SUCCEED.
+ *
+ *              If the target free space manager is settled, and we
+ *              are in the process of a file shutdown, post an error
+ *              message, and return FAIL.
+ *
+ *              Note that this function simply passes the call on to
+ *              the metadata cache proper, and returns the result.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              10/15/16
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5AC_unsettle_ring(H5F_t * f, H5C_ring_t ring)
+{
+    herr_t              ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    if ( FAIL == (ret_value = H5C_unsettle_ring(f, ring)) )
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+                    "H5C_unsettle_ring() failed.");
+
+done:
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5AC_unsettle_ring() */
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Function:    H5AC_cache_is_clean()
+ *
+ * Purpose:     Debugging function that verifies that all rings in the
+ *              metadata cache are clean from the outermost ring, inwards
+ *              to the inner ring specified.
+ *
+ *              Returns TRUE if all specified rings are clean, and FALSE
+ *              if not.  Throws an assertion failure on error.
+ *
+ * Return:      TRUE if the indicated ring(s) are clean, and FALSE otherwise.
+ *
+ * Programmer:  John Mainzer, 6/18/16
+ *
+ * Changes:     None.
+ *
+ *-------------------------------------------------------------------------
+ */
+#ifndef NDEBUG
+hbool_t
+H5AC_cache_is_clean(const H5F_t *f, H5C_ring_t inner_ring)
+{
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    FUNC_LEAVE_NOAPI(H5C_cache_is_clean(f, inner_ring))
+
+}/* H5AC_cache_is_clean() */
+
+#endif /* NDEBUG */
 
