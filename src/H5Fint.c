@@ -831,17 +831,6 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
         int actype;                         /* metadata cache type (enum value) */
         H5F_io_info_t fio_info;             /* I/O info for operation */
 
-#if 0 /* jrm */
-        /* Flush at this point since the file will be closed.
-         * Only try to flush the file if it was opened with write access, and if
-         * the caller requested a flush.
-         */
-        if((H5F_ACC_RDWR & H5F_INTENT(f)) && flush)
-            if(H5C_settle(f, dxpl_id) < 0)
-                //if(H5F_flush(f, dxpl_id, TRUE) < 0)
-                /* Push error, but keep going*/
-                HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
-#else /* jrm */
         /* Flush at this point since the file will be closed.
          * Only try to flush the file if it was opened with write access, and if
          * the caller requested a flush.
@@ -864,7 +853,6 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                 HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
                             "metadata cache prep for close failed")
         }
-#endif /* jrm */
 
         /* Release the external file cache */
         if(f->shared->efc) {
@@ -1406,12 +1394,6 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
     if(H5D_flush(f, dxpl_id) < 0)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush dataset cache")
-
-#if 0 /* JRM */
-    if(H5C_settle(f, dxpl_id) < 0)
-        /* Push error, but keep going*/
-        HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to settle metadata cache")
-#endif /* JRM */
 
 
     /* Release any space allocated to space aggregators, so that the eoa value

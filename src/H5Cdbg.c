@@ -194,7 +194,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-#if 0 /* debugging routine */
+#ifndef NDEBUG
 herr_t
 H5C_dump_cache_skip_list(H5C_t * cache_ptr, char * calling_fcn)
 {
@@ -260,7 +260,7 @@ H5C_dump_cache_skip_list(H5C_t * cache_ptr, char * calling_fcn)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5C_dump_cache_skip_list() */
-#endif /* debugging routine */
+#endif /* NDEBUG */
 
 
 /*-------------------------------------------------------------------------

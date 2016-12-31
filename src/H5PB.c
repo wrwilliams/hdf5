@@ -244,7 +244,8 @@ H5PB_create(H5F_t *f, size_t size, unsigned page_buf_min_meta_perc, unsigned pag
     page_buf->min_raw_perc = page_buf_min_raw_perc;
 
     /* calculate the minimum page count for metadata and raw data
-       based on the fractions provided */
+     * based on the fractions provided 
+     */
     page_buf->min_meta_count = (unsigned)(size/f->shared->fs_page_size) * ((double)page_buf_min_meta_perc/100);
     page_buf->min_raw_count = (unsigned)(size/f->shared->fs_page_size) * ((double)page_buf_min_raw_perc/100);
 
@@ -803,7 +804,7 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
     }
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5F_block_read() */
+} /* end H5PB_read() */
 
 
 /*-------------------------------------------------------------------------
@@ -1143,8 +1144,33 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5F_block_write() */
+} /* end H5PB_write() */
 
+
+/*-------------------------------------------------------------------------
+ * Function:	H5PB__insert_entry()
+ *
+ * Purpose: ??? 
+ *
+ *          This function was created without documentation.
+ *          What follows is my best understanding of Mohamad's intent.
+ *
+ *	    Insert the supplied page into the page buffer, both the
+ *          skip list and the LRU.
+ *
+ *          As best I can tell, this function imposes no limit on the
+ *          number of entries in the page buffer beyond an assertion
+ *          failure it the page count exceeds the limit.
+ *
+ *                                               JRM -- 12/22/16
+ *
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Mohamad Chaarawi
+ *
+ *-------------------------------------------------------------------------
+ */
 static herr_t 
 H5PB__insert_entry(H5PB_t *page_buf, H5PB_entry_t *page_entry)
 {
@@ -1161,12 +1187,34 @@ H5PB__insert_entry(H5PB_t *page_buf, H5PB_entry_t *page_entry)
     else
         page_buf->meta_count ++;
 
-    /* insert entry in LRU, evict others if necessary */
+    /* insert entry in LRU */
     H5PB__INSERT_LRU(page_buf, page_entry)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5PB__insert_entry */
 
+
+/*-------------------------------------------------------------------------
+ * Function:	H5PB__make_space()
+ *
+ * Purpose: ??? 
+ *
+ *          This function was created without documentation.
+ *          What follows is my best understanding of Mohamad's intent.
+ *
+ *          If necessary and if possible, evict a page from the page 
+ *          buffer to make space for the supplied page.  Depending on 
+ *	    the page buffer configuration and contents, and the page 
+ *          supplied this may or may not be possible.
+ *
+ *                                             JRM -- 12/22/16
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Mohamad Chaarawi
+ *
+ *-------------------------------------------------------------------------
+ */
 static htri_t 
 H5PB__make_space(const H5F_t *f, H5PB_t *page_buf, H5P_genplist_t *dxpl, H5FD_mem_t inserted_type)
 {
@@ -1243,6 +1291,22 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5PB__make_space */
 
+
+/*-------------------------------------------------------------------------
+ * Function:	H5PB__write_entry()
+ *
+ * Purpose: ??? 
+ *
+ *          This function was created without documentation.
+ *          What follows is my best understanding of Mohamad's intent.
+ *
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Mohamad Chaarawi
+ *
+ *-------------------------------------------------------------------------
+ */
 static herr_t
 H5PB__write_entry(const H5F_t *f, H5PB_entry_t *page_entry, H5P_genplist_t *dxpl)
 {
@@ -1292,6 +1356,22 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5PB__write_entry */
 
+
+/*-------------------------------------------------------------------------
+ * Function:	H5PB_print_stats()
+ *
+ * Purpose: ??? 
+ *
+ *          This function was created without documentation.
+ *          What follows is my best understanding of Mohamad's intent.
+ *
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Mohamad Chaarawi
+ *
+ *-------------------------------------------------------------------------
+ */
 #if H5PB_COLLECT_STATS
 herr_t
 H5PB_print_stats(const H5PB_t *page_buf)
@@ -1324,7 +1404,25 @@ H5PB_print_stats(const H5PB_t *page_buf)
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5PB_print_stats */
+#endif /* H5PB_COLLECT_STATS */
 
+
+/*-------------------------------------------------------------------------
+ * Function:	H5PB_reset_stats()
+ *
+ * Purpose: ??? 
+ *
+ *          This function was created without documentation.
+ *          What follows is my best understanding of Mohamad's intent.
+ *
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Mohamad Chaarawi
+ *
+ *-------------------------------------------------------------------------
+ */
+#if H5PB_COLLECT_STATS
 herr_t
 H5PB_reset_stats(H5PB_t *page_buf)
 {
