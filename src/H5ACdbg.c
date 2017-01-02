@@ -417,6 +417,35 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5AC_get_serialization_in_progress
+ *
+ * Purpose:     Return the current value of 
+ *              cache_ptr->serialization_in_progress.
+ *
+ * Return:      Current value of cache_ptr->serialization_in_progress.
+ *
+ * Programmer:  John Mainzer
+ *              8/24/15
+ *
+ *-------------------------------------------------------------------------
+ */
+#ifndef NDEBUG
+hbool_t
+H5AC_get_serialization_in_progress(H5F_t *f)
+{
+    hbool_t ret_value = FALSE;      /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    /* Set return value */
+    ret_value = H5C_get_serialization_in_progress(f);
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5AC_get_serialization_in_progress() */
+#endif /* NDEBUG */
+
+
+/*-------------------------------------------------------------------------
  *
  * Function:    H5AC_cache_is_clean()
  *

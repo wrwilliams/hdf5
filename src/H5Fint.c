@@ -1469,7 +1469,6 @@ H5F__flush_phase1(H5F_t *f, hid_t dxpl_id)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file space")
 
-done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F__flush_phase1() */
 
@@ -1505,6 +1504,7 @@ H5F__flush_phase2(H5F_t *f, hid_t dxpl_id, hbool_t closing)
 
     /* Truncate the file to the current allocated size */
     if(H5FD_truncate(f->shared->lf, dxpl_id, closing) < 0)
+        /* Push error, but keep going*/
         HDONE_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "low level truncate failed")
 
     /* Flush the entire metadata cache again since the EOA could have changed in the truncate call. */
@@ -1515,6 +1515,7 @@ H5F__flush_phase2(H5F_t *f, hid_t dxpl_id, hbool_t closing)
     /* Set up I/O info for operation */
     fio_info.f = f;
     if(NULL == (fio_info.dxpl = (H5P_genplist_t *)H5I_object(dxpl_id)))
+        /* Push error, but keep going*/
         HDONE_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
 
     /* Flush out the metadata accumulator */
@@ -1527,7 +1528,6 @@ H5F__flush_phase2(H5F_t *f, hid_t dxpl_id, hbool_t closing)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "low level flush failed")
 
-done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F__flush_phase2() */
 

@@ -2249,7 +2249,6 @@ H5_DLL herr_t H5C_get_cache_auto_resize_config(const H5C_t *cache_ptr,
     H5C_auto_size_ctl_t *config_ptr);
 H5_DLL herr_t H5C_get_cache_image_config(const H5C_t * cache_ptr,
     H5C_cache_image_ctl_t *config_ptr);
-H5_DLL hbool_t H5C_get_serialization_in_progress(H5F_t * f);
 H5_DLL herr_t H5C_get_cache_size(H5C_t *cache_ptr, size_t *max_size_ptr,
     size_t *min_clean_size_ptr, size_t *cur_size_ptr,
     int32_t *cur_num_entries_ptr);
@@ -2320,6 +2319,7 @@ H5_DLL herr_t H5C_mark_entries_as_clean(H5F_t *f, hid_t dxpl_id, int32_t ce_arra
 #endif /* H5_HAVE_PARALLEL */
 
 #ifndef NDEBUG	/* debugging functions */
+H5_DLL hbool_t H5C_get_serialization_in_progress(H5F_t *f);
 H5_DLL hbool_t H5C_cache_is_clean(const H5C_t *cache_ptr, H5C_ring_t inner_ring);
 H5_DLL herr_t H5C_get_entry_ptr_from_addr(H5C_t *cache_ptr, haddr_t addr,
     void **entry_ptr_ptr);
@@ -2328,7 +2328,7 @@ H5_DLL herr_t H5C_flush_dependency_exists(H5C_t *cache_ptr, haddr_t parent_addr,
 H5_DLL herr_t H5C_verify_entry_type(H5C_t *cache_ptr, haddr_t addr,
     const H5C_class_t *expected_type, hbool_t *in_cache_ptr,
     hbool_t *type_ok_ptr);
-H5_DLL herr_t H5C_validate_index_list(H5C_t * cache_ptr);
+H5_DLL herr_t H5C_validate_index_list(H5C_t *cache_ptr);
 #endif /* NDEBUG */
 
 #endif /* !_H5Cprivate_H */

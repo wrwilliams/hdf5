@@ -919,41 +919,6 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5C_get_serialization_in_progress
- *
- * Purpose:     Return the current value of 
- *              cache_ptr->serialization_in_progress.
- *
- * Return:      Current value of cache_ptr->serialization_in_progress.
- *
- * Programmer:  John Mainzer
- *		8/24/15
- *
- *-------------------------------------------------------------------------
- */
-hbool_t
-H5C_get_serialization_in_progress(H5F_t *f)
-{
-    H5C_t * cache_ptr;
-    hbool_t ret_value;          /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
-
-    /* Sanity check */
-    HDassert(f);
-    HDassert(f->shared);
-    cache_ptr = f->shared->cache;
-    HDassert(cache_ptr);
-    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
-
-    /* Set return value */
-    ret_value = cache_ptr->serialization_in_progress;
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5C_get_serialization_in_progress() */
-
-
-/*-------------------------------------------------------------------------
  * Function:    H5C_image_stats
  *
  * Purpose:     Prints statistics specific to the cache image.

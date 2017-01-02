@@ -383,7 +383,6 @@ H5_DLL herr_t H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr,
     H5AC_cache_image_config_t * image_config_ptr);
 H5_DLL herr_t H5AC_get_entry_status(const H5F_t *f, haddr_t addr,
     unsigned *status_ptr);
-H5_DLL hbool_t H5AC_get_serialization_in_progress(H5F_t * f);
 H5_DLL herr_t H5AC_insert_entry(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
     haddr_t addr, void *thing, unsigned int flags);
 H5_DLL herr_t H5AC_pin_protected_entry(void *thing);
@@ -461,12 +460,13 @@ H5_DLL herr_t H5AC_stats(const H5F_t *f);
 H5_DLL herr_t H5AC_dump_cache(const H5F_t *f);
 #ifndef NDEBUG
 H5_DLL herr_t H5AC_get_entry_ptr_from_addr(const H5F_t *f, haddr_t addr,
-    void ** entry_ptr_ptr);
+    void **entry_ptr_ptr);
 H5_DLL herr_t H5AC_flush_dependency_exists(H5F_t *f, haddr_t parent_addr, 
     haddr_t child_addr, hbool_t *fd_exists_ptr);
-H5_DLL herr_t H5AC_verify_entry_type(const H5F_t * f, haddr_t addr,
-    const H5AC_class_t * expected_type, hbool_t * in_cache_ptr,
-    hbool_t * type_ok_ptr);
+H5_DLL herr_t H5AC_verify_entry_type(const H5F_t *f, haddr_t addr,
+    const H5AC_class_t *expected_type, hbool_t *in_cache_ptr,
+    hbool_t *type_ok_ptr);
+H5_DLL hbool_t H5AC_get_serialization_in_progress(H5F_t *f);
 H5_DLL hbool_t H5AC_cache_is_clean(const H5F_t *f, H5AC_ring_t inner_ring);
 #endif /* NDEBUG */ /* end debugging functions */
 
