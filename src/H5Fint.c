@@ -76,6 +76,8 @@ typedef struct H5F_olist_t {
 static int H5F_get_objects_cb(void *obj_ptr, hid_t obj_id, void *key);
 static herr_t H5F_build_actual_name(const H5F_t *f, const H5P_genplist_t *fapl,
     const char *name, char ** /*out*/ actual_name);/* Declare a free list to manage the H5F_t struct */
+static herr_t H5F__flush_phase1(H5F_t *f, hid_t dxpl_id);
+static herr_t H5F__flush_phase2(H5F_t *f, hid_t dxpl_id, hbool_t closing);
 
 
 /*********************/
@@ -824,27 +826,31 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
         int actype;                         /* metadata cache type (enum value) */
         H5F_io_info_t fio_info;             /* I/O info for operation */
 
-        /* Flush at this point since the file will be closed.
+        /* Flush at this point since the file will be closed (phase 1).
          * Only try to flush the file if it was opened with write access, and if
          * the caller requested a flush.
          */
-        if((H5F_ACC_RDWR & H5F_INTENT(f)) && flush) {
-            if(H5F_flush(f, dxpl_id, TRUE) < 0)
+        if((H5F_ACC_RDWR & H5F_INTENT(f)) && flush)
+            if(H5F__flush_phase1(f, dxpl_id) < 0)
                 /* Push error, but keep going*/
                 HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
-        } /* end if */
-        else {
-            /* notify the metadata cache that the file is about to be closed.
-             * This allows the cache to set up for creating a metadata cache 
-             * image if this has been requested.
-             *
-             * must do this here, as this will not be done otherwise in the
-             * read only case.
-             */
-            if(H5AC_prep_for_file_close(f, dxpl_id) < 0)
-                /* Push error, but keep going */
-                HDONE_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "metadata cache prep for close failed")
-        } /* end else */
+
+        /* Notify the metadata cache that the file is about to be closed.
+         * This allows the cache to set up for creating a metadata cache 
+         * image if this has been requested.
+         */
+        if(H5AC_prep_for_file_close(f, dxpl_id) < 0)
+            /* Push error, but keep going */
+            HDONE_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "metadata cache prep for close failed")
+
+        /* Flush at this point since the file will be closed (phase 2).
+         * Only try to flush the file if it was opened with write access, and if
+         * the caller requested a flush.
+         */
+        if((H5F_ACC_RDWR & H5F_INTENT(f)) && flush)
+            if(H5F__flush_phase2(f, dxpl_id, TRUE) < 0)
+                /* Push error, but keep going*/
+                HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
 
         /* With the shutdown modifications, the contents of the metadata cache
          * should be clean at this point, with the possible exception of the 
@@ -1426,25 +1432,24 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5F_flush
+ * Function:	H5F_flush_phase1
  *
- * Purpose:	Flushes cached data.
+ * Purpose:	First phase of flushing cached data.
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Robb Matzke
- *		matzke@llnl.gov
- *		Aug 29 1997
+ * Programmer:	Quincey Koziol
+ *		koziol@lbl.gov
+ *		Jan  1 2017
  *
  *-------------------------------------------------------------------------
  */
-herr_t
-H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
+static herr_t
+H5F__flush_phase1(H5F_t *f, hid_t dxpl_id)
 {
-    H5F_io_info_t fio_info;             /* I/O info for operation */
     herr_t   ret_value = SUCCEED;       /* Return value */
 
-    FUNC_ENTER_NOAPI(FAIL)
+    FUNC_ENTER_STATIC
 
     /* Sanity check arguments */
     HDassert(f);
@@ -1464,19 +1469,34 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file space")
 
-#if 1 /* new home for H5AC_prep_for_file_close */ /* JRM */
-    if ( closing ) {
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5F__flush_phase1() */
 
-        /* notify the metadata cache that the file is about to be closed.
-         * This allows the cache to set up for creating a metadata cache
-         * image if this has been requested.
-         */
-        if(H5AC_prep_for_file_close(f, dxpl_id) < 0)
-            /* Push error, but keep going*/
-            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "metadata cache prep for close failed")
+
+/*-------------------------------------------------------------------------
+ * Function:	H5F__flush_phase2
+ *
+ * Purpose:	Second phase of flushing cached data.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *		koziol@lbl.gov
+ *		Jan  1 2017
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5F__flush_phase2(H5F_t *f, hid_t dxpl_id, hbool_t closing)
+{
+    H5F_io_info_t fio_info;             /* I/O info for operation */
+    herr_t   ret_value = SUCCEED;       /* Return value */
 
-    }
-#endif /* new home for H5AC_prep_for_file_close */ /* JRM */
+    FUNC_ENTER_STATIC
+
+    /* Sanity check arguments */
+    HDassert(f);
 
     /* Flush the entire metadata cache */
     if(H5AC_flush(f, dxpl_id) < 0)
@@ -1506,6 +1526,44 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
     if(H5FD_flush(f->shared->lf, dxpl_id, closing) < 0)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "low level flush failed")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5F__flush_phase2() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5F_flush
+ *
+ * Purpose:	Flushes cached data.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *		matzke@llnl.gov
+ *		Aug 29 1997
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
+{
+    herr_t   ret_value = SUCCEED;       /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity check arguments */
+    HDassert(f);
+
+    /* First phase of flushing data */
+    if(H5F__flush_phase1(f, dxpl_id) < 0)
+        /* Push error, but keep going*/
+        HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush file data")
+
+    /* Second phase of flushing data */
+    if(H5F__flush_phase2(f, dxpl_id, closing) < 0)
+        /* Push error, but keep going*/
+        HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush file data")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

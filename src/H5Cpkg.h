@@ -660,7 +660,8 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
             ((cache_ptr)->cache_flush_moves[(entry_ptr)->type->id])++; \
         if ( entry_ptr->flush_in_progress )                            \
             ((cache_ptr)->entry_flush_moves[(entry_ptr)->type->id])++; \
-	(((cache_ptr)->moves)[(entry_ptr)->type->id])++;
+	(((cache_ptr)->moves)[(entry_ptr)->type->id])++;               \
+        (cache_ptr)->entries_relocated_counter++;
 
 #define H5C__UPDATE_STATS_FOR_ENTRY_SIZE_CHANGE(cache_ptr, entry_ptr, new_size)\
 	if ( cache_ptr->flush_in_progress )                                    \
@@ -811,6 +812,7 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
             ((cache_ptr)->max_size)[(entry_ptr)->type->id] )         \
         ((cache_ptr)->max_size)[(entry_ptr)->type->id]               \
              = (entry_ptr)->size;                                    \
+    cache_ptr->entries_inserted_counter++;                           \
 }
 
 #define H5C__UPDATE_STATS_FOR_PROTECT(cache_ptr, entry_ptr, hit)            \
@@ -895,6 +897,7 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
         (cache_ptr)->max_slist_len = (cache_ptr)->slist_len;         \
     if ( (cache_ptr)->slist_size > (cache_ptr)->max_slist_size )     \
         (cache_ptr)->max_slist_size = (cache_ptr)->slist_size;       \
+    cache_ptr->entries_inserted_counter++;                           \
 }
 
 #define H5C__UPDATE_STATS_FOR_PROTECT(cache_ptr, entry_ptr, hit)            \
@@ -4925,7 +4928,8 @@ H5_DLLVAR const H5FD_mem_t H5C__class_mem_types[];
 /******************************/
 /* Package Private Prototypes */
 /******************************/
-H5_DLL herr_t H5C_construct_cache_image_buffer(H5F_t * f, H5C_t * cache_ptr);
+H5_DLL herr_t H5C_construct_cache_image_buffer(H5F_t *f, H5C_t *cache_ptr);
+H5_DLL herr_t H5C__prep_image_for_file_close(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5C_deserialize_prefetched_entry(H5F_t * f, hid_t dxpl_id,
     H5C_t * cache_ptr, H5C_cache_entry_t** entry_ptr_ptr, 
     const H5C_class_t * type, haddr_t addr, void * udata);

@@ -1540,7 +1540,7 @@ H5AC_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5C_prep_for_file_close() */
+} /* H5AC_prep_for_file_close() */
 
 
 /*-------------------------------------------------------------------------
