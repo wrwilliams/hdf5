@@ -1340,8 +1340,6 @@ H5MF_settle_raw_data_fsm(H5F_t *f, hid_t dxpl_id, hbool_t *fsm_settled)
     /* check args */
     HDassert(f);
     HDassert(f->shared);
-    HDassert(f->shared->lf);
-    HDassert(f->shared->sblock);
     HDassert(fsm_settled);
 
     /* Only need to settle things if we are persisting the free space info */
@@ -1746,7 +1744,6 @@ H5MF_settle_meta_data_fsm(H5F_t *f, hid_t dxpl_id, hbool_t *fsm_settled)
     /* Check args */
     HDassert(f);
     HDassert(f->shared);
-    HDassert(f->shared->lf);
     HDassert(fsm_settled);
 
     /* Only need to settle things if we are persisting the free space info */
