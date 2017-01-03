@@ -1931,6 +1931,7 @@ done:
  *             Monday, September 21, 2015
  *-------------------------------------------------------------------------
  */
+herr_t
 H5Fset_latest_format(hid_t file_id, hbool_t latest_format)
 {
     H5F_t *f;                           /* File */

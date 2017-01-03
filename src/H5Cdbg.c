@@ -1281,17 +1281,13 @@ done:
  */
 #ifndef NDEBUG
 hbool_t
-H5C_get_serialization_in_progress(H5F_t *f)
+H5C_get_serialization_in_progress(H5C_t *cache_ptr)
 {
-    H5C_t * cache_ptr;
     hbool_t ret_value;          /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Sanity check */
-    HDassert(f);
-    HDassert(f->shared);
-    cache_ptr = f->shared->cache;
     HDassert(cache_ptr);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
 

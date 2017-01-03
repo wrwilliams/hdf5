@@ -433,12 +433,18 @@ done:
 hbool_t
 H5AC_get_serialization_in_progress(H5F_t *f)
 {
+    H5C_t * cache_ptr;
     hbool_t ret_value = FALSE;      /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
+    /* Sanity check */
+    HDassert(f);
+    HDassert(f->shared);
+    cache_ptr = f->shared->cache;
+
     /* Set return value */
-    ret_value = H5C_get_serialization_in_progress(f);
+    ret_value = H5C_get_serialization_in_progress(cache_ptr);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC_get_serialization_in_progress() */

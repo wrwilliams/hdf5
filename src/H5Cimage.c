@@ -117,10 +117,10 @@ static herr_t H5C_reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id,
     H5C_t *cache_ptr);
 static H5C_cache_entry_t * H5C_reconstruct_cache_entry(H5C_t *cache_ptr, 
     int i);
-static herr_t H5C_serialize_cache(H5F_t *f, hid_t dxpl_id);
-static herr_t H5C_serialize_ring(const H5F_t *f, hid_t dxpl_id, 
+static herr_t H5C__serialize_cache(H5F_t *f, hid_t dxpl_id);
+static herr_t H5C__serialize_ring(H5F_t *f, hid_t dxpl_id, 
     H5C_ring_t ring);
-static herr_t H5C_serialize_single_entry(const H5F_t *f, hid_t dxpl_id, 
+static herr_t H5C__serialize_single_entry(H5F_t *f, hid_t dxpl_id, 
     H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, 
     hbool_t *restart_list_scan_ptr);
 static herr_t H5C__write_cache_image_superblock_msg(H5F_t *f, hid_t dxpl_id, 
@@ -1277,7 +1277,7 @@ H5C__prep_image_for_file_close(H5F_t *f, hid_t dxpl_id)
             HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "creation of cache image SB mesg failed.")
 
     /* serialize the cache */
-    if(H5C_serialize_cache(f, dxpl_id) < 0)
+    if(H5C__serialize_cache(f, dxpl_id) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "serialization of the cache failed")
 
     /* Scan the cache and record data needed to construct the 
@@ -3876,7 +3876,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5C_serialize_cache
+ * Function:    H5C__serialize_cache
  *
  * Purpose:	Serialize (i.e. construct an on disk image) for all entries 
  *		in the metadata cache including clean entries.  
@@ -3914,7 +3914,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5C_serialize_cache(H5F_t *f, hid_t dxpl_id)
+H5C__serialize_cache(H5F_t *f, hid_t dxpl_id)
 {
 #if H5C_DO_SANITY_CHECKS
     int                 i;
@@ -3929,8 +3929,9 @@ H5C_serialize_cache(H5F_t *f, hid_t dxpl_id)
     H5C_t             * cache_ptr;
     herr_t              ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI(FAIL)
+    FUNC_ENTER_STATIC
 
+    /* Sanity checks */
     HDassert(f);
     HDassert(f->shared);
     cache_ptr = f->shared->cache;
@@ -4009,38 +4010,38 @@ H5C_serialize_cache(H5F_t *f, hid_t dxpl_id)
      * working inward.
      */
     ring = H5C_RING_USER;
-
-    while ( ring < H5C_RING_NTYPES ) {
-
+    while(ring < H5C_RING_NTYPES) {
 	HDassert(cache_ptr->close_warning_received);
-
         switch(ring) {
-
             case H5C_RING_USER:
                 break;
 
             case H5C_RING_RDFSM:
-                if ( ( f->shared->fs_strategy == H5F_FILE_SPACE_ALL_PERSIST ) &&
-                     ( ! cache_ptr->rdfsm_settled ) ) {
+                if(!cache_ptr->rdfsm_settled) {
+                    hbool_t fsm_settled = FALSE;        /* Whether the FSM was actually settled */
 
-                    if ( H5MF_settle_raw_data_fsm(f, dxpl_id) < 0 )
-                        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                                    "RD FSM settle failed.")
+                    /* Settle raw data FSM */
+                    if(H5MF_settle_raw_data_fsm(f, dxpl_id, &fsm_settled) < 0)
+                        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "RD FSM settle failed")
 
-                    cache_ptr->rdfsm_settled = TRUE;
-                }
+                    /* Only set the flag if the FSM was actually settled */
+                    if(fsm_settled)
+                        cache_ptr->rdfsm_settled = TRUE;
+                } /* end if */
                 break;
 
             case H5C_RING_MDFSM:
-                if ( ( f->shared->fs_strategy == H5F_FILE_SPACE_ALL_PERSIST ) &&
-                     ( ! cache_ptr->mdfsm_settled ) ) {
+                if(!cache_ptr->mdfsm_settled) {
+                    hbool_t fsm_settled = FALSE;        /* Whether the FSM was actually settled */
 
-                    if ( H5MF_settle_meta_data_fsm(f, dxpl_id) < 0 )
-                        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                                    "MD FSM settle failed.")
+                    /* Settle metadata FSM */
+                    if(H5MF_settle_meta_data_fsm(f, dxpl_id, &fsm_settled) < 0)
+                        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "MD FSM settle failed")
 
-                    cache_ptr->mdfsm_settled = TRUE;
-                }
+                    /* Only set the flag if the FSM was actually settled */
+                    if(fsm_settled)
+                        cache_ptr->mdfsm_settled = TRUE;
+                } /* end if */
                 break;
 
             case H5C_RING_SBE:
@@ -4052,15 +4053,12 @@ H5C_serialize_cache(H5F_t *f, hid_t dxpl_id)
             default:
                 HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Unknown ring?!?!")
                 break;
-        }
+        } /* end switch */
 
-        if ( H5C_serialize_ring(f, dxpl_id, ring) < 0)
-
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                            "serialize ring failed.")
+        if(H5C__serialize_ring(f, dxpl_id, ring) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "serialize ring failed")
 
         ring++;
-
     } /* end while */
 
 #ifndef NDEBUG
@@ -4089,11 +4087,11 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 
-} /* H5C_serialize_cache() */
+} /* H5C__serialize_cache() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5C_serialize_ring
+ * Function:    H5C__serialize_ring
  *
  * Purpose:     Serialize the entries contained in the specified cache and
  *              ring.  All entries in rings outside the specified ring
@@ -4128,10 +4126,8 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
-H5C_serialize_ring(const H5F_t * f,
-                   hid_t    dxpl_id,
-                   H5C_ring_t ring)
+static herr_t
+H5C__serialize_ring(H5F_t *f, hid_t    dxpl_id, H5C_ring_t ring)
 {
     hbool_t		done = FALSE;
     hbool_t		restart_list_scan = FALSE;
@@ -4139,14 +4135,12 @@ H5C_serialize_ring(const H5F_t * f,
     H5C_cache_entry_t * entry_ptr;
     herr_t              ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI(FAIL)
+    FUNC_ENTER_STATIC
 
-    /* sanity checks */
+    /* Sanity checks */
     HDassert(f);
     HDassert(f->shared);
-
     cache_ptr = f->shared->cache;
-
     HDassert(cache_ptr);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
     HDassert(ring > H5C_RING_UNDEFINED);
@@ -4266,12 +4260,8 @@ H5C_serialize_ring(const H5F_t * f,
 		    HDassert(entry_ptr->serialization_count == 0);
 
 		    /* serialize the entry */
-		    if ( H5C_serialize_single_entry(f, dxpl_id, 
-                                                    cache_ptr, entry_ptr,
-                                                    &restart_list_scan) < 0 )
-
-            	        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-				    "entry serialization failed.");
+		    if(H5C__serialize_single_entry(f, dxpl_id, cache_ptr, entry_ptr, &restart_list_scan) < 0)
+            	        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "entry serialization failed")
 
                     HDassert(entry_ptr->flush_dep_nunser_children == 0);
 		    HDassert(entry_ptr->serialization_count == 0);
@@ -4329,18 +4319,10 @@ H5C_serialize_ring(const H5F_t * f,
                     HDassert(entry_ptr->flush_dep_nunser_children == 0);
 
 	            /* serialize the entry */
-	            if ( H5C_serialize_single_entry(f, dxpl_id,  cache_ptr, 
-					            entry_ptr, 
-                                                    &restart_list_scan) < 0 ) {
-
-		        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-			            "entry serialization failed.");
-
-		    } else if ( restart_list_scan ) {
-
-		        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-			"flush_me_last entry serialization triggered restart.");
-		    }
+	            if(H5C__serialize_single_entry(f, dxpl_id,  cache_ptr, entry_ptr, &restart_list_scan) < 0)
+		        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "entry serialization failed")
+		    else if(restart_list_scan)
+		        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "flush_me_last entry serialization triggered restart")
 
                     HDassert(entry_ptr->flush_dep_nunser_children == 0);
 		    HDassert(entry_ptr->serialization_count == 0);
@@ -4368,12 +4350,12 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 
-} /* H5C_serialize_ring() */
+} /* H5C__serialize_ring() */
 
 
 /*-------------------------------------------------------------------------
  *
- * Function:    H5C_serialize_single_entry
+ * Function:    H5C__serialize_single_entry
  *
  * Purpose:     Serialize the cache entry pointed to by the entry_ptr 
  *		parameter.
@@ -4391,13 +4373,9 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-
-herr_t
-H5C_serialize_single_entry(const H5F_t *f, 
-                           hid_t dxpl_id, 
-		           H5C_t *cache_ptr,
-                           H5C_cache_entry_t *entry_ptr,
-                           hbool_t *restart_list_scan_ptr)
+static herr_t
+H5C__serialize_single_entry(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr,
+    H5C_cache_entry_t *entry_ptr, hbool_t *restart_list_scan_ptr)
 {
     hbool_t		was_dirty;
     unsigned 		serialize_flags = H5C__SERIALIZE_NO_FLAGS_SET;
@@ -4408,7 +4386,7 @@ H5C_serialize_single_entry(const H5F_t *f,
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    /* sanity checks */
+    /* Sanity checks */
     HDassert(f);
     HDassert(cache_ptr);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
@@ -4466,14 +4444,9 @@ H5C_serialize_single_entry(const H5F_t *f,
     cache_ptr->entries_relocated_counter      = 0;
 
     /* Call client's pre-serialize callback, if there's one */
-    if ( ( entry_ptr->type->pre_serialize != NULL ) && 
-         ( (entry_ptr->type->pre_serialize)(f, dxpl_id, 
-                                            (void *)entry_ptr,
-                                            entry_ptr->addr, 
-                                            entry_ptr->size,
-                                            &new_addr, &new_len, 
-                                            &serialize_flags) < 0 ) )
-
+    if((entry_ptr->type->pre_serialize != NULL) && 
+             ((entry_ptr->type->pre_serialize)(f, dxpl_id, (void *)entry_ptr,
+                entry_ptr->addr, entry_ptr->size, &new_addr, &new_len, &serialize_flags) < 0))
         HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to pre-serialize entry")
 
      /* Check for any flags set in the pre-serialize callback */
@@ -4683,7 +4656,7 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 
-} /* H5C_serialize_single_entry() */
+} /* H5C__serialize_single_entry() */
 
 
 /*-------------------------------------------------------------------------

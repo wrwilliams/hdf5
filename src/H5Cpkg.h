@@ -4340,8 +4340,8 @@ typedef struct H5C_tag_info_t {
  * page buffering, this is no longer viable, as we must finalize the on 
  * disk image of all metadata much sooner.
  *
- * This is handled by the H5MF_settle_raw_data_fsm() and 
- * H5MF_settle_meta_data_FSM() routines.  As these calls are expensive,
+ * This is handled by the H5FS_settle_raw_data_fsm() and 
+ * H5FS_settle_meta_data_fsm() routines.  As these calls are expensive,
  * the following fields are used to track whether the target free space
  * managers are clean.  
  *
@@ -4935,7 +4935,7 @@ H5_DLL herr_t H5C_deserialize_prefetched_entry(H5F_t * f, hid_t dxpl_id,
     const H5C_class_t * type, haddr_t addr, void * udata);
 
 /* General routines */
-H5_DLL herr_t H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id,
+H5_DLL herr_t H5C__flush_single_entry(H5F_t *f, hid_t dxpl_id,
     H5C_cache_entry_t *entry_ptr, unsigned flags);
 H5_DLL herr_t H5C_free_image_entries_array(H5C_t * cache_ptr);
 H5_DLL herr_t H5C_load_cache_image(H5F_t *f, hid_t dxpl_id);

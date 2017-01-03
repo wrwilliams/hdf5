@@ -164,7 +164,7 @@ static herr_t H5C__mark_flush_dep_clean(H5C_cache_entry_t * entry);
 static herr_t H5C__verify_len_eoa(H5F_t *f, const H5C_class_t * type,
     haddr_t addr, size_t *len, hbool_t actual);
 
-static herr_t H5C__generate_image(const H5F_t *f, H5C_t * cache_ptr, H5C_cache_entry_t *entry_ptr, 
+static herr_t H5C__generate_image(H5F_t *f, H5C_t * cache_ptr, H5C_cache_entry_t *entry_ptr, 
                                   hid_t dxpl_id);
 
 #if H5C_DO_SLIST_SANITY_CHECKS
@@ -1158,9 +1158,6 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 	    /* only call the free space manager settle routines when close
              * warning has been received, and then only when the index is 
              * non-empty for that ring.
-             *
-             * Observe that the FSM rings should only be populated if 
-             * persistant free space managers are enabled.
              */
 	    if(cache_ptr->close_warning_received) {
 		switch(ring) {
@@ -1168,30 +1165,30 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 			break;
 
 		    case H5C_RING_RDFSM:
-			/* if the cache is clean through the FSM rings,
-                         * then the FSMs are clean and can't change -- 
-                         * no need to run the settle routine.
-                         */
-			if((f->shared->fs_strategy == H5F_FILE_SPACE_ALL_PERSIST)
-                                && (!cache_ptr->rdfsm_settled)) {
-			    if(H5MF_settle_raw_data_fsm(f, dxpl_id) < 0)
+			if(!cache_ptr->rdfsm_settled) {
+                            hbool_t fsm_settled = FALSE;        /* Whether the FSM was actually settled */
+
+                            /* Settle raw data FSM */
+			    if(H5MF_settle_raw_data_fsm(f, dxpl_id, &fsm_settled) < 0)
                                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "RD FSM settle failed")
 
-			    cache_ptr->rdfsm_settled = TRUE;
+                            /* Only set the flag if the FSM was actually settled */
+                            if(fsm_settled)
+                                cache_ptr->rdfsm_settled = TRUE;
                         } /* end if */
 			break;
 
 		    case H5C_RING_MDFSM:
-			/* if the cache is clean through the FSM rings,
-                         * then the FSMs are clean and can't change -- 
-                         * no need to run the settle routine.
-                         */
-			if((f->shared->fs_strategy == H5F_FILE_SPACE_ALL_PERSIST)
-                                && (!cache_ptr->mdfsm_settled)) {
-			    if(H5MF_settle_meta_data_fsm(f, dxpl_id) < 0)
+			if(!cache_ptr->mdfsm_settled) {
+                            hbool_t fsm_settled = FALSE;        /* Whether the FSM was actually settled */
+
+                            /* Settle metadata FSM */
+			    if(H5MF_settle_meta_data_fsm(f, dxpl_id, &fsm_settled) < 0)
                                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "MD FSM settle failed")
 
-			    cache_ptr->mdfsm_settled = TRUE;
+                            /* Only set the flag if the FSM was actually settled */
+                            if(fsm_settled)
+                                cache_ptr->mdfsm_settled = TRUE;
                         } /* end if */
 			break;
 
@@ -6398,7 +6395,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_ptr,
+H5C__flush_single_entry(H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_ptr,
     unsigned flags)
 {
     H5C_t *	     	cache_ptr;              /* Cache for file */
@@ -8452,7 +8449,7 @@ H5C__assert_flush_dep_nocycle(const H5C_cache_entry_t * entry,
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, 
+H5C__generate_image(H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, 
     hid_t dxpl_id)
 {
     haddr_t		new_addr = HADDR_UNDEF;

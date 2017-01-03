@@ -572,7 +572,7 @@ typedef struct H5C_t H5C_t;
  *
  *	The typedef for the pre-serialize callback is as follows:
  *
- *	typedef herr_t (*H5C_pre_serialize_func_t)(const H5F_t *f,
+ *	typedef herr_t (*H5C_pre_serialize_func_t)(H5F_t *f,
  *                                             hid_t dxpl_id,
  *                                             void * thing,
  *                                             haddr_t addr,
@@ -893,7 +893,7 @@ typedef htri_t (*H5C_verify_chksum_func_t)(const void *image_ptr, size_t len, vo
 typedef void *(*H5C_deserialize_func_t)(const void *image_ptr,
     size_t len, void *udata_ptr, hbool_t *dirty_ptr);
 typedef herr_t (*H5C_image_len_func_t)(const void *thing, size_t *image_len_ptr);
-typedef herr_t (*H5C_pre_serialize_func_t)(const H5F_t *f, hid_t dxpl_id,
+typedef herr_t (*H5C_pre_serialize_func_t)(H5F_t *f, hid_t dxpl_id,
     void *thing, haddr_t addr, size_t len, haddr_t *new_addr_ptr,
     size_t *new_len_ptr, unsigned *flags_ptr);
 typedef herr_t (*H5C_serialize_func_t)(const H5F_t *f, void *image_ptr,
@@ -2319,7 +2319,7 @@ H5_DLL herr_t H5C_mark_entries_as_clean(H5F_t *f, hid_t dxpl_id, int32_t ce_arra
 #endif /* H5_HAVE_PARALLEL */
 
 #ifndef NDEBUG	/* debugging functions */
-H5_DLL hbool_t H5C_get_serialization_in_progress(H5F_t *f);
+H5_DLL hbool_t H5C_get_serialization_in_progress(H5C_t *cache_ptr);
 H5_DLL hbool_t H5C_cache_is_clean(const H5C_t *cache_ptr, H5C_ring_t inner_ring);
 H5_DLL herr_t H5C_get_entry_ptr_from_addr(H5C_t *cache_ptr, haddr_t addr,
     void **entry_ptr_ptr);
