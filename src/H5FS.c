@@ -27,7 +27,6 @@
 /* Module Setup */
 /****************/
 
-#define H5F_FRIEND		/*suppress error about including H5Fpkg	  */
 #include "H5FSmodule.h"         /* This source code file is part of the H5FS module */
 
 
@@ -37,7 +36,6 @@
 #include "H5private.h"      /* Generic Functions                        */
 #include "H5ACprivate.h"    /* Metadata cache                           */
 #include "H5Eprivate.h"     /* Error handling                           */
-#include "H5Fpkg.h"         /* File access				*/
 #include "H5FSpkg.h"        /* File free space                          */
 #include "H5MFprivate.h"    /* File memory management                   */
 

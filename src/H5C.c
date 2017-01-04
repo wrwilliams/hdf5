@@ -138,12 +138,10 @@ static herr_t H5C__autoadjust__ageout__remove_excess_markers(H5C_t * cache_ptr);
 static herr_t H5C__flash_increase_cache_size(H5C_t * cache_ptr,
     size_t old_entry_size, size_t new_entry_size);
 
-static herr_t H5C_flush_invalidate_cache(const H5F_t *  f,
-                                          hid_t    dxpl_id,
-			                  unsigned flags);
+static herr_t H5C_flush_invalidate_cache(H5F_t *f, hid_t dxpl_id, unsigned flags);
 
-static herr_t H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id,
-    H5C_ring_t ring, unsigned flags);
+static herr_t H5C_flush_invalidate_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
+    unsigned flags);
 
 static herr_t H5C_flush_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
     unsigned flags);
@@ -3658,59 +3656,68 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5C_unsettle_ring()
  *
- * Purpose:	Advise the metadata cache that the specified free space 
- *		manager ring is no longer settled (if it was on entry).
+ * Function:    H5C_unsettle_entry_ring
  *
- *		If the target free space manager ring is already 
- *		unsettled, do nothing, and return SUCCEED.
+ * Purpose:     Advise the metadata cache that the specified entry's metadata
+ *              cache manager ring is no longer settled (if it was on entry).
  *
- *		If the target free space manager ring is settled, and
- *		we are not in the process of a file shutdown, mark 
- *		the ring as unsettled, and return SUCCEED.
+ *              If the target metadata cache manager ring is already
+ *              unsettled, do nothing, and return SUCCEED.
  *
- *		If the target free space manager is settled, and we 
- *		are in the process of a file shutdown, post an error
- *		message, and return FAIL.
+ *              If the target metadata cache manager ring is settled, and
+ *              we are not in the process of a file shutdown, mark
+ *              the ring as unsettled, and return SUCCEED.
+ *
+ *              If the target metadata cache  manager is settled, and we
+ *              are in the process of a file shutdown, post an error
+ *              message, and return FAIL.
+ *
+ *		Note that this function simply passes the call on to
+ *		the metadata cache proper, and returns the result.
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  John Mainzer
- *              10/15/16
+ * Programmer:  Quincey Koziol
+ *              January 3, 2017
  *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5C_unsettle_ring(H5F_t *f, H5C_ring_t ring) 
+H5C_unsettle_entry_ring(void *_entry)
 {
-    H5C_t *		cache_ptr;
-    herr_t              ret_value = SUCCEED;    /* Return value */
+    H5C_cache_entry_t *entry = (H5C_cache_entry_t *)_entry;     /* Entry whose ring to unsettle */
+    H5C_t *cache;               /* Cache for file */
+    herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(f);
-    HDassert(f->shared);
-    HDassert(f->shared->cache);
-    cache_ptr = f->shared->cache;
-    HDassert(H5C__H5C_T_MAGIC == cache_ptr->magic);
-    HDassert((H5C_RING_RDFSM == ring) || (H5C_RING_MDFSM == ring));
+    HDassert(entry);
+    HDassert(entry->ring != H5C_RING_UNDEFINED);
+    HDassert((H5C_RING_USER == entry->ring) || (H5C_RING_RDFSM == entry->ring) || (H5C_RING_MDFSM == entry->ring));
+    cache = entry->cache_ptr;
+    HDassert(cache);
+    HDassert(cache->magic == H5C__H5C_T_MAGIC);
 
-    switch(ring) {
+    switch(entry->ring) {
+	case H5C_RING_USER:
+            /* Do nothing */
+	    break;
+
 	case H5C_RING_RDFSM:
-	    if(cache_ptr->rdfsm_settled) {
-		if(cache_ptr->flush_in_progress || cache_ptr->close_warning_received)
+	    if(cache->rdfsm_settled) {
+		if(cache->flush_in_progress || cache->close_warning_received)
 		    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unexpected rdfsm ring unsettle")
-		cache_ptr->rdfsm_settled = FALSE;
+		cache->rdfsm_settled = FALSE;
 	    } /* end if */
 	    break;
 
 	case H5C_RING_MDFSM:
-	    if(cache_ptr->mdfsm_settled) {
-		if(cache_ptr->flush_in_progress || cache_ptr->close_warning_received)
+	    if(cache->mdfsm_settled) {
+		if(cache->flush_in_progress || cache->close_warning_received)
 		    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unexpected mdfsm ring unsettle")
-		cache_ptr->mdfsm_settled = FALSE;
+		cache->mdfsm_settled = FALSE;
 	    } /* end if */
 	    break;
 
@@ -3721,7 +3728,7 @@ H5C_unsettle_ring(H5F_t *f, H5C_ring_t ring)
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5C_unsettle_ring() */
+} /* H5C_unsettle_entry_ring() */
 
 
 /*-------------------------------------------------------------------------
@@ -5505,7 +5512,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5C_flush_invalidate_cache(const H5F_t * f, hid_t dxpl_id, unsigned flags)
+H5C_flush_invalidate_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 {
     H5C_t *		cache_ptr;
     H5C_ring_t		ring;
@@ -5650,7 +5657,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
+H5C_flush_invalidate_ring(H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
     unsigned flags)
 {
     H5C_t              *cache_ptr;

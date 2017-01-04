@@ -3179,15 +3179,15 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5AC_unsettle_ring()
+ * Function:    H5AC_unsettle_entry_ring()
  *
- * Purpose:     Advise the metadata cache that the specified metadata cache
- *              manager ring is no longer settled (if it was on entry).
+ * Purpose:     Advise the metadata cache that the specified entry's metadata
+ *              cache manager ring is no longer settled (if it was on entry).
  *
- *              If the target metadata cache  manager ring is already
+ *              If the target metadata cache manager ring is already
  *              unsettled, do nothing, and return SUCCEED.
  *
- *              If the target metadata cache  manager ring is settled, and
+ *              If the target metadata cache manager ring is settled, and
  *              we are not in the process of a file shutdown, mark
  *              the ring as unsettled, and return SUCCEED.
  *
@@ -3198,26 +3198,32 @@ done:
  *		Note that this function simply passes the call on to
  *		the metadata cache proper, and returns the result.
  *
- * Return:      Non-negative on success/Negative on failure
+ * Return:	Success:	Non-negative
+ *		Failure:	Negative
  *
- * Programmer:  John Mainzer
- *              10/15/16
+ * Programmer:  Quincey Koziol
+ *              September 17, 2016
  *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5AC_unsettle_ring(H5F_t *f, H5AC_ring_t ring)
+H5AC_unsettle_entry_ring(void *_entry)
 {
+    H5AC_info_t *entry = (H5AC_info_t *)_entry; /* Entry to remove */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(FAIL == (ret_value = H5C_unsettle_ring(f, ring)))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_unsettle_ring() failed")
+    /* Sanity checks */
+    HDassert(entry);
+
+    /* Unsettle the entry's ring */
+    if(H5C_unsettle_entry_ring(entry) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove entry")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5AC_unsettle_ring() */
+} /* H5AC_unsettle_entry_ring() */
 
 
 /*-------------------------------------------------------------------------

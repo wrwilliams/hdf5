@@ -186,7 +186,6 @@ H5_DLL herr_t H5FS_alloc_vfd_alloc_hdr_and_section_info(H5F_t *f, hid_t dxpl_id,
     H5FS_t *fspace, haddr_t *fs_addr_ptr);
 H5_DLL herr_t H5FS_free(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id);
 
-
 /* Free space section routines */
 H5_DLL herr_t H5FS_sect_add(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
     H5FS_section_info_t *node, unsigned flags, void *op_data);
