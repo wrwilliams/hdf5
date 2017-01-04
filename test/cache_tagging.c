@@ -784,8 +784,8 @@ check_multi_group_creation_tags(void)
     } /* end for */
 
     /* Verify free space header and section info */
-    if ( verify_tag(fid, H5AC_FSPACE_SINFO_ID, H5AC__FREESPACE_TAG) < 0 ) TEST_ERROR;
-    if ( verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0 ) TEST_ERROR;
+    if ( verify_tag(fid, H5AC_FSPACE_SINFO_ID, root_tag) < 0 ) TEST_ERROR;
+    if ( verify_tag(fid, H5AC_FSPACE_HDR_ID, root_tag) < 0 ) TEST_ERROR;
 
     /* verify fractal heap header belonging to root group */
     if ( verify_tag(fid, H5AC_FHEAP_HDR_ID, root_tag) < 0 ) TEST_ERROR;
@@ -1012,8 +1012,8 @@ check_dense_attribute_tags(void)
     if ( verbose ) dump_cache(fid);
 
     /* Verify free space header and section info */
-    if ( verify_tag(fid, H5AC_FSPACE_SINFO_ID, H5AC__FREESPACE_TAG) < 0 ) TEST_ERROR;
-    if ( verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0 ) TEST_ERROR;
+    if ( verify_tag(fid, H5AC_FSPACE_SINFO_ID, d_tag) < 0 ) TEST_ERROR;
+    if ( verify_tag(fid, H5AC_FSPACE_HDR_ID, d_tag) < 0 ) TEST_ERROR;
 
     /* verify object header belonging to dataset */
     if ( verify_tag(fid, H5AC_OHDR_ID, d_tag) < 0 ) TEST_ERROR;
@@ -1301,8 +1301,8 @@ check_attribute_creation_tags(hid_t fcpl, int type)
         if ( verify_tag(fid, H5AC_FHEAP_DBLOCK_ID, H5AC__SOHM_TAG) < 0 ) TEST_ERROR;
 
         /* Verify free space header and free space section */
-        if ( verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0 ) TEST_ERROR;
-        if ( verify_tag(fid, H5AC_FSPACE_SINFO_ID, H5AC__FREESPACE_TAG) < 0 ) TEST_ERROR;
+        if ( verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__SOHM_TAG) < 0 ) TEST_ERROR;
+        if ( verify_tag(fid, H5AC_FSPACE_SINFO_ID, H5AC__SOHM_TAG) < 0 ) TEST_ERROR;
 
         /* verify btree header and leaf node belonging to group */
         if ( verify_tag(fid, H5AC_BT2_HDR_ID, H5AC__SOHM_TAG) < 0 ) TEST_ERROR;
