@@ -909,8 +909,8 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                     f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_WRITE_ACCESS);
                     f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_SWMR_WRITE_ACCESS);
 
-                    /* Mark superblock dirty in cache, so change will get encoded */
-                    if(H5F_super_dirty(f) < 0)
+                    /* Mark EOA info dirty in cache, so change will get encoded */
+                    if(H5F_eoa_dirty(f, dxpl_id) < 0)
                         /* Push error, but keep going*/
                         HDONE_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
 

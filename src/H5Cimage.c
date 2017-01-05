@@ -1038,14 +1038,9 @@ H5C_load_cache_image(H5F_t *f, hid_t dxpl_id)
     HDassert(cache_ptr);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
 
-    if(cache_ptr->delete_image) {
+    if(cache_ptr->delete_image)
         if(H5F_super_ext_remove_msg(f, dxpl_id, H5O_MDCI_MSG_ID) < 0)
 	    HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove metadata cache image message from superblock extension")
-
-	/* this shouldn't be necessary, but must mark the superblock dirty */
-	if(H5F_super_dirty(f) < 0)
-	    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "can't mark superblock dirty")
-    } /* end if */
 
     /* If the image address is defined, load the image, decode it, 
      * and insert its contents into the metadata cache. 

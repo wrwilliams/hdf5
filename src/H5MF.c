@@ -2089,12 +2089,12 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
             && f->shared->fs_strategy == H5F_FILE_SPACE_ALL_PERSIST) {
         H5O_fsinfo_t fsinfo;		/* Free space manager info message */
 
-        /* superblock extension and free space manager message should 
+        /* Superblock extension and free space manager message should 
          * exist at this point -- verify at least the former.
          */
         HDassert(H5F_addr_defined(f->shared->sblock->ext_addr));
 
-        /* note that unlike the previous version of this code, we do not 
+        /* Note that unlike the previous version of this code, we do not 
          * delete free space managers that have no section to store.
          *
          * Can't do this, as that would involve freeing file space, which would 
@@ -2103,17 +2103,16 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
          * Fortunately, the code doesn't seem to care about this.
          */
 
-        /* gather data for the free space manager superblock extension message.
+        /* Gather data for the free space manager superblock extension message.
          * 
          * In passing, verify that all the free space managers are closed.
          */
         for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
-            fsinfo.fs_addr[type-1] = f->shared->fs_addr[type];
-
+            fsinfo.fs_addr[type - 1] = f->shared->fs_addr[type];
 	fsinfo.strategy = f->shared->fs_strategy;
 	fsinfo.threshold = f->shared->fs_threshold;
 
-        /* write the free space manager message -- message must already exist */
+        /* Write the free space manager message -- message must already exist */
         if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, FALSE, H5O_MSG_NO_FLAGS_SET) < 0)
             HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, "error in writing message to superblock extension")
 

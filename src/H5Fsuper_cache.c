@@ -74,9 +74,6 @@ static htri_t H5F__cache_superblock_verify_chksum(const void *image_ptr, size_t 
 static void *H5F__cache_superblock_deserialize(const void *image, size_t len,
     void *udata, hbool_t *dirty);
 static herr_t H5F__cache_superblock_image_len(const void *thing, size_t *image_len);
-static herr_t H5F__cache_superblock_pre_serialize(H5F_t *f, 
-    hid_t dxpl_id, void *thing, haddr_t addr, size_t len, 
-    haddr_t *new_addr, size_t *new_len, unsigned *flags);
 static herr_t H5F__cache_superblock_serialize(const H5F_t *f, void *image, size_t len,
     void *thing);
 static herr_t H5F__cache_superblock_free_icr(void *thing);
@@ -115,7 +112,7 @@ const H5AC_class_t H5AC_SUPERBLOCK[1] = {{
     H5F__cache_superblock_verify_chksum, /* 'verify_chksum' callback */
     H5F__cache_superblock_deserialize,  /* 'deserialize' callback */
     H5F__cache_superblock_image_len,    /* 'image_len' callback */
-    H5F__cache_superblock_pre_serialize,/* 'pre_serialize' callback */
+    NULL,                               /* 'pre_serialize' callback */
     H5F__cache_superblock_serialize,    /* 'serialize' callback */
     NULL,       			/* 'notify' callback */
     H5F__cache_superblock_free_icr,     /* 'free_icr' callback */
@@ -650,139 +647,6 @@ H5F__cache_superblock_image_len(const void *_thing, size_t *image_len)
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5F__cache_superblock_image_len() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5FS__cache_superblock_pre_serialize
- *
- * Purpose:	At present, this function is purely a sanity checking 
- *              call, intended to verify that the file driver info super
- *		block extension message contains the expected information.
- *
- *		Assuming this doesn't change, we will probably only want 
- *		to define this function in the debug build.
- *
- * Return:      Success:        SUCCEED
- *              Failure:        FAIL
- *
- * Programmer:  John Mainzer
- *              12/31/15
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5F__cache_superblock_pre_serialize(H5F_t *f, hid_t dxpl_id, 
-    void *_thing, haddr_t H5_ATTR_UNUSED addr, size_t H5_ATTR_UNUSED len, 
-    haddr_t H5_ATTR_UNUSED *new_addr, size_t H5_ATTR_UNUSED *new_len, 
-    unsigned H5_ATTR_UNUSED *flags)
-{
-    H5P_genplist_t *dxpl = NULL;        /* DXPL for setting ring */
-    hbool_t ring_modified = FALSE;
-    H5AC_ring_t orig_ring = H5AC_RING_INV;      /* Original ring value */
-    H5F_super_t *sblock = (H5F_super_t *)_thing; /* Pointer to the super block */
-    herr_t ret_value = SUCCEED; /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT
-
-    /* Sanity check */
-    HDassert(f);
-    HDassert(sblock);
-    HDassert(sblock->cache_info.magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
-    HDassert(sblock->cache_info.type == H5AC_SUPERBLOCK);
-    HDassert(flags);
-
-#ifndef NDEBUG
-    /* Verify that the driver info superblock extension message contains
-     * the correct data if appropriate.
-     *
-     * Do this if:
-     *
-     *  1) version 2 or greater superblock -- i.e. have superblock extension.
-     *
-     *  2) The superblock extension exists, and we are not ignoring the 
-     *     driver info.
-     *
-     *  3) The driver info message should exist (i.e. driver_size > 0).
-     *
-     *  4) The superblock extension object header is in the metadata cache.
-     */
-    if(sblock->super_vers >= HDF5_SUPERBLOCK_VERSION_2) {
-        /* Verify the driver information message in the superblock extension
-         * if appropriate.
-         */
-        if((H5F_addr_defined(sblock->ext_addr)) &&
-               (!H5F_HAS_FEATURE(f, H5FD_FEAT_IGNORE_DRVRINFO))) {
-            size_t     driver_size;    /* Size of driver info block (bytes)*/
-	    unsigned   sbe_status;   /* cache status of SBE object header */
-            H5O_loc_t  ext_loc;        /* "Object location" for superblock extension */
-
-            HDassert(sblock->super_vers >= HDF5_SUPERBLOCK_VERSION_2);
-
-            /* Check for driver info message */
-            H5_CHECKED_ASSIGN(driver_size, size_t, H5FD_sb_size(f->shared->lf), hsize_t);
-
-            if(driver_size > 0) {
-	        /* Check to see if the superblock extension is in the metadata
-                 * cache -- if it isn't, we must do nothing lest we risk 
-                 * loading it back into the cache during the final flush destroy
-                 * on file close.
-                 */
-	        if(H5AC_get_entry_status(f, sblock->ext_addr, &sbe_status) < 0)
-		    HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get SBE status")
-
-                if(sbe_status & H5AC_ES__IN_CACHE) {
-                    H5O_drvinfo_t expected_drvinfo;	/* Driver info */
-                    H5O_drvinfo_t actual_drvinfo;	/* Driver info */
-                    uint8_t expected_dbuf[H5F_MAX_DRVINFOBLOCK_SIZE];
-
-                    /* Sanity checks */
-                    HDassert(driver_size <= H5F_MAX_DRVINFOBLOCK_SIZE);
-		    HDassert(f->shared->drvinfo_sb_msg_exists);
-
-                    /* Encode expected driver-specific data */
-                    if(H5FD_sb_encode(f->shared->lf, expected_drvinfo.name, expected_dbuf) < 0)
-                        HGOTO_ERROR(H5E_FILE, H5E_CANTENCODE, FAIL, "unable to encode expected driver information")
-
-                    expected_drvinfo.len = driver_size;
-                    expected_drvinfo.buf = expected_dbuf;
-
-                    /* Open the superblock extension's object header */
-                    if(H5F_super_ext_open((H5F_t *)f, sblock->ext_addr, &ext_loc) < 0)
-                        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENOBJ, FAIL, "unable to open file's superblock extension")
-
-                    /* Set the ring type in the DXPL */
-                    if(H5AC_set_ring(dxpl_id, H5AC_RING_SBE, &dxpl, &orig_ring) < 0)
-                        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set ring value")
-		    ring_modified = TRUE;
-
-		    /* Retrieve the 'driver info' structure */
-                    if(NULL == H5O_msg_read(&ext_loc, H5O_DRVINFO_ID, &actual_drvinfo, dxpl_id))
-                        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "driver info message not present")
-
-		    /* validate driver info message */
-		    HDassert(expected_drvinfo.len == actual_drvinfo.len);
-		    HDassert(0 == HDmemcmp(expected_drvinfo.buf, actual_drvinfo.buf, expected_drvinfo.len));
-
-		    /* Reset driver info message */
-                    H5O_msg_reset(H5O_DRVINFO_ID, &actual_drvinfo);
-
-                    /* Close the superblock extension object header */
-                    if(H5F_super_ext_close((H5F_t *)f, &ext_loc, dxpl_id, FALSE) < 0)
-                        HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEOBJ, FAIL, "unable to close file's superblock extension")
-		} /* SBE in cache */
-	    } /* (driver_size > 0) */
-	} /* ((H5F_addr_defined(sblock->ext_addr)) &&           */
-          /*  (!H5F_HAS_FEATURE(f, H5FD_FEAT_IGNORE_DRVRINFO))) */
-    } /* (sblock->super_vers >= HDF5_SUPERBLOCK_VERSION_2) */
-#endif /* NDEBUG */
-
-done:
-    /* Reset the ring in the DXPL if needed */
-    if(ring_modified && H5AC_reset_ring(dxpl, orig_ring) < 0)
-        HDONE_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set property value")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5FS_cache_superblock_pre_serialize() */
 
 
 /*-------------------------------------------------------------------------

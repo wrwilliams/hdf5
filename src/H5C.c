@@ -774,7 +774,7 @@ H5C_free_tag_list_cb(void *_item, void H5_ATTR_UNUSED *key, void H5_ATTR_UNUSED 
 herr_t
 H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
 {
-    H5C_t *     cache_ptr = NULL;
+    H5C_t *     cache_ptr;
     herr_t	ret_value = SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
