@@ -3619,6 +3619,9 @@ typedef struct H5C_tag_info_t {
  *              clean data so as to avoid case b) above.  Again, this is
  *              a soft limit.
  *
+ * close_warning_received: Boolean flag indicating that a file closing 
+ *		warning has been received.
+ *
  *
  * In addition to the call back functions required for each entry, the
  * cache requires the following call back functions for this instance of
@@ -4237,9 +4240,6 @@ typedef struct H5C_tag_info_t {
  *		call, which is in turn required for sanity checks in some
  *		cache clients.
  *
- * close_warning_received: Boolean flag indicating that a file closing 
- *		warning has been received.
- *
  * load_image:	Boolean flag indicating that the metadata cache image 
  *		superblock extension message exists and should be 
  *		read, and the image block read and decoded on the next
@@ -4694,6 +4694,7 @@ struct H5C_t {
     hbool_t			write_permitted;
     H5C_log_flush_func_t	log_flush;
     hbool_t			evictions_enabled;
+    hbool_t			close_warning_received;
 
     /* Fields for maintaining [hash table] index of entries */
     int32_t                     index_len;
@@ -4800,7 +4801,6 @@ struct H5C_t {
     /* fields supporting generation of a cache image on file close */
     H5C_cache_image_ctl_t	image_ctl;
     hbool_t			serialization_in_progress;
-    hbool_t			close_warning_received;
     hbool_t			load_image;
     hbool_t                     image_loaded;
     hbool_t			delete_image;

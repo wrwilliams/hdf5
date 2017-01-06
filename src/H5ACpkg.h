@@ -437,7 +437,6 @@ H5_DLL herr_t H5AC__broadcast_cache_image(H5AC_t *cache_ptr, size_t image_len,
     void * image_buffer);
 H5_DLL herr_t H5AC__receive_cache_image(const H5AC_t *cache_ptr, 
     size_t image_len, void * image_buffer);
-
 #endif /* H5_HAVE_PARALLEL */
 
 /* Trace file routines */

@@ -345,6 +345,7 @@ H5C_create(size_t		      max_cache_size,
     cache_ptr->log_flush			= log_flush;
 
     cache_ptr->evictions_enabled		= TRUE;
+    cache_ptr->close_warning_received		= FALSE;
 
     cache_ptr->index_len			= 0;
     cache_ptr->index_size			= (size_t)0;
@@ -485,7 +486,6 @@ H5C_create(size_t		      max_cache_size,
     cache_ptr->image_ctl.flags              = H5C_CI__ALL_FLAGS;
 
     cache_ptr->serialization_in_progress= FALSE;
-    cache_ptr->close_warning_received   = FALSE;
     cache_ptr->load_image		= FALSE;
     cache_ptr->image_loaded             = FALSE;
     cache_ptr->delete_image		= FALSE;

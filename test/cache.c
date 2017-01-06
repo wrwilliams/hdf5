@@ -35867,7 +35867,7 @@ check_stats__smoke_check_1(H5F_t * file_ptr)
     int		   i;
     herr_t	   result;
 
-    if(pass)
+    if(pass) {
         if(cache_ptr == NULL) {
 
             pass = FALSE;
@@ -35893,6 +35893,7 @@ check_stats__smoke_check_1(H5F_t * file_ptr)
 	     */
             cache_ptr->min_clean_size = 0;
         } /* end else */
+    } /* end if */
 
     if(pass)
         /* first fill the cache with monster entryies via insertion */
