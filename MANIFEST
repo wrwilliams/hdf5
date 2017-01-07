@@ -991,6 +991,7 @@
 ./test/ntypes.c
 ./test/ohdr.c
 ./test/objcopy.c
+./test/page_buffer.c
 ./test/paged_nopersist.h5
 ./test/paged_persist.h5
 ./test/plugin.c
@@ -1033,7 +1034,6 @@
 ./test/tmisc.c
 ./test/tmtimen.h5
 ./test/tmtimeo.h5
-./test/tpage_buffer.c
 ./test/ttime.c
 ./test/trefer.c
 ./test/trefstr.c
