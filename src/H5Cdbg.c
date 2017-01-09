@@ -35,6 +35,7 @@
 /* Headers */
 /***********/
 #include "H5private.h"      /* Generic Functions            */
+#include "H5ACprivate.h"    /* Metadata Cache               */
 #include "H5Cpkg.h"         /* Cache                        */
 #include "H5Eprivate.h"     /* Error Handling               */
 
@@ -52,10 +53,6 @@
 /********************/
 /* Local Prototypes */
 /********************/
-
-#if 0 /* debugging routines */
-herr_t H5C_dump_cache_skip_list(H5C_t *cache_ptr, char *calling_fcn);
-#endif /* debugging routines */
 
 
 /*********************/
@@ -203,7 +200,7 @@ H5C_dump_cache_skip_list(H5C_t * cache_ptr, char * calling_fcn)
     H5C_cache_entry_t * entry_ptr = NULL;
     H5SL_node_t *       node_ptr = NULL;
 
-    FUNC_ENTER_NOAPI(FAIL)
+    FUNC_ENTER_STATIC_NOERR
 
     HDassert(cache_ptr != NULL);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
@@ -257,8 +254,8 @@ H5C_dump_cache_skip_list(H5C_t * cache_ptr, char * calling_fcn)
 
     HDfprintf(stdout, "\n\n");
 
-done:
     FUNC_LEAVE_NOAPI(ret_value)
+
 } /* H5C_dump_cache_skip_list() */
 #endif /* NDEBUG */
 
@@ -398,6 +395,7 @@ H5C_stats(H5C_t * cache_ptr,
     size_t      aggregate_max_size = 0;
     int32_t	aggregate_max_pins = 0;
     double      hit_rate;
+    double      prefetch_use_rate;
     double	average_successful_search_depth = 0.0f;
     double	average_failed_search_depth = 0.0f;
     double      average_entries_skipped_per_calls_to_msic = 0.0f;
@@ -655,11 +653,43 @@ H5C_stats(H5C_t * cache_ptr,
                             cache_ptr->entries_scanned_to_make_space));
 
     HDfprintf(stdout, 
-              "%s  slist/LRU/hash bkt scan restarts   = %lld / %lld / %lld.\n",
+              "%s  slist/LRU/index scan restarts   = %lld / %lld / %lld.\n",
               cache_ptr->prefix, 
               (long long)(cache_ptr->slist_scan_restarts),
               (long long)(cache_ptr->LRU_scan_restarts),
-              (long long)(cache_ptr->hash_bucket_scan_restarts));
+              (long long)(cache_ptr->index_scan_restarts));
+
+    HDfprintf(stdout,
+	      "%s  cache image creations/loads/size   = %d / %d / %lld\n",
+              cache_ptr->prefix,
+              cache_ptr->images_created,
+              cache_ptr->images_loaded,
+              (long long)cache_ptr->last_image_size);
+
+    HDfprintf(stdout,
+	      "%s  prefetches / dirty prefetches      = %lld / %lld\n",
+              cache_ptr->prefix,
+              (long long)(cache_ptr->prefetches),
+              (long long)(cache_ptr->dirty_prefetches));
+
+    HDfprintf(stdout,
+	      "%s  prefetch hits/flushes/evictions    = %lld / %lld / %lld\n",
+              cache_ptr->prefix,
+              (long long)(cache_ptr->prefetch_hits),
+              (long long)(cache_ptr->flushes[H5AC_PREFETCHED_ENTRY_ID]),
+              (long long)(cache_ptr->evictions[H5AC_PREFETCHED_ENTRY_ID]));
+
+    if(cache_ptr->prefetches > 0)
+        prefetch_use_rate = 
+                   (double)100.0f * ((double)(cache_ptr->prefetch_hits)) /
+                   ((double)(cache_ptr->prefetches));
+    else
+        prefetch_use_rate = 0.0f;
+
+    HDfprintf(stdout,
+	      "%s  prefetched entry use rate          = %lf\n",
+              cache_ptr->prefix,
+              prefetch_use_rate);
 
 #if H5C_COLLECT_CACHE_ENTRY_STATS
 
@@ -892,9 +922,17 @@ H5C_stats__reset(H5C_t H5_ATTR_UNUSED * cache_ptr)
     cache_ptr->max_entries_scanned_in_msic      = 0;
     cache_ptr->entries_scanned_to_make_space    = 0;
 
-    cache_ptr->slist_scan_restarts              = 0;
-    cache_ptr->LRU_scan_restarts                = 0;
-    cache_ptr->hash_bucket_scan_restarts        = 0;
+    cache_ptr->slist_scan_restarts		= 0;
+    cache_ptr->LRU_scan_restarts		= 0;
+    cache_ptr->index_scan_restarts              = 0;
+
+    cache_ptr->images_created           = 0;
+    cache_ptr->images_loaded            = 0;
+    cache_ptr->last_image_size          = (size_t)0;
+
+    cache_ptr->prefetches               = 0;
+    cache_ptr->dirty_prefetches			= 0;
+    cache_ptr->prefetch_hits			= 0;
 
 #if H5C_COLLECT_CACHE_ENTRY_STATS
     for(i = 0; i <= cache_ptr->max_type_id; i++) {
@@ -978,4 +1016,421 @@ H5C__dump_entry(H5C_t *cache_ptr, const H5C_cache_entry_t *entry_ptr,
         H5C__dump_parents(cache_ptr, entry_ptr, "Parent", indent);
     if(entry_ptr->flush_dep_nchildren)
         H5C__dump_children(cache_ptr, entry_ptr, FALSE, "Child", indent);
-}
+} /* end H5C__dump_entry() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5C_flush_dependency_exists()
+ *
+ * Purpose:	Test to see if a flush dependency relationship exists 
+ *          between the supplied parent and child.  Both parties 
+ *          are indicated by addresses so as to avoid the necessity
+ *          of protect / unprotect calls prior to this call. 
+ *
+ *          If either the parent or the child is not in the metadata 
+ *          cache, the function sets *fd_exists_ptr to FALSE.
+ *
+ *          If both are in the cache, the childs list of parents is 
+ *          searched for the proposed parent.  If the proposed parent
+ *          is found in the childs parent list, the function sets
+ *          *fd_exists_ptr to TRUE.  In all other non-error cases, 
+ *          the function sets *fd_exists_ptr FALSE.
+ *
+ * Return:      SUCCEED on success/FAIL on failure.  Note that 
+ *              *fd_exists_ptr is undefined on failure.
+ *
+ * Programmer:  John Mainzer
+ *              9/28/16
+ *
+ *-------------------------------------------------------------------------
+ */
+#ifndef NDEBUG
+herr_t
+H5C_flush_dependency_exists(H5C_t *cache_ptr, haddr_t parent_addr, haddr_t child_addr,
+    hbool_t *fd_exists_ptr)
+{
+    hbool_t             fd_exists = FALSE;  /* whether flush dependency exists */
+    H5C_cache_entry_t *	parent_ptr;         /* Ptr to parent entry */
+    H5C_cache_entry_t *	child_ptr;          /* Ptr to child entry */
+    hbool_t             ret_value = FALSE;  /* Return value */
+
+    FUNC_ENTER_NOAPI(NULL)
+
+    /* Sanity checks */
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+    HDassert(H5F_addr_defined(parent_addr));
+    HDassert(H5F_addr_defined(child_addr));
+    HDassert(fd_exists_ptr);
+
+    H5C__SEARCH_INDEX(cache_ptr, parent_addr, parent_ptr, FAIL)
+    H5C__SEARCH_INDEX(cache_ptr, child_addr, child_ptr, FAIL)
+
+    if(parent_ptr && child_ptr) {
+        HDassert(parent_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+        HDassert(child_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+
+        if(child_ptr->flush_dep_nparents > 0) {
+            unsigned u;         /* Local index variable */
+
+            HDassert(child_ptr->flush_dep_parent);
+            HDassert(child_ptr->flush_dep_parent_nalloc >= child_ptr->flush_dep_nparents);
+
+            for(u = 0; u < child_ptr->flush_dep_nparents; u++) {
+                if(child_ptr->flush_dep_parent[u] == parent_ptr) {
+                    fd_exists = TRUE;
+                    HDassert(parent_ptr->flush_dep_nchildren > 0);
+                    break;
+                } /* end if */
+            } /* end for */
+        } /* end if */
+    } /* end if */
+
+    *fd_exists_ptr = fd_exists;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C_flush_dependency_exists() */
+#endif /* NDEBUG */
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Function:    H5C_validate_index_list
+ *
+ * Purpose:     Debugging function that scans the index list for errors.
+ *
+ *		If an error is detected, the function generates a
+ *		diagnostic and returns FAIL.  If no error is detected,
+ *		the function returns SUCCEED.
+ *
+ * Return:      FAIL if error is detected, SUCCEED otherwise.
+ *
+ * Programmer:  John Mainzer, 9/16/16
+ *
+ *-------------------------------------------------------------------------
+ */
+#ifndef NDEBUG
+herr_t
+H5C_validate_index_list(H5C_t *cache_ptr)
+{
+    H5C_cache_entry_t *	entry_ptr = NULL;
+    int32_t             len = 0;
+    int32_t		index_ring_len[H5C_RING_NTYPES];
+    size_t              size = 0;
+    size_t              clean_size = 0;
+    size_t              dirty_size = 0;
+    size_t		index_ring_size[H5C_RING_NTYPES];
+    size_t		clean_index_ring_size[H5C_RING_NTYPES];
+    size_t		dirty_index_ring_size[H5C_RING_NTYPES];
+    int			i;
+    herr_t		ret_value = SUCCEED;      /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    /* Sanity checks */
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+
+    for(i = 0; i < H5C_RING_NTYPES; i++) {
+	index_ring_len[i] = 0;
+	index_ring_size[i] = 0;
+	clean_index_ring_size[i] = 0;
+	dirty_index_ring_size[i] = 0;
+    } /* end if */
+
+    if(((cache_ptr->il_head == NULL) || (cache_ptr->il_tail == NULL))
+            && (cache_ptr->il_head != cache_ptr->il_tail))
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 1 failed")
+
+    if(cache_ptr->index_len < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 2 failed")
+
+    if((cache_ptr->index_len == 1) && ((cache_ptr->il_head != cache_ptr->il_tail)
+            || (cache_ptr->il_head == NULL) || (cache_ptr->il_head->size != cache_ptr->index_size)))
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 3 failed")
+
+    if((cache_ptr->index_len >= 1)
+            && ((cache_ptr->il_head == NULL)
+                || (cache_ptr->il_head->il_prev != NULL)
+                || (cache_ptr->il_tail == NULL)
+                || (cache_ptr->il_tail->il_next != NULL)))
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 4 failed")
+
+    entry_ptr = cache_ptr->il_head;
+    while(entry_ptr != NULL) {
+        if((entry_ptr != cache_ptr->il_head)
+                && ((entry_ptr->il_prev == NULL) || (entry_ptr->il_prev->il_next != entry_ptr)))
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 5 failed")
+
+        if((entry_ptr != cache_ptr->il_tail)
+                && ((entry_ptr->il_next == NULL) || (entry_ptr->il_next->il_prev != entry_ptr)))
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 6 failed")
+
+	HDassert(entry_ptr->ring > 0);
+	HDassert(entry_ptr->ring < H5C_RING_NTYPES);
+
+        len++;
+	index_ring_len[entry_ptr->ring] += 1;
+
+        size += entry_ptr->size;
+        index_ring_size[entry_ptr->ring] += entry_ptr->size;
+
+	if(entry_ptr->is_dirty) {
+	    dirty_size += entry_ptr->size;
+	    dirty_index_ring_size[entry_ptr->ring] += entry_ptr->size;
+	} /* end if */
+        else {
+	    clean_size += entry_ptr->size;
+	    clean_index_ring_size[entry_ptr->ring] += entry_ptr->size;
+	} /* end else */
+
+        entry_ptr = entry_ptr->il_next;
+    } /* end while */
+
+    if((cache_ptr->index_len != len) || (cache_ptr->il_len != len)
+            || (cache_ptr->index_size != size) || (cache_ptr->il_size != size)
+            || (cache_ptr->clean_index_size != clean_size)
+            || (cache_ptr->dirty_index_size != dirty_size)
+            || (clean_size + dirty_size != size))
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 7 failed")
+
+    size = 0;
+    clean_size = 0;
+    dirty_size = 0;
+    for(i = 0; i < H5C_RING_NTYPES; i++) {
+	size += clean_index_ring_size[i] + dirty_index_ring_size[i];
+	clean_size += clean_index_ring_size[i];
+	dirty_size += dirty_index_ring_size[i];
+    } /* end for */
+
+    if((cache_ptr->index_size != size)
+            || (cache_ptr->clean_index_size != clean_size)
+            || (cache_ptr->dirty_index_size != dirty_size))
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 8 failed")
+
+done:
+    if(ret_value != SUCCEED)
+        HDassert(0);
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C_validate_index_list() */
+#endif /* NDEBUG */
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Function:    H5C_get_entry_ptr_from_addr()
+ *
+ * Purpose:     Debugging function that attempts to look up an entry in the 
+ *              cache by its file address, and if found, returns a pointer 
+ *              to the entry in *entry_ptr_ptr.  If the entry is not in the 
+ *              cache, *entry_ptr_ptr is set to NULL.
+ *
+ *              WARNING: This call should be used only in debugging  
+ *                       routines, and it should be avoided when 
+ *                       possible.
+ *
+ *                       Further, if we ever multi-thread the cache, 
+ *                       this routine will have to be either discarded 
+ *                       or heavily re-worked.
+ *
+ *                       Finally, keep in mind that the entry whose 
+ *                       pointer is obtained in this fashion may not 
+ *                       be in a stable state.  
+ *
+ *              Note that this function is only defined if NDEBUG
+ *              is not defined.
+ *
+ *              As heavy use of this function is almost certainly a 
+ *              bad idea, the metadata cache tracks the number of 
+ *              successful calls to this function, and (if 
+ *              H5C_DO_SANITY_CHECKS is defined) displays any 
+ *              non-zero count on cache shutdown.
+ *
+ * Return:      FAIL if error is detected, SUCCEED otherwise.
+ *
+ * Programmer:  John Mainzer, 5/30/14
+ *
+ *-------------------------------------------------------------------------
+ */
+#ifndef NDEBUG
+herr_t
+H5C_get_entry_ptr_from_addr(H5C_t *cache_ptr, haddr_t addr, void **entry_ptr_ptr)
+{
+    H5C_cache_entry_t * entry_ptr = NULL;
+    herr_t		ret_value = SUCCEED;      /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity checks */
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+    HDassert(H5F_addr_defined(addr));
+    HDassert(entry_ptr_ptr);
+
+    H5C__SEARCH_INDEX(cache_ptr, addr, entry_ptr, FAIL)
+
+    if(entry_ptr == NULL)
+        /* the entry doesn't exist in the cache -- report this
+         * and quit.
+         */
+        *entry_ptr_ptr = NULL;
+    else {
+        *entry_ptr_ptr = entry_ptr;
+
+	/* increment call counter */
+	(cache_ptr->get_entry_ptr_from_addr_counter)++;
+    } /* end else */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C_get_entry_ptr_from_addr() */
+#endif /* NDEBUG */
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Function:    H5C_cache_image_pending()
+ *
+ * Purpose:     Debugging function that tests to see if the load of a 
+ *		metadata cache image load is pending (i.e. will be executed 
+ *              on the next protect or insert)
+ *
+ *		Returns TRUE if a cache image load is pending, and FALSE
+ *		if not.  Throws an assertion failure on error.
+ *
+ * Return:      TRUE if a cache image load is pending, and FALSE otherwise.
+ *
+ * Programmer:  John Mainzer, 6/18/16
+ *
+ *-------------------------------------------------------------------------
+ */
+#ifndef NDEBUG
+hbool_t
+H5C_cache_image_pending(const H5C_t *cache_ptr)
+{
+    hbool_t             ret_value = TRUE;      /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    /* Sanity checks */
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+
+    ret_value = ( ( cache_ptr->load_image ) && ( ! cache_ptr->image_loaded ) );
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C_cache_image_pending() */
+#endif /* NDEBUG */
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Function:    H5C_cache_is_clean()
+ *
+ * Purpose:     Debugging function that verifies that all rings in the 
+ *		metadata cache are clean from the outermost ring, inwards
+ *		to the inner ring specified.
+ *
+ *		Returns TRUE if all specified rings are clean, and FALSE
+ *		if not.  Throws an assertion failure on error.
+ *
+ * Return:      TRUE if the indicated ring(s) are clean, and FALSE otherwise.
+ *
+ * Programmer:  John Mainzer, 6/18/16
+ *
+ *-------------------------------------------------------------------------
+ */
+#ifndef NDEBUG
+hbool_t
+H5C_cache_is_clean(const H5C_t *cache_ptr, H5C_ring_t inner_ring)
+{
+    H5C_ring_t		ring = H5C_RING_USER;
+    hbool_t             ret_value = TRUE;      /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    /* Sanity checks */
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+    HDassert(inner_ring >= H5C_RING_USER);
+    HDassert(inner_ring <= H5C_RING_SB);
+
+    while(ring <= inner_ring) {
+	if(cache_ptr->dirty_index_ring_size[ring] > 0)
+            ret_value = FALSE;
+
+	ring++;
+    } /* end while */
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C_cache_is_clean() */
+#endif /* NDEBUG */
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Function:    H5C_verify_entry_type()
+ *
+ * Purpose:     Debugging function that attempts to look up an entry in the 
+ *		cache by its file address, and if found, test to see if its
+ *		type field contains the expted value.
+ *
+ *		If the specified entry is in cache, *in_cache_ptr is set
+ *		to TRUE, and *type_ok_ptr is set to TRUE or FALSE depending 
+ *		on whether the entries type field matches the expected_type 
+ *		parameter.
+ *
+ *		If the target entry is not in cache, *in_cache_ptr is 
+ *		set to FALSE, and *type_ok_ptr is undefined.
+ *
+ *		Note that this function is only defined if NDEBUG
+ *		is not defined.
+ *
+ * Return:      FAIL if error is detected, SUCCEED otherwise.
+ *
+ * Programmer:  John Mainzer, 5/30/14
+ *
+ *-------------------------------------------------------------------------
+ */
+#ifndef NDEBUG
+herr_t
+H5C_verify_entry_type(H5C_t *cache_ptr, haddr_t addr,
+    const H5C_class_t *expected_type, hbool_t *in_cache_ptr,
+    hbool_t *type_ok_ptr)
+{
+    H5C_cache_entry_t * entry_ptr = NULL;
+    herr_t              ret_value = SUCCEED;      /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity checks */
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+    HDassert(H5F_addr_defined(addr));
+    HDassert(expected_type);
+    HDassert(in_cache_ptr);
+    HDassert(type_ok_ptr);
+
+    H5C__SEARCH_INDEX(cache_ptr, addr, entry_ptr, FAIL)
+
+    if(entry_ptr == NULL)
+        /* the entry doesn't exist in the cache -- report this
+         * and quit.
+         */
+        *in_cache_ptr = FALSE;
+    else {
+        *in_cache_ptr = TRUE;
+
+	if(entry_ptr->prefetched)
+	    *type_ok_ptr = (expected_type->id == entry_ptr->prefetch_type_id);
+	else
+	    *type_ok_ptr = (expected_type == entry_ptr->type);
+    } /* end else */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C_verify_entry_type() */
+#endif /* NDEBUG */
+

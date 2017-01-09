@@ -122,7 +122,7 @@ H5F_alloc(H5F_t *f, hid_t dxpl_id, H5F_mem_t type, hsize_t size, haddr_t *frag_a
     } /* end if */
 
     /* Call the file driver 'alloc' routine */
-    ret_value = H5FD_alloc(f->shared->lf, dxpl_id, type, size, frag_addr, frag_size);
+    ret_value = H5FD_alloc(f->shared->lf, dxpl_id, type, f, size, frag_addr, frag_size);
     if(!H5F_addr_defined(ret_value))
         HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, HADDR_UNDEF, "file driver 'alloc' request failed")
 
@@ -168,7 +168,7 @@ H5F_free(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type, haddr_t addr, hsize_t size)
     HDassert(size > 0);
 
     /* Call the file driver 'free' routine */
-    if(H5FD_free(f->shared->lf, dxpl_id, type, addr, size) < 0)
+    if(H5FD_free(f->shared->lf, dxpl_id, type, f, addr, size) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTFREE, FAIL, "file driver 'free' request failed")
 
     /* Mark superblock dirty in cache, so change to EOA will get encoded */
@@ -199,7 +199,7 @@ done:
  *-------------------------------------------------------------------------
  */
 htri_t
-H5F_try_extend(H5F_t *f, H5FD_mem_t type, haddr_t blk_end, hsize_t extra_requested)
+H5F_try_extend(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type, haddr_t blk_end, hsize_t extra_requested)
 {
     htri_t ret_value;           /* Return value */
 
@@ -213,13 +213,12 @@ H5F_try_extend(H5F_t *f, H5FD_mem_t type, haddr_t blk_end, hsize_t extra_request
     HDassert(extra_requested > 0);
 
     /* Extend the object by extending the underlying file */
-    if((ret_value = H5FD_try_extend(f->shared->lf, type, blk_end, extra_requested)) < 0)
+    if((ret_value = H5FD_try_extend(f->shared->lf, type, blk_end, f, dxpl_id, extra_requested)) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTEXTEND, FAIL, "driver try extend request failed")
 
-    /* If successful, mark superblock dirty in cache, so change to EOA will get encoded */
-    if(ret_value)
-        if(H5F_super_dirty(f) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
+    /* H5FD_try_extend() updates driver message and marks the superblock
+     * dirty, so no need to do it again here.
+     */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

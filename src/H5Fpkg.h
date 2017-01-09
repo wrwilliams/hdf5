@@ -222,14 +222,22 @@ typedef struct H5F_super_t {
  * pointing to this struct.
  */
 struct H5F_file_t {
-    H5FD_t *lf;                     /* Lower level file handle for I/O	*/
-    H5F_super_t *sblock;            /* Pointer to (pinned) superblock for file */
-    H5O_drvinfo_t *drvinfo;         /* Pointer to the (pinned) driver info 
-                                     * cache entry.  This field is only defined
-                                     * for older versions of the super block,
-                                     * and then only when a driver information
-                                     * block is present.  At all other times
-                                     * it should be NULL.
+    H5FD_t	*lf; 		/* Lower level file handle for I/O	*/
+    H5F_super_t *sblock;        /* Pointer to (pinned) superblock for file */
+    H5O_drvinfo_t *drvinfo;	/* Pointer to the (pinned) driver info 
+                                 * cache entry.  This field is only defined
+                                 * for older versions of the super block,
+                                 * and then only when a driver information
+                                 * block is present.  At all other times
+                                 * it should be NULL.
+                                 */
+    hbool_t drvinfo_sb_msg_exists;  /* Convenience field used to track 
+                                     * whether the driver info superblock 
+                                     * extension message has been created 
+                                     * yet. This field should be TRUE iff the
+                                     * superblock extension exists and contains
+                                     * a driver info message.  Under all other
+                                     * circumstances, it must be set to FALSE.
                                      */
     unsigned    nrefs;              /* Ref count for times file is opened	*/
     unsigned    flags;              /* Access Permissions for file          */
@@ -251,6 +259,12 @@ struct H5F_file_t {
                                             /* metadata cache.  This structure is   */
                                             /* fixed at creation time and should    */
                                             /* not change thereafter.               */
+    H5AC_cache_image_config_t 
+		mdc_initCacheImageCfg;  /* initial configuration for the */
+                                        /* generate metadata cache image on     */
+                                        /* close option.  This structure is     */
+                                        /* fixed at creation time and should    */
+                                        /* not change thereafter.               */
     hbool_t     use_mdc_logging;            /* Set when metadata logging is desired */
     hbool_t     start_mdc_log_on_access;    /* set when mdc logging should          */
                                             /* begin on file access/create          */
@@ -293,6 +307,9 @@ struct H5F_file_t {
                                             /* for self referential FSMs      */
     haddr_t eoa_post_fsm_fsalloc;           /* eoa post file space allocation */
                                             /* for self referential FSMs      */
+    haddr_t eoa_post_mdci_fsalloc;          /* eoa past file space allocation */
+                                            /* for metadata cache image, or   */
+                                            /* HADDR_UNDEF if no cache image. */
  
 
     /* Free-space aggregation info */
@@ -381,7 +398,8 @@ H5_DLL herr_t H5F__super_free(H5F_super_t *sblock);
 
 /* Superblock extension related routines */
 H5_DLL herr_t H5F_super_ext_open(H5F_t *f, haddr_t ext_addr, H5O_loc_t *ext_ptr);
-H5_DLL herr_t H5F_super_ext_write_msg(H5F_t *f, hid_t dxpl_id, unsigned id, void *mesg, hbool_t may_create);
+H5_DLL herr_t H5F_super_ext_write_msg(H5F_t *f, hid_t dxpl_id, unsigned id,
+    void *mesg, hbool_t may_create, unsigned mesg_flags);
 H5_DLL herr_t H5F_super_ext_remove_msg(H5F_t *f, hid_t dxpl_id, unsigned id);
 H5_DLL herr_t H5F_super_ext_close(H5F_t *f, H5O_loc_t *ext_ptr, hid_t dxpl_id,
     hbool_t was_created);
@@ -411,7 +429,8 @@ H5_DLL herr_t H5F_efc_try_close(H5F_t *f);
 /* Space allocation routines */
 H5_DLL haddr_t H5F_alloc(H5F_t *f, hid_t dxpl_id, H5F_mem_t type, hsize_t size, haddr_t *frag_addr, hsize_t *frag_size);
 H5_DLL herr_t H5F_free(H5F_t *f, hid_t dxpl_id, H5F_mem_t type, haddr_t addr, hsize_t size);
-H5_DLL htri_t H5F_try_extend(H5F_t *f, H5FD_mem_t type, haddr_t blk_end, hsize_t extra_requested);
+H5_DLL htri_t H5F_try_extend(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type, 
+    haddr_t blk_end, hsize_t extra_requested);
 
 /* Functions that get/retrieve values from VFD layer */
 H5_DLL herr_t H5F__set_eoa(const H5F_t *f, H5F_mem_t type, haddr_t addr);

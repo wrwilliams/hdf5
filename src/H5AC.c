@@ -135,7 +135,9 @@ static const char *H5AC_entry_type_names[H5AC_NTYPES] =
     "fixed array data block pages",
     "superblock",
     "driver info",
-    "test entry"	/* for testing only -- not used for actual files */
+    "test entry",	/* for testing only -- not used for actual files */
+    "epoch marker",     /* internal to cache only */    
+    "prefetched entry"  /* internal to cache only */    
 };
 
 
@@ -363,12 +365,14 @@ H5AC_term_package(void)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr)
+H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr, 
+            H5AC_cache_image_config_t * image_config_ptr)
 {
 #ifdef H5_HAVE_PARALLEL
     char 	 prefix[H5C__PREFIX_LEN] = "";
     H5AC_aux_t * aux_ptr = NULL;
 #endif /* H5_HAVE_PARALLEL */
+    struct H5C_cache_image_ctl_t int_ci_config = H5C__DEFAULT_CACHE_IMAGE_CTL;
     herr_t ret_value = SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -377,11 +381,16 @@ H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr)
     HDassert(f);
     HDassert(NULL == f->shared->cache);
     HDassert(config_ptr != NULL) ;
+    HDassert(image_config_ptr != NULL) ;
+    HDassert(image_config_ptr->version == H5AC__CURR_CACHE_IMAGE_CONFIG_VERSION);
     HDcompile_assert(NELMTS(H5AC_entry_type_names) == H5AC_NTYPES);
     HDcompile_assert(H5C__MAX_NUM_TYPE_IDS == H5AC_NTYPES);
 
+    /* Validate configurations */
     if(H5AC_validate_config(config_ptr) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Bad cache configuration")
+    if(H5AC_validate_cache_image_config(image_config_ptr) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Bad cache image configuration")
 
 #ifdef H5_HAVE_PARALLEL
     if(H5F_HAS_FEATURE(f, H5FD_FEAT_HAS_MPI)) {
@@ -423,6 +432,7 @@ H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr)
         aux_ptr->candidate_slist_ptr = NULL;
         aux_ptr->write_done = NULL;
         aux_ptr->sync_point_done = NULL;
+        aux_ptr->p0_image_len = 0;
 
         sprintf(prefix, "%d:", mpi_rank);
 
@@ -495,6 +505,20 @@ H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr)
 
     /* Set the cache parameters */
     if(H5AC_set_cache_auto_resize_config(f->shared->cache, config_ptr) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "auto resize configuration failed")
+
+    /* don't need to get the current H5C image config here since the
+     * cache has just been created, and thus f->shared->cache->image_ctl 
+     * must still set to its initial value (H5C__DEFAULT_CACHE_IMAGE_CTL).  
+     * Note that this not true as soon as control returns to the application
+     * program, as some test code modifies f->shared->cache->image_ctl.
+     */
+    int_ci_config.version            = image_config_ptr->version;
+    int_ci_config.generate_image     = image_config_ptr->generate_image;
+    int_ci_config.save_resize_status = image_config_ptr->save_resize_status;
+    int_ci_config.entry_ageout       = image_config_ptr->entry_ageout;
+
+    if(H5C_set_cache_image_config(f, f->shared->cache, &int_ci_config) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "auto resize configuration failed")
 
 done:
@@ -785,6 +809,7 @@ H5AC_get_entry_status(const H5F_t *f, haddr_t addr, unsigned *status)
     hbool_t	is_corked;
     hbool_t	is_flush_dep_child;     /* Entry @ addr is in the cache and is a flush dependency child */
     hbool_t	is_flush_dep_parent;    /* Entry @ addr is in the cache and is a flush dependency parent */
+    hbool_t	image_is_up_to_date;    /* Entry @ addr is in the cache and has an up to date image */
     herr_t      ret_value = SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -793,7 +818,8 @@ H5AC_get_entry_status(const H5F_t *f, haddr_t addr, unsigned *status)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Bad param(s) on entry.")
 
     if(H5C_get_entry_status(f, addr, NULL, &in_cache, &is_dirty,
-            &is_protected, &is_pinned, &is_corked, &is_flush_dep_parent, &is_flush_dep_child) < 0)
+            &is_protected, &is_pinned, &is_corked, &is_flush_dep_parent, 
+            &is_flush_dep_child, &image_is_up_to_date) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_get_entry_status() failed.")
 
     if(in_cache) {
@@ -810,6 +836,8 @@ H5AC_get_entry_status(const H5F_t *f, haddr_t addr, unsigned *status)
 	    *status |= H5AC_ES__IS_FLUSH_DEP_PARENT;
 	if(is_flush_dep_child)
 	    *status |= H5AC_ES__IS_FLUSH_DEP_CHILD;
+	if(image_is_up_to_date)
+	    *status |= H5AC_ES__IMAGE_IS_UP_TO_DATE;
     } /* end if */
     else
         *status = 0;
@@ -817,6 +845,33 @@ H5AC_get_entry_status(const H5F_t *f, haddr_t addr, unsigned *status)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC_get_entry_status() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5AC_get_serialization_in_progress
+ *
+ * Purpose:     Return the current value of 
+ *              cache_ptr->serialization_in_progress.
+ *
+ * Return:      Current value of cache_ptr->serialization_in_progress.
+ *
+ * Programmer:  John Mainzer
+ *              8/24/15
+ *
+ *-------------------------------------------------------------------------
+ */
+hbool_t
+H5AC_get_serialization_in_progress(H5F_t *f)
+{
+    hbool_t ret_value = FALSE;      /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    /* Set return value */
+    ret_value = H5C_get_serialization_in_progress(f);
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5AC_get_serialization_in_progress() */
 
 
 /*-------------------------------------------------------------------------
@@ -923,6 +978,41 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC_insert_entry() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5AC_load_cache_image_on_next_protect
+ *
+ * Purpose:     Load the cache image block at the specified location,
+ *              decode it, and insert its contents into the metadata
+ *              cache.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              7/6/15
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5AC_load_cache_image_on_next_protect(H5F_t * f, haddr_t addr, size_t len,
+    hbool_t rw)
+{
+    herr_t              ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity checks */
+    HDassert(f);
+    HDassert(f->shared);
+    HDassert(f->shared->cache);
+
+    if(H5C_load_cache_image_on_next_protect(f, addr, len, rw) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, FAIL, "call to H5C_load_cache_image_on_next_protect failed")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5AC_load_cache_image_on_next_protect() */
 
 
 /*-------------------------------------------------------------------------
@@ -1380,6 +1470,70 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5AC_read_cache_image
+ *
+ * Purpose:	Load the metadata cache image from the specified location
+ *		in the file, and return it in the supplied buffer.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              8/16/15
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5AC_read_cache_image(H5F_t *f, hid_t dxpl_id, haddr_t image_addr, 
+    size_t image_len, void *image_buffer)
+{
+#ifdef H5_HAVE_PARALLEL
+    H5AC_t *cache_ptr = NULL;
+    H5AC_aux_t *aux_ptr = NULL;
+#endif /* H5_HAVE_PARALLEL */
+    herr_t              ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity checks */
+    HDassert(f);
+    HDassert(H5F_addr_defined(image_addr));
+    HDassert(image_len > 0);
+    HDassert(image_buffer);
+
+#ifdef H5_HAVE_PARALLEL
+    HDassert(f->shared);
+    cache_ptr = f->shared->cache;
+    HDassert(cache_ptr);
+    aux_ptr = (H5AC_aux_t *)H5C_get_aux_ptr(cache_ptr);
+
+    if((NULL == aux_ptr) || (aux_ptr->mpi_rank == 0)) {
+	HDassert((NULL == aux_ptr) || (aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC));
+#endif /* H5_HAVE_PARALLEL */
+
+	/* Read the buffer (if serial access, or rank 0 of parallel access) */
+        if(H5F_block_read(f, H5FD_MEM_SUPER, image_addr, image_len, dxpl_id, image_buffer) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read metadata cache image block")
+
+#ifdef H5_HAVE_PARALLEL
+	if(aux_ptr) {
+	    /* Broadcast cache image */
+	    if(H5AC__broadcast_cache_image(cache_ptr, image_len, image_buffer) < 0)
+		HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Can't broadcast cache image contents.")
+        } /* end if */
+    } /* end if */
+    else if(aux_ptr) {
+	/* Receive metadata cache image */
+	if(H5AC__receive_cache_image(cache_ptr, image_len, image_buffer) < 0)
+	    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Can't receive cache image contents.")
+    } /* end else-if */
+#endif /* H5_HAVE_PARALLEL */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5AC_read_cache_image() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5AC_resize_entry
  *
  * Purpose:	Resize a pinned or protected entry.
@@ -1523,6 +1677,59 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC_unpin_entry() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5AC_write_cache_image
+ *
+ * Purpose:	Write the supplied metadata cache image to the specified
+ *		location in file.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              8/26/15
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5AC_write_cache_image(H5F_t *f, hid_t dxpl_id, haddr_t image_addr, 
+    size_t image_len, void *image_buffer)
+{
+#ifdef H5_HAVE_PARALLEL
+    H5AC_t *cache_ptr = NULL;
+    H5AC_aux_t *aux_ptr = NULL;
+#endif /* H5_HAVE_PARALLEL */
+    herr_t              ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity checks */
+    HDassert(f);
+    HDassert(H5F_addr_defined(image_addr));
+    HDassert(image_len > 0);
+    HDassert(image_buffer);
+
+#ifdef H5_HAVE_PARALLEL
+    HDassert(f->shared);
+    cache_ptr = f->shared->cache;
+    HDassert(cache_ptr);
+    aux_ptr = (H5AC_aux_t *)H5C_get_aux_ptr(cache_ptr);
+
+    if((NULL == aux_ptr) || (aux_ptr->mpi_rank == 0)) {
+	HDassert((NULL == aux_ptr) || (aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC));
+#endif /* H5_HAVE_PARALLEL */
+
+	/* Write the buffer (if serial access, or rank 0 for parallel access) */
+	if(H5F_block_write(f, H5FD_MEM_SUPER, image_addr, image_len, dxpl_id, image_buffer) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't write metadata cache image block to file.")
+#ifdef H5_HAVE_PARALLEL
+    } /* end if */
+#endif /* H5_HAVE_PARALLEL */
+	
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5AC_write_cache_image() */
 
 
 /*-------------------------------------------------------------------------
@@ -2131,9 +2338,59 @@ done:
 } /* H5AC_validate_config() */
 
 
-/*************************************************************************/
-/**************************** Private Functions: *************************/
-/*************************************************************************/
+/*-------------------------------------------------------------------------
+ * Function:    H5AC_validate_cache_image_config()
+ *
+ * Purpose:     Run a sanity check on the contents of the supplied
+ *		instance of H5AC_cache_image_config_t.
+ *
+ *              Do nothing and return SUCCEED if no errors are detected,
+ *              and flag an error and return FAIL otherwise.
+ *
+ *		At present, this function operates by packing the data
+ *		from the instance of H5AC_cache_image_config_t into an 
+ *		instance of H5C_cache_image_ctl_t, and then calling
+ *		H5C_validate_cache_image_config().  If and when 
+ *              H5AC_cache_image_config_t and H5C_cache_image_ctl_t 
+ *		diverge, we may have to change this.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              6/25/15
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5AC_validate_cache_image_config(H5AC_cache_image_config_t *config_ptr)
+{
+    H5C_cache_image_ctl_t internal_config = H5C__DEFAULT_CACHE_IMAGE_CTL;
+    herr_t              ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Check args */
+    if(config_ptr == NULL)
+        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "NULL config_ptr on entry")
+
+    if(config_ptr->version != H5AC__CURR_CACHE_IMAGE_CONFIG_VERSION)
+        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Unknown image config version")
+
+    /* don't need to get the current H5C image config here since the
+     * default values of fields not in the H5AC config will always be 
+     * valid.
+     */
+    internal_config.version            = config_ptr->version;
+    internal_config.generate_image     = config_ptr->generate_image;
+    internal_config.save_resize_status = config_ptr->save_resize_status;
+    internal_config.entry_ageout       = config_ptr->entry_ageout;
+
+    if(H5C_validate_cache_image_config(&internal_config) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "error(s) in new cache image config")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5AC_validate_cache_image_config() */
 
 
 /*-------------------------------------------------------------------------
@@ -2705,35 +2962,4 @@ done:
 
 } /* H5AC_unsettle_ring() */
 
-
-/*-------------------------------------------------------------------------
- *
- * Function:    H5AC_cache_is_clean()
- *
- * Purpose:     Debugging function that verifies that all rings in the
- *              metadata cache are clean from the outermost ring, inwards
- *              to the inner ring specified.
- *
- *              Returns TRUE if all specified rings are clean, and FALSE
- *              if not.  Throws an assertion failure on error.
- *
- * Return:      TRUE if the indicated ring(s) are clean, and FALSE otherwise.
- *
- * Programmer:  John Mainzer, 6/18/16
- *
- * Changes:     None.
- *
- *-------------------------------------------------------------------------
- */
-#ifndef NDEBUG
-hbool_t
-H5AC_cache_is_clean(const H5F_t *f, H5C_ring_t inner_ring)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
-
-    FUNC_LEAVE_NOAPI(H5C_cache_is_clean(f, inner_ring))
-
-}/* H5AC_cache_is_clean() */
-
-#endif /* NDEBUG */
 

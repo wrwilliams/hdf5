@@ -2587,7 +2587,7 @@ H5FS_vfd_alloc_hdr_and_section_info_if_needed(H5F_t *f, hid_t dxpl_id,
 
         /* allocate space for the hdr */
         if(HADDR_UNDEF == (fspace->addr = H5FD_alloc(f->shared->lf, dxpl_id,
-                                                   H5FD_MEM_FSPACE_HDR,
+                                                   H5FD_MEM_FSPACE_HDR, f, 
                                                    hdr_alloc_size,
                                                    &eoa_frag_addr,
                                                    &eoa_frag_size)))
@@ -2637,7 +2637,7 @@ H5FS_vfd_alloc_hdr_and_section_info_if_needed(H5F_t *f, hid_t dxpl_id,
 
         /* allocate space for the section info */
         if(HADDR_UNDEF == (sect_addr = H5FD_alloc(f->shared->lf, dxpl_id,
-                                                  H5FD_MEM_FSPACE_SINFO,
+                                                  H5FD_MEM_FSPACE_SINFO, f, 
                                                   sinfo_alloc_size,
                                                   &eoa_frag_addr,
                                                   &eoa_frag_size)))

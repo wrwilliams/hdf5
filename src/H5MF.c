@@ -821,10 +821,14 @@ HDfprintf(stderr, "%s: alloc_type = %u, size = %Hu\n", FUNC, (unsigned)alloc_typ
     HDassert(f->shared->lf);
     HDassert(size > 0);
 
-    if((f->shared->first_alloc_dealloc) &&
-       (SUCCEED != H5MF_tidy_self_referential_fsm_hack(f, dxpl_id)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, HADDR_UNDEF, \
-                    "tidy of self referential fsm hack failed.")
+    if(f->shared->first_alloc_dealloc) {
+
+        HDassert(! H5AC_cache_image_pending(f));
+
+        if(SUCCEED != H5MF_tidy_self_referential_fsm_hack(f, dxpl_id))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, HADDR_UNDEF, \
+                        "tidy of self referential fsm hack failed.")
+    }
 
     H5MF_alloc_to_fs_type(f, alloc_type, size, &fs_type);
 
@@ -1133,10 +1137,14 @@ HDfprintf(stderr, "%s: Entering - alloc_type = %u, addr = %a, size = %Hu\n", FUN
         HGOTO_DONE(SUCCEED);
     HDassert(addr != 0);        /* Can't deallocate the superblock :-) */
 
-    if((f->shared->first_alloc_dealloc) &&
-       (SUCCEED != H5MF_tidy_self_referential_fsm_hack(f, dxpl_id)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, HADDR_UNDEF, \
-                    "tidy of self referential fsm hack failed.")
+    if(f->shared->first_alloc_dealloc){
+
+        HDassert(!H5AC_cache_image_pending(f));
+
+        if(SUCCEED != H5MF_tidy_self_referential_fsm_hack(f, dxpl_id))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, HADDR_UNDEF, \
+                        "tidy of self referential fsm hack failed.")
+    }
 
     H5MF_alloc_to_fs_type(f, alloc_type, size, &fs_type);
 
@@ -1364,7 +1372,7 @@ HDfprintf(stderr, "%s: Entering: alloc_type = %u, addr = %a, size = %Hu, extra_r
 
     if(allow_extend) {
         /* Try extending the block at EOA */
-        if((ret_value = H5F_try_extend(f, map_type, end, extra_requested + frag_size)) < 0)
+        if((ret_value = H5F_try_extend(f, dxpl_id, map_type, end, extra_requested + frag_size)) < 0)
             HGOTO_ERROR(H5E_RESOURCE, H5E_CANTEXTEND, FAIL, "error extending file")
 #ifdef H5MF_ALLOC_DEBUG_MORE
 HDfprintf(stderr, "%s: extended = %t\n", FUNC, ret_value);
@@ -1400,7 +1408,7 @@ HDfprintf(stderr, "%s: extended = %t\n", FUNC, ret_value);
 
             /* Check if the block is able to extend into aggregation block */
             aggr = (map_type == H5FD_MEM_DRAW) ?  &(f->shared->sdata_aggr) : &(f->shared->meta_aggr);
-            if((ret_value = H5MF_aggr_try_extend(f, aggr, map_type, end, extra_requested)) < 0)
+            if((ret_value = H5MF_aggr_try_extend(f, dxpl_id, aggr, map_type, end, extra_requested)) < 0)
                 HGOTO_ERROR(H5E_RESOURCE, H5E_CANTEXTEND, FAIL, "error extending aggregation block")
 
 #ifdef H5MF_ALLOC_DEBUG_MORE
@@ -1696,10 +1704,14 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
      * them.  Otherwise, the function will be called after the format
      * conversion, and will become very confused.
      */
-    if((f->shared->first_alloc_dealloc) &&
-       (SUCCEED != H5MF_tidy_self_referential_fsm_hack(f, dxpl_id)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, HADDR_UNDEF, \
-                    "tidy of self referential fsm hack failed.")
+    if(f->shared->first_alloc_dealloc){
+
+        HDassert(!H5AC_cache_image_pending(f));
+
+        if (SUCCEED != H5MF_tidy_self_referential_fsm_hack(f, dxpl_id))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, HADDR_UNDEF, \
+                        "tidy of self referential fsm hack failed.")
+    }
 
     /* Set the ring type in the DXPL.  In most cases, we will
      * need H5C_RING_RDFSM, so initialy set the ring in
@@ -1874,7 +1886,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
 
         /* write the free space manager message -- message must already exist */
         if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, 
-                                   &fsinfo, FALSE) < 0)
+                                   &fsinfo, FALSE, 0) < 0)
             HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, \
                         "error in writing message to superblock extension")
 
@@ -2073,7 +2085,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
 
         /* write the free space manager message -- message must already exist */
         if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID,
-                                   &fsinfo, FALSE) < 0)
+                                   &fsinfo, FALSE, 0) < 0)
             HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, \
                         "error in writing message to superblock extension")
 
@@ -2135,9 +2147,23 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
         /* f->shared->eoa_post_fsm_fsalloc is undefined if there has
          * been no file space allocation or deallocation since file
          * open.
+         *
+         * If there is a cache image in the file at file open, 
+         * f->shared->first_alloc_dealloc will always be FALSE unless 
+         * the file is opened R/O, as otherwise, the image will have been
+         * read and discarded by this point.
+         *
+         * If a cache image was created on file close, the actual EOA 
+         * should be in f->shared->eoa_post_mdci_fsalloc.  Note that in 
+         * this case, it is conceivable that f->shared->first_alloc_dealloc
+         * will still be TRUE, as the cache image is allocated directly from
+         * the file driver layer.  However, as this possibility seems remote,
+         * it is ignored in the following assert.
          */
         HDassert((f->shared->first_alloc_dealloc) ||
-                 (final_eoa == f->shared->eoa_post_fsm_fsalloc));
+                 (final_eoa == f->shared->eoa_post_fsm_fsalloc) ||
+                 ((H5F_addr_defined(f->shared->eoa_post_mdci_fsalloc)) &&
+                  (final_eoa == f->shared->eoa_post_mdci_fsalloc)));
 
     } /* end if */
     else {
@@ -2154,7 +2180,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
 
         /* Write file space info message to superblock extension object header */
         /* Create the superblock extension object header in advance if needed */
-        if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, FALSE) < 0)
+        if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, FALSE, 0) < 0)
             HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, \
                         "error in writing message to superblock extension")
     } /* end else */
@@ -2505,11 +2531,14 @@ H5MF_get_free_sections(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type, size_t nsects, 
      * referential FSM is opened prior to the call to it.  Thus call
      * it here if necessary and if it hasn't been called already.
      */
-    if((f->shared->first_alloc_dealloc) &&
-       (SUCCEED != H5MF_tidy_self_referential_fsm_hack(f, dxpl_id)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, \
-                    "tidy of self referential fsm hack failed.")
+    if(f->shared->first_alloc_dealloc){
 
+        HDassert(!H5AC_cache_image_pending(f));
+
+        if(SUCCEED != H5MF_tidy_self_referential_fsm_hack(f, dxpl_id))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, \
+                        "tidy of self referential fsm hack failed.")
+    }
 
     if(type == H5FD_MEM_DEFAULT) {
         start_type = H5F_MEM_PAGE_SUPER;
@@ -3047,7 +3076,7 @@ H5MF_settle_raw_data_fsm(H5F_t *f, hid_t dxpl_id)
     fsinfo.pgend_meta_thres = f->shared->pgend_meta_thres;
     fsinfo.eoa_pre_fsm_fsalloc = HADDR_UNDEF;
 
-    if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, TRUE) < 0)
+    if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, TRUE, 0) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, \
                     "error in writing fsinfo message to superblock extension")
 

@@ -317,6 +317,7 @@
 #define H5F_SET_GRP_BTREE_SHARED(F, RC) (((F)->shared->grp_btree_shared = (RC)) ? SUCCEED : FAIL)
 #define H5F_USE_TMP_SPACE(F)    ((F)->shared->fs.use_tmp_space)
 #define H5F_IS_TMP_ADDR(F, ADDR) (H5F_addr_le((F)->shared->fs.tmp_addr, (ADDR)))
+#define H5F_SET_LATEST_FLAGS(F, FL)  ((F)->shared->latest_flags = (FL))
 #define H5F_ALIGNMENT(F)   	((F)->shared->alignment)
 #define H5F_THRESHOLD(F)   	((F)->shared->threshold)
 #define H5F_PGEND_META_THRES(F) ((F)->shared->fs.pgend_meta_thres)
@@ -372,6 +373,7 @@
 #define H5F_SET_GRP_BTREE_SHARED(F, RC) (H5F_set_grp_btree_shared((F), (RC)))
 #define H5F_USE_TMP_SPACE(F)    (H5F_use_tmp_space(F))
 #define H5F_IS_TMP_ADDR(F, ADDR) (H5F_is_tmp_addr((F), (ADDR)))
+#define H5F_SET_LATEST_FLAGS(F, FL)  (H5F_set_latest_flags((F), (FL)))
 #define H5F_USE_MDC_LOGGING(F)  (H5F_use_mdc_logging(F))
 #define H5F_START_MDC_LOG_ON_ACCESS(F)  (H5F_start_mdc_log_on_access(F))
 #define H5F_MDC_LOG_LOCATION(F) (H5F_mdc_log_location(F))
@@ -461,6 +463,8 @@
 
 
 /* ========= File Access properties ============ */
+#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME \
+						"mdc_initCacheImageCfg" /* Initial metadata cache image creation configuration */
 #define H5F_ACS_META_CACHE_INIT_CONFIG_NAME	"mdc_initCacheCfg" /* Initial metadata cache resize configuration */
 #define H5F_ACS_DATA_CACHE_NUM_SLOTS_NAME       "rdcc_nslots"   /* Size of raw data chunk cache(slots) */
 #define H5F_ACS_DATA_CACHE_BYTE_SIZE_NAME       "rdcc_nbytes"   /* Size of raw data chunk cache(bytes) */
@@ -764,6 +768,7 @@ H5_DLL struct H5UC_t *H5F_grp_btree_shared(const H5F_t *f);
 H5_DLL herr_t H5F_set_grp_btree_shared(H5F_t *f, struct H5UC_t *rc);
 H5_DLL hbool_t H5F_use_tmp_space(const H5F_t *f);
 H5_DLL hbool_t H5F_is_tmp_addr(const H5F_t *f, haddr_t addr);
+H5_DLL herr_t H5F_set_latest_flags(H5F_t *f, unsigned flags);
 H5_DLL hbool_t H5F_use_mdc_logging(const H5F_t *f);
 H5_DLL hbool_t H5F_start_mdc_log_on_access(const H5F_t *f);
 H5_DLL char *H5F_mdc_log_location(const H5F_t *f);
@@ -822,6 +827,7 @@ H5_DLL herr_t H5F_fake_free(H5F_t *f);
 
 /* Superblock related routines */
 H5_DLL herr_t H5F_super_dirty(H5F_t *f);
+H5_DLL herr_t H5F_update_super_ext_driver_msg(H5F_t *f, hid_t dxpl_id);
 
 /* Parallel I/O (i.e. MPI) related routines */
 #ifdef H5_HAVE_PARALLEL

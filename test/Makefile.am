@@ -42,7 +42,7 @@ check_SCRIPTS = $(TEST_SCRIPT)
 # As an exception, long-running tests should occur earlier in the list.
 # This gives them more time to run when tests are executing in parallel.
 TEST_PROG= testhdf5 \
-           cache cache_api cache_tagging lheap ohdr stab gheap \
+           cache cache_api cache_image cache_tagging lheap ohdr stab gheap \
            evict_on_close farray earray btree2 fheap \
            pool accum hyperslab istore bittests dt_arith tpage_buffer\
            dtypes dsets cmpd_dset filter_fail extend external efc objcopy links unlink \
@@ -101,7 +101,7 @@ else
   noinst_LTLIBRARIES=libh5test.la
 endif
 
-libh5test_la_SOURCES=h5test.c testframe.c cache_common.c
+libh5test_la_SOURCES=h5test.c testframe.c cache_common.c genall5.c
 
 # Use libhd5test.la to compile all of the tests
 LDADD=libh5test.la $(LIBHDF5)

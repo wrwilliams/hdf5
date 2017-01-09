@@ -2934,7 +2934,7 @@ check_insert_entry(unsigned paged)
 
 	result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
 			              &in_cache, &is_dirty, &is_protected,
-				      &is_pinned, NULL, NULL, NULL);
+				      &is_pinned, NULL, NULL, NULL, NULL);
 
         if(result < 0) {
 
@@ -12837,7 +12837,7 @@ check_get_entry_status(unsigned paged)
          */
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -12865,7 +12865,7 @@ check_get_entry_status(unsigned paged)
     if(pass) {
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -12891,7 +12891,7 @@ check_get_entry_status(unsigned paged)
     if(pass) {
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -12917,7 +12917,7 @@ check_get_entry_status(unsigned paged)
     if(pass) {
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -12943,7 +12943,7 @@ check_get_entry_status(unsigned paged)
     if(pass) {
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -12969,7 +12969,7 @@ check_get_entry_status(unsigned paged)
     if(pass) {
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -13061,7 +13061,7 @@ check_expunge_entry(unsigned paged)
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
                                       &in_cache, &is_dirty, &is_protected,
-				      &is_pinned, NULL, NULL, NULL);
+				      &is_pinned, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -13102,7 +13102,7 @@ check_expunge_entry(unsigned paged)
     if(pass) {
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -13145,7 +13145,7 @@ check_expunge_entry(unsigned paged)
          */
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
-                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL);
+                &in_cache, &is_dirty, &is_protected, &is_pinned, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -13186,7 +13186,7 @@ check_expunge_entry(unsigned paged)
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
                                       &in_cache, &is_dirty, &is_protected,
-				      &is_pinned, NULL, NULL, NULL);
+				      &is_pinned, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -13228,7 +13228,7 @@ check_expunge_entry(unsigned paged)
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
                                       &in_cache, &is_dirty, &is_protected,
-				      &is_pinned, NULL, NULL, NULL);
+				      &is_pinned, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -13272,7 +13272,7 @@ check_expunge_entry(unsigned paged)
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
                                       &in_cache, &is_dirty, &is_protected,
-				      &is_pinned, NULL, NULL, NULL);
+				      &is_pinned, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -14251,7 +14251,7 @@ check_resize_entry(unsigned paged)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -14329,7 +14329,7 @@ check_resize_entry(unsigned paged)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -14414,7 +14414,7 @@ check_resize_entry(unsigned paged)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -14482,7 +14482,7 @@ check_resize_entry(unsigned paged)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -14542,7 +14542,7 @@ check_resize_entry(unsigned paged)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -14582,7 +14582,7 @@ check_resize_entry(unsigned paged)
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
                                       &in_cache, &is_dirty, &is_protected,
-				      &is_pinned, NULL, NULL, NULL);
+				      &is_pinned, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -14696,7 +14696,7 @@ check_resize_entry(unsigned paged)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -14776,7 +14776,7 @@ check_resize_entry(unsigned paged)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -14861,7 +14861,7 @@ check_resize_entry(unsigned paged)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -14931,7 +14931,7 @@ check_resize_entry(unsigned paged)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -14991,7 +14991,7 @@ check_resize_entry(unsigned paged)
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              &reported_entry_size, &in_cache,
 				      &is_dirty, &is_protected, &is_pinned,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -15031,7 +15031,7 @@ check_resize_entry(unsigned paged)
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr, &entry_size,
                                       &in_cache, &is_dirty, &is_protected,
-				      &is_pinned, NULL, NULL, NULL);
+				      &is_pinned, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -15331,7 +15331,7 @@ check_evictions_enabled(unsigned paged)
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
 			              NULL, &in_cache, NULL, NULL, NULL,
-                                      NULL, NULL, NULL);
+                                      NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -15397,7 +15397,7 @@ check_evictions_enabled(unsigned paged)
         entry_ptr = &(base_addr[1]);
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
-			              NULL, &in_cache, NULL, NULL, NULL, NULL, NULL, NULL);
+			              NULL, &in_cache, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -15616,7 +15616,7 @@ check_evictions_enabled(unsigned paged)
         entry_ptr = &(base_addr[2]);
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
-			              NULL, &in_cache, NULL, NULL, NULL, NULL, NULL, NULL);
+			              NULL, &in_cache, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -15651,7 +15651,7 @@ check_evictions_enabled(unsigned paged)
         entry_ptr = &(base_addr[3]);
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
-			              NULL, &in_cache, NULL, NULL, NULL, NULL, NULL, NULL);
+			              NULL, &in_cache, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -15785,7 +15785,7 @@ check_evictions_enabled(unsigned paged)
         entry_ptr = &(base_addr[4]);
 
         result = H5C_get_entry_status(file_ptr, entry_ptr->addr,
-			              NULL, &in_cache, NULL, NULL, NULL, NULL, NULL, NULL);
+			              NULL, &in_cache, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if(result < 0) {
 
@@ -28991,7 +28991,7 @@ check_flush_deps(unsigned paged)
         /* Check the parent's entry status */
 	entry_ptr = &(base_addr[1]);
 	if(H5C_get_entry_status(file_ptr, entry_ptr->addr, NULL, &in_cache,
-                NULL, NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child) < 0)
+                NULL, NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child, NULL) < 0)
             CACHE_ERROR("H5C_get_entry_status() failed")
         if(!in_cache || is_flush_dep_parent || is_flush_dep_child)
             CACHE_ERROR("invalid entry status")
@@ -28999,7 +28999,7 @@ check_flush_deps(unsigned paged)
         /* Check the child's entry status */
 	entry_ptr = &(base_addr[0]);
 	if(H5C_get_entry_status(file_ptr, entry_ptr->addr, NULL, &in_cache,
-                NULL, NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child) < 0)
+                NULL, NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child, NULL) < 0)
             CACHE_ERROR("H5C_get_entry_status() failed")
         if(!in_cache || is_flush_dep_parent || is_flush_dep_child)
             CACHE_ERROR("invalid entry status")
@@ -29010,7 +29010,7 @@ check_flush_deps(unsigned paged)
         /* Check the parent's entry status */
 	entry_ptr = &(base_addr[1]);
 	if(H5C_get_entry_status(file_ptr, entry_ptr->addr, NULL, &in_cache,
-                NULL, NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child) < 0)
+                NULL, NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child, NULL) < 0)
             CACHE_ERROR("H5C_get_entry_status() failed")
         if(!in_cache || !is_flush_dep_parent || is_flush_dep_child)
             CACHE_ERROR("invalid entry status")
@@ -29018,7 +29018,7 @@ check_flush_deps(unsigned paged)
         /* Check the child's entry status */
 	entry_ptr = &(base_addr[0]);
 	if(H5C_get_entry_status(file_ptr, entry_ptr->addr, NULL, &in_cache,
-                NULL, NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child) < 0)
+                NULL, NULL, NULL, NULL, &is_flush_dep_parent, &is_flush_dep_child, NULL) < 0)
             CACHE_ERROR("H5C_get_entry_status() failed")
         if(!in_cache || is_flush_dep_parent || !is_flush_dep_child)
             CACHE_ERROR("invalid entry status")
@@ -34692,7 +34692,7 @@ cedds__expunge_dirty_entry_in_flush_test(H5F_t * file_ptr)
 
 	if((cache_ptr->slist_scan_restarts != 1) ||
              (cache_ptr->LRU_scan_restarts != 0) ||
-             (cache_ptr->hash_bucket_scan_restarts != 0)) {
+             (cache_ptr->index_scan_restarts != 0)) {
 
             pass = FALSE;
             failure_mssg = "unexpected scan restart stats in cedds__expunge_dirty_entry_in_flush_test().";
@@ -35080,7 +35080,7 @@ cedds__H5C_make_space_in_cache(H5F_t * file_ptr)
 
 	if((cache_ptr->slist_scan_restarts != 0) ||
              (cache_ptr->LRU_scan_restarts != 1) ||
-             (cache_ptr->hash_bucket_scan_restarts != 0)) {
+             (cache_ptr->index_scan_restarts != 0)) {
 
             pass = FALSE;
             failure_mssg = "unexpected scan restart stats in cedds__H5C_make_space_in_cache().";
@@ -35497,7 +35497,7 @@ cedds__H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * file_ptr)
 
 	if((cache_ptr->slist_scan_restarts != 0) ||
              (cache_ptr->LRU_scan_restarts != 1) ||
-             (cache_ptr->hash_bucket_scan_restarts != 0)) {
+             (cache_ptr->index_scan_restarts != 0)) {
 
             pass = FALSE;
             failure_mssg = "unexpected scan restart stats in cedds__H5C__autoadjust__ageout__evict_aged_out_entries().";
@@ -35524,7 +35524,26 @@ cedds__H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * file_ptr)
 /*-------------------------------------------------------------------------
  * Function:	cedds__H5C_flush_invalidate_cache__bucket_scan()
  *
- * Purpose:	Verify that H5C_flush_invalidate_cache() can handle
+ * Purpose:	Note:  	We now use the index list when we scan the 
+ *			contents of the metadata cache, so in principal,
+ *			this test is obsolete.  However, even using the
+ *			index list, restarts are possible, and must be 
+ *			handled gracefully.
+ *
+ *			As it turns out, this test triggers index list
+ *			scan restarts, and thus with minor changes is 
+ *			still a useful test.
+ * 
+ *			For this reason, with the exception of changing
+ *			to check the index_scan_restart stat instead of 
+ *			hash bucket restarts, I'm leaving the test 
+ *			alone.  If and when it starts to fail due to
+ *			other changes, we can re-work it to test 
+ *			index list scan restarts explicitly.
+ *
+ *						JRM -- 11/2/16
+ *
+ *		Verify that H5C_flush_invalidate_cache() can handle
  *		the removal from the cache of the next item in 
  *		its scans of hash buckets.
  *
@@ -35626,20 +35645,20 @@ cedds__H5C_flush_invalidate_cache__bucket_scan(H5F_t * file_ptr)
          if(cache_ptr == NULL) {
 
             pass = FALSE;
-            failure_mssg = "cache_ptr NULL on entry to cedds for H5C__autoadjust__ageout__evict_aged_out_entries() test.";
+            failure_mssg = "cache_ptr NULL on entry to cedds for cedds__H5C_flush_invalidate_cache__bucket_scan() test.";
         }
         else if((cache_ptr->index_len != 0) ||
                   (cache_ptr->index_size != 0)) {
 
             pass = FALSE;
-            failure_mssg = "cache not empty at start cedds for H5C__autoadjust__ageout__evict_aged_out_entries() test.";
+            failure_mssg = "cache not empty at start cedds for cedds__H5C_flush_invalidate_cache__bucket_scan() test.";
         }
         else if((cache_ptr->max_cache_size != (2 * 1024 * 1024)) ||
                   (cache_ptr->min_clean_size != (1 * 1024 * 1024))) {
 
 	    pass = FALSE;
 	    failure_mssg =
-	        "unexpected cache config at start of cedds H5C__autoadjust__ageout__evict_aged_out_entries() test.";
+	        "unexpected cache config at start of cedds cedds__H5C_flush_invalidate_cache__bucket_scan() test.";
 
         } else {
 
@@ -35868,11 +35887,14 @@ cedds__H5C_flush_invalidate_cache__bucket_scan(H5F_t * file_ptr)
         }
     }
 
-    if(pass) {
-
+    if(pass){
+        /* as this test is now checking for index list scan restarts,
+         * the following has been modified to check this instead of 
+         * hash bucket scan restarts.
+         */
 	if((cache_ptr->slist_scan_restarts != 0) ||
              (cache_ptr->LRU_scan_restarts != 0) ||
-             (cache_ptr->hash_bucket_scan_restarts != 1)) {
+             (cache_ptr->index_scan_restarts != 1)) {
 
             pass = FALSE;
             failure_mssg = "unexpected scan restart stats in cedds__H5C_flush_invalidate_cache__bucket_scan().";
@@ -36105,7 +36127,7 @@ check_stats__smoke_check_1(H5F_t * file_ptr)
              (cache_ptr->entries_scanned_to_make_space != 0) ||
              (cache_ptr->slist_scan_restarts != 0) ||
              (cache_ptr->LRU_scan_restarts != 0) ||
-             (cache_ptr->hash_bucket_scan_restarts != 0)) {
+             (cache_ptr->index_scan_restarts != 0)) {
 
             pass = FALSE;
             failure_mssg = "Unexpected cache stats in check_stats__smoke_check_1(1).";
@@ -36201,7 +36223,7 @@ check_stats__smoke_check_1(H5F_t * file_ptr)
              (cache_ptr->entries_scanned_to_make_space != 0) ||
              (cache_ptr->slist_scan_restarts != 0) ||
              (cache_ptr->LRU_scan_restarts != 0) ||
-             (cache_ptr->hash_bucket_scan_restarts != 0)) {
+             (cache_ptr->index_scan_restarts != 0)) {
 
             pass = FALSE;
             failure_mssg = "Unexpected cache stats in check_stats__smoke_check_1(2).";
@@ -36294,7 +36316,7 @@ check_stats__smoke_check_1(H5F_t * file_ptr)
              (cache_ptr->entries_scanned_to_make_space != 33) ||
              (cache_ptr->slist_scan_restarts != 0) ||
              (cache_ptr->LRU_scan_restarts != 0) ||
-             (cache_ptr->hash_bucket_scan_restarts != 0)) {
+             (cache_ptr->index_scan_restarts != 0)) {
 
             pass = FALSE;
             failure_mssg = "Unexpected cache stats in check_stats__smoke_check_1(3).";
@@ -36405,7 +36427,7 @@ check_stats__smoke_check_1(H5F_t * file_ptr)
              (cache_ptr->entries_scanned_to_make_space != 33) ||
              (cache_ptr->slist_scan_restarts != 0) ||
              (cache_ptr->LRU_scan_restarts != 0) ||
-             (cache_ptr->hash_bucket_scan_restarts != 0)) {
+             (cache_ptr->index_scan_restarts != 0)) {
 
             pass = FALSE;
             failure_mssg = "Unexpected cache stats in check_stats__smoke_check_1(4).";

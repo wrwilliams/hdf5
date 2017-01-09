@@ -147,6 +147,8 @@ H5F_get_access_plist(H5F_t *f, hbool_t app_ref)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
 
     /* Copy properties of the file access property list */
+    if(H5P_set(new_plist, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME, &(f->shared->mdc_initCacheImageCfg)) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set initial metadata cache resize config.")
     if(H5P_set(new_plist, H5F_ACS_META_CACHE_INIT_CONFIG_NAME, &(f->shared->mdc_initCacheCfg)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set initial metadata cache resize config.")
     if(H5P_set(new_plist, H5F_ACS_DATA_CACHE_NUM_SLOTS_NAME, &(f->shared->rdcc_nslots)) < 0)
@@ -613,6 +615,7 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
         f->shared->first_alloc_dealloc = FALSE;
         f->shared->eoa_pre_fsm_fsalloc = HADDR_UNDEF;
         f->shared->eoa_post_fsm_fsalloc = HADDR_UNDEF;
+        f->shared->eoa_post_mdci_fsalloc = HADDR_UNDEF;
 
         /* Initialization for handling file space (for paged aggregation) */
         f->shared->pgend_meta_thres = H5F_FILE_SPACE_PGEND_META_THRES;
@@ -657,6 +660,8 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
         /* Get the FAPL values to cache */
         if(NULL == (plist = (H5P_genplist_t *)H5I_object(fapl_id)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not file access property list")
+        if(H5P_get(plist, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME, &(f->shared->mdc_initCacheImageCfg)) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get initial metadata cache resize config")
         if(H5P_get(plist, H5F_ACS_META_CACHE_INIT_CONFIG_NAME, &(f->shared->mdc_initCacheCfg)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get initial metadata cache resize config")
         if(H5P_get(plist, H5F_ACS_DATA_CACHE_NUM_SLOTS_NAME, &(f->shared->rdcc_nslots)) < 0)
@@ -750,17 +755,18 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
                 f->shared->mdc_log_location = NULL;
         } /* end block */
 
-        /* Get object flush callback information */
-        if(H5P_get(plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &(f->shared->object_flush)) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "can't get object flush cb info")
-
         /*
          * Create a metadata cache with the specified number of elements.
          * The cache might be created with a different number of elements and
          * the access property list should be updated to reflect that.
          */
-        if(H5AC_create(f, &(f->shared->mdc_initCacheCfg)) < 0)
+        if(H5AC_create(f, &(f->shared->mdc_initCacheCfg), &(f->shared->mdc_initCacheImageCfg)) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to create metadata cache")
+
+        /* Get object flush callback information */
+        if(H5P_get(plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &(f->shared->object_flush)) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "can't get object flush cb info")
+
 
         /* Create the file's "open object" information */
         if(H5FO_create(f) < 0)
@@ -849,10 +855,17 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
              * read only case.
              */
             if(H5AC_prep_for_file_close(f, dxpl_id) < 0)
-                /* Push error, but keep going*/
-                HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                            "metadata cache prep for close failed")
-        }
+                /* Push error, but keep going */
+                HDONE_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "metadata cache prep for close failed")
+        } /* end else */
+
+        /* With the shutdown modifications, the contents of the metadata cache
+         * should be clean at this point, with the possible exception of the 
+         * the superblock and superblock extension.
+         *
+         * Verify this.
+         */
+        HDassert(H5AC_cache_is_clean(f, H5AC_RING_MDFSM));
 
         /* Release the external file cache */
         if(f->shared->efc) {
@@ -862,7 +875,6 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
             f->shared->efc = NULL;
         } /* end if */
 
-#if 1 /* JRM */
         /* With the shutdown modifications, the contents of the metadata cache
          * should be clean at this point, with the possible exception of the
          * the superblock and superblock extension.
@@ -870,7 +882,6 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
          * Verify this.
          */
         HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
-#endif /* JRM */
 
         /* Release objects that depend on the superblock being initialized */
         if(f->shared->sblock) {
@@ -895,22 +906,16 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                     /* Push error, but keep going*/
                     HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file free space info")
 
-#if 1 /* JRM */
                 /* at this point, only the superblock and superblock
                  * extension should be dirty.
                  */
                 HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
-#endif /* JRM */
 
                 /* Flush the file again (if requested), as shutting down the
                  * free space manager may dirty some data structures again.
                  */
                 if(flush)
-#if 0 /* JRM */
-                    if(H5F_flush(f, dxpl_id, TRUE) < 0)
-                        /* Push error, but keep going*/
-                        HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
-#else /* JRM */
+
                 {
                     /* Release any space allocated to space aggregators,
                      * so that the eoa value corresponds to the end of the
@@ -934,7 +939,6 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                      */
                     HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
                 }
-#endif /* JRM */
             } /* end if */
 
             /* if it exists, unpin the driver information block cache entry,
@@ -952,14 +956,12 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
             f->shared->sblock = NULL;
         } /* end if */
 
-#if 1 /* JRM */
         /* with the possible exception of the superblock and superblock
          * extension, the metadata cache should be clean at this point.
          *
          * Verify this.
          */
         HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
-#endif /* JRM */
 
         /* Remove shared file struct from list of open files */
         if(H5F_sfile_remove(f->shared) < 0)
@@ -1406,7 +1408,6 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file space")
 
-#if 1 /* new home for H5AC_prep_for_file_close */ /* JRM */
     if ( closing ) {
 
         /* notify the metadata cache that the file is about to be closed.
@@ -1418,7 +1419,6 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
             HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "metadata cache prep for close failed")
 
     }
-#endif /* new home for H5AC_prep_for_file_close */ /* JRM */
 
     /* Flush the entire metadata cache */
     if(H5AC_flush(f, dxpl_id) < 0)
@@ -2586,3 +2586,34 @@ H5F_set_coll_md_read(H5F_t *f, H5P_coll_md_read_flag_t cmr)
     FUNC_LEAVE_NOAPI_VOID
 } /* H5F_set_coll_md_read() */
 #endif /* H5_HAVE_PARALLEL */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5F_set_latest_flags
+ *
+ * Purpose:     Set the latest_flags field with a new value.
+ *
+ * Return:      Success:        SUCCEED
+ *              Failure:        FAIL
+ *
+ * Programmer:  Quincey Koziol
+ *              4/26/16
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5F_set_latest_flags(H5F_t *f, unsigned flags)
+{
+    /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    /* Sanity check */
+    HDassert(f);
+    HDassert(f->shared);
+    HDassert(0 == ((~flags) & H5F_LATEST_ALL_FLAGS));
+
+    f->shared->latest_flags = flags;
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+} /* H5F_set_latest_flags() */
+
