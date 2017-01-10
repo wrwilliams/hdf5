@@ -87,8 +87,10 @@ set (H5C_SOURCES
     ${HDF5_SRC_DIR}/H5C.c
     ${HDF5_SRC_DIR}/H5Cdbg.c
     ${HDF5_SRC_DIR}/H5Cepoch.c
+    ${HDF5_SRC_DIR}/H5Cimage.c
     ${HDF5_SRC_DIR}/H5Clog.c
     ${HDF5_SRC_DIR}/H5Cmpio.c
+    ${HDF5_SRC_DIR}/H5Cprefetched.c
     ${HDF5_SRC_DIR}/H5Cquery.c
     ${HDF5_SRC_DIR}/H5Ctag.c
     ${HDF5_SRC_DIR}/H5Ctest.c
@@ -448,6 +450,7 @@ set (H5O_SOURCES
     ${HDF5_SRC_DIR}/H5Olayout.c
     ${HDF5_SRC_DIR}/H5Olinfo.c
     ${HDF5_SRC_DIR}/H5Olink.c
+    ${HDF5_SRC_DIR}/H5Omdci_msg.c
     ${HDF5_SRC_DIR}/H5Omessage.c
     ${HDF5_SRC_DIR}/H5Omtime.c
     ${HDF5_SRC_DIR}/H5Oname.c
