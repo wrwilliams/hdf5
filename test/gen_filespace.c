@@ -19,12 +19,12 @@
 #define NELMTS(X)    	(sizeof(X)/sizeof(X[0]))	/* # of elements */
 
 const char *FILENAMES[] = {
-    "aggr_nopersist.h5",	/* H5F_FILE_SPACE_AGGR + not persisting free-space */
-    "aggr_persist.h5",		/* H5F_FILE_SPACE_AGGR + persisting free-space */
-    "paged_nopersist.h5",	/* H5F_FILE_SPACE_PAGE + not persisting free-space */
-    "paged_persist.h5",		/* H5F_FILE_SPACE_PAGE + persisting free-space */
-    "none_nopersist.h5",	/* H5F_FILE_SPACE_NONE + not persisting free-space */
-    "none_persist.h5"		/* H5F_FILE_SPACE_NONE + persisting free-space */
+    "aggr_nopersist.h5",	/* H5F_FSPACE_STRATEGY_AGGR + not persisting free-space */
+    "aggr_persist.h5",		/* H5F_FSPACE_STRATEGY_AGGR + persisting free-space */
+    "paged_nopersist.h5",	/* H5F_FSPACE_STRATEGY_PAGE + not persisting free-space */
+    "paged_persist.h5",		/* H5F_FSPACE_STRATEGY_PAGE + persisting free-space */
+    "none_nopersist.h5",	/* H5F_FSPACE_STRATEGY_NONE + not persisting free-space */
+    "none_persist.h5"		/* H5F_FSPACE_STRATEGY_NONE + persisting free-space */
 };
 
 #define DATASET		"dset"
@@ -47,54 +47,68 @@ const char *FILENAMES[] = {
  * compatibility testing via test_filespace_round_compatible() in test/tfile.c.
  *
  */
-static void gen_file(void)
+int main(void)
 {
-    hid_t   	fid = -1;		/* File ID */
-    hid_t   	fcpl = -1;		/* File creation property list */
-    hid_t       dataset = -1;		/* Dataset ID */
-    hid_t       space = -1;		/* Dataspace ID */
-    hsize_t     dim[1];			/* Dimension sizes */
-    int         data[NUM_ELMTS];	/* Buffer for data */
-    unsigned    i, j;			/* Local index variables */
+    hid_t fid = -1;         /* File ID */
+    hid_t fcpl = -1;        /* File creation property list */
+    hid_t did = -1;         /* Dataset ID */
+    hid_t sid = -1;		    /* Dataspace ID */
+    hsize_t dim[1];			/* Dimension sizes */
+    int data[NUM_ELMTS];	/* Buffer for data */
+    int i, j;			    /* Local index variables */
     H5F_fspace_strategy_t fs_strategy;	/* File space handling strategy */
-    hbool_t    	fs_persist;
+    unsigned fs_persist;     /* Persisting free-space or not */
 
     j = 0;
     for(fs_strategy = H5F_FSPACE_STRATEGY_AGGR; fs_strategy < H5F_FSPACE_STRATEGY_NTYPES; INC_ENUM(H5F_fspace_strategy_t, fs_strategy)) {
-	for(fs_persist = FALSE; fs_persist <= TRUE; fs_persist++) {
-	    /* Get a copy of the default file creation property */
-	    fcpl = H5Pcreate(H5P_FILE_CREATE);
+        for(fs_persist = FALSE; fs_persist <= TRUE; fs_persist++) {
+            /* Get a copy of the default file creation property */
+            if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
+                goto error;
 
-	    H5Pset_file_space_strategy(fcpl, fs_strategy, fs_persist, (hsize_t)1);
+            if(H5Pset_file_space_strategy(fcpl, fs_strategy, fs_persist, (hsize_t)1) < 0)
+                goto error;
 
-	    /* Create the file with the file space info */
-	    fid = H5Fcreate(FILENAMES[j], H5F_ACC_TRUNC, fcpl, H5P_DEFAULT);
+            /* Create the file with the file space info */
+            if((fid = H5Fcreate(FILENAMES[j], H5F_ACC_TRUNC, fcpl, H5P_DEFAULT)) < 0)
+                goto error;
 
-	    /* Create the dataset */
-	    dim[0] = NUM_ELMTS;
-	    space = H5Screate_simple(1, dim, NULL);
-	    dataset = H5Dcreate2(fid, DATASET, H5T_NATIVE_INT, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+            /* Create the dataset */
+            dim[0] = NUM_ELMTS;
+            if((sid = H5Screate_simple(1, dim, NULL)) < 0)
+                goto error;
+            if((did = H5Dcreate2(fid, DATASET, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+                goto error;
 
-	    for(i = 0; i < NUM_ELMTS; i++)
-		data[i] = i;
+            for(i = 0; i < NUM_ELMTS; i++)
+                data[i] = i;
 
-	    /* Write the dataset */
-	    H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data);
+            /* Write the dataset */
+            if(H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data) < 0)
+                goto error;
 
-	    /* Closing */
-	    H5Dclose(dataset);
-	    H5Sclose(space);
-	    H5Fclose(fid);
-	    H5Pclose(fcpl);
-	    ++j;
-	}
+            /* Closing */
+            if(H5Dclose(did) < 0)
+                goto error;
+            if(H5Sclose(sid) < 0)
+                goto error;
+            if(H5Fclose(fid) < 0)
+                goto error;
+            if(H5Pclose(fcpl) < 0)
+                goto error;
+            ++j;
+        }
     }
     assert(j == NELMTS(FILENAMES));
-}
-
-int main(void)
-{
-    gen_file();
 
     return 0;
+
+error:
+    H5E_BEGIN_TRY {
+        H5Sclose(sid);
+        H5Sclose(did);
+        H5Pclose(fcpl);
+        H5Fclose(fid);
+    } H5E_END_TRY;
+    return -1;
 }

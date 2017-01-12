@@ -128,12 +128,12 @@ const char *OLD_FILENAME[] = {
 };
 
 const char *FSPACE_FILENAMES[] = {
-    "aggr_nopersist.h5",        /* H5F_FILE_SPACE_AGGR, not persisting free-space */
-    "aggr_persist.h5",          /* H5F_FILE_SPACE_AGGR, persisting free-space */
-    "paged_nopersist.h5",  	/* H5F_FILE_SPACE_PAGE, not persisting free-space */
-    "paged_persist.h5",    	/* H5F_FILE_SPACE_PAGE, persisting free-space */
-    "none_nopersist.h5",        /* H5F_FILE_SPACE_NONE, not persisting free-space */
-    "none_persist.h5"       
+    "aggr_nopersist.h5",    /* H5F_FILE_SPACE_AGGR, not persisting free-space */
+    "aggr_persist.h5",      /* H5F_FILE_SPACE_AGGR, persisting free-space */
+    "paged_nopersist.h5",   /* H5F_FILE_SPACE_PAGE, not persisting free-space */
+    "paged_persist.h5",     /* H5F_FILE_SPACE_PAGE, persisting free-space */
+    "none_nopersist.h5",    /* H5F_FILE_SPACE_NONE, not persisting free-space */
+    "none_persist.h5"       /* H5F_FILE_SPACE_NONE, persisting free-space */
 };
 
 const char *FILESPACE_NAME[] = {
@@ -4909,10 +4909,7 @@ test_file(void)
                                                 /* Skipped testing for multi/split drivers */
 
     test_filespace_compatible();                /* Test compatibility for file space management */
-#if 0 /* failure triggered by file format change??? */ 
-      /* lookat later -- JRM */
     test_filespace_round_compatible();          /* Testing file space compatibility for files from trunk to 1_8 to trunk */
-#endif /* JRM */
 
     test_libver_bounds();                       /* Test compatibility for file space management */
     test_libver_macros();                       /* Test the macros for library version comparison */
