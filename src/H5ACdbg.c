@@ -418,46 +418,6 @@ done:
 
 /*-------------------------------------------------------------------------
  *
- * Function:    H5AC_cache_image_pending()
- *
- * Purpose:     Debugging function that tests to see if the load of a 
- *              metadata cache image load is pending (i.e. will be executed
- *              on the next protect or insert)
- *              
- *              Returns TRUE if a cache image load is pending, and FALSE
- *              if not.  Throws an assertion failure on error.
- *
- * Return:      TRUE if a cache image load is pending, and FALSE otherwise.
- *
- * Programmer:  John Mainzer, 6/18/16
- *
- * Changes:     None.
- *
- *-------------------------------------------------------------------------
- */
-#ifndef NDEBUG
-hbool_t
-H5AC_cache_image_pending(const H5F_t *f)
-{
-    H5C_t *cache_ptr;
-    hbool_t ret_value;          /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
-
-    /* Sanity checks */
-    HDassert(f);
-    HDassert(f->shared);
-    cache_ptr = f->shared->cache;
-
-    ret_value = H5C_cache_image_pending(cache_ptr);
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5AC_cache_image_pending() */
-#endif /* NDEBUG */
-
-
-/*-------------------------------------------------------------------------
- *
  * Function:    H5AC_cache_is_clean()
  *
  * Purpose:     Debugging function that verifies that all rings in the

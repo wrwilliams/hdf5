@@ -347,6 +347,44 @@ H5AC_term_package(void)
 
 
 /*-------------------------------------------------------------------------
+ *
+ * Function:    H5AC_cache_image_pending()
+ *
+ * Purpose:     Debugging function that tests to see if the load of a 
+ *              metadata cache image load is pending (i.e. will be executed
+ *              on the next protect or insert)
+ *              
+ *              Returns TRUE if a cache image load is pending, and FALSE
+ *              if not.  Throws an assertion failure on error.
+ *
+ * Return:      TRUE if a cache image load is pending, and FALSE otherwise.
+ *
+ * Programmer:  John Mainzer, 1/10/17
+ *
+ * Changes:     None.
+ *
+ *-------------------------------------------------------------------------
+ */
+hbool_t
+H5AC_cache_image_pending(const H5F_t *f)
+{
+    H5C_t *cache_ptr;
+    hbool_t ret_value;          /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    /* Sanity checks */
+    HDassert(f);
+    HDassert(f->shared);
+    cache_ptr = f->shared->cache;
+
+    ret_value = H5C_cache_image_pending(cache_ptr);
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5AC_cache_image_pending() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5AC_create
  *
  * Purpose:     Initialize the cache just after a file is opened.  The
@@ -776,6 +814,49 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC_flush() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5AC_force_cache_image_load()
+ *
+ * Purpose:     On rare occasions, it is necessary to run 
+ *              H5MF_tidy_self_referential_fsm_hack() prior to the first
+ *              metadata cache access.  This is a problem as if there is a 
+ *              cache image at the end of the file, that routine will 
+ *              discard it.
+ *
+ *              We solve this issue by calling this function, which will
+ *              load the cache image and then call 
+ *              H5MF_tidy_self_referential_fsm_hack() to discard it.
+ *
+ * Return:      SUCCEED on success, and FAIL on failure.
+ *
+ * Programmer:  John Mainzer
+ *              1/11/17
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5AC_force_cache_image_load(H5F_t *    f,
+                            hid_t      dxpl_id)
+{
+    herr_t ret_value = SUCCEED;      /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    HDassert(f);
+    HDassert(f->shared);
+    HDassert(f->shared->cache);
+
+    if ( H5C_force_cache_image_load(f, dxpl_id) < 0 )
+
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, FAIL, "Can't load cache image")
+
+done:
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5AC_force_cache_image_load() */
 
 
 /*-------------------------------------------------------------------------

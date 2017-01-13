@@ -394,6 +394,8 @@ H5_DLL herr_t H5AC_set_cache_auto_resize_config(H5AC_t *cache_ptr,
 H5_DLL herr_t H5AC_validate_config(H5AC_cache_config_t *config_ptr);
 
 /* Cache image routines */
+H5_DLL hbool_t H5AC_cache_image_pending(const H5F_t *f);
+H5_DLL herr_t H5AC_force_cache_image_load(H5F_t * f, hid_t dxpl_id);
 H5_DLL herr_t H5AC_load_cache_image_on_next_protect(H5F_t *f, haddr_t addr, 
     size_t len, hbool_t rw);
 H5_DLL herr_t H5AC_validate_cache_image_config(
@@ -432,7 +434,6 @@ H5_DLL herr_t H5AC_verify_entry_type(const H5F_t * f, haddr_t addr,
     hbool_t * type_ok_ptr);
 H5_DLL herr_t H5AC_stats(const H5F_t *f);
 H5_DLL herr_t H5AC_dump_cache(const H5F_t *f);
-H5_DLL hbool_t H5AC_cache_image_pending(const H5F_t *f);
 H5_DLL hbool_t H5AC_cache_is_clean(const H5F_t *f, H5C_ring_t inner_ring);
 
 #endif /* !_H5ACprivate_H */
