@@ -1901,7 +1901,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
 
         /* write the free space manager message -- message must already exist */
         if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, 
-                                   &fsinfo, FALSE, 0) < 0)
+                                   &fsinfo, FALSE, H5O_MSG_FLAG_MARK_IF_UNKNOWN) < 0)
             HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, \
                         "error in writing message to superblock extension")
 
@@ -2100,7 +2100,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
 
         /* write the free space manager message -- message must already exist */
         if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID,
-                                   &fsinfo, FALSE, 0) < 0)
+                                   &fsinfo, FALSE, H5O_MSG_FLAG_MARK_IF_UNKNOWN) < 0)
             HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, \
                         "error in writing message to superblock extension")
 
@@ -2195,7 +2195,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
 
         /* Write file space info message to superblock extension object header */
         /* Create the superblock extension object header in advance if needed */
-        if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, FALSE, 0) < 0)
+        if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, FALSE, H5O_MSG_FLAG_MARK_IF_UNKNOWN) < 0)
             HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, \
                         "error in writing message to superblock extension")
     } /* end else */
@@ -3101,7 +3101,7 @@ H5MF_settle_raw_data_fsm(H5F_t *f, hid_t dxpl_id)
     fsinfo.pgend_meta_thres = f->shared->pgend_meta_thres;
     fsinfo.eoa_pre_fsm_fsalloc = HADDR_UNDEF;
 
-    if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, TRUE, 0) < 0)
+    if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, TRUE, H5O_MSG_FLAG_MARK_IF_UNKNOWN) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, \
                     "error in writing fsinfo message to superblock extension")
 
