@@ -1142,7 +1142,7 @@ HDfprintf(stderr, "%s: Entering - alloc_type = %u, addr = %a, size = %Hu\n", FUN
         HDassert(!H5AC_cache_image_pending(f));
 
         if(SUCCEED != H5MF_tidy_self_referential_fsm_hack(f, dxpl_id))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, HADDR_UNDEF, \
+            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, \
                         "tidy of self referential fsm hack failed.")
     }
 
@@ -1698,19 +1698,34 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
     /* check args */
     HDassert(f);
 
-    /* if there have been no file space allocations / deallocation so 
+    /* If there have been no file space allocations / deallocation so 
      * far, must call H5MF_tidy_self_referential_fsm_hack() to float 
      * all self referential FSMs and release file space allocated to
      * them.  Otherwise, the function will be called after the format
      * conversion, and will become very confused.
+     *
+     * The situation is further complicated if a cache image exists
+     * and had not yet been loaded into the metadata cache.  In this
+     * case, call H5C_force_cache_image_load() instead of 
+     * H5MF_tidy_self_referential_fsm_hack().  H5C_force_cache_image_load()
+     * will load the cache image, and then call 
+     * H5MF_tidy_self_referential_fsm_hack() to discard the cache image 
+     * block.
      */
     if(f->shared->first_alloc_dealloc){
 
-        HDassert(!H5AC_cache_image_pending(f));
+        if(H5AC_cache_image_pending(f)){
 
-        if (SUCCEED != H5MF_tidy_self_referential_fsm_hack(f, dxpl_id))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, HADDR_UNDEF, \
-                        "tidy of self referential fsm hack failed.")
+            if(SUCCEED != H5AC_force_cache_image_load(f, dxpl_id))
+                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, \
+                            "forced cache image load failed.")
+
+        } else {
+
+            if(SUCCEED != H5MF_tidy_self_referential_fsm_hack(f, dxpl_id))
+                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, \
+                            "tidy of self referential fsm hack failed.")
+        }
     }
 
     /* Set the ring type in the DXPL.  In most cases, we will
@@ -2525,14 +2540,29 @@ H5MF_get_free_sections(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type, size_t nsects, 
     /* H5MF_tidy_self_referential_fsm_hack() will fail if any self 
      * referential FSM is opened prior to the call to it.  Thus call
      * it here if necessary and if it hasn't been called already.
+     *
+     * The situation is further complicated if a cache image exists
+     * and had not yet been loaded into the metadata cache.  In this
+     * case, call H5C_force_cache_image_load() instead of 
+     * H5MF_tidy_self_referential_fsm_hack().  H5C_force_cache_image_load()
+     * will load the cache image, and then call 
+     * H5MF_tidy_self_referential_fsm_hack() to discard the cache image 
+     * block.
      */
     if(f->shared->first_alloc_dealloc){
 
-        HDassert(!H5AC_cache_image_pending(f));
+        if(H5AC_cache_image_pending(f)){
 
-        if(SUCCEED != H5MF_tidy_self_referential_fsm_hack(f, dxpl_id))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, \
-                        "tidy of self referential fsm hack failed.")
+            if(SUCCEED != H5AC_force_cache_image_load(f, dxpl_id))
+                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, \
+                            "forced cache image load failed.")
+
+        } else {
+
+            if(SUCCEED != H5MF_tidy_self_referential_fsm_hack(f, dxpl_id))
+                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, \
+                            "tidy of self referential fsm hack failed.")
+        }
     }
 
     if(type == H5FD_MEM_DEFAULT) {

@@ -2238,6 +2238,7 @@ H5_DLL herr_t H5C_expunge_entry(H5F_t *f, hid_t dxpl_id,
     const H5C_class_t *type, haddr_t addr, unsigned flags);
 H5_DLL herr_t H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags);
 H5_DLL herr_t H5C_flush_tagged_entries(H5F_t * f, hid_t dxpl_id, haddr_t tag); 
+H5_DLL herr_t H5C_force_cache_image_load(H5F_t * f, hid_t dxpl_id);
 H5_DLL herr_t H5C_evict_tagged_entries(H5F_t * f, hid_t dxpl_id, haddr_t tag, hbool_t match_global);
 H5_DLL herr_t H5C_expunge_tag_type_metadata(H5F_t *f, hid_t dxpl_id, haddr_t tag, int type_id, unsigned flags);
 H5_DLL herr_t H5C_get_tag(const void *thing, /*OUT*/ haddr_t *tag);
@@ -2303,6 +2304,7 @@ H5_DLL herr_t H5C_get_entry_ring(const H5F_t *f, haddr_t addr, H5C_ring_t *ring)
 H5_DLL herr_t H5C_unsettle_ring(H5F_t * f, H5C_ring_t ring);
 H5_DLL herr_t H5C_cache_image_status(H5F_t * f, hbool_t *load_ci_ptr, 
     hbool_t *write_ci_ptr);
+H5_DLL hbool_t H5C_cache_image_pending(const H5C_t *cache_ptr);
 
 #ifdef H5_HAVE_PARALLEL
 H5_DLL herr_t H5C_apply_candidate_list(H5F_t *f, hid_t dxpl_id,
@@ -2316,7 +2318,6 @@ H5_DLL herr_t H5C_mark_entries_as_clean(H5F_t *f, hid_t dxpl_id, int32_t ce_arra
 #endif /* H5_HAVE_PARALLEL */
 
 #ifndef NDEBUG	/* debugging functions */
-H5_DLL hbool_t H5C_cache_image_pending(const H5C_t *cache_ptr);
 H5_DLL hbool_t H5C_cache_is_clean(const H5C_t *cache_ptr, H5C_ring_t inner_ring);
 H5_DLL herr_t H5C_dump_cache_skip_list(H5C_t *cache_ptr, char *calling_fcn);
 H5_DLL herr_t H5C_get_entry_ptr_from_addr(H5C_t *cache_ptr, haddr_t addr,
