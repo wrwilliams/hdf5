@@ -4259,6 +4259,8 @@ test_sects_freespace(const char *env_h5_drvr, hbool_t new_format)
         CHECK(ret, FAIL, "H5Fclose");
         ret = H5Pclose(fcpl);
         CHECK(fcpl, FAIL, "H5Pclose");
+
+        h5_clean_files(FILESPACE_NAME, fapl);
     } 
 
 } /* end test_sects_freespace() */
