@@ -1385,42 +1385,36 @@ Java_hdf_hdf5lib_H5_H5Pset_1virtual_1printf_1gap
 
 /*
  * Class:     hdf_hdf5lib_H5
- * Method:    H5Pget_file_space
- * Signature: (J[I[J)V
- */
-/* XXX: DEPRECATED HDF5 1.10.0 API
-JNIEXPORT void JNICALL
-Java_hdf_hdf5lib_H5_H5Pget_1file_1space
-(JNIEnv *, jclass, jlong, jintArray, jlongArray);
-*/
-
-/*
- * Class:     hdf_hdf5lib_H5
- * Method:    H5Pset_file_space
- * Signature: (JIJ)V
- */
-/* XXX: DEPRECATED HDF5 1.10.0 API
-JNIEXPORT void JNICALL
-Java_hdf_hdf5lib_H5_H5Pset_1file_1space
-(JNIEnv *, jclass, jlong, jint, jlong);
-*/
-
-/*
- * Class:     hdf_hdf5lib_H5
  * Method:    H5Pget_file_space_strategy
- * Signature: (J[I[Z[J)V
+ * Signature: (J[Z[J)I
  */
-/* XXX: HDF5 1.10.1+ API */
-JNIEXPORT void JNICALL
+JNIEXPORT jint JNICALL
 Java_hdf_hdf5lib_H5_H5Pget_1file_1space_1strategy
-(JNIEnv *, jclass, jlong, jintArray, jbooleanArray, jlongArray);
+(JNIEnv *, jclass, jlong, jbooleanArray, jlongArray);
+
+/*
+ * Class:     hdf_hdf5lib_H5
+ * Method:    H5Pget_file_space_strategy_persist
+ * Signature: (J)Z
+ */
+JNIEXPORT jboolean JNICALL
+Java_hdf_hdf5lib_H5_H5Pget_1file_1space_1strategy_1persist
+(JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     hdf_hdf5lib_H5
+ * Method:    H5Pget_file_space_strategy_threshold
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL
+Java_hdf_hdf5lib_H5_H5Pget_1file_1space_1strategy_1threshold
+(JNIEnv *, jclass, jlong);
 
 /*
  * Class:     hdf_hdf5lib_H5
  * Method:    H5Pset_file_space_strategy
  * Signature: (JIZJ)V
  */
-/* XXX: HDF5 1.10.1+ API */
 JNIEXPORT void JNICALL
 Java_hdf_hdf5lib_H5_H5Pset_1file_1space_1strategy
 (JNIEnv *, jclass, jlong, jint, jboolean, jlong);
@@ -1428,19 +1422,17 @@ Java_hdf_hdf5lib_H5_H5Pset_1file_1space_1strategy
 /*
  * Class:     hdf_hdf5lib_H5
  * Method:    H5Pget_file_space_page_size
- * Signature: (J[J)V
+ * Signature: (J)J
  */
-/* XXX: HDF5 1.10.1+ API */
-JNIEXPORT void JNICALL
+JNIEXPORT jlong JNICALL
 Java_hdf_hdf5lib_H5_H5Pget_1file_1space_1page_1size
-(JNIEnv *, jclass, jlong, jlongArray);
+(JNIEnv *, jclass, jlong);
 
 /*
  * Class:     hdf_hdf5lib_H5
  * Method:    H5Pset_file_space_page_size
  * Signature: (JJ)V
  */
-/* XXX: HDF5 1.10.1+ API */
 JNIEXPORT void JNICALL
 Java_hdf_hdf5lib_H5_H5Pset_1file_1space_1page_1size
 (JNIEnv *, jclass, jlong, jlong);

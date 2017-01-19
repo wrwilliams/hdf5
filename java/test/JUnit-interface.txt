@@ -414,6 +414,7 @@ JUnit version 4.11
 .testH5P_layout
 .testH5Pget_link_creation_order
 .testH5Pset_shared_mesg_nindexes_InvalidHIGHnindexes
+.testH5P_file_space_page_size
 .testH5Pget_shared_mesg_index_Invalid_indexnum
 .testH5Pset_data_transform_NullExpression
 .testH5Pset_elink_prefix_null
@@ -436,9 +437,9 @@ JUnit version 4.11
 .testH5Pset_shared_mesg_index
 .testH5Pset_copy_object
 .testH5Pset_link_creation_order_trackedPLUSindexed
+.testH5P_file_space_strategy
 .testH5Pset_copy_object_invalidobject
 .testH5Pset_est_link_info_InvalidValues
-.testH5P_file_space
 .testH5Pset_local_heap_size_hint
 .testH5Pget_est_link_info
 .testH5Pset_scaleoffset
@@ -496,7 +497,6 @@ JUnit version 4.11
 .testH5P_fapl_family
 .testH5P_chunk_cache
 .testH5P_meta_block_size
-.testH5Fmdc_logging
 .testH5Pget_elink_fapl
 .testH5Pset_mdc_config
 .testH5P_small_data_block_size
