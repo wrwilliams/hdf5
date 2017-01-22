@@ -1571,7 +1571,6 @@ H5C_insert_entry(H5F_t *             f,
     /* initialize cache image related fields */
     entry_ptr->include_in_image 		= FALSE;
     entry_ptr->lru_rank         		= 0;
-    entry_ptr->image_index			= -1;
     entry_ptr->image_dirty			= FALSE;
     entry_ptr->fd_parent_count			= 0;
     entry_ptr->fd_parent_addrs			= NULL;
@@ -7231,7 +7230,6 @@ H5C_load_entry(H5F_t *              f,
     /* initialize cache image related fields */
     entry->include_in_image             = FALSE;
     entry->lru_rank                     = 0;
-    entry->image_index                  = -1;
     entry->image_dirty                  = FALSE;
     entry->fd_parent_count              = 0;
     entry->fd_parent_addrs              = NULL;

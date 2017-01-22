@@ -1382,10 +1382,6 @@ typedef int H5C_ring_t;
  *		either lru_rank -1 (if pinned) or 0 (if loaded during 
  *		the process of flushing the cache.
  *
- * image_index:	Index of the entry in the array of pointer to 
- *		H5C_cache_entry_t pointed to by cache_ptr->image_entries,
- *		or -1 if not referenced by that array.
- *
  * image_dirty: Boolean flag indicating whether the entry should be marked
  *		as dirty in the metadata cache image.  The flag is set to
  *		TRUE iff the entry is dirty when H5C_prep_for_file_close()
@@ -1636,7 +1632,6 @@ typedef struct H5C_cache_entry_t {
     /* fields supporting cache image */
     hbool_t                     include_in_image;
     int32_t                     lru_rank;
-    int32_t                     image_index;
     hbool_t                     image_dirty;
     uint64_t                    fd_parent_count;
     haddr_t                    *fd_parent_addrs;
@@ -1671,7 +1666,7 @@ typedef struct H5C_cache_entry_t {
  * structure H5C_image_entry_t
  *
  * Instances of the H5C_image_entry_t structure are used to store data on
- * metadatat cache entries used in the construction of the metadat cache 
+ * metadata cache entries used in the construction of the metadata cache 
  * image block.  In essence this structure is a greatly simplified version
  * of H5C_cache_entry_t.
  *
@@ -1704,10 +1699,6 @@ typedef struct H5C_cache_entry_t {
  *
  * type_id:	Integer field containing the type ID of the entry.
  *
- * image_index:	Index of the entry in the array of pointer to 
- *		H5C_cache_entry_t pointed to by cache_ptr->image_entries,
- *		or -1 if not referenced by that array.
- *
  * lru_rank:	Rank of the entry in the LRU just prior to file close.
  *
  *		Note that the first entry on the LRU has lru_rank 1,
@@ -1728,7 +1719,7 @@ typedef struct H5C_cache_entry_t {
  *
  *              Since the image_fd_height is used to order entries in the
  *              cache image so that fd parents preceed fd children, for
- *              purposes of this field, and entry is at flush dependency
+ *              purposes of this field, an entry is at flush dependency
  *              level 0 if it either has no children, or if all of its
  *              children are not in the cache image.
  *
@@ -1754,7 +1745,7 @@ typedef struct H5C_cache_entry_t {
  *              cache image, and its parent is dirty and not in the cache
  *              image, then the entry must be removed from the cache image
  *              to avoid violating the flush dependency flush ordering.
- *		This should have happended before the construction of 
+ *		This should have happened before the construction of 
  *		the instance of H5C_image_entry_t.
  *
  * fd_parent_addrs: If the entry is a child in one or more flush dependency
@@ -1776,7 +1767,7 @@ typedef struct H5C_cache_entry_t {
  *              cache image, and its parent is dirty and not in the cache
  *              image, then the entry must be removed from the cache image
  *              to avoid violating the flush dependency flush ordering.
- *		This should have happended before the construction of 
+ *		This should have happened before the construction of 
  *		the instance of H5C_image_entry_t.
  *
  * fd_child_count: If the entry is a parent in a flush dependency 
@@ -1821,7 +1812,6 @@ typedef struct H5C_image_entry_t {
     H5C_ring_t                  ring;
     int32_t                     age;
     int32_t                     type_id;
-    int32_t                     image_index;
     int32_t                     lru_rank;
     hbool_t                     is_dirty;
     unsigned                    image_fd_height;

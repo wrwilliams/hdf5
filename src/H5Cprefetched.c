@@ -307,10 +307,6 @@ done:
  * Programmer:  John Mainzer
  *              8/13/15
  *
- * Changes:	Updated routine to free the fd parent addrs array if 
- *		appropriate.
- *						JRM -- 9/13/16
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
