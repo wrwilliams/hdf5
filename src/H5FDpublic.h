@@ -235,18 +235,23 @@ typedef enum H5F_mem_t	H5FD_mem_t;
      */
 #define H5FD_FEAT_CAN_USE_FILE_IMAGE_CALLBACKS 0x00000800
     /*
+     * Defining H5FD_FEAT_SUPPORTS_SWMR_IO for a VFL driver means that the
+     * driver supports the single-writer/multiple-readers I/O pattern.
+     */
+#define H5FD_FEAT_SUPPORTS_SWMR_IO      0x00001000
+    /*
      * Defining H5FD_FEAT_USE_ALLOC_SIZE for a VFL driver
      * means that the library will just pass the allocation size to the
      * the driver's allocation callback which will eventually handle alignment.
      * This is specifically used for the multi/split driver.
      */
-#define H5FD_FEAT_USE_ALLOC_SIZE	0x00001000
+#define H5FD_FEAT_USE_ALLOC_SIZE	0x00002000
     /*
      * Defining H5FD_FEAT_PAGED_AGGR for a VFL driver
      * means that the driver needs special file space mapping for paged aggregation.
      * This is specifically used for the multi/split driver.
      */
-#define H5FD_FEAT_PAGED_AGGR 0x00002000
+#define H5FD_FEAT_PAGED_AGGR 0x00004000
 
 /* Forward declaration */
 typedef struct H5FD_t H5FD_t;
@@ -307,6 +312,7 @@ struct H5FD_t {
     hid_t               driver_id;      /*driver ID for this file   */
     const H5FD_class_t *cls;            /*constant class info       */
     unsigned long       fileno;         /* File 'serial' number     */
+    unsigned            access_flags;   /* File access flags (from create or open) */
     unsigned long       feature_flags;  /* VFL Driver feature Flags */
     haddr_t             maxaddr;        /* For this file, overrides class */
     haddr_t             base_addr;      /* Base address for HDF5 data w/in file */

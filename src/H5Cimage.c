@@ -555,7 +555,7 @@ H5C_deserialize_prefetched_entry(H5F_t *             f,
      * relationships now.  The client will restore the relationship(s) with
      * the deserialized entry if appropriate.
      */
-//HDassert(pf_entry_ptr->fd_parent_count == pf_entry_ptr->flush_dep_nparents);
+    HDassert(pf_entry_ptr->fd_parent_count == pf_entry_ptr->flush_dep_nparents);
     for(i = (int)(pf_entry_ptr->fd_parent_count) - 1; i >= 0; i--) {
         HDassert(pf_entry_ptr->flush_dep_parent);
         HDassert(pf_entry_ptr->flush_dep_parent[i]);

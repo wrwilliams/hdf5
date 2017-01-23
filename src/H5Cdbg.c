@@ -985,8 +985,8 @@ H5C__dump_children_cb(H5C_cache_entry_t *entry_ptr, void *_ctx)
                 H5C__dump_entry(ctx->cache_ptr, entry_ptr, ctx->dump_parents, ctx->prefix, ctx->indent + 2);
     } /* end if */
 
-    return(H5_ITER_CONT);
-}
+    return H5_ITER_CONT;
+} /* end H5C__dump_children_cb() */
 
 static void
 H5C__dump_children(H5C_t *cache_ptr, const H5C_cache_entry_t *entry_ptr,
@@ -1002,7 +1002,7 @@ H5C__dump_children(H5C_t *cache_ptr, const H5C_cache_entry_t *entry_ptr,
     ctx.prefix = prefix;
     ctx.indent = indent;
     H5C__iter_tagged_entries(cache_ptr, entry_ptr->tag_info->tag, FALSE, H5C__dump_children_cb, &ctx);
-}
+} /* end H5C__dump_children() */
 
 void
 H5C__dump_entry(H5C_t *cache_ptr, const H5C_cache_entry_t *entry_ptr,

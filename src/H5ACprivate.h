@@ -86,10 +86,10 @@ typedef enum {
     H5AC_FARRAY_DBLK_PAGE_ID,   /* (24) fixed array data block page                 */
     H5AC_SUPERBLOCK_ID,         /* (25) file superblock                             */
     H5AC_DRVRINFO_ID,           /* (26) driver info block (supplements superblock)  */
-    H5AC_TEST_ID,               /* (27) test entry -- not used for actual files     */
-    H5AC_EPOCH_MARKER_ID,       /* (28) epoch marker - always internal to cache     */
-     H5AC_PREFETCHED_ENTRY_ID, 	/* (29) prefetched entry - always internal to cache */
-
+    H5AC_PROXY_ENTRY_ID,        /* (27) cache entry proxy                           */
+    H5AC_PREFETCHED_ENTRY_ID, 	/* (28) prefetched entry - always internal to cache */
+    H5AC_EPOCH_MARKER_ID,       /* (29) epoch marker - always internal to cache     */
+    H5AC_TEST_ID,               /* (30) test entry -- not used for actual files     */
     H5AC_NTYPES                 /* Number of types, must be last                    */
 } H5AC_type_t;
 
@@ -179,6 +179,8 @@ typedef H5C_notify_action_t     H5AC_notify_action_t;
 #define H5AC_NOTIFY_ACTION_ENTRY_CLEANED H5C_NOTIFY_ACTION_ENTRY_CLEANED
 #define H5AC_NOTIFY_ACTION_CHILD_DIRTIED H5C_NOTIFY_ACTION_CHILD_DIRTIED
 #define H5AC_NOTIFY_ACTION_CHILD_CLEANED H5C_NOTIFY_ACTION_CHILD_CLEANED
+#define H5AC_NOTIFY_ACTION_CHILD_UNSERIALIZED H5C_NOTIFY_ACTION_CHILD_UNSERIALIZED
+#define H5AC_NOTIFY_ACTION_CHILD_SERIALIZED H5C_NOTIFY_ACTION_CHILD_SERIALIZED
 
 #define H5AC__CLASS_NO_FLAGS_SET 	H5C__CLASS_NO_FLAGS_SET
 #define H5AC__CLASS_SPECULATIVE_LOAD_FLAG H5C__CLASS_SPECULATIVE_LOAD_FLAG
@@ -211,6 +213,27 @@ typedef H5C_cache_entry_t		H5AC_info_t;
 
 /* Typedef for metadata cache (defined in H5Cpkg.h) */
 typedef H5C_t	H5AC_t;
+
+/* Metadata cache proxy entry type */
+typedef struct H5AC_proxy_entry_t {
+    H5AC_info_t cache_info;             /* Information for H5AC cache functions */
+                                        /* (MUST be first field in structure) */
+
+    /* General fields */
+    haddr_t addr;                       /* Address of the entry in the file */
+                                        /* (Should be in 'temporary' address space) */
+
+    /* Parent fields */
+    H5SL_t *parents;                    /* Skip list to track parent addresses */
+
+    /* Child fields */
+    size_t nchildren;                   /* Number of children */
+    size_t ndirty_children;             /* Number of dirty children */
+                                        /* (Note that this currently duplicates some cache functionality) */
+    size_t nunser_children;             /* Number of unserialized children */
+                                        /* (Note that this currently duplicates some cache functionality) */
+} H5AC_proxy_entry_t;
+
 
 #define H5AC_RING_NAME  "H5AC_ring_type"
 
@@ -376,13 +399,16 @@ H5_DLL herr_t H5AC_unprotect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
     haddr_t addr, void *thing, unsigned flags);
 H5_DLL herr_t H5AC_flush(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5AC_mark_entry_dirty(void *thing);
+H5_DLL herr_t H5AC_mark_entry_clean(void *thing);
 H5_DLL herr_t H5AC_mark_entry_unserialized(void *thing);
 H5_DLL herr_t H5AC_mark_entry_serialized(void *thing);
 H5_DLL herr_t H5AC_move_entry(H5F_t *f, const H5AC_class_t *type,
     haddr_t old_addr, haddr_t new_addr, hid_t dxpl_id);
 H5_DLL herr_t H5AC_dest(H5F_t *f, hid_t dxpl_id);
+H5_DLL herr_t H5AC_evict(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5AC_expunge_entry(H5F_t *f, hid_t dxpl_id,
     const H5AC_class_t *type, haddr_t addr, unsigned flags);
+H5_DLL herr_t H5AC_remove_entry(void *entry);
 H5_DLL herr_t H5AC_get_cache_auto_resize_config(const H5AC_t * cache_ptr,
     H5AC_cache_config_t *config_ptr);
 H5_DLL herr_t H5AC_get_cache_size(H5AC_t *cache_ptr, size_t *max_size_ptr,
@@ -419,6 +445,15 @@ H5_DLL herr_t H5AC_reset_ring(H5P_genplist_t *dxpl, H5AC_ring_t orig_ring);
 H5_DLL herr_t H5AC_unsettle_ring(H5F_t * f, H5AC_ring_t ring);
 H5_DLL herr_t H5AC_expunge_tag_type_metadata(H5F_t *f, hid_t dxpl_id, haddr_t tag, int type_id, unsigned flags);
 H5_DLL herr_t H5AC_get_tag(const void *thing, /*OUT*/ haddr_t *tag);
+
+/* Virtual entry routines */
+H5_DLL H5AC_proxy_entry_t *H5AC_proxy_entry_create(void);
+H5_DLL herr_t H5AC_proxy_entry_add_parent(H5AC_proxy_entry_t *pentry, void *parent);
+H5_DLL herr_t H5AC_proxy_entry_remove_parent(H5AC_proxy_entry_t *pentry, void *parent);
+H5_DLL herr_t H5AC_proxy_entry_add_child(H5AC_proxy_entry_t *pentry, H5F_t *f,
+    hid_t dxpl_id, void *child);
+H5_DLL herr_t H5AC_proxy_entry_remove_child(H5AC_proxy_entry_t *pentry, void *child);
+H5_DLL herr_t H5AC_proxy_entry_dest(H5AC_proxy_entry_t *pentry);
 
 #ifdef H5_HAVE_PARALLEL
 H5_DLL herr_t H5AC_add_candidate(H5AC_t * cache_ptr, haddr_t addr);

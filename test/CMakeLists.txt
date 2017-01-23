@@ -246,12 +246,13 @@ set (H5_TESTS
     cross_read
     freespace
     mf
-    page_buffer
+#    page_buffer
     vds
     file_image
     unregister
     cache_logging
     cork
+    swmr
 )
 
 foreach (test ${H5_TESTS})

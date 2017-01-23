@@ -41,7 +41,7 @@
 /**************************/
 
 /* Cache configuration settings */
-#define H5C__MAX_NUM_TYPE_IDS   30
+#define H5C__MAX_NUM_TYPE_IDS   31
 #define H5C__PREFIX_LEN         32
 
 /* This sanity checking constant was picked out of the air.  Increase
@@ -880,7 +880,9 @@ typedef enum H5C_notify_action_t {
     H5C_NOTIFY_ACTION_ENTRY_DIRTIED,    /* Entry has been marked dirty. */
     H5C_NOTIFY_ACTION_ENTRY_CLEANED,    /* Entry has been marked clean. */
     H5C_NOTIFY_ACTION_CHILD_DIRTIED,    /* Dependent child has been marked dirty. */
-    H5C_NOTIFY_ACTION_CHILD_CLEANED     /* Dependent child has been marked clean. */
+    H5C_NOTIFY_ACTION_CHILD_CLEANED,    /* Dependent child has been marked clean. */
+    H5C_NOTIFY_ACTION_CHILD_UNSERIALIZED, /* Dependent child has been marked unserialized. */
+    H5C_NOTIFY_ACTION_CHILD_SERIALIZED  /* Dependent child has been marked serialized. */
 } H5C_notify_action_t;
 
 /* Cache client callback function pointers */
@@ -1615,8 +1617,8 @@ typedef struct H5C_cache_entry_t {
     unsigned                    flush_dep_nchildren;
     unsigned                    flush_dep_ndirty_children;
     unsigned                    flush_dep_nunser_children;
-    hbool_t			pinned_from_client;
-    hbool_t			pinned_from_cache;
+    hbool_t                     pinned_from_client;
+    hbool_t                     pinned_from_cache;
 
     /* fields supporting the hash table: */
     struct H5C_cache_entry_t   *ht_next;
@@ -2234,6 +2236,7 @@ H5_DLL void H5C_def_auto_resize_rpt_fcn(H5C_t *cache_ptr, int32_t version,
     size_t old_max_cache_size, size_t new_max_cache_size,
     size_t old_min_clean_size, size_t new_min_clean_size);
 H5_DLL herr_t H5C_dest(H5F_t *f, hid_t dxpl_id);
+H5_DLL herr_t H5C_evict(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5C_expunge_entry(H5F_t *f, hid_t dxpl_id,
     const H5C_class_t *type, haddr_t addr, unsigned flags);
 H5_DLL herr_t H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags);
@@ -2270,6 +2273,9 @@ H5_DLL herr_t H5C_insert_entry(H5F_t *f, hid_t dxpl_id, const H5C_class_t *type,
 H5_DLL herr_t H5C_load_cache_image_on_next_protect(H5F_t *f, haddr_t addr, 
    size_t len, hbool_t rw);
 H5_DLL herr_t H5C_mark_entry_dirty(void *thing);
+H5_DLL herr_t H5C_mark_entry_clean(void *thing);
+H5_DLL herr_t H5C_mark_entry_unserialized(void *thing);
+H5_DLL herr_t H5C_mark_entry_serialized(void *thing);
 H5_DLL herr_t H5C_move_entry(H5C_t *cache_ptr, const H5C_class_t *type,
     haddr_t old_addr, haddr_t new_addr);
 H5_DLL herr_t H5C_pin_protected_entry(void *thing);
@@ -2305,6 +2311,7 @@ H5_DLL herr_t H5C_unsettle_ring(H5F_t * f, H5C_ring_t ring);
 H5_DLL herr_t H5C_cache_image_status(H5F_t * f, hbool_t *load_ci_ptr, 
     hbool_t *write_ci_ptr);
 H5_DLL hbool_t H5C_cache_image_pending(const H5C_t *cache_ptr);
+H5_DLL herr_t H5C_remove_entry(void * thing);
 
 #ifdef H5_HAVE_PARALLEL
 H5_DLL herr_t H5C_apply_candidate_list(H5F_t *f, hid_t dxpl_id,

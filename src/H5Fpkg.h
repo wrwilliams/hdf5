@@ -57,10 +57,11 @@
 /* Superblock status flags */
 #define H5F_SUPER_WRITE_ACCESS          0x01
 #define H5F_SUPER_FILE_OK               0x02
-#define H5F_SUPER_ALL_FLAGS             (H5F_SUPER_WRITE_ACCESS | H5F_SUPER_FILE_OK)
+#define H5F_SUPER_SWMR_WRITE_ACCESS     0x04
+#define H5F_SUPER_ALL_FLAGS             (H5F_SUPER_WRITE_ACCESS | H5F_SUPER_FILE_OK | H5F_SUPER_SWMR_WRITE_ACCESS)
 
 /* Mask for removing private file access flags */
-#define H5F_ACC_PUBLIC_FLAGS 	        0x001fu
+#define H5F_ACC_PUBLIC_FLAGS 	        0x007fu
 
 /* Free space section+aggregator merge flags */
 #define H5F_FS_MERGE_METADATA           0x01    /* Section can merge with metadata aggregator */
@@ -127,12 +128,28 @@
 #define H5F_SUPERBLOCK_VARLEN_SIZE(v, sizeof_addr, sizeof_size) (	\
         (v == 0 ? H5F_SUPERBLOCK_VARLEN_SIZE_V0(sizeof_addr, sizeof_size) : 0) \
         + (v == 1 ? H5F_SUPERBLOCK_VARLEN_SIZE_V1(sizeof_addr, sizeof_size) : 0) \
-        + (v == 2 ? H5F_SUPERBLOCK_VARLEN_SIZE_V2(sizeof_addr) : 0))
+        + (v >= 2 ? H5F_SUPERBLOCK_VARLEN_SIZE_V2(sizeof_addr) : 0))
 
 /* Total size of superblock, depends on superblock version */
 #define H5F_SUPERBLOCK_SIZE(s) ( H5F_SUPERBLOCK_FIXED_SIZE              \
         + H5F_SUPERBLOCK_VARLEN_SIZE((s)->super_vers, (s)->sizeof_addr, (s)->sizeof_size))
 
+/* For superblock version 0 & 1:
+   Offset to the file consistency flags (status_flags) in the superblock (excluding H5F_SUPERBLOCK_FIXED_SIZE) */
+#define H5F_SUPER_STATUS_OFF_V01                                                \
+        (2  /* freespace, and root group versions */                    \
+        + 1 /* reserved */                                              \
+        + 3 /* shared header vers, size of address, size of lengths */  \
+        + 1 /* reserved */                                              \
+        + 4) /* group leaf k, group internal k */
+
+#define H5F_SUPER_STATUS_OFF(v)   (v >= 2 ? 2 : H5F_SUPER_STATUS_OFF_V01)
+
+/* Offset to the file consistency flags (status_flags) in the superblock */
+#define H5F_SUPER_STATUS_FLAGS_OFF(v) (H5F_SUPERBLOCK_FIXED_SIZE + H5F_SUPER_STATUS_OFF(v))
+
+/* Size of file consistency flags (status_flags) in the superblock */
+#define H5F_SUPER_STATUS_FLAGS_SIZE(v)        (v >= 2 ? 1 : 4)
 
 /* Forward declaration external file cache struct used below (defined in
  * H5Fefc.c) */
@@ -436,6 +453,9 @@ H5_DLL htri_t H5F_try_extend(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type,
 H5_DLL herr_t H5F__set_eoa(const H5F_t *f, H5F_mem_t type, haddr_t addr);
 H5_DLL herr_t H5F__set_base_addr(const H5F_t *f, haddr_t addr);
 H5_DLL herr_t H5F__set_paged_aggr(const H5F_t *f, hbool_t paged);
+
+/* Functions that flush or evict */
+H5_DLL herr_t H5F__evict_cache_entries(H5F_t *f, hid_t dxpl_id);
 
 /* Testing functions */
 #ifdef H5F_TESTING
