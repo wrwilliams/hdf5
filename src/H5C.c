@@ -1081,12 +1081,12 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 {
 #if H5C_DO_SANITY_CHECKS
     int			i;
-    int32_t		index_len = 0;
+    uint32_t		index_len = 0;
     size_t		index_size = (size_t)0;
     size_t		clean_index_size = (size_t)0;
     size_t		dirty_index_size = (size_t)0;
     size_t		slist_size = (size_t)0;
-    int32_t		slist_len = 0;
+    uint32_t		slist_len = 0;
 #endif /* H5C_DO_SANITY_CHECKS */
     H5C_ring_t		ring;
     H5C_t             * cache_ptr;
@@ -5529,8 +5529,8 @@ H5C_flush_invalidate_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 #if H5C_DO_SANITY_CHECKS
 {
     int32_t		i;
-    int32_t		index_len = 0;
-    int32_t		slist_len = 0;
+    uint32_t		index_len = 0;
+    uint32_t		slist_len = 0;
     size_t		index_size = (size_t)0;
     size_t		clean_index_size = (size_t)0;
     size_t		dirty_index_size = (size_t)0;
@@ -5661,7 +5661,7 @@ H5C_flush_invalidate_ring(H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
 {
     H5C_t              *cache_ptr;
     hbool_t             restart_slist_scan;
-    int32_t             protected_entries = 0;
+    uint32_t            protected_entries = 0;
     int32_t             i;
     int32_t             cur_ring_pel_len;
     int32_t             old_ring_pel_len;
@@ -6102,7 +6102,7 @@ H5C_flush_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,  unsigned flags)
     hbool_t		ignore_protected;
     hbool_t		tried_to_flush_protected_entry = FALSE;
     hbool_t		restart_slist_scan;
-    int32_t		protected_entries = 0;
+    uint32_t		protected_entries = 0;
     H5SL_node_t * 	node_ptr = NULL;
     H5C_cache_entry_t *	entry_ptr = NULL;
     H5C_cache_entry_t *	next_entry_ptr = NULL;
@@ -7339,8 +7339,8 @@ H5C_make_space_in_cache(H5F_t *	f,
     int32_t             clean_entries_skipped = 0;
     int32_t             total_entries_scanned = 0;
 #endif /* H5C_COLLECT_CACHE_STATS */
-    int32_t		entries_examined = 0;
-    int32_t		initial_list_len;
+    uint32_t		entries_examined = 0;
+    uint32_t		initial_list_len;
     size_t		empty_space;
     hbool_t		prev_is_dirty = FALSE;
     hbool_t             didnt_flush_entry = FALSE;

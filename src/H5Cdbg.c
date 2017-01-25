@@ -492,12 +492,12 @@ H5C_stats(H5C_t * cache_ptr,
               average_failed_search_depth);
 
     HDfprintf(stdout,
-             "%s  current (max) index size / length  = %ld (%ld) / %ld (%ld)\n",
+             "%s  current (max) index size / length  = %ld (%ld) / %lu (%lu)\n",
               cache_ptr->prefix,
               (long)(cache_ptr->index_size),
               (long)(cache_ptr->max_index_size),
-              (long)(cache_ptr->index_len),
-              (long)(cache_ptr->max_index_len));
+              (unsigned long)(cache_ptr->index_len),
+              (unsigned long)(cache_ptr->max_index_len));
 
     HDfprintf(stdout,
              "%s  current (max) clean/dirty idx size = %ld (%ld) / %ld (%ld)\n",
@@ -508,46 +508,46 @@ H5C_stats(H5C_t * cache_ptr,
               (long)(cache_ptr->max_dirty_index_size));
 
     HDfprintf(stdout,
-             "%s  current (max) slist size / length  = %ld (%ld) / %ld (%ld)\n",
+             "%s  current (max) slist size / length  = %ld (%ld) / %lu (%lu)\n",
               cache_ptr->prefix,
               (long)(cache_ptr->slist_size),
               (long)(cache_ptr->max_slist_size),
-              (long)(cache_ptr->slist_len),
-              (long)(cache_ptr->max_slist_len));
+              (unsigned long)(cache_ptr->slist_len),
+              (unsigned long)(cache_ptr->max_slist_len));
 
     HDfprintf(stdout,
-             "%s  current (max) PL size / length     = %ld (%ld) / %ld (%ld)\n",
+             "%s  current (max) PL size / length     = %ld (%ld) / %lu (%lu)\n",
               cache_ptr->prefix,
               (long)(cache_ptr->pl_size),
               (long)(cache_ptr->max_pl_size),
-              (long)(cache_ptr->pl_len),
-              (long)(cache_ptr->max_pl_len));
+              (unsigned long)(cache_ptr->pl_len),
+              (unsigned long)(cache_ptr->max_pl_len));
 
     HDfprintf(stdout,
-             "%s  current (max) PEL size / length    = %ld (%ld) / %ld (%ld)\n",
+             "%s  current (max) PEL size / length    = %ld (%ld) / %lu (%lu)\n",
               cache_ptr->prefix,
               (long)(cache_ptr->pel_size),
               (long)(cache_ptr->max_pel_size),
-              (long)(cache_ptr->pel_len),
-              (long)(cache_ptr->max_pel_len));
+              (unsigned long)(cache_ptr->pel_len),
+              (unsigned long)(cache_ptr->max_pel_len));
 
     HDfprintf(stdout,
-              "%s  current LRU list size / length     = %ld / %ld\n",
+              "%s  current LRU list size / length     = %ld / %lu\n",
               cache_ptr->prefix,
               (long)(cache_ptr->LRU_list_size),
-              (long)(cache_ptr->LRU_list_len));
+              (unsigned long)(cache_ptr->LRU_list_len));
 
     HDfprintf(stdout,
-              "%s  current clean LRU size / length    = %ld / %ld\n",
+              "%s  current clean LRU size / length    = %ld / %lu\n",
               cache_ptr->prefix,
               (long)(cache_ptr->cLRU_list_size),
-              (long)(cache_ptr->cLRU_list_len));
+              (unsigned long)(cache_ptr->cLRU_list_len));
 
     HDfprintf(stdout,
-              "%s  current dirty LRU size / length    = %ld / %ld\n",
+              "%s  current dirty LRU size / length    = %ld / %lu\n",
               cache_ptr->prefix,
               (long)(cache_ptr->dLRU_list_size),
-              (long)(cache_ptr->dLRU_list_len));
+              (unsigned long)(cache_ptr->dLRU_list_len));
 
     HDfprintf(stdout,
               "%s  Total hits / misses / hit_rate     = %ld / %ld / %f\n",
@@ -1092,7 +1092,7 @@ herr_t
 H5C_validate_index_list(H5C_t *cache_ptr)
 {
     H5C_cache_entry_t *	entry_ptr = NULL;
-    int32_t             len = 0;
+    uint32_t            len = 0;
     int32_t		index_ring_len[H5C_RING_NTYPES];
     size_t              size = 0;
     size_t              clean_size = 0;
@@ -1120,29 +1120,26 @@ H5C_validate_index_list(H5C_t *cache_ptr)
             && (cache_ptr->il_head != cache_ptr->il_tail))
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 1 failed")
 
-    if(cache_ptr->index_len < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 2 failed")
-
     if((cache_ptr->index_len == 1) && ((cache_ptr->il_head != cache_ptr->il_tail)
             || (cache_ptr->il_head == NULL) || (cache_ptr->il_head->size != cache_ptr->index_size)))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 3 failed")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 2 failed")
 
     if((cache_ptr->index_len >= 1)
             && ((cache_ptr->il_head == NULL)
                 || (cache_ptr->il_head->il_prev != NULL)
                 || (cache_ptr->il_tail == NULL)
                 || (cache_ptr->il_tail->il_next != NULL)))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 4 failed")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 3 failed")
 
     entry_ptr = cache_ptr->il_head;
     while(entry_ptr != NULL) {
         if((entry_ptr != cache_ptr->il_head)
                 && ((entry_ptr->il_prev == NULL) || (entry_ptr->il_prev->il_next != entry_ptr)))
-            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 5 failed")
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 4 failed")
 
         if((entry_ptr != cache_ptr->il_tail)
                 && ((entry_ptr->il_next == NULL) || (entry_ptr->il_next->il_prev != entry_ptr)))
-            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 6 failed")
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 5 failed")
 
 	HDassert(entry_ptr->ring > 0);
 	HDassert(entry_ptr->ring < H5C_RING_NTYPES);
@@ -1170,7 +1167,7 @@ H5C_validate_index_list(H5C_t *cache_ptr)
             || (cache_ptr->clean_index_size != clean_size)
             || (cache_ptr->dirty_index_size != dirty_size)
             || (clean_size + dirty_size != size))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 7 failed")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 6 failed")
 
     size = 0;
     clean_size = 0;
@@ -1184,7 +1181,7 @@ H5C_validate_index_list(H5C_t *cache_ptr)
     if((cache_ptr->index_size != size)
             || (cache_ptr->clean_index_size != clean_size)
             || (cache_ptr->dirty_index_size != dirty_size))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 8 failed")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 7 failed")
 
 done:
     if(ret_value != SUCCEED)
@@ -1281,20 +1278,15 @@ done:
  */
 #ifndef NDEBUG
 hbool_t
-H5C_get_serialization_in_progress(H5C_t *cache_ptr)
+H5C_get_serialization_in_progress(const H5C_t *cache_ptr)
 {
-    hbool_t ret_value;          /* Return value */
-
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Sanity check */
     HDassert(cache_ptr);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
 
-    /* Set return value */
-    ret_value = cache_ptr->serialization_in_progress;
-
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(cache_ptr->serialization_in_progress)
 } /* H5C_get_serialization_in_progress() */
 #endif /* NDEBUG */
 

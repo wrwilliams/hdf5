@@ -27433,7 +27433,7 @@ check_auto_cache_resize_aux_fcns(void)
     size_t max_size;
     size_t min_clean_size;
     size_t cur_size;
-    int32_t cur_num_entries;
+    uint32_t cur_num_entries;
     H5C_auto_size_ctl_t auto_size_ctl =
     {
         /* int32_t     version                = */ H5C__CURR_AUTO_SIZE_CTL_VER,
