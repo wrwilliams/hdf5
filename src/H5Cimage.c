@@ -948,10 +948,6 @@ done:
 herr_t
 H5C__read_cache_image(H5F_t *f, hid_t dxpl_id, const H5C_t *cache_ptr)
 {
-#ifdef H5_HAVE_PARALLEL
-    H5AC_aux_t *aux_ptr = NULL;
-    int mpi_result;
-#endif /* H5_HAVE_PARALLEL */
     herr_t              ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_STATIC
@@ -964,7 +960,9 @@ H5C__read_cache_image(H5F_t *f, hid_t dxpl_id, const H5C_t *cache_ptr)
     HDassert(cache_ptr->image_buffer);
 
 #ifdef H5_HAVE_PARALLEL
-    aux_ptr = (H5AC_aux_t *)cache_ptr->aux_ptr;
+{
+    H5AC_aux_t *aux_ptr = (H5AC_aux_t *)cache_ptr->aux_ptr;
+    int mpi_result;
 
     if((NULL == aux_ptr) || (aux_ptr->mpi_rank == 0)) {
 	HDassert((NULL == aux_ptr) || (aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC));
@@ -986,6 +984,7 @@ H5C__read_cache_image(H5F_t *f, hid_t dxpl_id, const H5C_t *cache_ptr)
         if(MPI_SUCCESS != (mpi_result = MPI_Bcast(cache_ptr->image_buffer, (int)cache_ptr->image_len, MPI_BYTE, 0, aux_ptr->mpi_comm)))
             HMPI_GOTO_ERROR(FAIL, "can't receive cache image MPI_Bcast", mpi_result)
     } /* end else-if */
+} /* end block */
 #endif /* H5_HAVE_PARALLEL */
 
 done:
@@ -1043,7 +1042,7 @@ H5C__load_cache_image(H5F_t *f, hid_t dxpl_id)
 	HDassert(cache_ptr->image_len > 0);
         HDassert(cache_ptr->image_buffer == NULL);
 
-	/* allocate space for the image */
+	/* Allocate space for the image */
         if(NULL == (cache_ptr->image_buffer = H5MM_malloc(cache_ptr->image_len + 1)))
             HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for cache image buffer")
 
@@ -1051,19 +1050,19 @@ H5C__load_cache_image(H5F_t *f, hid_t dxpl_id)
 	if(H5C__read_cache_image(f, dxpl_id, cache_ptr) < 0)
             HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read metadata cache image block")
 
-	/* decode metadata cache image */
+	/* Decode metadata cache image */
 	if(H5C__decode_cache_image_buffer(f, cache_ptr) < 0)
             HGOTO_ERROR(H5E_CACHE, H5E_CANTDECODE, FAIL, "Can't decode metadata cache image block")
 
-	/* at this point, the image_data_len should be known */
+	/* At this point, the image_data_len should be known */
 	HDassert(cache_ptr->image_data_len > 0);
 	HDassert(cache_ptr->image_data_len <= cache_ptr->image_len);
 
-	/* insert image contents into cache */
+	/* Insert image contents into cache */
 	if(H5C__reconstruct_cache_contents(f, dxpl_id, cache_ptr) < 0)
             HGOTO_ERROR(H5E_CACHE, H5E_CANTDECODE, FAIL, "Can't reconstruct cache contents from image block")
 
-	/* free the image buffer */
+	/* Free the image buffer */
         cache_ptr->image_buffer = H5MM_xfree(cache_ptr->image_buffer);
 
         /* update stats -- must do this now, as we are about
@@ -1071,20 +1070,18 @@ H5C__load_cache_image(H5F_t *f, hid_t dxpl_id)
          */
         H5C__UPDATE_STATS_FOR_CACHE_IMAGE_LOAD(cache_ptr)
 
-	/* if directed, free the on disk metadata cache image */
+	/* If directed, free the on disk metadata cache image */
         if(cache_ptr->delete_image) { 
-	    HDassert(HADDR_UNDEF != cache_ptr->image_addr);
-
             if(H5MF_xfree(f, H5FD_MEM_SUPER, dxpl_id, cache_ptr->image_addr, (hsize_t)(cache_ptr->image_len)) < 0)
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFREE, FAIL, "unable to free file space for cache image block")
 
-            /* clean up */
+            /* Clean up */
             cache_ptr->image_len = 0;
             cache_ptr->image_data_len = 0;
             cache_ptr->image_addr = HADDR_UNDEF;
         } /* end if */
 
-        /* free the image entries array.  Note that all on disk image 
+        /* Free the image entries array.  Note that all on disk image 
          * image buffers and fd parent address arrays have been transferred 
 	 * to their respective prefetched entries so we can just free the 
          * array of H5C_image_entry_t.
@@ -1715,18 +1712,18 @@ H5C__decode_cache_image_buffer(const H5F_t *f, H5C_t *cache_ptr)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTDECODE, FAIL, "cache image header decode failed")
     HDassert((size_t)(p - (uint8_t *)cache_ptr->image_buffer) < cache_ptr->image_len);
 
-    /* cache_ptr->image_data_len should be defined now */
+    /* Cache_ptr->image_data_len should be defined now */
     HDassert(cache_ptr->image_data_len > 0);
     HDassert(cache_ptr->image_data_len <= cache_ptr->image_len);
 
-    /* we should now have cache_ptr->num_entries_in_image -- allocate the
+    /* We should now have cache_ptr->num_entries_in_image -- allocate the
      * image entries array.
      */
     HDassert(cache_ptr->num_entries_in_image > 0);
     if(NULL == (cache_ptr->image_entries = (H5C_image_entry_t *)H5MM_malloc(sizeof(H5C_image_entry_t) * (size_t)(cache_ptr->num_entries_in_image + 1))))
 	HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed image entries array")
 
-    /* load the image entries */
+    /* Load the image entries */
     for(u = 0; u < cache_ptr->num_entries_in_image; u++) {
 	(cache_ptr->image_entries)[u].magic = H5C__H5C_IMAGE_ENTRY_T_MAGIC;
         (cache_ptr->image_entries)[u].image_fd_height = 0;
@@ -1737,13 +1734,12 @@ H5C__decode_cache_image_buffer(const H5F_t *f, H5C_t *cache_ptr)
     } /* end for */
     HDassert((size_t)(p - (uint8_t *)cache_ptr->image_buffer) < cache_ptr->image_len);
 
-    /* (load the adaptive cache resize status -- not yet) */
+    /* (Load the adaptive cache resize status -- not yet) */
 
-    /* verify the checksum */
+    /* Verify the checksum */
     UINT32DECODE(p, read_chksum);
     HDassert((size_t)(p - (uint8_t *)cache_ptr->image_buffer) == cache_ptr->image_data_len);
     HDassert((size_t)(p - (uint8_t *)cache_ptr->image_buffer) <= cache_ptr->image_len);
-
     computed_chksum = H5_checksum_metadata(cache_ptr->image_buffer, (size_t)(cache_ptr->image_data_len - H5F_SIZEOF_CHKSUM), 0);
     if(read_chksum != computed_chksum)
         HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "bad checksum on metadata cache image block")
@@ -4166,9 +4162,6 @@ done:
 static herr_t
 H5C__write_cache_image(H5F_t *f, hid_t dxpl_id, const H5C_t *cache_ptr)
 {
-#ifdef H5_HAVE_PARALLEL
-    H5AC_aux_t *aux_ptr = NULL;
-#endif /* H5_HAVE_PARALLEL */
     herr_t              ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_STATIC
@@ -4181,7 +4174,8 @@ H5C__write_cache_image(H5F_t *f, hid_t dxpl_id, const H5C_t *cache_ptr)
     HDassert(cache_ptr->image_buffer);
 
 #ifdef H5_HAVE_PARALLEL
-    aux_ptr = (H5AC_aux_t *)cache_ptr->aux_ptr;
+{
+    H5AC_aux_t *aux_ptr = (H5AC_aux_t *)cache_ptr->aux_ptr;
 
     if((NULL == aux_ptr) || (aux_ptr->mpi_rank == 0)) {
 	HDassert((NULL == aux_ptr) || (aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC));
@@ -4192,6 +4186,7 @@ H5C__write_cache_image(H5F_t *f, hid_t dxpl_id, const H5C_t *cache_ptr)
             HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't write metadata cache image block to file.")
 #ifdef H5_HAVE_PARALLEL
     } /* end if */
+} /* end block */
 #endif /* H5_HAVE_PARALLEL */
 	
 done:
