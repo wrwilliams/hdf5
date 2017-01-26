@@ -4923,7 +4923,6 @@ H5_DLLVAR const H5FD_mem_t H5C__class_mem_types[];
 /******************************/
 /* Package Private Prototypes */
 /******************************/
-H5_DLL herr_t H5C_construct_cache_image_buffer(H5F_t *f, H5C_t *cache_ptr);
 H5_DLL herr_t H5C__prep_image_for_file_close(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5C__deserialize_prefetched_entry(H5F_t * f, hid_t dxpl_id,
     H5C_t * cache_ptr, H5C_cache_entry_t** entry_ptr_ptr, 
@@ -4932,10 +4931,8 @@ H5_DLL herr_t H5C__deserialize_prefetched_entry(H5F_t * f, hid_t dxpl_id,
 /* General routines */
 H5_DLL herr_t H5C__flush_single_entry(H5F_t *f, hid_t dxpl_id,
     H5C_cache_entry_t *entry_ptr, unsigned flags);
-H5_DLL herr_t H5C__free_image_entries_array(H5C_t * cache_ptr);
+H5_DLL herr_t H5C__generate_cache_image(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr);
 H5_DLL herr_t H5C__load_cache_image(H5F_t *f, hid_t dxpl_id);
-H5_DLL herr_t H5C__write_cache_image(H5F_t * f, hid_t dxpl_id, 
-    haddr_t image_addr, size_t image_len, void *image_buffer);
 H5_DLL herr_t H5C__mark_flush_dep_serialized(H5C_cache_entry_t * entry_ptr);
 H5_DLL herr_t H5C__mark_flush_dep_unserialized(H5C_cache_entry_t * entry_ptr);
 H5_DLL herr_t H5C__make_space_in_cache(H5F_t * f, hid_t   dxpl_id,
