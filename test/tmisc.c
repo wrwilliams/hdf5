@@ -1869,7 +1869,7 @@ test_misc11(void)
 
     /* This should fail as (32770*2) will exceed ^16 - 2 bytes for storing btree entries */
     H5E_BEGIN_TRY {
-	ret=H5Pset_istore_k(fcpl, 32770);
+        ret=H5Pset_istore_k(fcpl, 32770);
     } H5E_END_TRY;
     VERIFY(ret, FAIL, "H5Pset_istore_k");
 
@@ -1879,11 +1879,11 @@ test_misc11(void)
     ret=H5Pset_shared_mesg_nindexes(fcpl,MISC11_NINDEXES);
     CHECK(ret, FAIL, "H5Pset_shared_mesg");
 
-    ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_NONE, TRUE, (hsize_t)0);
+    ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_NONE, FALSE, (hsize_t)1);
     CHECK(ret, FAIL, "H5Pset_file_space");
 
     /* Creating a file with the non-default file creation property list should
-     * create a version 1 superblock
+     * create a version 2 superblock
      */
 
     /* Create file with custom file creation property list */
@@ -1945,9 +1945,9 @@ test_misc11(void)
 
     ret = H5Pget_file_space_strategy(fcpl, &strategy, &persist, &threshold);
     CHECK(ret, FAIL, "H5Pget_file_space_strategy");
-    VERIFY(strategy, 2, "H5Pget_file_space_strategy");
-    VERIFY(persist, TRUE, "H5Pget_file_space_strategy");
-    VERIFY(threshold, 0, "H5Pget_file_space_strategy");
+    VERIFY(strategy, 3, "H5Pget_file_space_strategy");
+    VERIFY(persist, FALSE, "H5Pget_file_space_strategy");
+    VERIFY(threshold, 1, "H5Pget_file_space_strategy");
 
     /* Close file */
     ret=H5Fclose(file);

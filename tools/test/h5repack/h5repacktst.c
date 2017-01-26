@@ -83,14 +83,14 @@
 #define FSPACE_OUT	"h5repack_fspace_OUT.h5"	/* The output file */
 #define NELMTS(X)       (sizeof(X)/sizeof(X[0]))        /* # of elements */
 const char *H5REPACK_FSPACE_FNAMES[] = {
-    "h5repack_fs_latest.h5",   
-    "h5repack_fs_notset.h5",   
-    "h5repack_fs_strat_pers.h5",   		
-    "h5repack_fs_strat_thres.h5",   	
-    "h5repack_fs_pers_thres.h5",   
-    "h5repack_fs_strat.h5",   	
-    "h5repack_fs_pers.h5",
-    "h5repack_fs_thres.h5"
+    "h5repack_latest.h5",               /* 0 */
+    "h5repack_default.h5",              /* 1 */
+    "h5repack_page_persist.h5",   	    /* 2 */
+    "h5repack_fsm_aggr_persist.h5",   	/* 3 */
+    "h5repack_page_threshold.h5",       /* 4 */
+    "h5repack_fsm_aggr_threshold.h5",   /* 5 */ 
+    "h5repack_aggr.h5",                 /* 6 */
+    "h5repack_none.h5"                  /* 7 */
 };
 
 #define FNAME_UB   "ublock.bin"
@@ -235,7 +235,6 @@ int main (void)
     if(h5repack_init(&pack_options, 0) < 0)
         GOERROR;
     
-    /* -S, -P, -T, -G options are not set */
     if(h5repack(fname, FSPACE_OUT, &pack_options) < 0)
         GOERROR;
     if(h5diff(fname, FSPACE_OUT, NULL, NULL, &diff_options) > 0)
@@ -253,10 +252,9 @@ int main (void)
     fname = H5REPACK_FSPACE_FNAMES[j];	
     if(h5repack_init(&pack_options, 0) < 0)
         GOERROR;
-    /* -S, -P, -T, -G options all set */
     pack_options.fs_strategy = H5F_FSPACE_STRATEGY_NONE;
-    pack_options.fs_persist = TRUE;
-    pack_options.fs_threshold = 3; 
+    pack_options.fs_persist = -1;        /* "FALSE" is set via -P 0 */
+    pack_options.fs_threshold = 1; 
     pack_options.fs_pagesize = 8192;
     if(h5repack(fname, FSPACE_OUT, &pack_options) < 0)
         GOERROR;
@@ -275,8 +273,7 @@ int main (void)
     fname = H5REPACK_FSPACE_FNAMES[j];
     if(h5repack_init(&pack_options, 0) < 0)
         GOERROR;
-    /* -S, -T options set */
-    pack_options.fs_strategy = -1; 	/* "AGGR" specified via -S AGGR */
+    pack_options.fs_strategy = -1; 	    /* "FSM_AGGR" specified via -S FSM_AGGR */
     pack_options.fs_threshold = -1; 	/* "0" specified via -T 0 */
     if(h5repack(fname, FSPACE_OUT, &pack_options) < 0)
         GOERROR;
@@ -295,9 +292,8 @@ int main (void)
     fname = H5REPACK_FSPACE_FNAMES[j];
     if(h5repack_init(&pack_options, 0) < 0)
         GOERROR;
-    /* -S, -P options set */
     pack_options.fs_strategy = H5F_FSPACE_STRATEGY_PAGE; /* "PAGE" specified via -S */
-    pack_options.fs_persist = TRUE; 
+    pack_options.fs_persist = TRUE;
     pack_options.latest = 1; 
     if(h5repack(fname, FSPACE_OUT, &pack_options) < 0)
         GOERROR;
@@ -315,7 +311,6 @@ int main (void)
     fname = H5REPACK_FSPACE_FNAMES[j];
     if(h5repack_init(&pack_options, 0) < 0)
         GOERROR;
-    /* -P, -T options set */
     pack_options.fs_persist = -1; 	/* "FALSE" is set via -P 0 */
     pack_options.fs_threshold = 2; 
     pack_options.latest = 1; 
@@ -334,9 +329,8 @@ int main (void)
     HDassert(j < NELMTS(H5REPACK_FSPACE_FNAMES));
     fname = H5REPACK_FSPACE_FNAMES[j];
     if(h5repack_init(&pack_options, 0) < 0)
-	GOERROR;
-    /* -S, -G options set */
-    pack_options.fs_strategy = H5F_FSPACE_STRATEGY_NONE;
+        GOERROR;
+    pack_options.fs_strategy = H5F_FSPACE_STRATEGY_PAGE;
     pack_options.fs_pagesize = 8192;
     pack_options.latest = 1; 
     if(h5repack(fname, FSPACE_OUT, &pack_options) < 0)
@@ -349,15 +343,15 @@ int main (void)
         GOERROR;
     PASSED();
 
-    TESTING("    files with file space info setting-- options -P, -T, -G are set");
+    TESTING("    files with file space info setting-- options -S, -P, -T, -G are set");
     ++j;	/* #6 */
     HDassert(j < NELMTS(H5REPACK_FSPACE_FNAMES));
     fname = H5REPACK_FSPACE_FNAMES[j];
     if(h5repack_init(&pack_options, 0) < 0)
         GOERROR;
-    /* -P, -T, -G options set */
+    pack_options.fs_strategy = H5F_FSPACE_STRATEGY_NONE;
     pack_options.fs_persist = -1; 	/* "FALSE" is set via -P 0 */
-    pack_options.fs_threshold = -1; 	/* "0" is set via -T 0 */
+    pack_options.fs_threshold = 1; 	
     pack_options.fs_pagesize = 8192;
     if(h5repack(fname, FSPACE_OUT, &pack_options) < 0)
         GOERROR;
@@ -369,14 +363,14 @@ int main (void)
         GOERROR;
     PASSED();
 
-    TESTING("    files with file space info setting-- options -T, -G are set & -L");
+    TESTING("    files with file space info setting-- options -S, -T, -G are set & -L");
     ++j;	/* #7 */
     HDassert(j < NELMTS(H5REPACK_FSPACE_FNAMES));
     fname = H5REPACK_FSPACE_FNAMES[j];
     if(h5repack_init(&pack_options, 0) < 0)
         GOERROR;
-    /* -T, -G options set */
-    pack_options.fs_threshold = 3; 
+    pack_options.fs_strategy = H5F_FSPACE_STRATEGY_AGGR;
+    pack_options.fs_threshold = 1; 
     pack_options.fs_pagesize = 4096;
     pack_options.latest = 1; 
     if(h5repack(fname, FSPACE_OUT, &pack_options) < 0)
@@ -2063,7 +2057,7 @@ int make_testfiles(void)
 
     /* 
      * #0 -- h5repack_latest.h5 
-     * default: strategy=PAGE, persist=TRUE, threshold=1 
+     * default: strategy=FSM_AGGR, persist=FALSE, threshold=1 
      * default: inpage=4096
      */
     j = 0;
@@ -2073,8 +2067,8 @@ int make_testfiles(void)
         return -1;
 
     /* 
-     * #1 -- h5repack_notset.h5 
-     * default: strategy=AGGR, persist=FALSE, threshold=1 
+     * #1 -- h5repack_default.h5 
+     * default: strategy=FSM_AGGR, persist=FALSE, threshold=1 
      * default: inpage=4096
      */
     HDassert(j < NELMTS(H5REPACK_FSPACE_FNAMES));
@@ -2084,9 +2078,9 @@ int make_testfiles(void)
         return -1;
 
     /* 
-     * #2 -- h5repack_strat_pers.h5
+     * #2 -- h5repack_page_persist.h5
      * Setting: 
-     *	strategy=PAGE, persist=TRUE, threshold=def-1
+     *	strategy=PAGE, persist=TRUE, threshold=1
      *	inpage=512
      *  latest format
      */
@@ -2107,15 +2101,15 @@ int make_testfiles(void)
 
 
     /* 
-     * #3 -- h5repack_strat_thres.h5
+     * #3 -- h5repack_fsm_aggr_persist.h5
      * Setting:
-     *	strategy=PAGE, persist=def-FALSE, threshold=2 
+     *	strategy=FSM_AGGR, persist=TRUE, threshold=1 
      *  default: inpage=4096
      */
     /* Create file creation property list */
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         return -1;
-    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, FALSE, (hsize_t)2) < 0)
+    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_FSM_AGGR, TRUE, (hsize_t)1) < 0)
         return -1;
     HDassert(j < NELMTS(H5REPACK_FSPACE_FNAMES));
     if((fid = H5Fcreate(H5REPACK_FSPACE_FNAMES[++j], H5F_ACC_TRUNC, fcpl, H5P_DEFAULT)) < 0)
@@ -2127,9 +2121,9 @@ int make_testfiles(void)
 
 
     /* 
-     * #4 -- h5repack_pers_thres.h5
+     * #4 -- h5repack_page_threshold.h5
      * Setting:
-     *	strategy=default-AGGR, persist=FALSE, threshold=3 
+     *	strategy=PAGE, persist=FALSE, threshold=3 
      *  inpage=8192
      *  latest format
      */
@@ -2137,7 +2131,7 @@ int make_testfiles(void)
     /* Create file creation property list */
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         return -1;
-    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, FALSE, (hsize_t)3) < 0)
+    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, FALSE, (hsize_t)3) < 0)
         return -1;
     if(H5Pset_file_space_page_size(fcpl, (hsize_t)8192) < 0)
         return -1;
@@ -2150,16 +2144,16 @@ int make_testfiles(void)
         return -1;
 
     /*
-     * #5 -- h5repack_strat.h5
+     * #5 -- h5repack_fsm_aggr_threshold.h5
      * Setting:
-     *	strategy=PAGE, persist=def-FALSE, threshold=def-1 
+     *	strategy=FSM_AGGR, persist=FALSE, threshold=3 
      *	inpage=4096
      */
 
     /* Create file creation property list */
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         return -1;
-    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, FALSE, (hsize_t)1) < 0)
+    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_FSM_AGGR, FALSE, (hsize_t)3) < 0)
         return -1;
     if(H5Pset_file_space_page_size(fcpl, (hsize_t)FS_PAGESIZE_DEF) < 0)
         return -1;
@@ -2172,16 +2166,16 @@ int make_testfiles(void)
         return -1;
 
     /* 
-     * #6 -- h5repack_pers.h5 
+     * #6 -- h5repack_aggr.h5 
      * Setting:
-     * 	strategy=def-AGGR, persist=TRUE, threshold=def-1 
+     * 	strategy=AGGR, persist=FALSE, threshold=1 
      *  latest format
      */
 
     /* Create file creation property list */
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         return -1;
-    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, TRUE, (hsize_t)1) < 0)
+    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, FALSE, (hsize_t)1) < 0)
         return -1;
     HDassert(j < NELMTS(H5REPACK_FSPACE_FNAMES));
     if((fid = H5Fcreate(H5REPACK_FSPACE_FNAMES[++j], H5F_ACC_TRUNC, fcpl, fapl)) < 0)
@@ -2192,16 +2186,16 @@ int make_testfiles(void)
         return -1;
 
     /* 
-     * #7 -- h5repack_thres.h5
+     * #7 -- h5repack_none.h5
      * Setting:
-     *	strategy=default-AGGR, persist=default-FALSE, threshold=0 
+     *	strategy=NONE, persist=FALSE, threshold=1 
      * 	inpage=8192
      */
 
     /* Create file creation property list */
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         return -1;
-    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, FALSE, (hsize_t)0) < 0)
+    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_NONE, FALSE, (hsize_t)1) < 0)
         return -1;
     if(H5Pset_file_space_page_size(fcpl, (hsize_t)8192) < 0)
         return -1;

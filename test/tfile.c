@@ -128,12 +128,12 @@ const char *OLD_FILENAME[] = {
 };
 
 const char *FSPACE_FILENAMES[] = {
-    "aggr_nopersist.h5",    /* H5F_FILE_SPACE_AGGR, not persisting free-space */
-    "aggr_persist.h5",      /* H5F_FILE_SPACE_AGGR, persisting free-space */
+    "fsm_aggr_nopersist.h5",    /* H5F_FILE_SPACE_AGGR, not persisting free-space */
+    "fsm_aggr_persist.h5",      /* H5F_FILE_SPACE_AGGR, persisting free-space */
     "paged_nopersist.h5",   /* H5F_FILE_SPACE_PAGE, not persisting free-space */
     "paged_persist.h5",     /* H5F_FILE_SPACE_PAGE, persisting free-space */
-    "none_nopersist.h5",    /* H5F_FILE_SPACE_NONE, not persisting free-space */
-    "none_persist.h5"       /* H5F_FILE_SPACE_NONE, persisting free-space */
+    "aggr.h5",              /* H5F_FILE_SPACE_AGGR */
+    "none.h5"               /* H5F_FILE_SPACE_NONE */
 };
 
 const char *FILESPACE_NAME[] = {
@@ -3330,7 +3330,7 @@ test_userblock_alignment_paged(void)
      * Case 4b:
      *  Userblock size =  1024
      *  Alignment in use = 16
-     *    Strategy is H5F_FILE_SPACE_AGGR; fsp_size = 1023
+     *    Strategy is H5F_FILE_SPACE_FSM_AGGR; fsp_size = 1023
      *    H5Pset_alignment() is 16
      * Outcome:
      *  Should succeed: 
@@ -3341,7 +3341,7 @@ test_userblock_alignment_paged(void)
     CHECK(fcpl, FAIL, "H5Pcreate");
     ret = H5Pset_userblock(fcpl, (hsize_t)1024);
     CHECK(ret, FAIL, "H5Pset_userblock");
-    ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, FALSE, (hsize_t)1);
+    ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_FSM_AGGR, FALSE, (hsize_t)1);
     CHECK(ret, FAIL, "H5Pset_file_space_strategy");
     ret = H5Pset_file_space_page_size(fcpl, (hsize_t)1023);
     CHECK(ret, FAIL, "H5Pset_file_space_page_size");
@@ -3554,7 +3554,7 @@ test_filespace_info(const char *env_h5_drvr)
     CHECK(ret, FAIL, "H5Pget_file_space_strategy");
 
     /* Verify file space information */
-    VERIFY(strategy, H5F_FSPACE_STRATEGY_AGGR, "H5Pget_file_space_strategy");
+    VERIFY(strategy, H5F_FSPACE_STRATEGY_FSM_AGGR, "H5Pget_file_space_strategy");
     VERIFY(persist, FALSE, "H5Pget_file_space_strategy");
     VERIFY(threshold, 1, "H5Pget_file_space_strategy");
 
@@ -3621,7 +3621,7 @@ test_filespace_info(const char *env_h5_drvr)
     CHECK(ret, FAIL, "H5Pget_file_space_strategy");
 
     /* Verify file space information */
-    VERIFY(strategy, H5F_FSPACE_STRATEGY_AGGR, "H5Pget_file_space_strategy");
+    VERIFY(strategy, H5F_FSPACE_STRATEGY_FSM_AGGR, "H5Pget_file_space_strategy");
     VERIFY(persist, FALSE, "H5Pget_file_space_strategy");
     VERIFY(threshold, 1, "H5Pget_file_space_strategy");
 
@@ -3659,7 +3659,7 @@ test_filespace_info(const char *env_h5_drvr)
     CHECK(ret, FAIL, "H5Pget_file_space_strategy");
 
     /* Verify file space information */
-    VERIFY(strategy, H5F_FSPACE_STRATEGY_AGGR, "H5Pget_file_space_strategy");
+    VERIFY(strategy, H5F_FSPACE_STRATEGY_FSM_AGGR, "H5Pget_file_space_strategy");
     VERIFY(persist, FALSE, "H5Pget_file_space_strategy");
     VERIFY(threshold, 1, "H5Pget_file_space_strategy");
 
@@ -3681,8 +3681,9 @@ test_filespace_info(const char *env_h5_drvr)
      *		New or old format
      *		Persist or not persist free-space
      *		Different sizes for free-space section threshold (0 to 10)
-     *		The three file space strategies: 
-     *		  H5F_FILE_SPACE_AGGR, H5F_FILE_SPACE_PAGE, H5F_FILE_SPACE_NONE
+     *		The four file space strategies: 
+     *		  H5F_FSPACE_STRATEGY_FSM_AGGR, H5F_FSPACE_STRATEGY_PAGE, 
+     *        H5F_FSPACE_STRATEGY_AGGR, H5F_FSPACE_STRATEGY_NONE
      *		File space page size: set to 512
      *  
      */
@@ -3705,8 +3706,8 @@ test_filespace_info(const char *env_h5_drvr)
             /* Test with free-space section threshold size: 0 to 10 */
             for(fs_threshold = 0; fs_threshold <= TEST_THRESHOLD10; fs_threshold++) {
 
-                /* Test with 3 file space strategies */
-                for(fs_strategy = H5F_FSPACE_STRATEGY_AGGR; fs_strategy < H5F_FSPACE_STRATEGY_NTYPES; H5_INC_ENUM(H5F_fspace_strategy_t, fs_strategy)) {
+                /* Test with 4 file space strategies */
+                for(fs_strategy = H5F_FSPACE_STRATEGY_FSM_AGGR; fs_strategy < H5F_FSPACE_STRATEGY_NTYPES; H5_INC_ENUM(H5F_fspace_strategy_t, fs_strategy)) {
 
                     if(!contig_addr_vfd && (fs_strategy == H5F_FSPACE_STRATEGY_PAGE || fs_persist))
                         continue;
@@ -3728,8 +3729,14 @@ test_filespace_info(const char *env_h5_drvr)
 
                     /* Verify file space information */
                     VERIFY(strategy, fs_strategy, "H5Pget_file_space_strategy");
-                    VERIFY(persist, (hbool_t)fs_persist, "H5Pget_file_space_strategy");
-                    VERIFY(threshold, fs_threshold, "H5Pget_file_space_strategy");
+
+                    if(fs_strategy < H5F_FSPACE_STRATEGY_AGGR) {
+                        VERIFY(persist, (hbool_t)fs_persist, "H5Pget_file_space_strategy");
+                        VERIFY(threshold, fs_threshold, "H5Pget_file_space_strategy");
+                    } else {
+                        VERIFY(persist, FALSE, "H5Pget_file_space_strategy");
+                        VERIFY(threshold, 1, "H5Pget_file_space_strategy");
+                    }
 
                     /* Retrieve and verify file space page size */
                     ret = H5Pget_file_space_page_size(fcpl, &fsp_size);
@@ -3750,8 +3757,14 @@ test_filespace_info(const char *env_h5_drvr)
 
                     /* Verify file space information */
                     VERIFY(strategy, fs_strategy, "H5Pget_file_space_strategy");
-                    VERIFY(persist, fs_persist, "H5Pget_file_space_strategy");
-                    VERIFY(threshold, fs_threshold, "H5Pget_file_space_strategy");
+
+                    if(fs_strategy < H5F_FSPACE_STRATEGY_AGGR) {
+                        VERIFY(persist, fs_persist, "H5Pget_file_space_strategy");
+                        VERIFY(threshold, fs_threshold, "H5Pget_file_space_strategy");
+                    } else {
+                        VERIFY(persist, FALSE, "H5Pget_file_space_strategy");
+                        VERIFY(threshold, 1, "H5Pget_file_space_strategy");
+                    }
 
                     /* Retrieve and verify file space page size */
                     ret = H5Pget_file_space_page_size(fcpl1, &fsp_size);
@@ -3776,8 +3789,13 @@ test_filespace_info(const char *env_h5_drvr)
 
                     /* Verify file space information */
                     VERIFY(strategy, fs_strategy, "H5Pget_file_space_strategy");
-                    VERIFY(persist, fs_persist, "H5Pget_file_space_strategy");
-                    VERIFY(threshold, fs_threshold, "H5Pget_file_space_strategy");
+                    if(fs_strategy < H5F_FSPACE_STRATEGY_AGGR) {
+                        VERIFY(persist, fs_persist, "H5Pget_file_space_strategy");
+                        VERIFY(threshold, fs_threshold, "H5Pget_file_space_strategy");
+                    } else {
+                        VERIFY(persist, FALSE, "H5Pget_file_space_strategy");
+                        VERIFY(threshold, 1, "H5Pget_file_space_strategy");
+                    }
 
                     /* Retrieve and verify file space page size */
                     ret = H5Pget_file_space_page_size(fcpl2, &fsp_size);
@@ -4096,7 +4114,7 @@ test_sects_freespace(const char *env_h5_drvr, hbool_t new_format)
             }
 
         } else {
-            ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, TRUE, (hsize_t)1);
+            ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_FSM_AGGR, TRUE, (hsize_t)1);
             CHECK(ret, FAIL, "H5Pget_file_space_strategy");
         } 
 
@@ -4470,7 +4488,7 @@ test_filespace_round_compatible(void)
 
 	ret = H5Pget_file_space_strategy(fcpl, &strategy, &persist, &threshold);
 	CHECK(ret, FAIL, "H5Pget_file_space_strategy");
-	VERIFY(strategy, H5F_FSPACE_STRATEGY_AGGR, "H5Pget_file_space_strategy");
+	VERIFY(strategy, H5F_FSPACE_STRATEGY_FSM_AGGR, "H5Pget_file_space_strategy");
 	VERIFY(persist, FALSE, "H5Pget_file_space_strategy");
 	VERIFY(threshold, 1, "H5Pget_file_space_strategy");
 

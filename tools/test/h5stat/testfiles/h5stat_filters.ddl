@@ -88,7 +88,7 @@ Small size free-space sections (< 10 bytes):
 	Total # of small size sections: 0
 Free-space section bins:
 	Total # of sections: 0
-File space management strategy: H5F_FSPACE_STRATEGY_AGGR
+File space management strategy: H5F_FSPACE_STRATEGY_FSM_AGGR
 File space page size: 4096 bytes
 Summary of file space information:
   File metadata: 37312 bytes

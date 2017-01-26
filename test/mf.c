@@ -2144,6 +2144,7 @@ test_mf_aggr_alloc1(const char *env_h5_drvr, hid_t fapl)
     hid_t       file = -1;              /* File ID */
     char        filename[FILENAME_LEN]; /* Filename to use */
     H5F_t       *f = NULL;              /* Internal file object pointer */
+    hid_t       fcpl;                   /* File creation property list */
     h5_stat_size_t      file_size, new_file_size; /* file size */
     H5FD_mem_t  type;
     haddr_t     addr1, addr2;
@@ -2159,13 +2160,21 @@ test_mf_aggr_alloc1(const char *env_h5_drvr, hid_t fapl)
         /* Set the filename to use for this test (dependent on fapl) */
         h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
+        /* File creation property list template */
+        if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
+            TEST_ERROR
+
+        /* Set to H5F_FSPACE_STRATEGY_AGGR strategy */
+        if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, FALSE, (hsize_t)1) < 0)
+            TEST_ERROR
+
         /* Create the file to work on */
-        if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+        if((file = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
             FAIL_STACK_ERROR
 
         /* Close file */
         if(H5Fclose(file) < 0)
-            FAIL_STACK_ERROR
+            TEST_ERROR
 
         /* Get the size of a file  */
         if((file_size = h5_get_file_size(filename, fapl)) < 0)
@@ -2173,22 +2182,24 @@ test_mf_aggr_alloc1(const char *env_h5_drvr, hid_t fapl)
 
         /* Re-open the file */
         if((file = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
-            FAIL_STACK_ERROR
+            TEST_ERROR
 
         /* Get a pointer to the internal file object */
         if(NULL == (f = (H5F_t *)H5I_object(file)))
-            FAIL_STACK_ERROR
+            TEST_ERROR
 
         /* Allocate first block from meta_aggr */
         type = H5FD_MEM_SUPER;
-        addr1 = H5MF_alloc(f, type, H5AC_ind_read_dxpl_id, (hsize_t)TBLOCK_SIZE30);
+        if((addr1 = H5MF_alloc(f, type, H5AC_ind_read_dxpl_id, (hsize_t)TBLOCK_SIZE30)) == HADDR_UNDEF)
+            TEST_ERROR
 
         H5MF_aggr_query(f, &(f->shared->meta_aggr), &ma_addr, &ma_size);
         if((addr1+TBLOCK_SIZE30) != ma_addr)
             TEST_ERROR
 
         /* Allocate second block from meta_aggr */
-        addr2 = H5MF_alloc(f, type, H5AC_ind_read_dxpl_id, (hsize_t)TBLOCK_SIZE50);
+        if((addr2 = H5MF_alloc(f, type, H5AC_ind_read_dxpl_id, (hsize_t)TBLOCK_SIZE50)) == HADDR_UNDEF)
+            TEST_ERROR
 
         H5MF_aggr_query(f, &(f->shared->meta_aggr), &ma_addr, &ma_size);
         if((addr2+TBLOCK_SIZE50) != ma_addr)
@@ -2197,7 +2208,7 @@ test_mf_aggr_alloc1(const char *env_h5_drvr, hid_t fapl)
             TEST_ERROR
 
         if(H5Fclose(file) < 0)
-            FAIL_STACK_ERROR
+            TEST_ERROR
 
         /* Get the size of the file */
         if((new_file_size = h5_get_file_size(filename, fapl)) < 0)
@@ -2209,18 +2220,20 @@ test_mf_aggr_alloc1(const char *env_h5_drvr, hid_t fapl)
 
         /* Re-open the file */
         if((file = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
-            FAIL_STACK_ERROR
+            TEST_ERROR
 
         /* Get a pointer to the internal file object */
         if(NULL == (f = (H5F_t *)H5I_object(file)))
-            FAIL_STACK_ERROR
+            TEST_ERROR
 
-        /* Free the two blocks */
-        H5MF_xfree(f, type, H5AC_ind_read_dxpl_id, addr1, (hsize_t)TBLOCK_SIZE30);
-        H5MF_xfree(f, type, H5AC_ind_read_dxpl_id, addr2, (hsize_t)TBLOCK_SIZE50);
+        /* Free the two blocks: order matters because of H5F_FSPACE_STRATEGY_AGGR strategy */
+        if(H5MF_xfree(f, type, H5AC_ind_read_dxpl_id, addr2, (hsize_t)TBLOCK_SIZE50) < 0)
+            TEST_ERROR
+        if(H5MF_xfree(f, type, H5AC_ind_read_dxpl_id, addr1, (hsize_t)TBLOCK_SIZE30) < 0)
+            TEST_ERROR
 
         if(H5Fclose(file) < 0)
-            FAIL_STACK_ERROR
+            TEST_ERROR
 
         /* Get the size of the file */
         if((new_file_size = h5_get_file_size(filename, fapl)) < 0)
@@ -2228,6 +2241,9 @@ test_mf_aggr_alloc1(const char *env_h5_drvr, hid_t fapl)
 
         /* Verify the file is the correct size */
         if (new_file_size != file_size)
+            TEST_ERROR
+
+        if(H5Pclose(fcpl) < 0)
             TEST_ERROR
 
         PASSED()
@@ -2242,6 +2258,7 @@ test_mf_aggr_alloc1(const char *env_h5_drvr, hid_t fapl)
 error:
     H5E_BEGIN_TRY {
         H5Fclose(file);
+        H5Pclose(fcpl);
     } H5E_END_TRY;
     return(1);
 } /* test_mf_aggr_alloc1() */
@@ -6179,7 +6196,7 @@ test_mf_fs_persist_split(void)
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
     FAIL_STACK_ERROR
 
-    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, TRUE, (hsize_t)1) < 0)
+    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_FSM_AGGR, TRUE, (hsize_t)1) < 0)
     FAIL_STACK_ERROR
 
     /* Set the filename to use for this test (dependent on fapl) */
@@ -6488,7 +6505,7 @@ test_mf_fs_persist_multi(void)
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         FAIL_STACK_ERROR
 
-    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, TRUE, (hsize_t)1) < 0)
+    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_FSM_AGGR, TRUE, (hsize_t)1) < 0)
         FAIL_STACK_ERROR
 
     if((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0)
@@ -6889,7 +6906,7 @@ test_mf_fs_gone(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
                 FAIL_STACK_ERROR
 
         /* Set to aggregation and persisting free-space */
-        if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, TRUE, (hsize_t)1) < 0)
+        if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_FSM_AGGR, TRUE, (hsize_t)1) < 0)
             FAIL_STACK_ERROR
 
         /* Set the filename to use for this test (dependent on fapl) */
@@ -7086,8 +7103,8 @@ test_mf_strat_thres_gone(const char *env_h5_drvr, hid_t fapl, hbool_t new_format
 
     /* Test with TRUE or FALSE for persisting free-space */
     for(fs_persist = FALSE; fs_persist <= TRUE; fs_persist++) {
-
-        for(fs_type = H5F_FSPACE_STRATEGY_AGGR; fs_type < H5F_FSPACE_STRATEGY_NTYPES; H5_INC_ENUM(H5F_fspace_strategy_t, fs_type)) {
+        /* Testing for H5F_FSPACE_STRATEGY_FSM_AGGR and H5F_FSPACE_STRATEGY_PAGE strategies only */
+        for(fs_type = H5F_FSPACE_STRATEGY_FSM_AGGR; fs_type < H5F_FSPACE_STRATEGY_AGGR; H5_INC_ENUM(H5F_fspace_strategy_t, fs_type)) {
 
             /* Skip for multi/split driver: persisting free-space or paged aggregation strategy */
             if(!contig_addr_vfd && (fs_persist || fs_type == H5F_FSPACE_STRATEGY_PAGE))
@@ -7272,7 +7289,8 @@ test_mf_strat_thres_persist(const char *env_h5_drvr, hid_t fapl, hbool_t new_for
 
         for(fs_threshold = 0; fs_threshold <= TEST_THRESHOLD10; fs_threshold++) {
 
-            for(fs_type = H5F_FSPACE_STRATEGY_AGGR; fs_type < H5F_FSPACE_STRATEGY_NTYPES; H5_INC_ENUM(H5F_fspace_strategy_t, fs_type)) {
+            /* Testing for H5F_FSPACE_STRATEGY_FSM_AGGR and H5F_FSPACE_STRATEGY_PAGE strategies only */
+            for(fs_type = H5F_FSPACE_STRATEGY_FSM_AGGR; fs_type < H5F_FSPACE_STRATEGY_AGGR; H5_INC_ENUM(H5F_fspace_strategy_t, fs_type)) {
 
                 if(!contig_addr_vfd && (fs_persist || fs_type == H5F_FSPACE_STRATEGY_PAGE))
                     continue;
@@ -7435,7 +7453,7 @@ test_mf_fs_persist(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
                 TEST_ERROR
         } else {
             /* Setting: aggregation with persisting free-space */
-            if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, TRUE, (hsize_t)1) < 0)
+            if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_FSM_AGGR, TRUE, (hsize_t)1) < 0)
                 TEST_ERROR
         }
 
@@ -8821,8 +8839,8 @@ test_page_alignment(const char *env_h5_drvr, hid_t fapl)
         if(H5Pset_file_space_page_size(fcpl2, (hsize_t)TBLOCK_SIZE8192) < 0)
             TEST_ERROR
 
-        /* Set strategy */
-        if(H5Pset_file_space_strategy(fcpl2, H5F_FSPACE_STRATEGY_NONE, FALSE, (hsize_t)1) < 0)
+        /* Set strategy to H5F_FSPACE_STRATEGY_AGGR but meta/raw data block is 0 as set in fapl_new */
+        if(H5Pset_file_space_strategy(fcpl2, H5F_FSPACE_STRATEGY_AGGR, FALSE, (hsize_t)1) < 0)
             TEST_ERROR
 
         /* fapl_new has latest format, H5Pset_alignment set, and disable meta/raw block */
@@ -8848,7 +8866,7 @@ test_page_alignment(const char *env_h5_drvr, hid_t fapl)
             if(saddr2 != (((saddr1 + TBLOCK_SIZE30) / TEST_ALIGN16) + 1) * TEST_ALIGN16)
                 TEST_ERROR
 
-        /* Allocate a large meta data block */
+        /* Allocate a large raw data block */
         gaddr1 = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, (hsize_t)TBLOCK_SIZE5000);
 
         /* Should be aligned on 16 */
@@ -8860,23 +8878,9 @@ test_page_alignment(const char *env_h5_drvr, hid_t fapl)
             if(gaddr1 != (((saddr2 + TBLOCK_SIZE50) / TEST_ALIGN16) + 1) * TEST_ALIGN16)
                 TEST_ERROR
 
-        /* Verify free space from the mis-aligned fragments */
-        if(!f->shared->fs_man[H5FD_MEM_DRAW])
+        /* There is no free-space manager involved for H5F_FSPACE_STRATEGY_AGGR strategy */
+        if(f->shared->fs_man[H5FD_MEM_DRAW] || f->shared->fs_man[H5FD_MEM_SUPER])
             TEST_ERROR
-        if(H5FS_stat_info(f, f->shared->fs_man[H5FD_MEM_DRAW], &fs_stat) < 0)
-            TEST_ERROR
-
-        if(multi || split) {
-            if(fs_stat.tot_space != 16)
-                TEST_ERROR
-            if(fs_stat.tot_sect_count != 2)
-                TEST_ERROR
-        } else {
-            if(fs_stat.tot_space != 29)
-                TEST_ERROR
-            if(fs_stat.tot_sect_count != 3)
-                TEST_ERROR
-        }
 
         /* Closing */
         if(H5Fclose(fid) < 0)

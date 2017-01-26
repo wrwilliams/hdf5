@@ -95,9 +95,9 @@ static void usage(const char *prog) {
     PRINTVALSTREAM(rawoutstream, "   -f FILT, --filter=FILT  Filter type\n");
     PRINTVALSTREAM(rawoutstream, "   -l LAYT, --layout=LAYT  Layout type\n");
     PRINTVALSTREAM(rawoutstream, "   -S FS_STRATEGY, --fs_strategy=FS_STRATEGY  File space management strategy for H5Pset_file_space_strategy\n");
-    PRINTVALSTREAM(rawoutstream, "   -P FS_PERSIST, --fs_persist=FS_PERSIST  Persist or not persist free-space for H5Pset_file_space_strategy\n");
+    PRINTVALSTREAM(rawoutstream, "   -P FS_PERSIST, --fs_persist=FS_PERSIST  Persisting or not persisting free-space for H5Pset_file_space_strategy\n");
     PRINTVALSTREAM(rawoutstream, "   -T FS_THRESHOLD, --fs_threshold=FS_THRESHOLD   Free-space section threshold for H5Pset_file_space_strategy\n");
-    PRINTVALSTREAM(rawoutstream, "   -G FS_PAGESIZE, --fs_pagesize=FS_PAGESIZE   File space page size for H5Pset_file_space_page_siz\n");
+    PRINTVALSTREAM(rawoutstream, "   -G FS_PAGESIZE, --fs_pagesize=FS_PAGESIZE   File space page size for H5Pset_file_space_page_size\n");
     PRINTVALSTREAM(rawoutstream, "\n");
     PRINTVALSTREAM(rawoutstream, "    M - is an integer greater than 1, size of dataset in bytes (default is 0) \n");
     PRINTVALSTREAM(rawoutstream, "    E - is a filename.\n");
@@ -113,22 +113,27 @@ static void usage(const char *prog) {
     PRINTVALSTREAM(rawoutstream, "     --enable-error-stack Prints messages from the HDF5 error stack as they\n");
     PRINTVALSTREAM(rawoutstream, "                          occur.\n");
     PRINTVALSTREAM(rawoutstream, "\n");
-    PRINTVALSTREAM(rawoutstream, "    FS_STRATEGY is a string as listed below:\n");
-    PRINTVALSTREAM(rawoutstream, "        AGGR - Aggregation strategy:\n");
+    PRINTVALSTREAM(rawoutstream, "    FS_STRATEGY is a string indicating the file space strategy used:\n");
+    PRINTVALSTREAM(rawoutstream, "        FSM_AGGR:\n");
     PRINTVALSTREAM(rawoutstream, "               The mechanisms used in managing file space are free-space managers, aggregators and virtual file driver.\n");
-    PRINTVALSTREAM(rawoutstream, "        PAGE - Paged aggregation strategy:\n");
+    PRINTVALSTREAM(rawoutstream, "        PAGE:\n");
     PRINTVALSTREAM(rawoutstream, "               The mechanisms used in managing file space are free-space managers with embedded paged aggregation and virtual file driver.\n");
-    PRINTVALSTREAM(rawoutstream, "        NONE - No aggregation strategy:\n");
-    PRINTVALSTREAM(rawoutstream, "               The mechanisms used in managing file space are free-space managers and virtual file driver.\n");
-    PRINTVALSTREAM(rawoutstream, "        The default strategy when not set is AGGR with non-persistent free-space.\n");
+    PRINTVALSTREAM(rawoutstream, "        AGGR:\n");
+    PRINTVALSTREAM(rawoutstream, "               The mechanisms used in managing file space are aggregators and virtual file driver.\n");
+    PRINTVALSTREAM(rawoutstream, "        NONE:\n");
+    PRINTVALSTREAM(rawoutstream, "               The mechanisms used in managing file space are virtual file driver.\n");
+    PRINTVALSTREAM(rawoutstream, "        The default strategy when not set is FSM_AGGR without persisting free-space.\n");
     PRINTVALSTREAM(rawoutstream, "\n");
-    PRINTVALSTREAM(rawoutstream, "    FS_PERSIST is 1 to persist free-space or 0 to not persist free-space.\n");
-    PRINTVALSTREAM(rawoutstream, "      The default when not set is non-persistent free-space.\n");
+    PRINTVALSTREAM(rawoutstream, "    FS_PERSIST is 1 to persisting free-space or 0 to not persisting free-space.\n");
+    PRINTVALSTREAM(rawoutstream, "      The default when not set is not persisting free-space.\n");
+    PRINTVALSTREAM(rawoutstream, "      The value is ignored for AGGR and NONE strategies.\n");
     PRINTVALSTREAM(rawoutstream, "\n");
-    PRINTVALSTREAM(rawoutstream, "    FS_THRESHOLD is minimum size (in bytes) of free-space sections to be tracked by the library.\n");
+    PRINTVALSTREAM(rawoutstream, "    FS_THRESHOLD is the minimum size (in bytes) of free-space sections to be tracked by the library.\n");
+    PRINTVALSTREAM(rawoutstream, "      The default when not set is 1.\n");
+    PRINTVALSTREAM(rawoutstream, "      The value is ignored for AGGR and NONE strategies.\n");
     PRINTVALSTREAM(rawoutstream, "\n");
-    PRINTVALSTREAM(rawoutstream, "    FS_PAGESIZE is the size (in bytes) >=0 that is used by the library when the file space strategy PAGE is used.\n");
-    PRINTVALSTREAM(rawoutstream, "      A zero value will disable paged aggregation.\n");
+    PRINTVALSTREAM(rawoutstream, "    FS_PAGESIZE is the size (in bytes) >=512 that is used by the library when the file space strategy PAGE is used.\n");
+    PRINTVALSTREAM(rawoutstream, "      The default when not set is 4096.\n");
     PRINTVALSTREAM(rawoutstream, "\n");
     PRINTVALSTREAM(rawoutstream, "    FILT - is a string with the format:\n");
     PRINTVALSTREAM(rawoutstream, "\n");
@@ -429,15 +434,15 @@ static int parse_command_line(int argc, const char **argv, pack_opt_t* options)
                 }
                 break;
 
-	    case 'm':
-		options->min_comp = HDstrtoull(opt_arg , NULL, 0);
-		if ((int) options->min_comp <= 0) {
-		    error_msg("invalid minimum compress size <%s>\n", opt_arg);
-		    h5tools_setstatus(EXIT_FAILURE);
-		    ret_value = -1;
-		    goto done;
-		}
-		break;
+            case 'm':
+                options->min_comp = HDstrtoull(opt_arg , NULL, 0);
+                if ((int) options->min_comp <= 0) {
+                    error_msg("invalid minimum compress size <%s>\n", opt_arg);
+                    h5tools_setstatus(EXIT_FAILURE);
+                    ret_value = -1;
+                    goto done;
+                }
+                break;
 
             case 'e':
                 ret_value = read_info(opt_arg, options);
@@ -512,25 +517,27 @@ static int parse_command_line(int argc, const char **argv, pack_opt_t* options)
                 options->threshold = (hsize_t) HDatol( opt_arg );
                 break;
 
-	    case 'a':
-		options->alignment = HDstrtoull(opt_arg , NULL, 0);
-		if (options->alignment < 1) {
-		    error_msg("invalid alignment size\n", opt_arg);
-		    h5tools_setstatus(EXIT_FAILURE);
-		    ret_value = -1;
-		    goto done;
-		}
-		break;
+            case 'a':
+                options->alignment = HDstrtoull(opt_arg , NULL, 0);
+                if (options->alignment < 1) {
+                    error_msg("invalid alignment size\n", opt_arg);
+                    h5tools_setstatus(EXIT_FAILURE);
+                    ret_value = -1;
+                    goto done;
+                }
+                break;
 
             case 'S':
                 {
                     char strategy[MAX_NC_NAME];
 
                     HDstrcpy(strategy, opt_arg);
-                    if(!HDstrcmp(strategy, "AGGR"))
-                        options->fs_strategy = H5F_FSPACE_STRATEGY_AGGR;
+                    if(!HDstrcmp(strategy, "FSM_AGGR"))
+                        options->fs_strategy = H5F_FSPACE_STRATEGY_FSM_AGGR;
                     else if(!HDstrcmp(strategy, "PAGE"))
                         options->fs_strategy = H5F_FSPACE_STRATEGY_PAGE;
+                    else if(!HDstrcmp(strategy, "AGGR"))
+                        options->fs_strategy = H5F_FSPACE_STRATEGY_AGGR;
                     else if(!HDstrcmp(strategy, "NONE"))
                         options->fs_strategy = H5F_FSPACE_STRATEGY_NONE;
                     else {

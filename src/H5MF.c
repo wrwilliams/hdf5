@@ -842,26 +842,31 @@ HDfprintf(stderr, "%s: Check 1.0\n", FUNC);
     if(H5AC_set_ring(dxpl_id, fsm_ring, &dxpl, &orig_ring) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, HADDR_UNDEF, "unable to set ring value")
 
-     /* we are about to change the contents of the free space manager --
-      * notify metadata cache that the associated fsm ring is
-      * unsettled
-      */
-    if(H5AC_unsettle_ring(f, fsm_ring) < 0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_SYSTEM, HADDR_UNDEF, \
-                    "attempt to notify cache that ring is unsettled failed.")
+    /* Check if we are using the free space manager for this file */
+    if(H5F_HAVE_FREE_SPACE_MANAGER(f)) {
 
-    /* Check if the free space manager for the file has been initialized */
-    if(!f->shared->fs_man[fs_type] && H5F_addr_defined(f->shared->fs_addr[fs_type])) {
-        /* Open the free-space manager */
-        if(H5MF_open_fstype(f, dxpl_id, fs_type) < 0)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTOPENOBJ, HADDR_UNDEF, "can't initialize file free space")
-        HDassert(f->shared->fs_man[fs_type]);
-    } /* end if */
+        /* we are about to change the contents of the free space manager --
+         * notify metadata cache that the associated fsm ring is
+         * unsettled
+         */
+        if(H5AC_unsettle_ring(f, fsm_ring) < 0)
+            HGOTO_ERROR(H5E_RESOURCE, H5E_SYSTEM, HADDR_UNDEF, \
+                        "attempt to notify cache that ring is unsettled failed.")
 
-    /* Search for large enough space in the free space manager */
-    if(f->shared->fs_man[fs_type])
-        if(H5MF_find_sect(f, alloc_type, dxpl_id, size, f->shared->fs_man[fs_type], &ret_value) < 0)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, HADDR_UNDEF, "error locating a node")
+        /* Check if the free space manager for the file has been initialized */
+        if(!f->shared->fs_man[fs_type] && H5F_addr_defined(f->shared->fs_addr[fs_type])) {
+            /* Open the free-space manager */
+            if(H5MF_open_fstype(f, dxpl_id, fs_type) < 0)
+                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTOPENOBJ, HADDR_UNDEF, "can't initialize file free space")
+            HDassert(f->shared->fs_man[fs_type]);
+        } /* end if */
+
+        /* Search for large enough space in the free space manager */
+        if(f->shared->fs_man[fs_type])
+            if(H5MF_find_sect(f, alloc_type, dxpl_id, size, f->shared->fs_man[fs_type], &ret_value) < 0)
+                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, HADDR_UNDEF, "error locating a node")
+
+    }
 
     /* If no space is found from the free-space manager, continue further action */
     if(!H5F_addr_defined(ret_value)) {
@@ -1158,9 +1163,12 @@ HDfprintf(stderr, "%s: Entering - alloc_type = %u, addr = %a, size = %Hu\n", FUN
      * notify metadata cache that the associated fsm ring is
      * unsettled
      */
-    if (H5AC_unsettle_ring(f, fsm_ring) < 0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_SYSTEM, FAIL, \
-                    "attempt to notify cache that ring is unsettled failed.")
+    /* Only do so for strategies that use free-space managers */
+    if(H5F_HAVE_FREE_SPACE_MANAGER(f)) {
+        if (H5AC_unsettle_ring(f, fsm_ring) < 0)
+            HGOTO_ERROR(H5E_RESOURCE, H5E_SYSTEM, FAIL, \
+                        "attempt to notify cache that ring is unsettled failed.")
+    }
 
     /* Check for attempting to free space that's a 'temporary' file address */
     if(H5F_addr_le(f->shared->tmp_addr, addr))
@@ -1206,9 +1214,14 @@ HDfprintf(stderr, "%s: dropping addr = %a, size = %Hu, on the floor!\n", FUNC, a
 
         /* If we are deleting the free space manager, leave now, to avoid
          *  [re-]starting it.
+         * or if file space strategy type is not using a free space manager
+         *  (H5F_FSPACE_STRATEGY_AGGR or H5F_FSPACE_STRATEGY_NONE), drop free space
+         *   section on the floor.
+         *
          * Note: this drops the space to free on the floor...
          */
-        if(f->shared->fs_state[fs_type] == H5F_FS_STATE_DELETING) {
+        if(f->shared->fs_state[fs_type] == H5F_FS_STATE_DELETING ||
+           !H5F_HAVE_FREE_SPACE_MANAGER(f) ) {
 #ifdef H5MF_ALLOC_DEBUG_MORE
 HDfprintf(stderr, "%s: dropping addr = %a, size = %Hu, on the floor!\n", FUNC, addr, size);
 #endif /* H5MF_ALLOC_DEBUG_MORE */
@@ -1401,7 +1414,8 @@ HDfprintf(stderr, "%s: extended = %t\n", FUNC, ret_value);
         }
 
         /* For non-paged aggregation: try to extend into the aggregators */
-        if(ret_value == FALSE && f->shared->fs_strategy == H5F_FSPACE_STRATEGY_AGGR) {
+        if(ret_value == FALSE && (f->shared->fs_strategy == H5F_FSPACE_STRATEGY_FSM_AGGR ||
+                                  f->shared->fs_strategy == H5F_FSPACE_STRATEGY_AGGR) ) {
             H5F_blk_aggr_t *aggr;   /* Aggregator to use */
 
             /* Check if the block is able to extend into aggregation block */
@@ -1415,7 +1429,8 @@ HDfprintf(stderr, "%s: H5MF_aggr_try_extend = %t\n", FUNC, ret_value);
         } /* end if */
 
         /* If no extension so far, try to extend into a free-space section */
-        if(ret_value == FALSE) {
+        if(ret_value == FALSE && ((f->shared->fs_strategy == H5F_FSPACE_STRATEGY_FSM_AGGR) ||
+                                  (H5F_PAGED_AGGR(f))) ) {
             H5MF_sect_ud_t udata;       /* User data */
 
             /* Construct user data for callbacks */
