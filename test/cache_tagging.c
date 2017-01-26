@@ -3685,7 +3685,7 @@ main(void)
     fcpl_shmesg_all = H5Pcreate(H5P_FILE_CREATE);
     H5Pset_shared_mesg_nindexes(fcpl_shmesg_all, 1);
     H5Pset_shared_mesg_index(fcpl_shmesg_all, 0, H5O_SHMESG_ALL_FLAG, 20);
-    H5Pset_file_space_strategy(fcpl_shmesg_all, H5F_FSPACE_STRATEGY_AGGR, TRUE, (hsize_t)0);
+    H5Pset_file_space_strategy(fcpl_shmesg_all, H5F_FSPACE_STRATEGY_FSM_AGGR, TRUE, (hsize_t)0);
 
     /* ========= */
     /* Run Tests */

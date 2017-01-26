@@ -346,7 +346,7 @@ int copy_objects(const char* fnamein, const char* fnameout, pack_opt_t *options)
     if(set_pagesize != FS_PAGESIZE_DEF) /* Set non-default file space page size as specified */
         if(H5Pset_file_space_page_size(fcpl, set_pagesize) < 0) {
             error_msg("failed to set file space page size\n");
-	    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pclose failed");
+	    HGOTO_ERROR(FAIL, H5E_tools_min_id_g, "H5Pclose failed");
         }
 
     /*-------------------------------------------------------------------------

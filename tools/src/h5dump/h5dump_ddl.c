@@ -1268,10 +1268,12 @@ dump_fcpl(hid_t fid)
     PRINTSTREAM(rawoutstream, "%s %u\n","ISTORE_K", istore_ik);
 
     indentation(dump_indent + COL);
-    if(fs_strategy == H5F_FSPACE_STRATEGY_AGGR) {
-        PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FSPACE_STRATEGY_AGGR");
+    if(fs_strategy == H5F_FSPACE_STRATEGY_FSM_AGGR) {
+        PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FSPACE_STRATEGY_FSM_AGGR");
     } else if(fs_strategy == H5F_FSPACE_STRATEGY_PAGE) {
         PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FSPACE_STRATEGY_PAGE");
+    } else if(fs_strategy == H5F_FSPACE_STRATEGY_AGGR) {
+        PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FSPACE_STRATEGY_AGGR");
     } else if(fs_strategy == H5F_FSPACE_STRATEGY_NONE) {
         PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FSPACE_STRATEGY_NONE");
     } else {

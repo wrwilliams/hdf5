@@ -35,7 +35,7 @@ const char *FILENAME[] = {
     NULL
 };
 
-static int external_link_env(hid_t fcpl, hid_t fapl, hbool_t new_format);
+static int external_link_env(hid_t fapl, hbool_t new_format);
 
 
 /*-------------------------------------------------------------------------
@@ -59,7 +59,7 @@ static int external_link_env(hid_t fcpl, hid_t fapl, hbool_t new_format);
  *-------------------------------------------------------------------------
  */
 static int
-external_link_env(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_env(hid_t fapl, hbool_t new_format)
 {
     hid_t fid = (-1);     	/* File ID */
     hid_t gid = (-1);	        /* Group IDs */
@@ -91,7 +91,7 @@ external_link_env(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[2], fapl, filename3, sizeof filename3);
 
     /* Create the target file in "tmp" directory */
-    if((fid=H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if((gid=H5Gcreate2(fid, "A", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
 
     /* Closing for target file */
@@ -100,7 +100,7 @@ external_link_env(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
 
     /* Create the main file */
-    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link to target file */
     if(H5Lcreate_external(filename2, "/A", fid, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -149,7 +149,6 @@ int
 main(void)
 {
     hid_t fapl; 	/* File access property lists */
-    hid_t fcpl; 	/* File creation property lists */
     int	nerrors = 0;	/* Error from tests */
     const char  *env_h5_drvr;      /* File Driver value from environment */
     hbool_t contig_addr_vfd;
@@ -164,20 +163,12 @@ main(void)
     h5_reset();
     fapl = h5_fileaccess();
 
-    /* Create file-creation template */
-    if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
-        TEST_ERROR
-
-    nerrors += external_link_env(fcpl, fapl, FALSE) < 0 ? 1 : 0;
+    nerrors += external_link_env(fapl, FALSE) < 0 ? 1 : 0;
 
     /* Set the "use the latest version of the format" bounds for creating objects in the file */
     if(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0) TEST_ERROR
 
-    if(!contig_addr_vfd)
-	if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, FALSE, (hsize_t)1) < 0)
-	    TEST_ERROR
-
-    nerrors += external_link_env(fcpl, fapl, TRUE) < 0 ? 1 : 0;
+    nerrors += external_link_env(fapl, TRUE) < 0 ? 1 : 0;
 
     /* Verify symbol table messages are cached */
     nerrors += (h5_verify_cached_stabs(FILENAME, fapl) < 0 ? 1 : 0);

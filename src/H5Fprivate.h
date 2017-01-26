@@ -536,7 +536,7 @@
 						/* See format specification on version 1 B-trees */
 
 /* Default file space handling strategy */
-#define H5F_FILE_SPACE_STRATEGY_DEF	        H5F_FSPACE_STRATEGY_AGGR
+#define H5F_FILE_SPACE_STRATEGY_DEF	        H5F_FSPACE_STRATEGY_FSM_AGGR
 
 /* Default free space section threshold used by free-space managers */
 #define H5F_FREE_SPACE_PERSIST_DEF	        FALSE

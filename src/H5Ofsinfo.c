@@ -306,12 +306,16 @@ H5O_fsinfo_debug(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, const vo
 
     HDfprintf(stream, "%*s%-*s ", indent, "", fwidth, "File space strategy:");
     switch(fsinfo->strategy) {
-        case H5F_FSPACE_STRATEGY_AGGR:
-            HDfprintf(stream, "%s\n", "H5F_FSPACE_STRATEGY_AGGR");
+        case H5F_FSPACE_STRATEGY_FSM_AGGR:
+            HDfprintf(stream, "%s\n", "H5F_FSPACE_STRATEGY_FSM_AGGR");
             break;
 
         case H5F_FSPACE_STRATEGY_PAGE:
             HDfprintf(stream, "%s\n", "H5F_FSPACE_STRATEGY_PAGE");
+            break;
+
+        case H5F_FSPACE_STRATEGY_AGGR:
+            HDfprintf(stream, "%s\n", "H5F_FSPACE_STRATEGY_AGGR");
             break;
 
         case H5F_FSPACE_STRATEGY_NONE:

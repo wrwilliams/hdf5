@@ -14815,7 +14815,7 @@ int
 main(void)
 {
     hid_t	fapl, fapl2;    /* File access property lists */
-    hid_t	fcpl, fcpl2;    /* File creation property lists */
+    hid_t	fcpl;           /* File creation property lists */
     int	nerrors = 0;
     unsigned new_format;    /* Whether to use the new format or not */
     unsigned efc;           /* Whether to use the external file cache */
@@ -14842,21 +14842,15 @@ main(void)
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         TEST_ERROR
 
-    if((fcpl2 = H5Pcopy(fcpl)) < 0) TEST_ERROR
-    if(H5Pset_file_space_strategy(fcpl2, H5F_FSPACE_STRATEGY_AGGR, FALSE, (hsize_t)1) < 0)
-        TEST_ERROR
-
     /* Loop over using new group format */
     for(new_format = FALSE; new_format <= TRUE; new_format++) {
         hid_t my_fapl;
         hid_t my_fcpl = fcpl;
 
         /* Check for FAPL to use */
-        if(new_format) {
+        if(new_format)
             my_fapl = fapl2;
-	    if(!contig_addr_vfd)
-		my_fcpl = fcpl2;
-        } else
+        else
             my_fapl = fapl;
 
         /* General tests... (on both old & new format groups */
@@ -14991,22 +14985,22 @@ main(void)
     } /* end for */
 
     /* New group revision feature tests */
-    nerrors += corder_create_empty(fcpl2, fapl2) < 0 ? 1 : 0;
+    nerrors += corder_create_empty(fcpl, fapl2) < 0 ? 1 : 0;
 /* XXX: when creation order indexing is fully working, go back and add checks
 *      to these tests to make certain that the creation order values are
 *      correct.
 */
-    nerrors += corder_create_compact(fapl2) < 0 ? 1 : 0;
-    nerrors += corder_create_dense(fcpl2, fapl2) < 0 ? 1 : 0;
-    nerrors += corder_transition(fcpl2, fapl2) < 0 ? 1 : 0;
-    nerrors += corder_delete(fcpl2, fapl2) < 0 ? 1 : 0;
-    nerrors += link_info_by_idx(fcpl2, fapl2) < 0 ? 1 : 0;
-    nerrors += delete_by_idx(fcpl2, fapl2) < 0 ? 1 : 0;
-    nerrors += link_iterate(fcpl2, fapl2) < 0 ? 1 : 0;
-    nerrors += open_by_idx(fcpl2, fapl2) < 0 ? 1 : 0;
-    nerrors += object_info(fcpl2, fapl2) < 0 ? 1 : 0;
-    nerrors += group_info(fcpl2, fapl2) < 0 ? 1 : 0;
-    nerrors += timestamps(fcpl2, fapl2) < 0 ? 1 : 0;
+    nerrors += corder_create_compact(fapl) < 0 ? 1 : 0;
+    nerrors += corder_create_dense(fcpl, fapl2) < 0 ? 1 : 0;
+    nerrors += corder_transition(fcpl, fapl2) < 0 ? 1 : 0;
+    nerrors += corder_delete(fcpl, fapl2) < 0 ? 1 : 0;
+    nerrors += link_info_by_idx(fcpl, fapl2) < 0 ? 1 : 0;
+    nerrors += delete_by_idx(fcpl, fapl2) < 0 ? 1 : 0;
+    nerrors += link_iterate(fcpl, fapl2) < 0 ? 1 : 0;
+    nerrors += open_by_idx(fcpl, fapl2) < 0 ? 1 : 0;
+    nerrors += object_info(fcpl, fapl2) < 0 ? 1 : 0;
+    nerrors += group_info(fcpl, fapl2) < 0 ? 1 : 0;
+    nerrors += timestamps(fcpl, fapl2) < 0 ? 1 : 0;
 
     /* Test new API calls on old-style groups */
     nerrors += link_info_by_idx_old(fapl) < 0 ? 1 : 0;
@@ -15020,7 +15014,6 @@ main(void)
     /* Close 2nd FAPL */
     H5Pclose(fapl2);
     if(H5Pclose(fcpl) < 0) TEST_ERROR
-    if(H5Pclose(fcpl2) < 0) TEST_ERROR
 
     /* Verify symbol table messages are cached */
     nerrors += (h5_verify_cached_stabs(FILENAME, fapl) < 0 ? 1 : 0);

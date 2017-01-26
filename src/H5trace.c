@@ -898,12 +898,16 @@ H5_trace(const double *returning, const char *func, const char *type, ...)
                             H5F_fspace_strategy_t fs_strategy = (H5F_fspace_strategy_t)va_arg(ap, int);
 
                             switch(fs_strategy) {
-                                case H5F_FSPACE_STRATEGY_AGGR:
-                                    fprintf(out, "H5F_FSPACE_STRATEGY_AGGR");
+                                case H5F_FSPACE_STRATEGY_FSM_AGGR:
+                                    fprintf(out, "H5F_FSPACE_STRATEGY_FSM_AGGR");
                                     break;
 
                                 case H5F_FSPACE_STRATEGY_PAGE:
                                     fprintf(out, "H5F_FSPACE_STRATEGY_PAGE");
+                                    break;
+
+                                case H5F_FSPACE_STRATEGY_AGGR:
+                                    fprintf(out, "H5F_FSPACE_STRATEGY_AGGR");
                                     break;
 
                                 case H5F_FSPACE_STRATEGY_NONE:

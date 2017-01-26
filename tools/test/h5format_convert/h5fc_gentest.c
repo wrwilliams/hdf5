@@ -580,7 +580,7 @@ gen_ext(const char *fname, unsigned new_format, unsigned what)
 	    break;
 	case 4:
 	    H5Pset_istore_k(fcpl, ISTORE_IK);
-	    H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_AGGR, TRUE, (hsize_t)1);
+	    H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_FSM_AGGR, TRUE, (hsize_t)1);
 	    break;
 	case 5:
 	    H5Pset_shared_mesg_nindexes(fcpl, 4);
