@@ -1204,7 +1204,7 @@ public class TestH5P {
         int strategy = 0;
         try {
             strategy = H5.H5Pget_file_space_strategy(fcpl_id, persist, threshold);
-            assertTrue("strategy(default): "+strategy, strategy == HDF5Constants.H5F_FSPACE_STRATEGY_AGGR);
+            assertTrue("strategy(default): "+strategy, strategy == HDF5Constants.H5F_FSPACE_STRATEGY_FSM_AGGR);
             assertTrue("persist(default): "+persist[0], persist[0] == false);
             assertTrue("theshold(default): "+threshold[0], threshold[0] == 1);
             H5.H5Pset_file_space_strategy(fcpl_id, HDF5Constants.H5F_FSPACE_STRATEGY_PAGE, true, 1);

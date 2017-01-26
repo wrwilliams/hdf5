@@ -4892,7 +4892,7 @@ Java_hdf_hdf5lib_H5_H5Pget_1file_1space_1strategy
     (JNIEnv *env, jclass clss, jlong fcpl_id, jbooleanArray persist, jlongArray threshold)
 {
     herr_t   status = -1;
-    H5F_fspace_strategy_t    thestrategy = H5F_FSPACE_STRATEGY_AGGR; /* Library default */
+    H5F_fspace_strategy_t    thestrategy = H5F_FSPACE_STRATEGY_FSM_AGGR; /* Library default */
     jlong   *thethresholdArray = NULL;
     jboolean *thepersistArray = NULL;
     jboolean isCopy;
