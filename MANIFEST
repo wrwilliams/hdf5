@@ -893,8 +893,7 @@
 ./test/H5srcdir_str.h.in
 ./test/Makefile.am
 ./test/accum.c
-./test/aggr_nopersist.h5
-./test/aggr_persist.h5
+./test/aggr.h5
 ./test/app_ref.c
 ./test/bad_compound.h5
 ./test/be_data.h5
@@ -954,6 +953,8 @@
 ./test/filter_fail.c
 ./test/flush1.c
 ./test/flush2.c
+./test/fsm_aggr_nopersist.h5
+./test/fsm_aggr_persist.h5
 ./test/gen_bad_ohdr.c
 ./test/gen_bad_compound.c
 ./test/gen_bogus.c
@@ -998,8 +999,7 @@
 ./test/multi_file_v16-r.h5
 ./test/multi_file_v16-s.h5
 ./test/noencoder.h5
-./test/none_nopersist.h5
-./test/none_persist.h5
+./test/none.h5
 ./test/ntypes.c
 ./test/ohdr.c
 ./test/objcopy.c
