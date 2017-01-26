@@ -4257,7 +4257,7 @@ typedef struct H5C_tag_info_t {
  *		construction and write, and the read and decode of 
  *		metadata cache image blocks.
  *
- * image_len:	size_t containing the size of the on disk metadata cache 
+ * image_len:	hsize_t containing the size of the on disk metadata cache 
  *		image, or zero if that value is undefined.  Note that this 
  *		field is used both in the construction and write, and the 
  *		read and decode of metadata cache image blocks.
@@ -4800,8 +4800,8 @@ struct H5C_t {
     hbool_t                     image_loaded;
     hbool_t			delete_image;
     haddr_t 			image_addr;
-    size_t			image_len;
-    size_t			image_data_len;
+    hsize_t			image_len;
+    hsize_t			image_data_len;
     int64_t			entries_loaded_counter;
     int64_t			entries_inserted_counter;
     int64_t			entries_relocated_counter;
@@ -4880,7 +4880,7 @@ struct H5C_t {
     /* Fields for tracking cache image operations */
     int32_t			images_created;
     int32_t			images_loaded;
-    size_t			last_image_size;
+    hsize_t			last_image_size;
 
     /* Fields for tracking prefetched entries */
     int64_t			prefetches;

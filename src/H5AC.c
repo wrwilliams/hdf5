@@ -1014,7 +1014,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5AC_load_cache_image_on_next_protect(H5F_t * f, haddr_t addr, size_t len,
+H5AC_load_cache_image_on_next_protect(H5F_t * f, haddr_t addr, hsize_t len,
     hbool_t rw)
 {
     herr_t              ret_value = SUCCEED;    /* Return value */

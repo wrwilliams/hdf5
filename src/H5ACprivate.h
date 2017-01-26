@@ -419,7 +419,7 @@ H5_DLL herr_t H5AC_validate_config(H5AC_cache_config_t *config_ptr);
 
 /* Cache image routines */
 H5_DLL herr_t H5AC_load_cache_image_on_next_protect(H5F_t *f, haddr_t addr, 
-    size_t len, hbool_t rw);
+    hsize_t len, hbool_t rw);
 H5_DLL herr_t H5AC_validate_cache_image_config(H5AC_cache_image_config_t *config_ptr);
 
 /* Tag & Ring routines */

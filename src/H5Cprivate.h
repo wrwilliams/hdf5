@@ -2256,7 +2256,7 @@ H5_DLL herr_t H5C_image_stats(H5C_t * cache_ptr, hbool_t print_header);
 H5_DLL herr_t H5C_insert_entry(H5F_t *f, hid_t dxpl_id, const H5C_class_t *type,
     haddr_t addr, void *thing, unsigned int flags);
 H5_DLL herr_t H5C_load_cache_image_on_next_protect(H5F_t *f, haddr_t addr, 
-   size_t len, hbool_t rw);
+   hsize_t len, hbool_t rw);
 H5_DLL herr_t H5C_mark_entry_dirty(void *thing);
 H5_DLL herr_t H5C_mark_entry_clean(void *thing);
 H5_DLL herr_t H5C_mark_entry_unserialized(void *thing);

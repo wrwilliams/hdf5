@@ -1026,10 +1026,6 @@ H5C__load_cache_image(H5F_t *f, hid_t dxpl_id)
     HDassert(cache_ptr);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
 
-    if(cache_ptr->delete_image)
-        if(H5F_super_ext_remove_msg(f, dxpl_id, H5O_MDCI_MSG_ID) < 0)
-	    HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove metadata cache image message from superblock extension")
-
     /* If the image address is defined, load the image, decode it, 
      * and insert its contents into the metadata cache. 
      *
@@ -1067,21 +1063,10 @@ H5C__load_cache_image(H5F_t *f, hid_t dxpl_id)
 	/* Free the image buffer */
         cache_ptr->image_buffer = H5MM_xfree(cache_ptr->image_buffer);
 
-        /* update stats -- must do this now, as we are about
+        /* Update stats -- must do this now, as we are about
          * to discard the size of the cache image.
          */
         H5C__UPDATE_STATS_FOR_CACHE_IMAGE_LOAD(cache_ptr)
-
-	/* If directed, free the on disk metadata cache image */
-        if(cache_ptr->delete_image) { 
-            if(H5MF_xfree(f, H5FD_MEM_SUPER, dxpl_id, cache_ptr->image_addr, (hsize_t)(cache_ptr->image_len)) < 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTFREE, FAIL, "unable to free file space for cache image block")
-
-            /* Clean up */
-            cache_ptr->image_len = 0;
-            cache_ptr->image_data_len = 0;
-            cache_ptr->image_addr = HADDR_UNDEF;
-        } /* end if */
 
         /* Free the image entries array.  Note that all on disk image 
          * image buffers and fd parent address arrays have been transferred 
@@ -1109,6 +1094,17 @@ H5C__load_cache_image(H5F_t *f, hid_t dxpl_id)
 	cache_ptr->num_entries_in_image = 0;
 
         cache_ptr->image_loaded = TRUE;
+    } /* end if */
+
+    /* If directed, free the on disk metadata cache image */
+    if(cache_ptr->delete_image) { 
+        if(H5F_super_ext_remove_msg(f, dxpl_id, H5O_MDCI_MSG_ID) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove metadata cache image message from superblock extension")
+
+        /* Reset image block values */
+        cache_ptr->image_len = 0;
+        cache_ptr->image_data_len = 0;
+        cache_ptr->image_addr = HADDR_UNDEF;
     } /* end if */
 
 done:
@@ -1145,7 +1141,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5C_load_cache_image_on_next_protect(H5F_t *f, haddr_t addr, size_t len,
+H5C_load_cache_image_on_next_protect(H5F_t *f, haddr_t addr, hsize_t len,
     hbool_t rw)
 {
     H5C_t *cache_ptr;
@@ -1364,8 +1360,7 @@ H5C__prep_image_for_file_close(H5F_t *f, hid_t dxpl_id)
          * Note that we allocate the cache image directly from the file 
          * driver so as to avoid unsettling the free space managers.
          */
-        if(HADDR_UNDEF == (cache_ptr->image_addr = 
-                H5FD_alloc(f->shared->lf, dxpl_id, H5FD_MEM_SUPER, f,
+        if(HADDR_UNDEF == (cache_ptr->image_addr = H5FD_alloc(f->shared->lf, dxpl_id, H5FD_MEM_SUPER, f,
                     (hsize_t)p0_image_len, &eoa_frag_addr, &eoa_frag_size)))
             HGOTO_ERROR(H5E_CACHE, H5E_NOSPACE, FAIL, "can't allocate file space for metadata cache image")
     } /* end if */
@@ -1788,31 +1783,31 @@ H5C__decode_cache_image_header(const H5F_t *f, H5C_t *cache_ptr,
     /* Point to buffer to decode */
     p = *buf;
 
-    /* check signature */
+    /* Check signature */
     if(HDmemcmp(p, H5C__MDCI_BLOCK_SIGNATURE, (size_t)H5C__MDCI_BLOCK_SIGNATURE_LEN))
 	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Bad metadata cache image header signature")
     p += H5C__MDCI_BLOCK_SIGNATURE_LEN;
 
-    /* check version */
+    /* Check version */
     version = *p++;
     if(version != (uint8_t)H5C__MDCI_BLOCK_VERSION_0)
 	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Bad metadata cache image version")
 
-    /* decode flags */
+    /* Decode flags */
     flags = *p++;
     if(flags & H5C__MDCI_HEADER_HAVE_RESIZE_STATUS)	
 	have_resize_status = TRUE;
     if(have_resize_status)
 	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "MDC resize status not yet supported")
 
-    /* read image data length */
+    /* Read image data length */
     H5F_DECODE_LENGTH(f, p, cache_ptr->image_data_len);
 
-    /* for now -- will become <= eventually */
+    /* For now -- will become <= eventually */
     if(cache_ptr->image_data_len != cache_ptr->image_len)
 	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Bad metadata cache image data length")
 
-    /* read num entries */
+    /* Read num entries */
     UINT32DECODE(p, cache_ptr->num_entries_in_image);
     if(cache_ptr->num_entries_in_image == 0) 
 	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Bad metadata cache entry count")
@@ -4102,7 +4097,7 @@ static herr_t
 H5C__write_cache_image_superblock_msg(H5F_t *f, hid_t dxpl_id, hbool_t create)
 {
     H5C_t *		cache_ptr;
-    H5O_mdci_msg_t 	mdci_msg;	/* metadata cache image message */
+    H5O_mdci_t 	        mdci_msg;	/* metadata cache image message */
 					/* to insert in the superblock  */
 					/* extension.			*/
     unsigned	   	mesg_flags = H5O_MSG_FLAG_FAIL_IF_UNKNOWN_ALWAYS;
