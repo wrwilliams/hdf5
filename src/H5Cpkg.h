@@ -4132,7 +4132,7 @@ typedef struct H5C_tag_info_t {
  *
  * size_decreased:  Boolean flag set to TRUE whenever the maximum cache
  *		size is decreased.  The flag triggers a call to
- *		H5C_make_space_in_cache() on the next call to H5C_protect().
+ *		H5C__make_space_in_cache() on the next call to H5C_protect().
  *
  * resize_in_progress: As the metadata cache has become re-entrant, it is 
  *		possible that a protect may trigger a call to 
@@ -4540,19 +4540,19 @@ typedef struct H5C_tag_info_t {
  * max_pel_size: Largest value attained by the pel_size field in the
  *              current epoch.
  *
- * calls_to_msic: Total number of calls to H5C_make_space_in_cache
+ * calls_to_msic: Total number of calls to H5C__make_space_in_cache
  *
  * total_entries_skipped_in_msic: Number of clean entries skipped while
- *              enforcing the min_clean_fraction in H5C_make_space_in_cache().
+ *              enforcing the min_clean_fraction in H5C__make_space_in_cache().
  *
  * total_entries_scanned_in_msic: Number of clean entries skipped while
- *              enforcing the min_clean_fraction in H5C_make_space_in_cache().
+ *              enforcing the min_clean_fraction in H5C__make_space_in_cache().
  *
  * max_entries_skipped_in_msic: Maximum number of clean entries skipped
- *              in any one call to H5C_make_space_in_cache().
+ *              in any one call to H5C__make_space_in_cache().
  *
  * max_entries_scanned_in_msic: Maximum number of entries scanned over
- *              in any one call to H5C_make_space_in_cache().
+ *              in any one call to H5C__make_space_in_cache().
  *
  * entries_scanned_to_make_space: Number of entries scanned only when looking
  *              for entries to evict in order to make space in cache.
@@ -4925,18 +4925,20 @@ H5_DLLVAR const H5FD_mem_t H5C__class_mem_types[];
 /******************************/
 H5_DLL herr_t H5C_construct_cache_image_buffer(H5F_t *f, H5C_t *cache_ptr);
 H5_DLL herr_t H5C__prep_image_for_file_close(H5F_t *f, hid_t dxpl_id);
-H5_DLL herr_t H5C_deserialize_prefetched_entry(H5F_t * f, hid_t dxpl_id,
+H5_DLL herr_t H5C__deserialize_prefetched_entry(H5F_t * f, hid_t dxpl_id,
     H5C_t * cache_ptr, H5C_cache_entry_t** entry_ptr_ptr, 
     const H5C_class_t * type, haddr_t addr, void * udata);
 
 /* General routines */
 H5_DLL herr_t H5C__flush_single_entry(H5F_t *f, hid_t dxpl_id,
     H5C_cache_entry_t *entry_ptr, unsigned flags);
-H5_DLL herr_t H5C_free_image_entries_array(H5C_t * cache_ptr);
-H5_DLL herr_t H5C_load_cache_image(H5F_t *f, hid_t dxpl_id);
+H5_DLL herr_t H5C__free_image_entries_array(H5C_t * cache_ptr);
+H5_DLL herr_t H5C__load_cache_image(H5F_t *f, hid_t dxpl_id);
+H5_DLL herr_t H5C__write_cache_image(H5F_t * f, hid_t dxpl_id, 
+    haddr_t image_addr, size_t image_len, void *image_buffer);
 H5_DLL herr_t H5C__mark_flush_dep_serialized(H5C_cache_entry_t * entry_ptr);
 H5_DLL herr_t H5C__mark_flush_dep_unserialized(H5C_cache_entry_t * entry_ptr);
-H5_DLL herr_t H5C_make_space_in_cache(H5F_t * f, hid_t   dxpl_id,
+H5_DLL herr_t H5C__make_space_in_cache(H5F_t * f, hid_t   dxpl_id,
     size_t  space_needed, hbool_t write_permitted);
 H5_DLL herr_t H5C__flush_marked_entries(H5F_t * f, hid_t dxpl_id);
 H5_DLL herr_t H5C__iter_tagged_entries(H5C_t *cache, haddr_t tag, hbool_t match_global,

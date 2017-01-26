@@ -803,7 +803,7 @@ typedef struct H5O_fsinfo_t {
  */
 typedef struct H5O_mdci_msg_t {
     haddr_t	addr;			/* address of MDC image block */
-    size_t	size;			/* size of MDC image block    */
+    hsize_t	size;			/* size of MDC image block    */
 } H5O_mdci_msg_t;
 
 /* only one version of the metadata cache image message at present */
