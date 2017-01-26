@@ -1211,7 +1211,7 @@ public class TestH5P {
             strategy = H5.H5Pget_file_space_strategy(fcpl_id, persist, threshold);
             assertTrue("strategy: "+strategy, strategy == HDF5Constants.H5F_FSPACE_STRATEGY_PAGE);
             assertTrue("persist: "+persist[0], persist[0] == true);
-            assertTrue("theshold: "+threshold[0], threshold[0] == 10);
+            assertTrue("theshold: "+threshold[0], threshold[0] == 1);
         }
         catch (Throwable err) {
             err.printStackTrace();
