@@ -1204,10 +1204,10 @@ public class TestH5P {
         int strategy = 0;
         try {
             strategy = H5.H5Pget_file_space_strategy(fcpl_id, persist, threshold);
-            assertTrue("strategy: "+strategy, strategy == HDF5Constants.H5F_FSPACE_STRATEGY_AGGR);
-            assertTrue("persist: "+persist[0], persist[0] == false);
-            assertTrue("theshold: "+threshold[0], threshold[0] == 1);
-            H5.H5Pset_file_space_strategy(fcpl_id, HDF5Constants.H5F_FSPACE_STRATEGY_PAGE, true, 10);
+            assertTrue("strategy(default): "+strategy, strategy == HDF5Constants.H5F_FSPACE_STRATEGY_AGGR);
+            assertTrue("persist(default): "+persist[0], persist[0] == false);
+            assertTrue("theshold(default): "+threshold[0], threshold[0] == 1);
+            H5.H5Pset_file_space_strategy(fcpl_id, HDF5Constants.H5F_FSPACE_STRATEGY_PAGE, true, 1);
             strategy = H5.H5Pget_file_space_strategy(fcpl_id, persist, threshold);
             assertTrue("strategy: "+strategy, strategy == HDF5Constants.H5F_FSPACE_STRATEGY_PAGE);
             assertTrue("persist: "+persist[0], persist[0] == true);
@@ -1224,7 +1224,7 @@ public class TestH5P {
         long page_size = 0;
         try {
             page_size = H5.H5Pget_file_space_page_size(fcpl_id);
-            assertTrue("page_size: "+page_size, page_size == 4096);
+            assertTrue("page_size(default): "+page_size, page_size == 4096);
             H5.H5Pset_file_space_page_size(fcpl_id, 512);
             page_size = H5.H5Pget_file_space_page_size(fcpl_id);
             assertTrue("page_size: "+page_size, page_size == 512);
