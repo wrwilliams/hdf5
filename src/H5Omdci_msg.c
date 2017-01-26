@@ -33,8 +33,9 @@
 
 #include "H5private.h"          /* Generic Functions                     */
 #include "H5Eprivate.h"         /* Error handling                        */
+#include "H5FLprivate.h"        /* Free Lists                            */
 #include "H5Opkg.h"             /* Object headers                        */
-#include "H5MMprivate.h"        /* Memory management                     */
+#include "H5MFprivate.h"        /* File space management                 */
 
 /* Callbacks for message class */
 static void *H5O__mdci_decode(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh,
@@ -287,7 +288,7 @@ H5O__mdci_delete(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, void *_mesg)
 
     /* Free file space for cache image */
     if(H5F_addr_defined(mesg->addr))
-        if(H5MF_xfree(f, H5FD_MEM_SUPER, dxpl_id, mesg->addr, mesg->addr)) < 0)
+        if(H5MF_xfree(f, H5FD_MEM_SUPER, dxpl_id, mesg->addr, mesg->addr) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_CANTFREE, FAIL, "unable to free file space for cache image block")
 
 done:
