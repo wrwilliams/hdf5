@@ -5329,13 +5329,15 @@ public class H5 implements java.io.Serializable {
      *            IN: File creation property list identifier
      * @param strategy
      *            IN: The strategy for file space management.
-     *                H5F_FSPACE_STRATEGY_AGGR
-     *                        Aggregation: mechanisms are free-space managers, aggregators, and virtual file driver
+     *                H5F_FSPACE_STRATEGY_FSM_AGGR
+     *                        Mechanisms: free-space managers, aggregators, and virtual file drivers
      *                        This is the library default when not set.
      *                H5F_FSPACE_STRATEGY_PAGE
-     *                        Paged aggregation: mechanisms are free-space managers with embedded paged aggregation and virtual file driver.
+     *                        Mechanisms: free-space managers with embedded paged aggregation and virtual file drivers
+     *                H5F_FSPACE_STRATEGY_AGGR
+     *                        Mechanisms: aggregators and virtual file drivers
      *                H5F_FSPACE_STRATEGY_NONE
-     *                        No aggregation: mechanisms are free-space managers and virtual file driver.
+     *                        Mechanisms: virtual file drivers
      * @param persist
      *            IN: True to persist free-space.
      * @param threshold

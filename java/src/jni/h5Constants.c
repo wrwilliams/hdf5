@@ -399,6 +399,8 @@ JNIEXPORT jint JNICALL
 Java_hdf_hdf5lib_HDF5Constants_H5F_1UNLIMITED(JNIEnv *env, jclass cls) { return (jint)H5F_UNLIMITED; }
 
 JNIEXPORT jint JNICALL
+Java_hdf_hdf5lib_HDF5Constants_H5F_1FSPACE_1STRATEGY_1FSM_1AGGR(JNIEnv *env, jclass cls) { return H5F_FSPACE_STRATEGY_FSM_AGGR; }
+JNIEXPORT jint JNICALL
 Java_hdf_hdf5lib_HDF5Constants_H5F_1FSPACE_1STRATEGY_1AGGR(JNIEnv *env, jclass cls) { return H5F_FSPACE_STRATEGY_AGGR; }
 JNIEXPORT jint JNICALL
 Java_hdf_hdf5lib_HDF5Constants_H5F_1FSPACE_1STRATEGY_1PAGE(JNIEnv *env, jclass cls) { return H5F_FSPACE_STRATEGY_PAGE; }

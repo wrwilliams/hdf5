@@ -218,6 +218,7 @@ public class HDF5Constants {
     public static final int H5F_SCOPE_LOCAL = H5F_SCOPE_LOCAL();
     public static final int H5F_UNLIMITED = H5F_UNLIMITED();
 
+    public static final int H5F_FSPACE_STRATEGY_FSM_AGGR = H5F_FSPACE_STRATEGY_FSM_AGGR();
     public static final int H5F_FSPACE_STRATEGY_AGGR = H5F_FSPACE_STRATEGY_AGGR();
     public static final int H5F_FSPACE_STRATEGY_PAGE = H5F_FSPACE_STRATEGY_PAGE();
     public static final int H5F_FSPACE_STRATEGY_NONE = H5F_FSPACE_STRATEGY_NONE();
@@ -1016,6 +1017,8 @@ public class HDF5Constants {
     private static native final int H5F_SCOPE_LOCAL();
 
     private static native final int H5F_UNLIMITED();
+
+    private static native final int H5F_FSPACE_STRATEGY_FSM_AGGR();
 
     private static native final int H5F_FSPACE_STRATEGY_AGGR();
 
