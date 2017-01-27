@@ -93,7 +93,7 @@ H5FL_EXTERN(H5C_cache_entry_t);
 /*******************/
 
 
-const H5C_class_t H5C__prefetched_entry_class =
+const H5AC_class_t H5C__prefetched_entry_class =
 {
     /* id                       = */ H5AC_PREFETCHED_ENTRY_ID,
     /* name                     = */ "prefetched entry",
