@@ -344,7 +344,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5C__generate_cache_iamge()
+ * Function:    H5C__generate_cache_image()
  *
  * Purpose:	Generate the cache image and write it to the file, if
  *		directed.
@@ -1154,6 +1154,7 @@ H5C_load_cache_image_on_next_protect(H5F_t *f, haddr_t addr, hsize_t len,
     HDassert(cache_ptr);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
 
+    /* Set information needed to load cache image */
     cache_ptr->image_addr   = addr,
     cache_ptr->image_len    = len;
     cache_ptr->load_image   = TRUE;
@@ -1707,7 +1708,7 @@ H5C__decode_cache_image_buffer(const H5F_t *f, H5C_t *cache_ptr)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTDECODE, FAIL, "cache image header decode failed")
     HDassert((size_t)(p - (uint8_t *)cache_ptr->image_buffer) < cache_ptr->image_len);
 
-    /* Cache_ptr->image_data_len should be defined now */
+    /* cache_ptr->image_data_len should be defined now */
     HDassert(cache_ptr->image_data_len > 0);
     HDassert(cache_ptr->image_data_len <= cache_ptr->image_len);
 
@@ -3245,7 +3246,6 @@ H5C__reconstruct_cache_entry(H5C_t *cache_ptr, unsigned index)
 {
     H5C_cache_entry_t *pf_entry_ptr = NULL;     /* Reconstructed cache entry */
     H5C_image_entry_t *ie_ptr;
-    hbool_t file_is_rw;                         /* Is file R/W? */
     H5C_cache_entry_t *ret_value = NULL;        /* Return value */
 
     FUNC_ENTER_STATIC
@@ -3261,8 +3261,6 @@ H5C__reconstruct_cache_entry(H5C_t *cache_ptr, unsigned index)
     HDassert(H5F_addr_defined(ie_ptr->addr));
     HDassert(ie_ptr->size > 0);
     HDassert(ie_ptr->image_ptr);
-
-    file_is_rw = cache_ptr->delete_image;
 
     /* Allocate space for the prefetched cache entry */
     if(NULL == (pf_entry_ptr = H5FL_CALLOC(H5C_cache_entry_t)))
@@ -3286,7 +3284,7 @@ H5C__reconstruct_cache_entry(H5C_t *cache_ptr, unsigned index)
      * extension message and the cache image block will not be removed.
      * Hence no danger in this.
      */
-    pf_entry_ptr->is_dirty			= ie_ptr->is_dirty && file_is_rw;
+    pf_entry_ptr->is_dirty			= ie_ptr->is_dirty && cache_ptr->delete_image;
 
     /* Initialize cache image related fields */
     pf_entry_ptr->lru_rank			= ie_ptr->lru_rank;
