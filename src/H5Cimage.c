@@ -496,7 +496,6 @@ H5C__deserialize_prefetched_entry(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr,
      * relationships now.  The client will restore the relationship(s) with
      * the deserialized entry if appropriate.
      */
-//HDassert(pf_entry_ptr->fd_parent_count == pf_entry_ptr->flush_dep_nparents);
     for(i = (int)(pf_entry_ptr->fd_parent_count) - 1; i >= 0; i--) {
         HDassert(pf_entry_ptr->flush_dep_parent);
         HDassert(pf_entry_ptr->flush_dep_parent[i]);
@@ -3041,7 +3040,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
+static herr_t
 H5C__reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
 {
     H5C_cache_entry_t *	pf_entry_ptr;   /* Pointer to prefetched entry */
@@ -3049,7 +3048,7 @@ H5C__reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
     unsigned		u, v;           /* Local index variable */
     herr_t 		ret_value = SUCCEED;      /* Return value */
 
-    FUNC_ENTER_NOAPI(FAIL)
+    FUNC_ENTER_STATIC
 
     /* Sanity checks */
     HDassert(f);
@@ -3064,7 +3063,7 @@ H5C__reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
 
     /* Reconstruct entries in image */
     for(u = 0; u < cache_ptr->num_entries_in_image; u++) {
-	/* create the prefetched entry described by the ith
+	/* Create the prefetched entry described by the ith
          * entry in cache_ptr->image_entrise.
          */
 	if(NULL == (pf_entry_ptr = H5C__reconstruct_cache_entry(cache_ptr, u)))
@@ -3078,19 +3077,19 @@ H5C__reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
          * reconstruction process.
          */
 
-	/* insert the prefetched entry in the index */
+	/* Insert the prefetched entry in the index */
 	H5C__INSERT_IN_INDEX(cache_ptr, pf_entry_ptr, FAIL)
 
-	/* if dirty, insert the entry into the slist. */
+	/* If dirty, insert the entry into the slist. */
 	if(pf_entry_ptr->is_dirty)
 	    H5C__INSERT_ENTRY_IN_SLIST(cache_ptr, pf_entry_ptr, FAIL)
 
-        /* append the entry to the LRU */
+        /* Append the entry to the LRU */
 	H5C__UPDATE_RP_FOR_INSERT_APPEND(cache_ptr, pf_entry_ptr, FAIL)
 
 	H5C__UPDATE_STATS_FOR_PREFETCH(cache_ptr, pf_entry_ptr->is_dirty)
 
-	/* if the prefetched entry is the child in one or more flush 
+	/* If the prefetched entry is the child in one or more flush 
          * dependency relationships, recreate those flush dependencies.
          */
 	for(v = 0; v < pf_entry_ptr->fd_parent_count; v++) {
@@ -3098,6 +3097,7 @@ H5C__reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
 	    HDassert(pf_entry_ptr->fd_parent_addrs);
 	    HDassert(H5F_addr_defined(pf_entry_ptr->fd_parent_addrs[v]));
 
+            /* Find the parent entry */
 	    parent_ptr = NULL;
 	    H5C__SEARCH_INDEX(cache_ptr, pf_entry_ptr->fd_parent_addrs[v], parent_ptr, FAIL)
 	    if(parent_ptr == NULL)
@@ -3114,18 +3114,18 @@ H5C__reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
             H5C__UPDATE_RP_FOR_PROTECT(cache_ptr, parent_ptr, FAIL)
             parent_ptr->is_protected = TRUE;
 	    
-	    /* setup the flush dependency */
+	    /* Setup the flush dependency */
 	    if(H5C_create_flush_dependency(parent_ptr, pf_entry_ptr) < 0)
 		HGOTO_ERROR(H5E_CACHE, H5E_CANTDEPEND, FAIL, "Can't restore flush dependency")
 
-	    /* and now unprotect */
+	    /* And now unprotect */
 	    H5C__UPDATE_RP_FOR_UNPROTECT(cache_ptr, parent_ptr, FAIL)
 	    parent_ptr->is_protected = FALSE;
         } /* end for */
     } /* end for */
 
 #ifndef NDEBUG
-    /* scan the image_entries array, and verify that each entry has
+    /* Scan the image_entries array, and verify that each entry has
      * the expected flush dependency status.
      */
     for(u = 0; u < cache_ptr->num_entries_in_image; u++) {
@@ -3134,6 +3134,7 @@ H5C__reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
 	ie_ptr = &(cache_ptr->image_entries[u]);
         HDassert(ie_ptr->magic == H5C__H5C_IMAGE_ENTRY_T_MAGIC);
 
+        /* Find the prefetched entry */
 	pf_entry_ptr = NULL;
 	H5C__SEARCH_INDEX(cache_ptr, ie_ptr->addr, pf_entry_ptr, FAIL);
 
@@ -3158,7 +3159,7 @@ H5C__reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
 	HDassert(pf_entry_ptr->fd_dirty_child_count == pf_entry_ptr->flush_dep_ndirty_children);
     } /* end for */
 
-    /* scan the LRU, and verify the expected ordering of the 
+    /* Scan the LRU, and verify the expected ordering of the 
      * prefetched entries.
      */
     {
@@ -3242,8 +3243,8 @@ done:
 static H5C_cache_entry_t *
 H5C__reconstruct_cache_entry(H5C_t *cache_ptr, unsigned index)
 {
+    H5C_cache_entry_t *pf_entry_ptr = NULL;     /* Reconstructed cache entry */
     H5C_image_entry_t *ie_ptr;
-    H5C_cache_entry_t *pf_entry_ptr;
     hbool_t file_is_rw;                         /* Is file R/W? */
     H5C_cache_entry_t *ret_value = NULL;        /* Return value */
 
@@ -3263,11 +3264,12 @@ H5C__reconstruct_cache_entry(H5C_t *cache_ptr, unsigned index)
 
     file_is_rw = cache_ptr->delete_image;
 
-    /* allocate space for the prefetched cache entry */
-    if(NULL == (pf_entry_ptr = H5FL_MALLOC(H5C_cache_entry_t)))
+    /* Allocate space for the prefetched cache entry */
+    if(NULL == (pf_entry_ptr = H5FL_CALLOC(H5C_cache_entry_t)))
 	HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, NULL, "memory allocation failed for prefetched cache entry")
 
-    /* initialize the prefetched entry from the entry image */
+    /* Initialize the prefetched entry from the entry image */
+    /* (Only need to set non-zero/NULL/FALSE fields, due to calloc() above) */
     pf_entry_ptr->magic				= H5C__H5C_CACHE_ENTRY_T_MAGIC;
     pf_entry_ptr->cache_ptr 			= cache_ptr;
     pf_entry_ptr->addr				= ie_ptr->addr;
@@ -3277,71 +3279,26 @@ H5C__reconstruct_cache_entry(H5C_t *cache_ptr, unsigned index)
     pf_entry_ptr->image_ptr			= ie_ptr->image_ptr;
     pf_entry_ptr->image_up_to_date		= TRUE;
     pf_entry_ptr->type				= &H5C__prefetched_entry_class;
-    pf_entry_ptr->tag_info                      = NULL;
 
-    /* force dirty entries to clean if the file read only -- must do 
+    /* Force dirty entries to clean if the file read only -- must do 
      * this as otherwise the cache will attempt to write them on file
      * close.  Since the file is R/O, the metadata cache image superblock
      * extension message and the cache image block will not be removed.
      * Hence no danger in this.
      */
     pf_entry_ptr->is_dirty			= ie_ptr->is_dirty && file_is_rw;
-    pf_entry_ptr->dirtied			= FALSE;
-    pf_entry_ptr->is_protected			= FALSE;
-    pf_entry_ptr->is_read_only			= FALSE;
-    pf_entry_ptr->ro_ref_count			= 0;
-    pf_entry_ptr->is_pinned			= FALSE;
-    pf_entry_ptr->in_slist			= FALSE;
-    pf_entry_ptr->flush_marker			= FALSE;
-    pf_entry_ptr->flush_me_last			= FALSE;
-#ifdef H5_HAVE_PARALLEL
-    pf_entry_ptr->clear_on_unprotect		= FALSE;
-    pf_entry_ptr->flush_immediately		= FALSE;
-    pf_entry_ptr->coll_access           	= FALSE;
-#endif
-    pf_entry_ptr->flush_in_progress		= FALSE;
-    pf_entry_ptr->destroy_in_progress		= FALSE;
-
-    /* Initialize flush dependency fields */
-    pf_entry_ptr->flush_dep_parent		= NULL;
-    pf_entry_ptr->flush_dep_nparents		= 0;
-    pf_entry_ptr->flush_dep_parent_nalloc	= 0;
-    pf_entry_ptr->flush_dep_nchildren		= 0;
-    pf_entry_ptr->flush_dep_ndirty_children	= 0;
-    pf_entry_ptr->flush_dep_nunser_children	= 0;
-    pf_entry_ptr->pinned_from_client		= FALSE;
-    pf_entry_ptr->pinned_from_cache		= FALSE;
-
-    /* Initialize fields supporting the hash table: */
-    pf_entry_ptr->ht_next			= NULL;
-    pf_entry_ptr->ht_prev			= NULL;
-    pf_entry_ptr->il_next			= NULL;
-    pf_entry_ptr->il_prev			= NULL;
-
-    /* Initialize fields supporting replacement policies: */
-    pf_entry_ptr->next				= NULL;
-    pf_entry_ptr->prev				= NULL;
-    pf_entry_ptr->aux_next			= NULL;
-    pf_entry_ptr->aux_prev			= NULL;
-#ifdef H5_HAVE_PARALLEL
-    pf_entry_ptr->coll_next             	= NULL;
-    pf_entry_ptr->coll_prev             	= NULL;
-#endif /* H5_HAVE_PARALLEL */
 
     /* Initialize cache image related fields */
-    pf_entry_ptr->include_in_image		= FALSE;
     pf_entry_ptr->lru_rank			= ie_ptr->lru_rank;
-    pf_entry_ptr->image_dirty			= FALSE;
     pf_entry_ptr->fd_parent_count		= ie_ptr->fd_parent_count;
     pf_entry_ptr->fd_parent_addrs		= ie_ptr->fd_parent_addrs;
     pf_entry_ptr->fd_child_count		= ie_ptr->fd_child_count;
     pf_entry_ptr->fd_dirty_child_count		= ie_ptr->fd_dirty_child_count;
-    pf_entry_ptr->image_fd_height		= 0;
     pf_entry_ptr->prefetched			= TRUE;
     pf_entry_ptr->prefetch_type_id		= ie_ptr->type_id;
     pf_entry_ptr->age				= ie_ptr->age;
 
-    /* array of addresses of flush dependency parents is now transferred to
+    /* Array of addresses of flush dependency parents is now transferred to
      * the prefetched entry.  Thus set ie_ptr->fd_parent_addrs to NULL.
      */
     if(pf_entry_ptr->fd_parent_count > 0) {
@@ -3356,14 +3313,15 @@ H5C__reconstruct_cache_entry(H5C_t *cache_ptr, unsigned index)
      */
     ie_ptr->image_ptr = NULL;
 
-    H5C__RESET_CACHE_ENTRY_STATS(pf_entry_ptr)
-
     /* Sanity checks */
     HDassert(pf_entry_ptr->size > 0 && pf_entry_ptr->size < H5C_MAX_ENTRY_SIZE);
 
     ret_value = pf_entry_ptr;
 
 done:
+    if(NULL == ret_value && pf_entry_ptr)
+        pf_entry_ptr = H5FL_FREE(H5C_cache_entry_t, pf_entry_ptr);
+
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5C__reconstruct_cache_entry() */
 
