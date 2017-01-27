@@ -41,7 +41,7 @@
 /**************************/
 
 /* Cache configuration settings */
-#define H5C__MAX_NUM_TYPE_IDS   31
+#define H5C__MAX_NUM_TYPE_IDS   30
 #define H5C__PREFIX_LEN         32
 
 /* This sanity checking constant was picked out of the air.  Increase
@@ -71,7 +71,6 @@
 /* The following flags may only appear in test code */
 #define H5C__CLASS_SKIP_READS               ((unsigned)0x2)
 #define H5C__CLASS_SKIP_WRITES              ((unsigned)0x4)
-#define H5C__CLASS_SKIP_MEM_TYPE_CHECKS     ((unsigned)0x8)
 
 /* Flags for pre-serialize callback */
 #define H5C__SERIALIZE_NO_FLAGS_SET	((unsigned)0)
@@ -330,13 +329,6 @@ typedef struct H5C_t H5C_t;
  *	H5C__CLASS_SKIP_WRITES: This flags is intended only for use in test
  *		code.  When it is set, writes of buffers prepared by the 
  *		serialize callback will be skipped.
- *
- *	H5C__CLASS_SKIP_MEM_TYPE_CHECKS: This flag is intended only for use
- *		in test code.  When it is set, sanity checks to verify
- *		agreement between class and expected disk mem type are 
- *		skipped.  This allows us to create a new set of client
- *		classes for testing that use the same ID space as the regular
- *		client classes.
  *
  * GET_INITIAL_LOAD_SIZE: Pointer to the 'get initial load size' function.
  *
@@ -2208,7 +2200,7 @@ typedef struct H5C_cache_image_ctl_t {
 /***************************************/
 
 H5_DLL H5C_t *H5C_create(size_t max_cache_size, size_t min_clean_size,
-    int max_type_id, const char *(*type_name_table_ptr),
+    int max_type_id, const H5C_class_t * const *class_table_ptr,
     H5C_write_permitted_func_t check_write_permitted, hbool_t write_permitted,
     H5C_log_flush_func_t log_flush, void *aux_ptr);
 H5_DLL herr_t H5C_set_up_logging(H5C_t *cache_ptr, const char log_location[], hbool_t start_immediately);

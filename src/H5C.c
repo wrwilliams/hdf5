@@ -189,48 +189,6 @@ static void H5C__assert_flush_dep_nocycle(const H5C_cache_entry_t * entry,
 /* Package initialization variable */
 hbool_t H5_PKG_INIT_VAR = FALSE;
 
-/* The H5C__class_mem_types array exists to allow lookups from 
- * class ID to the associated mem type.  This is needed 
- * to support writes of dirty prefetched entries with the 
- * correct mem type.
- *				JRM -- 8/14/15
- */
-const H5FD_mem_t H5C__class_mem_types[H5C__MAX_NUM_TYPE_IDS + 1] = 
-{
-   /*  0 H5AC_BT_ID               */ H5FD_MEM_BTREE,
-   /*  1 H5AC_SNODE_ID            */ H5FD_MEM_BTREE,
-   /*  2 H5AC_LHEAP_PRFX_ID       */ H5FD_MEM_LHEAP,
-   /*  3 H5AC_LHEAP_DBLK_ID       */ H5FD_MEM_LHEAP,
-   /*  4 H5AC_GHEAP_ID            */ H5FD_MEM_GHEAP,
-   /*  5 H5AC_OHDR_ID             */ H5FD_MEM_OHDR,
-   /*  6 H5AC_OHDR_CHK_ID         */ H5FD_MEM_OHDR,
-   /*  7 H5AC_BT2_HDR_ID          */ H5FD_MEM_BTREE,
-   /*  8 H5AC_BT2_INT_ID          */ H5FD_MEM_BTREE,
-   /*  9 H5AC_BT2_LEAF_ID         */ H5FD_MEM_BTREE,
-   /* 10 H5AC_FHEAP_HDR_ID        */ H5FD_MEM_FHEAP_HDR,
-   /* 11 H5AC_FHEAP_DBLOCK_ID     */ H5FD_MEM_FHEAP_DBLOCK,
-   /* 12 H5AC_FHEAP_IBLOCK_ID     */ H5FD_MEM_FHEAP_IBLOCK,
-   /* 13 H5AC_FSPACE_HDR_ID       */ H5FD_MEM_FSPACE_HDR,
-   /* 14 H5AC_FSPACE_SINFO_ID     */ H5FD_MEM_FSPACE_SINFO,
-   /* 15 H5AC_SOHM_TABLE_ID       */ H5FD_MEM_SOHM_TABLE,
-   /* 16 H5AC_SOHM_LIST_ID        */ H5FD_MEM_SOHM_TABLE,
-   /* 17 H5AC_EARRAY_HDR_ID       */ H5FD_MEM_EARRAY_HDR,
-   /* 18 H5AC_EARRAY_IBLOCK_ID    */ H5FD_MEM_EARRAY_IBLOCK,
-   /* 19 H5AC_EARRAY_SBLOCK_ID    */ H5FD_MEM_EARRAY_SBLOCK,
-   /* 20 H5AC_EARRAY_DBLOCK_ID    */ H5FD_MEM_EARRAY_DBLOCK,
-   /* 21 H5AC_EARRAY_DBLK_PAGE_ID */ H5FD_MEM_EARRAY_DBLK_PAGE,
-   /* 22 H5AC_FARRAY_HDR_ID       */ H5FD_MEM_FARRAY_HDR,
-   /* 23 H5AC_FARRAY_DBLOCK_ID    */ H5FD_MEM_FARRAY_DBLOCK,
-   /* 24 H5AC_FARRAY_DBLK_PAGE_ID */ H5FD_MEM_FARRAY_DBLK_PAGE,
-   /* 25 H5AC_SUPERBLOCK_ID       */ H5FD_MEM_SUPER,
-   /* 26 H5AC_DRVRINFO_ID         */ H5FD_MEM_SUPER,
-   /* 27 H5AC_EPOCH_MARKER_ID     */ H5FD_MEM_DEFAULT,
-   /* 28 H5AC_PROXY_ENTRY_ID      */ H5FD_MEM_SUPER,
-   /* 29 H5AC_PREFETCHED_ENTRY_ID */ H5FD_MEM_DEFAULT,
-   /* 30 H5AC_TEST_ID             */ H5FD_MEM_DEFAULT,
-   /* 31 H5AC_NTYPES              */ H5FD_MEM_DEFAULT
-};
-
 /* Declare a free list to manage the tag info struct */
 H5FL_DEFINE(H5C_tag_info_t);
 
@@ -280,7 +238,7 @@ H5C_t *
 H5C_create(size_t		      max_cache_size,
            size_t		      min_clean_size,
            int			      max_type_id,
-           const char *		      (* type_name_table_ptr),
+           const H5C_class_t * const * class_table_ptr,
            H5C_write_permitted_func_t check_write_permitted,
            hbool_t		      write_permitted,
            H5C_log_flush_func_t       log_flush,
@@ -298,11 +256,11 @@ H5C_create(size_t		      max_cache_size,
 
     HDassert( max_type_id >= 0 );
     HDassert( max_type_id < H5C__MAX_NUM_TYPE_IDS );
-    HDassert( type_name_table_ptr );
+    HDassert( class_table_ptr );
 
     for ( i = 0; i <= max_type_id; i++ ) {
-        HDassert( (type_name_table_ptr)[i] );
-        HDassert( HDstrlen(( type_name_table_ptr)[i]) > 0 );
+        HDassert( (class_table_ptr)[i] );
+        HDassert(HDstrlen((class_table_ptr)[i]->name) > 0);
     } /* end for */
 
     if(NULL == (cache_ptr = H5FL_CALLOC(H5C_t)))
@@ -334,7 +292,7 @@ H5C_create(size_t		      max_cache_size,
 
     cache_ptr->max_type_id			= max_type_id;
 
-    cache_ptr->type_name_table_ptr		= type_name_table_ptr;
+    cache_ptr->class_table_ptr			= class_table_ptr;
 
     cache_ptr->max_cache_size			= max_cache_size;
     cache_ptr->min_clean_size			= min_clean_size;
@@ -472,7 +430,7 @@ H5C_create(size_t		      max_cache_size,
         ((cache_ptr->epoch_markers)[i]).magic		 =
 					       H5C__H5C_CACHE_ENTRY_T_MAGIC;
         ((cache_ptr->epoch_markers)[i]).addr		 = (haddr_t)i;
-        ((cache_ptr->epoch_markers)[i]).type		 = &H5C__epoch_marker_class;
+        ((cache_ptr->epoch_markers)[i]).type		 = H5AC_EPOCH_MARKER;
     }
 
     /* Initialize cache image generation on file close related fields.
@@ -1438,8 +1396,7 @@ H5C_insert_entry(H5F_t *             f,
     HDassert( cache_ptr );
     HDassert( cache_ptr->magic == H5C__H5C_T_MAGIC );
     HDassert( type );
-    HDassert( ( type->flags & H5C__CLASS_SKIP_MEM_TYPE_CHECKS ) ||
-              ( type->mem_type == H5C__class_mem_types[type->id] ) );
+    HDassert( type->mem_type == cache_ptr->class_table_ptr[type->id]->mem_type );
     HDassert( type->image_len );
     HDassert( H5F_addr_defined(addr) );
     HDassert( thing );
@@ -2501,8 +2458,7 @@ H5C_protect(H5F_t *		f,
     HDassert( cache_ptr );
     HDassert( cache_ptr->magic == H5C__H5C_T_MAGIC );
     HDassert( type );
-    HDassert( ( type->flags & H5C__CLASS_SKIP_MEM_TYPE_CHECKS ) ||
-              ( type->mem_type == H5C__class_mem_types[type->id] ) );
+    HDassert( type->mem_type == cache_ptr->class_table_ptr[type->id]->mem_type );
     HDassert( H5F_addr_defined(addr) );
 
 #if H5C_DO_EXTREME_SANITY_CHECKS
@@ -6554,7 +6510,7 @@ H5C__flush_single_entry(H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_ptr,
 
             if(entry_ptr->prefetched) {
                 HDassert(entry_ptr->type->id == H5AC_PREFETCHED_ENTRY_ID);
-                mem_type = H5C__class_mem_types[entry_ptr->prefetch_type_id];
+                mem_type = cache_ptr->class_table_ptr[entry_ptr->prefetch_type_id]->mem_type;
             } /* end if */
             else
                 mem_type = entry_ptr->type->mem_type;

@@ -477,7 +477,7 @@ H5C__deserialize_prefetched_entry(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr,
     HDassert(pf_entry_ptr->addr == addr);
     HDassert(type);
     HDassert(type->id == pf_entry_ptr->prefetch_type_id);
-    HDassert(type->mem_type == H5C__class_mem_types[type->id]);
+    HDassert(type->mem_type == cache_ptr->class_table_ptr[type->id]->mem_type);
 
     /* verify absence of prohibited or unsupported type flag combinations */
     HDassert(!(type->flags & H5C__CLASS_SKIP_READS));
@@ -3278,7 +3278,7 @@ H5C__reconstruct_cache_entry(H5C_t *cache_ptr, unsigned index)
     pf_entry_ptr->age				= ie_ptr->age;
     pf_entry_ptr->image_ptr			= ie_ptr->image_ptr;
     pf_entry_ptr->image_up_to_date		= TRUE;
-    pf_entry_ptr->type				= &H5C__prefetched_entry_class;
+    pf_entry_ptr->type				= H5AC_PREFETCHED_ENTRY;
 
     /* Force dirty entries to clean if the file read only -- must do 
      * this as otherwise the cache will attempt to write them on file

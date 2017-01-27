@@ -93,8 +93,7 @@ H5FL_EXTERN(H5C_cache_entry_t);
 /*******************/
 
 
-const H5AC_class_t H5C__prefetched_entry_class =
-{
+const H5AC_class_t H5AC_PREFETCHED_ENTRY[1] = {{
     /* id                       = */ H5AC_PREFETCHED_ENTRY_ID,
     /* name                     = */ "prefetched entry",
     /* mem_type                 = */ H5FD_MEM_DEFAULT, /* value doesn't matter */
@@ -109,7 +108,7 @@ const H5AC_class_t H5C__prefetched_entry_class =
     /* notify                   = */ H5C__prefetched_entry_notify,
     /* free_icr                 = */ H5C__prefetched_entry_free_icr,
     /* fsf_size                 = */ H5C__prefetched_entry_fsf_size,
-};
+}};
 
 
 
