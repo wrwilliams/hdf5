@@ -2375,39 +2375,6 @@ done:
  *
  * Programmer:  John Mainzer -  6/2/04
  *
- * 		JRM -- 11/13/08
- * 		Modified function to call H5C__make_space_in_cache() when
- * 		the min_clean_size is violated, not just when there isn't
- * 		enough space for and entry that has just been loaded.
- *
- *              The purpose of this modification is to avoid "metadata
- *              blizzards" in the write only case.  In such instances,
- *              the cache was allowed to fill with dirty metadata.  When
- *              we finally needed to evict an entry to make space, we had
- *              to flush out a whole cache full of metadata -- which has
- *              interesting performance effects.  We hope to avoid (or
- *              perhaps more accurately hide) this effect by maintaining
- *              the min_clean_size, which should force us to start flushing
- *              entries long before we actually have to evict something
- *              to make space.
- *
- *		JRM -- 9/1/14
- *		Replace the old rw parameter with the flags parameter.
- *		This allows H5C_protect to accept flags other than 
- *		H5C__READ_ONLY_FLAG.  
- *
- *		Added support for the H5C__FLUSH_LAST_FLAG.
- *		At present, this flag is only applied if the entry is 
- *              not in cache, and is loaded into the cache as a result of 
- *              this call.
- *
- *		JRM -- 7/8/15
- *		Added code to call H5C__load_cache_image() if 
- *		cache_ptr->load_image is TRUE.
- *
- *		JRM -- 8/13/15
- *		Added code to manage prefetched entries.
- *
  *-------------------------------------------------------------------------
  */
 void *
@@ -6266,39 +6233,6 @@ done:
  *
  * Programmer:  John Mainzer, 5/5/04
  *
- * Changes:	Refactored function to remove the type_ptr parameter.
- *
- *						JRM -- 8/7/14
- *
- *              Added code to check for slist changes in pre_serialize and
- *              serialize calls, and set 
- *              cache_ptr->slist_change_in_pre_serialize and 
- *		cache_ptr->slist_change_in_serialize as appropriate.
- *
- *                                              JRM -- 12/13/14
- *
- *		Refactored function to delay all modifications of the 
- *		metadata cache data structures until after any calls 
- *		to the pre-serialize or serialize callbacks.
- *
- *		Need to do this, as some pre-serialize or serialize 
- *		calls result in calls to the metadata cache and 
- *		modifications to its data structures.  Thus, at the
- *		time of any such call, the target entry flags and 
- *		the metadata cache must all be consistant.
- *
- *		Also added the entry_size_change_ptr parameter, which 
- *              allows the function to report back any change in the size 
- *		of the entry during the flush.  Such size changes may 
- *		occur during the pre-serialize callback.
- *
- *						JRM -- 12/24/14
- *
- *		Modified code to omit entry writes and entry image frees
- *		as indicated when constructing a file image.
- *
- *						JRM -- 8/4/15
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -7247,16 +7181,16 @@ H5C__make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     H5C_cache_entry_t *	entry_ptr;
     H5C_cache_entry_t *	prev_ptr;
     H5C_cache_entry_t *	next_ptr;
-    int32_t 		num_corked_entries = 0;
+    uint32_t 		num_corked_entries = 0;
     herr_t		ret_value = SUCCEED;      /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT
+    FUNC_ENTER_PACKAGE
 
-    HDassert( f );
-    HDassert( cache_ptr );
-    HDassert( cache_ptr->magic == H5C__H5C_T_MAGIC );
-    HDassert( cache_ptr->index_size ==
-	      (cache_ptr->clean_index_size + cache_ptr->dirty_index_size) );
+    /* Sanity checks */
+    HDassert(f);
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+    HDassert(cache_ptr->index_size == (cache_ptr->clean_index_size + cache_ptr->dirty_index_size));
 
     if ( write_permitted ) {
 

@@ -596,27 +596,6 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
  * H5C__UPDATE_CACHE_HIT_RATE_STATS(), which is always active as
  * the cache hit rate stats are always collected and available.
  *
- * Changes:
- *
- * 	JRM -- 3/21/06
- * 	Added / updated macros for pinned entry related stats.
- *
- * 	JRM -- 8/9/06
- * 	More pinned entry stats related updates.
- *
- * 	JRM -- 3/31/07
- * 	Updated H5C__UPDATE_STATS_FOR_PROTECT() to keep stats on
- * 	read and write protects.
- *
- *      MAM -- 1/15/09
- *      Created H5C__UPDATE_MAX_INDEX_SIZE_STATS to contain
- *      common code within macros that update the maximum
- *      index, clean_index, and dirty_index statistics fields.
- *
- *	JRM -- 8/20/15
- *	Added macros to collect metadata cache and prefetch related
- *	stats.
- *
  ***********************************************************************/
 
 #define H5C__UPDATE_CACHE_HIT_RATE_STATS(cache_ptr, hit) \
@@ -2290,10 +2269,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
  * Return:      N/A
  *
  * Programmer:  John Mainzer, 8/15/15
- *
- * Modifications:
- *
- *		None.
  *
  *-------------------------------------------------------------------------
  */
