@@ -8277,6 +8277,10 @@ H5C__assert_flush_dep_nocycle(const H5C_cache_entry_t * entry,
  *              are about to delete the entry from the cache (i.e. on a 
  *              flush destroy).
  *
+ * Note:	This routine is very similar to H5C__serialize_single_entry
+ *		and changes to one should probably be reflected in the other.
+ *		Ideally, one should be eliminated.
+ *
  * Return:      Non-negative on success/Negative on failure
  *
  * Programmer:  Mohamad Chaarawi
@@ -8311,8 +8315,7 @@ H5C__generate_image(H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr,
     /* Check for any flags set in the pre-serialize callback */
     if(serialize_flags != H5C__SERIALIZE_NO_FLAGS_SET) {
         /* Check for unexpected flags from serialize callback */
-        if(serialize_flags & ~(H5C__SERIALIZE_RESIZED_FLAG | 
-                               H5C__SERIALIZE_MOVED_FLAG))
+        if(serialize_flags & ~(H5C__SERIALIZE_RESIZED_FLAG | H5C__SERIALIZE_MOVED_FLAG))
             HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unknown serialize flag(s)")
 
 #ifdef H5_HAVE_PARALLEL
@@ -8359,9 +8362,8 @@ H5C__generate_image(H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr,
             /* Update statistics for resizing the entry */
             H5C__UPDATE_STATS_FOR_ENTRY_SIZE_CHANGE(cache_ptr, entry_ptr, new_len);
 
-            /* update the hash table for the size change */
-            H5C__UPDATE_INDEX_FOR_SIZE_CHANGE(cache_ptr, entry_ptr->size, \
-                                              new_len, entry_ptr, !(entry_ptr->is_dirty));
+            /* Update the hash table for the size change */
+            H5C__UPDATE_INDEX_FOR_SIZE_CHANGE(cache_ptr, entry_ptr->size, new_len, entry_ptr, !(entry_ptr->is_dirty));
 
             /* The entry can't be protected since we are in the process of
              * flushing it.  Thus we must update the replacement policy data
@@ -8374,10 +8376,11 @@ H5C__generate_image(H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr,
              * for the flush or flush destroy yet, the entry should
              * be in the slist.  Thus update it for the size change.
              */
+            HDassert(entry_ptr->is_dirty);
             HDassert(entry_ptr->in_slist);
             H5C__UPDATE_SLIST_FOR_SIZE_CHANGE(cache_ptr, entry_ptr->size, new_len);
 
-            /* finally, update the entry for its new size */
+            /* Finally, update the entry for its new size */
             entry_ptr->size = new_len;
         } /* end if */
 
@@ -8394,10 +8397,10 @@ H5C__generate_image(H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr,
                 H5C__DELETE_FROM_INDEX(cache_ptr, entry_ptr, FAIL);
                 H5C__REMOVE_ENTRY_FROM_SLIST(cache_ptr, entry_ptr, FALSE);
 
-                /* update the entry for its new address */
+                /* Update the entry for its new address */
                 entry_ptr->addr = new_addr;
 
-                /* and then reinsert in the index and slist */
+                /* And then reinsert in the index and slist */
                 H5C__INSERT_IN_INDEX(cache_ptr, entry_ptr, FAIL);
                 H5C__INSERT_ENTRY_IN_SLIST(cache_ptr, entry_ptr, FAIL);
             } /* end if */
