@@ -15,7 +15,7 @@
 
 /*-------------------------------------------------------------------------
  *
- * Created:     H5Omdci_msg.c
+ * Created:     H5Ocache_image.c
  *              June 21, 2015
  *              John Mainzer
  *
