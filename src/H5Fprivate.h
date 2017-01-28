@@ -453,8 +453,6 @@
 
 
 /* ========= File Access properties ============ */
-#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME \
-						"mdc_initCacheImageCfg" /* Initial metadata cache image creation configuration */
 #define H5F_ACS_META_CACHE_INIT_CONFIG_NAME	"mdc_initCacheCfg" /* Initial metadata cache resize configuration */
 #define H5F_ACS_DATA_CACHE_NUM_SLOTS_NAME       "rdcc_nslots"   /* Size of raw data chunk cache(slots) */
 #define H5F_ACS_DATA_CACHE_BYTE_SIZE_NAME       "rdcc_nbytes"   /* Size of raw data chunk cache(bytes) */
@@ -485,6 +483,7 @@
 #define H5F_ACS_EVICT_ON_CLOSE_FLAG_NAME        "evict_on_close_flag" /* Whether or not the metadata cache will evict objects on close */
 #define H5F_ACS_CORE_WRITE_TRACKING_PAGE_SIZE_NAME "core_write_tracking_page_size" /* The page size in kiB when core VFD write tracking is enabled */
 #define H5F_ACS_COLL_MD_WRITE_FLAG_NAME         "collective_metadata_write" /* property indicating whether metadata writes are done collectively or not */
+#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME "mdc_initCacheImageCfg" /* Initial metadata cache image creation configuration */
 
 /* ======================== File Mount properties ====================*/
 #define H5F_MNT_SYM_LOCAL_NAME 		"local"                 /* Whether absolute symlinks local to file. */

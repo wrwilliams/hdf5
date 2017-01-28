@@ -78,6 +78,13 @@
 #define H5C__MDCI_MAX_FD_CHILDREN		USHRT_MAX
 #define H5C__MDCI_MAX_FD_PARENTS		USHRT_MAX
 
+/* Values for image entry magic field */
+#define H5C_IMAGE_ENTRY_T_MAGIC		0x005CAC08
+#define H5C_IMAGE_ENTRY_T_BAD_MAGIC	0xBeefDead
+
+/* Maximum ring allowed in image */
+#define H5C_MAX_RING_IN_IMAGE   3
+
 
 /******************/
 /* Local Typedefs */
@@ -281,7 +288,7 @@ H5C__construct_cache_image_buffer(H5F_t * f, H5C_t *cache_ptr)
 	HDassert(fake_cache_ptr->image_entries);
 
         for(u = 0; u < fake_cache_ptr->num_entries_in_image; u++) {
-	    (fake_cache_ptr->image_entries)[u].magic = H5C__H5C_IMAGE_ENTRY_T_MAGIC;
+	    (fake_cache_ptr->image_entries)[u].magic = H5C_IMAGE_ENTRY_T_MAGIC;
             (fake_cache_ptr->image_entries)[u].image_ptr = NULL;
 
 	    /* touch up f->shared->cache to satisfy sanity checks... */
@@ -798,7 +805,7 @@ H5C__free_image_entries_array(H5C_t * cache_ptr)
 
             /* Sanity checks */ 
 	    HDassert(ie_ptr);
-            HDassert(ie_ptr->magic == H5C__H5C_IMAGE_ENTRY_T_MAGIC);
+            HDassert(ie_ptr->magic == H5C_IMAGE_ENTRY_T_MAGIC);
 	    HDassert(ie_ptr->image_ptr);
 
 	    /* Free the parent addrs array if appropriate */
@@ -814,7 +821,7 @@ H5C__free_image_entries_array(H5C_t * cache_ptr)
             ie_ptr->image_ptr = H5MM_xfree(ie_ptr->image_ptr);
 
 	    /* Set magic field to bad magic so we can detect freed entries */
-	    ie_ptr->magic = H5C__H5C_IMAGE_ENTRY_T_BAD_MAGIC;
+	    ie_ptr->magic = H5C_IMAGE_ENTRY_T_BAD_MAGIC;
 	} /* end for */
 
 	/* Free the image entries array */
@@ -1082,7 +1089,7 @@ H5C__load_cache_image(H5F_t *f, hid_t dxpl_id)
 		ie_ptr = &((cache_ptr->image_entries)[u]);
 
 		HDassert(ie_ptr);
-                HDassert(ie_ptr->magic == H5C__H5C_IMAGE_ENTRY_T_MAGIC);
+                HDassert(ie_ptr->magic == H5C_IMAGE_ENTRY_T_MAGIC);
 	        HDassert(ie_ptr->fd_parent_addrs == NULL);
                 HDassert(ie_ptr->image_ptr == NULL);
             } /* end for */
@@ -1721,7 +1728,7 @@ H5C__decode_cache_image_buffer(const H5F_t *f, H5C_t *cache_ptr)
 
     /* Load the image entries */
     for(u = 0; u < cache_ptr->num_entries_in_image; u++) {
-	(cache_ptr->image_entries)[u].magic = H5C__H5C_IMAGE_ENTRY_T_MAGIC;
+	(cache_ptr->image_entries)[u].magic = H5C_IMAGE_ENTRY_T_MAGIC;
         (cache_ptr->image_entries)[u].image_fd_height = 0;
         (cache_ptr->image_entries)[u].image_ptr = NULL;
 
@@ -1884,7 +1891,7 @@ H5C__decode_cache_image_entry(const H5F_t *f, const H5C_t *cache_ptr,
     HDassert(entry_num < cache_ptr->num_entries_in_image);
     ie_ptr = &((cache_ptr->image_entries)[entry_num]);
     HDassert(ie_ptr);
-    HDassert(ie_ptr->magic == H5C__H5C_IMAGE_ENTRY_T_MAGIC);
+    HDassert(ie_ptr->magic == H5C_IMAGE_ENTRY_T_MAGIC);
 
     /* Get pointer to buffer */
     p = *buf;
@@ -2239,7 +2246,7 @@ H5C__encode_cache_image_entry(H5F_t *f, H5C_t *cache_ptr, uint8_t **buf,
     HDassert(*buf);
     HDassert(entry_num < cache_ptr->num_entries_in_image);
     ie_ptr = &((cache_ptr->image_entries)[entry_num]);
-    HDassert(ie_ptr->magic == H5C__H5C_IMAGE_ENTRY_T_MAGIC);
+    HDassert(ie_ptr->magic == H5C_IMAGE_ENTRY_T_MAGIC);
 
     /* Get pointer to buffer to encode into */
     p = *buf;
@@ -2676,7 +2683,7 @@ H5C__prep_for_file_close__setup_image_entries_array(H5C_t *cache_ptr)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for image_entries")
 
     for(u = 0; u <= cache_ptr->num_entries_in_image; u++) {
-	image_entries[u].magic                = H5C__H5C_IMAGE_ENTRY_T_MAGIC;
+	image_entries[u].magic                = H5C_IMAGE_ENTRY_T_MAGIC;
 	image_entries[u].addr                 = HADDR_UNDEF;
 	image_entries[u].size                 = 0;
         image_entries[u].ring		      = H5C_RING_UNDEFINED;
@@ -3133,7 +3140,7 @@ H5C__reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
         H5C_image_entry_t * ie_ptr;
 
 	ie_ptr = &(cache_ptr->image_entries[u]);
-        HDassert(ie_ptr->magic == H5C__H5C_IMAGE_ENTRY_T_MAGIC);
+        HDassert(ie_ptr->magic == H5C_IMAGE_ENTRY_T_MAGIC);
 
         /* Find the prefetched entry */
 	pf_entry_ptr = NULL;
@@ -3257,7 +3264,7 @@ H5C__reconstruct_cache_entry(H5C_t *cache_ptr, unsigned index)
     HDassert(cache_ptr->num_entries_in_image > 0);
     HDassert(index < cache_ptr->num_entries_in_image);
     ie_ptr = &((cache_ptr->image_entries)[index]);
-    HDassert(ie_ptr->magic == H5C__H5C_IMAGE_ENTRY_T_MAGIC);
+    HDassert(ie_ptr->magic == H5C_IMAGE_ENTRY_T_MAGIC);
     HDassert(H5F_addr_defined(ie_ptr->addr));
     HDassert(ie_ptr->size > 0);
     HDassert(ie_ptr->image_ptr);

@@ -806,9 +806,6 @@ typedef struct H5O_mdci_t {
     hsize_t	size;			/* size of MDC image block    */
 } H5O_mdci_t;
 
-/* only one version of the metadata cache image message at present */
-#define H5O_MDCI_VERSION_0 	0
-
 /* Typedef for "application" iteration operations */
 typedef herr_t (*H5O_operator_t)(const void *mesg/*in*/, unsigned idx,
     void *operator_data/*in,out*/);

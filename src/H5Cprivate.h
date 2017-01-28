@@ -98,10 +98,6 @@
 #define H5C__H5C_CACHE_ENTRY_T_MAGIC		0x005CAC0A
 #define H5C__H5C_CACHE_ENTRY_T_BAD_MAGIC	0xDeadBeef
 
-/* Values for image entry magic field */
-#define H5C__H5C_IMAGE_ENTRY_T_MAGIC		0x005CAC08
-#define H5C__H5C_IMAGE_ENTRY_T_BAD_MAGIC	0xBeefDead
-
 /* Cache configuration validation definitions */
 #define H5C_RESIZE_CFG__VALIDATE_GENERAL        0x1
 #define H5C_RESIZE_CFG__VALIDATE_INCREMENT      0x2
@@ -971,8 +967,6 @@ typedef herr_t (*H5C_log_flush_func_t)(H5C_t *cache_ptr, haddr_t addr,
 #define H5C_RING_SBE        4
 #define H5C_RING_SB         5 /* innermost ring */
 #define H5C_RING_NTYPES     6
-
-#define H5C_MAX_RING_IN_IMAGE   3
 
 typedef int H5C_ring_t;
 
@@ -2182,17 +2176,11 @@ typedef struct H5C_auto_size_ctl_t {
 }
 
 typedef struct H5C_cache_image_ctl_t {
-
     int32_t				version;
-
     hbool_t				generate_image;
-
     hbool_t                             save_resize_status;
-
     int32_t                             entry_ageout;
-
     unsigned				flags;
-
 } H5C_cache_image_ctl_t;
 
 /***************************************/

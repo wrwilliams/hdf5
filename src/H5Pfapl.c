@@ -58,12 +58,6 @@
 
 /* ========= File Access properties ============ */
 /* Definitions for the initial metadata cache resize configuration */
-#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_SIZE sizeof(H5AC_cache_image_config_t)
-#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEF  H5AC__DEFAULT_CACHE_IMAGE_CONFIG
-#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_ENC  H5P__facc_cache_image_config_enc
-#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEC  H5P__facc_cache_image_config_dec
-#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_CMP  H5P__facc_cache_image_config_cmp
-/* Definitions for the initial metadata cache resize configuration */
 #define H5F_ACS_META_CACHE_INIT_CONFIG_SIZE	sizeof(H5AC_cache_config_t)
 #define H5F_ACS_META_CACHE_INIT_CONFIG_DEF	H5AC__DEFAULT_CACHE_CONFIG
 #define H5F_ACS_META_CACHE_INIT_CONFIG_ENC	H5P__facc_cache_config_enc
@@ -231,6 +225,13 @@
 #define H5F_ACS_COLL_MD_WRITE_FLAG_ENC    H5P__encode_hbool_t
 #define H5F_ACS_COLL_MD_WRITE_FLAG_DEC    H5P__decode_hbool_t
 #endif /* H5_HAVE_PARALLEL */
+/* Definitions for the initial metadata cache image configuration */
+#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_SIZE sizeof(H5AC_cache_image_config_t)
+#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEF  H5AC__DEFAULT_CACHE_IMAGE_CONFIG
+#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_ENC  H5P__facc_cache_image_config_enc
+#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEC  H5P__facc_cache_image_config_dec
+#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_CMP  H5P__facc_cache_image_config_cmp
+
 
 /******************/
 /* Local Typedefs */
@@ -271,9 +272,6 @@ static herr_t H5P__facc_file_image_info_close(const char *name, size_t size, voi
 /* encode & decode callbacks */
 static herr_t H5P__facc_cache_config_enc(const void *value, void **_pp, size_t *size);
 static herr_t H5P__facc_cache_config_dec(const void **_pp, void *value);
-static int H5P__facc_cache_image_config_cmp(const void *_config1, const void *_config2, size_t H5_ATTR_UNUSED size);
-static herr_t H5P__facc_cache_image_config_enc(const void *value, void **_pp, size_t *size);
-static herr_t H5P__facc_cache_image_config_dec(const void **_pp, void *_value);
 static int H5P__facc_cache_config_cmp(const void *value1, const void *value2, size_t size);
 static herr_t H5P__facc_fclose_degree_enc(const void *value, void **_pp, size_t *size);
 static herr_t H5P__facc_fclose_degree_dec(const void **pp, void *value);
@@ -287,6 +285,11 @@ static herr_t H5P_facc_mdc_log_location_del(hid_t prop_id, const char *name, siz
 static herr_t H5P_facc_mdc_log_location_copy(const char *name, size_t size, void *value);
 static int    H5P_facc_mdc_log_location_cmp(const void *value1, const void *value2, size_t size);
 static herr_t H5P_facc_mdc_log_location_close(const char *name, size_t size, void *value);
+
+/* Metadata cache image property callbacks */
+static int H5P__facc_cache_image_config_cmp(const void *_config1, const void *_config2, size_t H5_ATTR_UNUSED size);
+static herr_t H5P__facc_cache_image_config_enc(const void *value, void **_pp, size_t *size);
+static herr_t H5P__facc_cache_image_config_dec(const void **_pp, void *_value);
 
 
 /*********************/
@@ -323,7 +326,6 @@ const H5P_libclass_t H5P_CLS_FACC[1] = {{
 /*******************/
 
 /* Property value defaults */
-static const H5AC_cache_image_config_t H5F_def_mdc_initCacheImageCfg_g = H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEF;  /* Default metadata cache image settings */
 static const H5AC_cache_config_t H5F_def_mdc_initCacheCfg_g = H5F_ACS_META_CACHE_INIT_CONFIG_DEF;  /* Default metadata cache settings */
 static const size_t H5F_def_rdcc_nslots_g = H5F_ACS_DATA_CACHE_NUM_SLOTS_DEF;      /* Default raw data chunk cache # of slots */
 static const size_t H5F_def_rdcc_nbytes_g = H5F_ACS_DATA_CACHE_BYTE_SIZE_DEF;      /* Default raw data chunk cache # of bytes */
@@ -356,6 +358,7 @@ static const hbool_t H5F_def_evict_on_close_flag_g = H5F_ACS_EVICT_ON_CLOSE_FLAG
 static const H5P_coll_md_read_flag_t H5F_def_coll_md_read_flag_g = H5F_ACS_COLL_MD_READ_FLAG_DEF;  /* Default setting for the collective metedata read flag */
 static const hbool_t H5F_def_coll_md_write_flag_g = H5F_ACS_COLL_MD_WRITE_FLAG_DEF;  /* Default setting for the collective metedata write flag */
 #endif /* H5_HAVE_PARALLEL */
+static const H5AC_cache_image_config_t H5F_def_mdc_initCacheImageCfg_g = H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEF;  /* Default metadata cache image settings */
 
 
 /*-------------------------------------------------------------------------
@@ -376,12 +379,6 @@ H5P__facc_reg_prop(H5P_genclass_t *pclass)
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_STATIC
-
-    /* Register the initial metadata cache image configuration */
-    if(H5P_register_real(pclass, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_SIZE, &H5F_def_mdc_initCacheImageCfg_g, 
-            NULL, NULL, NULL, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_ENC, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEC, 
-            NULL, NULL, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_CMP, NULL) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
     /* Register the initial metadata cache resize configuration */
     if(H5P_register_real(pclass, H5F_ACS_META_CACHE_INIT_CONFIG_NAME, H5F_ACS_META_CACHE_INIT_CONFIG_SIZE, &H5F_def_mdc_initCacheCfg_g, 
@@ -570,6 +567,12 @@ H5P__facc_reg_prop(H5P_genclass_t *pclass)
             NULL, NULL, NULL, NULL) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 #endif /* H5_HAVE_PARALLEL */
+
+    /* Register the initial metadata cache image configuration */
+    if(H5P_register_real(pclass, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_SIZE, &H5F_def_mdc_initCacheImageCfg_g, 
+            NULL, NULL, NULL, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_ENC, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEC, 
+            NULL, NULL, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_CMP, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2873,7 +2876,7 @@ done:
  *		greater than VALUE1 and zero if VALUE1 and VALUE2 are equal.
  *
  * Programmer:     John Mainzer
- *                 June 26, 2015 24, 2012
+ *                 June 26, 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -2918,7 +2921,7 @@ done:
  *		   Failure:	Negative
  *
  * Programmer:     John Mainzer
- *                 June 26, 2015 24, 2012
+ *                 June 26, 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -2937,7 +2940,6 @@ H5P__facc_cache_image_config_enc(const void *value, void **_pp, size_t *size)
         /* Encode type sizes (as a safety check) */
         *(*pp)++ = (uint8_t)sizeof(unsigned);
 
-        /* int */
         INT32ENCODE(*pp, (int32_t)config->version);
 
         H5_ENCODE_UNSIGNED(*pp, config->generate_image);
@@ -2965,7 +2967,7 @@ H5P__facc_cache_image_config_enc(const void *value, void **_pp, size_t *size)
  *		   Failure:	Negative
  *
  * Programmer:     John Mainzer
- *                 June 26, 2015 24, 2012
+ *                 June 26, 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -2993,7 +2995,6 @@ H5P__facc_cache_image_config_dec(const void **_pp, void *_value)
     if(enc_size != sizeof(unsigned))
         HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "unsigned value can't be decoded")
 
-    /* int */
     INT32DECODE(*pp, config->version);
 
     H5_DECODE_UNSIGNED(*pp, config->generate_image);

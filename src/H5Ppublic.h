@@ -323,10 +323,6 @@ H5_DLL herr_t H5Pget_cache(hid_t plist_id,
        int *mdc_nelmts, /* out */
        size_t *rdcc_nslots/*out*/,
        size_t *rdcc_nbytes/*out*/, double *rdcc_w0);
-H5_DLL herr_t H5Pset_mdc_image_config(hid_t    plist_id,
-       H5AC_cache_image_config_t * config_ptr);
-H5_DLL herr_t H5Pget_mdc_image_config(hid_t     plist_id,
-       H5AC_cache_image_config_t * config_ptr);	/* out */
 H5_DLL herr_t H5Pset_mdc_config(hid_t    plist_id,
        H5AC_cache_config_t * config_ptr);
 H5_DLL herr_t H5Pget_mdc_config(hid_t     plist_id,
@@ -369,6 +365,8 @@ H5_DLL herr_t H5Pget_all_coll_metadata_ops(hid_t plist_id, hbool_t *is_collectiv
 H5_DLL herr_t H5Pset_coll_metadata_write(hid_t plist_id, hbool_t is_collective);
 H5_DLL herr_t H5Pget_coll_metadata_write(hid_t plist_id, hbool_t *is_collective);
 #endif /* H5_HAVE_PARALLEL */
+H5_DLL herr_t H5Pset_mdc_image_config(hid_t plist_id, H5AC_cache_image_config_t *config_ptr);
+H5_DLL herr_t H5Pget_mdc_image_config(hid_t plist_id, H5AC_cache_image_config_t *config_ptr /*out*/);
 
 /* Dataset creation property list (DCPL) routines */
 H5_DLL herr_t H5Pset_layout(hid_t plist_id, H5D_layout_t layout);
