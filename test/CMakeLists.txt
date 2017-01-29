@@ -270,13 +270,21 @@ endforeach ()
 ##############################################################################
 
 #-- Adding test for cache_image
-add_executable (cache_image ${HDF5_TEST_SOURCE_DIR}/cache_image.c ${HDF5_TEST_SOURCE_DIR}/cache_common.c ${HDF5_TEST_SOURCE_DIR}/genall5.c)
+add_executable (cache_image
+    ${HDF5_TEST_SOURCE_DIR}/cache_image.c
+    ${HDF5_TEST_SOURCE_DIR}/cache_common.c
+    ${HDF5_TEST_SOURCE_DIR}/genall5.c
+)
 TARGET_NAMING (cache_image STATIC)
 TARGET_C_PROPERTIES (cache_image STATIC " " " ")
 target_link_libraries (cache_image ${HDF5_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
 set_target_properties (cache_image PROPERTIES FOLDER test)
 if (BUILD_SHARED_LIBS)
-  add_executable (cache_image-shared ${HDF5_TEST_SOURCE_DIR}/cache_image.c ${HDF5_TEST_SOURCE_DIR}/cache_common.c ${HDF5_TEST_SOURCE_DIR}/genall5.c)
+  add_executable (cache_image-shared
+    ${HDF5_TEST_SOURCE_DIR}/cache_image.c
+    ${HDF5_TEST_SOURCE_DIR}/cache_common.c
+    ${HDF5_TEST_SOURCE_DIR}/genall5.c
+  )
   TARGET_NAMING (cache_image-shared SHARED)
   TARGET_C_PROPERTIES (cache_image-shared SHARED " " " ")
   target_link_libraries (cache_image-shared ${HDF5_TEST_LIBSH_TARGET} ${HDF5_LIBSH_TARGET})
