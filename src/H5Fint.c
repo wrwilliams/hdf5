@@ -2691,7 +2691,7 @@ H5F__set_paged_aggr(const H5F_t *f, hbool_t paged)
 
     /* Dispatch to driver */
     if(H5FD_set_paged_aggr(f->shared->lf, paged) < 0)
-	HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "driver set paged aggre mode failed")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "driver set paged aggre mode failed")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

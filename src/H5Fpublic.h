@@ -191,6 +191,17 @@ typedef enum H5F_fspace_strategy_t {
     H5F_FSPACE_STRATEGY_NTYPES      /* must be last */
 } H5F_fspace_strategy_t;
 
+/* Deprecated: File space handling strategy for release 1.10.0 */
+/* They are mapped to H5F_fspace_strategy_t as defined above from release 1.10.1 onwards */
+typedef enum H5F_file_space_type_t {
+    H5F_FILE_SPACE_DEFAULT = 0,     /* Default (or current) free space strategy setting */
+    H5F_FILE_SPACE_ALL_PERSIST = 1, /* Persistent free space managers, aggregators, virtual file driver */
+    H5F_FILE_SPACE_ALL = 2,         /* Non-persistent free space managers, aggregators, virtual file driver */
+    H5F_FILE_SPACE_AGGR_VFD = 3,    /* Aggregators, Virtual file driver */
+    H5F_FILE_SPACE_VFD = 4,         /* Virtual file driver */
+    H5F_FILE_SPACE_NTYPES           /* must be last */
+} H5F_file_space_type_t;
+
 /* Data structure to report the collection of read retries for metadata items with checksum */
 /* Used by public routine H5Fget_metadata_read_retry_info() */
 #define H5F_NUM_METADATA_READ_RETRY_TYPES	21

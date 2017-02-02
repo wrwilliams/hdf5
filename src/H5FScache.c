@@ -296,7 +296,7 @@ H5FS__cache_hdr_deserialize(const void *_image, size_t len, void *_udata,
     /* # of section classes */
     /* (only check if we actually have some classes) */
     UINT16DECODE(image, nclasses);
-    if(fspace->nclasses > 0 && fspace->nclasses != nclasses)
+    if(fspace->nclasses > 0 && nclasses > fspace->nclasses)
         HGOTO_ERROR(H5E_FSPACE, H5E_CANTLOAD, NULL, "section class count mismatch")
 
     /* Shrink percent */
