@@ -798,6 +798,8 @@ typedef struct H5O_fsinfo_t {
     haddr_t eoa_pre_fsm_fsalloc;            /* For paged aggregation: the eoa before free-space headers & sinfo */
     haddr_t fs_addr[H5F_MEM_PAGE_NTYPES - 1];   /* 13 addresses of free-space managers */
                                                 /* For non-paged aggregation: only 6 addresses are used */
+    hbool_t mapped;                             /* Not stored */
+                                                /* Indicate the message is mapped from version 0 to version 1 */
 } H5O_fsinfo_t;
 
 /*

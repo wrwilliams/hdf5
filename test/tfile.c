@@ -127,13 +127,25 @@ const char *OLD_FILENAME[] = {
     "filespace_1_8.h5"	/* 1.8 HDF5 file */
 };
 
+/* Files created in 1.10.0 release --used in test_filespace_1.10.0_compatible() */
+/* These files are copied from release 1.10.0 tools/h5format_convert/testfiles */
+const char *OLD_1_10_0_FILENAME[] = { 
+    "h5fc_ext1_i.h5",   /* 0 */
+    "h5fc_ext1_f.h5",   /* 1 */
+    "h5fc_ext2_if.h5",  /* 2 */
+    "h5fc_ext2_sf.h5",  /* 3 */
+    "h5fc_ext3_isf.h5", /* 4 */
+    "h5fc_ext_none.h5"  /* 5 */
+};
+
+/* Files used in test_filespace_round_compatible() */
 const char *FSPACE_FILENAMES[] = {
     "fsm_aggr_nopersist.h5",    /* H5F_FILE_SPACE_AGGR, not persisting free-space */
     "fsm_aggr_persist.h5",      /* H5F_FILE_SPACE_AGGR, persisting free-space */
-    "paged_nopersist.h5",   /* H5F_FILE_SPACE_PAGE, not persisting free-space */
-    "paged_persist.h5",     /* H5F_FILE_SPACE_PAGE, persisting free-space */
-    "aggr.h5",              /* H5F_FILE_SPACE_AGGR */
-    "none.h5"               /* H5F_FILE_SPACE_NONE */
+    "paged_nopersist.h5",       /* H5F_FILE_SPACE_PAGE, not persisting free-space */
+    "paged_persist.h5",         /* H5F_FILE_SPACE_PAGE, persisting free-space */
+    "aggr.h5",                  /* H5F_FILE_SPACE_AGGR */
+    "none.h5"                   /* H5F_FILE_SPACE_NONE */
 };
 
 const char *FILESPACE_NAME[] = {
@@ -4330,95 +4342,420 @@ test_filespace_compatible(void)
     for(j = 0; j < NELMTS(OLD_FILENAME); j++) {
         const char *filename = H5_get_srcdir_filename(OLD_FILENAME[j]); /* Corrected test file name */
 
-	/* Open and copy the test file into a temporary file */
-	fd_old = HDopen(filename, O_RDONLY, 0666);
-	CHECK(fd_old, FAIL, "HDopen");
-	fd_new = HDopen(FILE5, O_RDWR|O_CREAT|O_TRUNC, 0666);
-	CHECK(fd_new, FAIL, "HDopen");
+        /* Open and copy the test file into a temporary file */
+        fd_old = HDopen(filename, O_RDONLY, 0666);
+        CHECK(fd_old, FAIL, "HDopen");
+        fd_new = HDopen(FILE5, O_RDWR|O_CREAT|O_TRUNC, 0666);
+        CHECK(fd_new, FAIL, "HDopen");
 
-	/* Copy data */
-	while((nread = HDread(fd_old, buf, (size_t)READ_OLD_BUFSIZE)) > 0) {
-        ssize_t write_err = HDwrite(fd_new, buf, (size_t)nread);
-        CHECK(write_err, -1, "HDwrite");
-    } /* end while */
+	    /* Copy data */
+        while((nread = HDread(fd_old, buf, (size_t)READ_OLD_BUFSIZE)) > 0) {
+            ssize_t write_err = HDwrite(fd_new, buf, (size_t)nread);
+            CHECK(write_err, -1, "HDwrite");
+        } /* end while */
 
-	/* Close the files */
-	ret = HDclose(fd_old);
-	CHECK(ret, FAIL, "HDclose");
-	ret = HDclose(fd_new);
-	CHECK(ret, FAIL, "HDclose");
+        /* Close the files */
+        ret = HDclose(fd_old);
+        CHECK(ret, FAIL, "HDclose");
+        ret = HDclose(fd_new);
+        CHECK(ret, FAIL, "HDclose");
 
-	/* Open the temporary test file */
-	fid = H5Fopen(FILE5, H5F_ACC_RDWR, H5P_DEFAULT);
-	CHECK(fid, FAIL, "H5Fopen");
+        /* Open the temporary test file */
+        fid = H5Fopen(FILE5, H5F_ACC_RDWR, H5P_DEFAULT);
+        CHECK(fid, FAIL, "H5Fopen");
 
-	/* There should not be any free space in the file */
-	free_space = H5Fget_freespace(fid);
-	CHECK(free_space, FAIL, "H5Fget_freespace");
-	VERIFY(free_space, (hssize_t)0, "H5Fget_freespace");
+        /* There should not be any free space in the file */
+        free_space = H5Fget_freespace(fid);
+        CHECK(free_space, FAIL, "H5Fget_freespace");
+        VERIFY(free_space, (hssize_t)0, "H5Fget_freespace");
 
-	/* Get the file's file creation property list */
-	fcpl = H5Fget_create_plist(fid);
-	CHECK(fcpl, FAIL, "H5Fget_create_plist");
+        /* Get the file's file creation property list */
+        fcpl = H5Fget_create_plist(fid);
+        CHECK(fcpl, FAIL, "H5Fget_create_plist");
 
-	/* Retrieve the file space info */
-	ret = H5Pget_file_space_strategy(fcpl, &strategy, &persist, &threshold);
-	CHECK(ret, FAIL, "H5Pget_file_space_strategy");
+        /* Retrieve the file space info */
+        ret = H5Pget_file_space_strategy(fcpl, &strategy, &persist, &threshold);
+        CHECK(ret, FAIL, "H5Pget_file_space_strategy");
 
-	/* File space handling strategy should be H5F_FILE_SPACE_AGGR = 0 */
-	/* Persisting free-space should be FALSE */
-	/* Free-space section threshold should be 1 */
-	VERIFY(strategy, 0, "H5Pget_file_space");
-	VERIFY(persist, FALSE, "H5Pget_file_space");
-	VERIFY(threshold, 1, "H5Pget_file_space");
+        /* File space handling strategy should be H5F_FSPACE_STRATEGY_FSM_AGGR */
+        /* Persisting free-space should be FALSE */
+        /* Free-space section threshold should be 1 */
+        VERIFY(strategy, H5F_FSPACE_STRATEGY_FSM_AGGR, "H5Pget_file_space_strategy");
+        VERIFY(persist, FALSE, "H5Pget_file_space_strategy");
+        VERIFY(threshold, 1, "H5Pget_file_space_strategy");
 
-	/* Generate raw data */
-	for(i = 0; i < 100; i++)
-	    check[i] = (int)i;
+        /* Generate raw data */
+        for(i = 0; i < 100; i++)
+            check[i] = (int)i;
 
-	/* Open and read the dataset */
-	did = H5Dopen2(fid, DSETNAME, H5P_DEFAULT);
-	CHECK(did, FAIL, "H5Dopen");
-	ret = H5Dread(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdbuf);
-	CHECK(ret, FAIL, "H5Dread");
+        /* Open and read the dataset */
+        did = H5Dopen2(fid, DSETNAME, H5P_DEFAULT);
+        CHECK(did, FAIL, "H5Dopen");
+        ret = H5Dread(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdbuf);
+        CHECK(ret, FAIL, "H5Dread");
 
-	/* Verify the data read is correct */
-	for(i = 0; i < 100; i++)
-	    VERIFY(rdbuf[i], check[i], "test_compatible");
+        /* Verify the data read is correct */
+        for(i = 0; i < 100; i++)
+            VERIFY(rdbuf[i], check[i], "test_compatible");
 
-	/* Close the dataset */
-	ret = H5Dclose(did);
-	CHECK(ret, FAIL, "H5Dclose");
+        /* Close the dataset */
+        ret = H5Dclose(did);
+        CHECK(ret, FAIL, "H5Dclose");
 
-	/* Remove the dataset */
-	ret = H5Ldelete(fid, DSETNAME, H5P_DEFAULT);
-	CHECK(ret, FAIL, "H5Ldelete");
+        /* Remove the dataset */
+        ret = H5Ldelete(fid, DSETNAME, H5P_DEFAULT);
+        CHECK(ret, FAIL, "H5Ldelete");
 
-    /* Close the plist */
-    ret = H5Pclose(fcpl);
-    CHECK(ret, FAIL, "H5Pclose");
+        /* Close the plist */
+        ret = H5Pclose(fcpl);
+        CHECK(ret, FAIL, "H5Pclose");
 
-    /* Close the file */
-    ret = H5Fclose(fid);
-    CHECK(ret, FAIL, "H5Fclose");
+        /* Close the file */
+        ret = H5Fclose(fid);
+        CHECK(ret, FAIL, "H5Fclose");
 
-	/* Re-Open the file */
-	fid = H5Fopen(FILE5, H5F_ACC_RDONLY, H5P_DEFAULT);
-	CHECK(fid, FAIL, "H5Fopen");
+        /* Re-Open the file */
+        fid = H5Fopen(FILE5, H5F_ACC_RDONLY, H5P_DEFAULT);
+        CHECK(fid, FAIL, "H5Fopen");
 
-	/* The dataset should not be there */
-	did = H5Dopen2(fid, DSETNAME, H5P_DEFAULT);
-	VERIFY(did, FAIL, "H5Dopen");
-	/* There should not be any free space in the file */
-	free_space = H5Fget_freespace(fid);
-	CHECK(free_space, FAIL, "H5Fget_freespace");
-	VERIFY(free_space, (hssize_t)0, "H5Fget_freespace");
+        /* The dataset should not be there */
+        did = H5Dopen2(fid, DSETNAME, H5P_DEFAULT);
+        VERIFY(did, FAIL, "H5Dopen");
+        /* There should not be any free space in the file */
+        free_space = H5Fget_freespace(fid);
+        CHECK(free_space, FAIL, "H5Fget_freespace");
+        VERIFY(free_space, (hssize_t)0, "H5Fget_freespace");
 
-	/* Close the file */
-	ret = H5Fclose(fid);
-	CHECK(ret, FAIL, "H5Fclose");
+        /* Close the file */
+        ret = H5Fclose(fid);
+        CHECK(ret, FAIL, "H5Fclose");
     } /* end for */
 } /* test_filespace_compatible */
+
+/****************************************************************
+**
+**  test_filespace_1.10.0_compatible():
+**	Verify that the latest file space management can open, read and
+**	modify 1.10.0 HDF5 files : 
+**    h5fc_ext1_i.h5:   H5F_FILE_SPACE_ALL, default threshold; has superblock extension but no fsinfo message
+**    h5fc_ext1_f.h5:   H5F_FILE_SPACE_ALL_PERSIST, default threshold; has superblock extension with fsinfo message
+**    h5fc_ext2_if.h5:  H5F_FILE_SPACE_ALL, non-default threshold; has superblock extension with fsinfo message
+**    h5fc_ext2_sf.h5:  H5F_FILE_SPACE_VFD, default threshold; has superblock extension with fsinfo message
+**    h5fc_ext3_isf.h5: H5F_FILE_SPACE_AGGR_VFD, default threshold; has superblock extension with fsinfo message
+**    h5fc_ext_none.h5: H5F_FILE_SPACE_ALL, default threshold; without superblock extension
+**  The above files are copied from release 1.10.0 tools/h5format_convert/testfiles.
+**
+****************************************************************/
+static void
+test_filespace_1_10_0_compatible(void)
+{
+    int fd_old = (-1), fd_new = (-1);   /* File descriptors for copying data */
+    hid_t fid = -1;                     /* File id */
+    hid_t did = -1;		                /* Dataset id */
+    hid_t fcpl;                         /* File creation property list */
+    unsigned i, j;                      /* Local index variable */
+    hbool_t	persist;                    /* Persist free-space or not */
+    hsize_t	threshold;                  /* Free-space section threshold */
+    H5F_fspace_strategy_t strategy;     /* File space handling strategy */
+    int  wbuf[24]; 		                /* Buffer for dataset data */
+    int  rdbuf[24];		                /* Buffer for dataset data */
+    uint8_t buf[READ_OLD_BUFSIZE];	    /* temporary buffer for reading */
+    ssize_t nread;  		            /* Number of bytes read in */
+    herr_t	ret;			            /* Return value */
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("File space compatibility testing for 1.10.0 files\n"));
+
+    for(j = 0; j < NELMTS(OLD_1_10_0_FILENAME); j++) {
+        const char *filename = H5_get_srcdir_filename(OLD_1_10_0_FILENAME[j]); /* Corrected test file name */
+
+        /* Open and copy the test file into a temporary file */
+        fd_old = HDopen(filename, O_RDONLY, 0666);
+        CHECK(fd_old, FAIL, "HDopen");
+        fd_new = HDopen(FILE5, O_RDWR|O_CREAT|O_TRUNC, 0666);
+        CHECK(fd_new, FAIL, "HDopen");
+
+	    /* Copy data */
+        while((nread = HDread(fd_old, buf, (size_t)READ_OLD_BUFSIZE)) > 0) {
+            ssize_t write_err = HDwrite(fd_new, buf, (size_t)nread);
+            CHECK(write_err, -1, "HDwrite");
+        } /* end while */
+
+        /* Close the files */
+        ret = HDclose(fd_old);
+        CHECK(ret, FAIL, "HDclose");
+        ret = HDclose(fd_new);
+        CHECK(ret, FAIL, "HDclose");
+
+        /* Open the temporary test file */
+        fid = H5Fopen(FILE5, H5F_ACC_RDWR, H5P_DEFAULT);
+        CHECK(fid, FAIL, "H5Fopen");
+
+        /* Get the file's file creation property list */
+        fcpl = H5Fget_create_plist(fid);
+        CHECK(fcpl, FAIL, "H5Fget_create_plist");
+
+        /* Retrieve the file space info */
+        ret = H5Pget_file_space_strategy(fcpl, &strategy, &persist, &threshold);
+        CHECK(ret, FAIL, "H5Pget_file_space_strategy");
+
+        switch(j) {
+            case 0:
+                VERIFY(strategy, H5F_FILE_SPACE_STRATEGY_DEF, "H5Pget_file_space_strategy");
+                VERIFY(persist, H5F_FREE_SPACE_PERSIST_DEF, "H5Pget_file_space_strategy");
+                VERIFY(threshold, H5F_FREE_SPACE_THRESHOLD_DEF, "H5Pget_file_space_strategy");
+
+                /* Open the dataset */
+                did = H5Dopen2(fid, "/DSET_EA", H5P_DEFAULT);
+                CHECK(did, FAIL, "H5Dopen");
+
+                for(i = 0; i < 24; i++)
+                    wbuf[i] = (int)j+1;
+
+                /* Write to the dataset */
+                ret = H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf);
+                CHECK(ret, FAIL, "H5Dwrite");
+
+                /* Close the dataset */
+                ret = H5Dclose(did);
+                CHECK(ret, FAIL, "H5Dclose");
+                break; 
+
+            case 1:
+                VERIFY(strategy, H5F_FSPACE_STRATEGY_FSM_AGGR, "H5Pget_file_space_strategy");
+                VERIFY(persist, TRUE, "H5Pget_file_space_strategy");
+                VERIFY(threshold, H5F_FREE_SPACE_THRESHOLD_DEF, "H5Pget_file_space_strategy");
+
+                /* Open the dataset */
+                did = H5Dopen2(fid, "/DSET_NDATA_BT2", H5P_DEFAULT);
+                CHECK(did, FAIL, "H5Dopen");
+
+                for(i = 0; i < 24; i++)
+                    wbuf[i] = (int)j+1;
+
+                /* Write to the dataset */
+                ret = H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf);
+                CHECK(ret, FAIL, "H5Dwrite");
+
+                /* Close the dataset */
+                ret = H5Dclose(did);
+                CHECK(ret, FAIL, "H5Dclose");
+                break; 
+
+            case 2:
+                VERIFY(strategy, H5F_FSPACE_STRATEGY_FSM_AGGR, "H5Pget_file_space_strategy");
+                VERIFY(persist, H5F_FREE_SPACE_PERSIST_DEF, "H5Pget_file_space_strategy");
+                VERIFY(threshold, 2, "H5Pget_file_space_strategy");
+
+                /* Open the dataset */
+                did = H5Dopen2(fid, "/DSET_NONE", H5P_DEFAULT);
+                CHECK(did, FAIL, "H5Dopen");
+
+                for(i = 0; i < 24; i++)
+                    wbuf[i] = (int)j+1;
+
+                /* Write to the dataset */
+                ret = H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf);
+                CHECK(ret, FAIL, "H5Dwrite");
+
+                /* Close the dataset */
+                ret = H5Dclose(did);
+                CHECK(ret, FAIL, "H5Dclose");
+                break; 
+
+            case 3:
+                VERIFY(strategy, H5F_FSPACE_STRATEGY_NONE, "H5Pget_file_space_strategy");
+                VERIFY(persist, H5F_FREE_SPACE_PERSIST_DEF, "H5Pget_file_space_strategy");
+                VERIFY(threshold, H5F_FREE_SPACE_THRESHOLD_DEF, "H5Pget_file_space_strategy");
+
+                /* Open the dataset */
+                did = H5Dopen2(fid, "/GROUP/DSET_NDATA_EA", H5P_DEFAULT);
+                CHECK(did, FAIL, "H5Dopen");
+
+                for(i = 0; i < 24; i++)
+                    wbuf[i] = (int)j+1;
+
+                /* Write to the dataset */
+                ret = H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf);
+                CHECK(ret, FAIL, "H5Dwrite");
+
+                /* Close the dataset */
+                ret = H5Dclose(did);
+                CHECK(ret, FAIL, "H5Dclose");
+                break; 
+
+            case 4:
+                VERIFY(strategy, H5F_FSPACE_STRATEGY_AGGR, "H5Pget_file_space_strategy");
+                VERIFY(persist, H5F_FREE_SPACE_PERSIST_DEF, "H5Pget_file_space_strategy");
+                VERIFY(threshold, H5F_FREE_SPACE_THRESHOLD_DEF, "H5Pget_file_space_strategy");
+
+                /* Open the dataset */
+                did = H5Dopen2(fid, "/GROUP/DSET_NDATA_FA", H5P_DEFAULT);
+                CHECK(did, FAIL, "H5Dopen");
+
+                for(i = 0; i < 24; i++)
+                    wbuf[i] = (int)j+1;
+
+                /* Write to the dataset */
+                ret = H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf);
+                CHECK(ret, FAIL, "H5Dwrite");
+
+                /* Close the dataset */
+                ret = H5Dclose(did);
+                CHECK(ret, FAIL, "H5Dclose");
+                break; 
+            case 5:
+                VERIFY(strategy, H5F_FSPACE_STRATEGY_FSM_AGGR, "H5Pget_file_space_strategy");
+                VERIFY(persist, H5F_FREE_SPACE_PERSIST_DEF, "H5Pget_file_space_strategy");
+                VERIFY(threshold, H5F_FREE_SPACE_THRESHOLD_DEF, "H5Pget_file_space_strategy");
+
+                /* Open the dataset */
+                did = H5Dopen2(fid, "/GROUP/DSET_NDATA_NONE", H5P_DEFAULT);
+                CHECK(did, FAIL, "H5Dopen");
+
+                for(i = 0; i < 24; i++)
+                    wbuf[i] = (int)j+1;
+
+                /* Write to the dataset */
+                ret = H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf);
+                CHECK(ret, FAIL, "H5Dwrite");
+
+                /* Close the dataset */
+                ret = H5Dclose(did);
+                CHECK(ret, FAIL, "H5Dclose");
+                break; 
+
+            default:
+               break; 
+        }
+
+        /* Close the plist */
+        ret = H5Pclose(fcpl);
+        CHECK(ret, FAIL, "H5Pclose");
+
+        /* Close the file */
+        ret = H5Fclose(fid);
+        CHECK(ret, FAIL, "H5Fclose");
+
+        /* Re-Open the file */
+        fid = H5Fopen(FILE5, H5F_ACC_RDONLY, H5P_DEFAULT);
+        CHECK(fid, FAIL, "H5Fopen");
+
+        switch(j) {
+            case 0:
+                /* Open and read the dataset */
+                did = H5Dopen2(fid, "/DSET_EA", H5P_DEFAULT);
+                CHECK(did, FAIL, "H5Dopen");
+
+                ret = H5Dread(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdbuf);
+                CHECK(ret, FAIL, "H5Dread");
+
+                /* Verify the data read is correct */
+                for(i = 0; i < 24; i++)
+                    VERIFY(rdbuf[i], j+1, "test_compatible");
+
+                /* Close the dataset */
+                ret = H5Dclose(did);
+                CHECK(ret, FAIL, "H5Dclose");
+                break; 
+
+            case 1:
+                /* Open and read the dataset */
+                did = H5Dopen2(fid, "/DSET_NDATA_BT2", H5P_DEFAULT);
+                CHECK(did, FAIL, "H5Dopen");
+
+                ret = H5Dread(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdbuf);
+                CHECK(ret, FAIL, "H5Dread");
+
+                /* Verify the data read is correct */
+                for(i = 0; i < 24; i++)
+                    VERIFY(rdbuf[i], j+1, "test_compatible");
+
+                /* Close the dataset */
+                ret = H5Dclose(did);
+                CHECK(ret, FAIL, "H5Dclose");
+                break; 
+
+            case 2:
+                /* Open and read the dataset */
+                did = H5Dopen2(fid, "/DSET_NONE", H5P_DEFAULT);
+                CHECK(did, FAIL, "H5Dopen");
+
+                ret = H5Dread(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdbuf);
+                CHECK(ret, FAIL, "H5Dread");
+
+                /* Verify the data read is correct */
+                for(i = 0; i < 24; i++)
+                    VERIFY(rdbuf[i], j+1, "test_compatible");
+
+                /* Close the dataset */
+                ret = H5Dclose(did);
+                CHECK(ret, FAIL, "H5Dclose");
+                break; 
+
+            case 3:
+                /* Open and read the dataset */
+                did = H5Dopen2(fid, "/GROUP/DSET_NDATA_EA", H5P_DEFAULT);
+                CHECK(did, FAIL, "H5Dopen");
+
+                ret = H5Dread(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdbuf);
+                CHECK(ret, FAIL, "H5Dread");
+
+                /* Verify the data read is correct */
+                for(i = 0; i < 24; i++)
+                    VERIFY(rdbuf[i], j+1, "test_compatible");
+
+                /* Close the dataset */
+                ret = H5Dclose(did);
+                CHECK(ret, FAIL, "H5Dclose");
+                break; 
+
+            case 4:
+
+                /* Open and read the dataset */
+                did = H5Dopen2(fid, "/GROUP/DSET_NDATA_FA", H5P_DEFAULT);
+                CHECK(did, FAIL, "H5Dopen");
+
+                ret = H5Dread(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdbuf);
+                CHECK(ret, FAIL, "H5Dread");
+
+                /* Verify the data read is correct */
+                for(i = 0; i < 24; i++)
+                    VERIFY(rdbuf[i], j+1, "test_compatible");
+
+                /* Close the dataset */
+                ret = H5Dclose(did);
+                CHECK(ret, FAIL, "H5Dclose");
+                break; 
+
+            case 5:
+
+                /* Open and read the dataset */
+                did = H5Dopen2(fid, "/GROUP/DSET_NDATA_NONE", H5P_DEFAULT);
+                CHECK(did, FAIL, "H5Dopen");
+
+                ret = H5Dread(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdbuf);
+                CHECK(ret, FAIL, "H5Dread");
+
+                /* Verify the data read is correct */
+                for(i = 0; i < 24; i++)
+                    VERIFY(rdbuf[i], j+1, "test_compatible");
+
+                /* Close the dataset */
+                ret = H5Dclose(did);
+                CHECK(ret, FAIL, "H5Dclose");
+                break; 
+
+            default:
+               break; 
+        }
+
+        /* Close the file */
+        ret = H5Fclose(fid);
+        CHECK(ret, FAIL, "H5Fclose");
+    } /* end for */
+
+} /* test_filespace_1_10_0_compatible */
 
 /****************************************************************
 **
@@ -4879,6 +5216,81 @@ hsize_t align;
     /* Close file */
     ret=H5Fclose(file);
     CHECK(ret, FAIL, "H5Fclose");
+
+    { /* Test deprecated H5Pget/set_file_space() */
+
+        H5F_file_space_type_t old_strategy;
+        hsize_t old_threshold;
+        hid_t fid;
+        hid_t ffcpl;
+
+        fcpl = H5Pcreate(H5P_FILE_CREATE);
+        CHECK(fcpl, FAIL, "H5Pcreate");
+
+        ret = H5Pget_file_space(fcpl, &old_strategy, &old_threshold);
+        CHECK(ret, FAIL, "H5Pget_file_space");
+        VERIFY(old_strategy, H5F_FILE_SPACE_ALL, "H5Pget_file_space");
+        VERIFY(old_threshold, H5F_FREE_SPACE_THRESHOLD_DEF, "H5Pget_file_space");
+
+        /* Set file space strategy and free space section threshold */
+        ret = H5Pset_file_space(fcpl, H5F_FILE_SPACE_ALL_PERSIST, (hsize_t)0);
+        CHECK(ret, FAIL, "H5Pget_file_space");
+
+        /* Get the file space info from the creation property */
+        ret = H5Pget_file_space(fcpl, &old_strategy, &old_threshold);
+        CHECK(ret, FAIL, "H5Pget_file_space");
+        VERIFY(old_strategy, H5F_FILE_SPACE_ALL_PERSIST, "H5Pget_file_space");
+        VERIFY(old_threshold, H5F_FREE_SPACE_THRESHOLD_DEF, "H5Pget_file_space");
+
+        ret = H5Pset_file_space(fcpl, H5F_FILE_SPACE_DEFAULT, (hsize_t)3);
+        CHECK(ret, FAIL, "H5Pget_file_space");
+
+        ret = H5Pget_file_space(fcpl, &old_strategy, &old_threshold);
+        CHECK(ret, FAIL, "H5Pget_file_space");
+        VERIFY(old_strategy, H5F_FILE_SPACE_ALL_PERSIST, "H5Pget_file_space");
+        VERIFY(old_threshold, 3, "H5Pget_file_space");
+
+        /* Create a file */
+        fid = H5Fcreate(FILE1, H5F_ACC_TRUNC , fcpl, H5P_DEFAULT);
+        CHECK(file, FAIL, "H5Fcreate");
+
+        old_strategy = H5F_FILE_SPACE_DEFAULT;
+        old_threshold = 0;
+        ffcpl = H5Fget_create_plist(fid);
+        ret = H5Pget_file_space(ffcpl, &old_strategy, &old_threshold);
+        CHECK(ret, FAIL, "H5Pget_file_space");
+        VERIFY(old_strategy, H5F_FILE_SPACE_ALL_PERSIST, "H5Pget_file_space");
+        VERIFY(old_threshold, 3, "H5Pget_file_space");
+
+        /* Close file */
+        ret=H5Fclose(fid);
+        CHECK(ret, FAIL, "H5Fclose");
+
+        ret = H5Pclose(ffcpl);
+        CHECK(ret, FAIL, "H5Pclose");
+
+        ret = H5Pclose(fcpl);
+        CHECK(ret, FAIL, "H5Pclose");
+
+        /* Reopen the file */
+        fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+        CHECK(fid, FAIL, "H5Fcreate");
+
+        old_strategy = H5F_FILE_SPACE_DEFAULT;
+        old_threshold = 0;
+        ffcpl = H5Fget_create_plist(fid);
+        ret = H5Pget_file_space(ffcpl, &old_strategy, &old_threshold);
+        CHECK(ret, FAIL, "H5Pget_file_space");
+        VERIFY(old_strategy, H5F_FILE_SPACE_ALL_PERSIST, "H5Pget_file_space");
+        VERIFY(old_threshold, 3, "H5Pget_file_space");
+
+        ret = H5Pclose(ffcpl);
+        CHECK(ret, FAIL, "H5Pclose");
+
+        ret=H5Fclose(fid);
+        CHECK(ret, FAIL, "H5Fclose");
+    }
+
 } /* test_deprec */
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
 
@@ -4943,6 +5355,7 @@ test_file(void)
 
     test_filespace_compatible();                /* Test compatibility for file space management */
     test_filespace_round_compatible();          /* Testing file space compatibility for files from trunk to 1_8 to trunk */
+    test_filespace_1_10_0_compatible();          /* Testing file space compatibility for files from release 1.10.0 */
 
     test_libver_bounds();                       /* Test compatibility for file space management */
     test_libver_macros();                       /* Test the macros for library version comparison */
