@@ -98,7 +98,7 @@
   foreach (listfiles ${LIST_HDF5_TEST_FILES} ${LIST_OTHER_TEST_FILES})
     get_filename_component(fname "${listfiles}" NAME)
     HDFTEST_COPY_FILE("${listfiles}" "${PROJECT_BINARY_DIR}/testfiles/${fname}" "h5ls_files")
-  endforeach (listfiles ${LIST_HDF5_TEST_FILES} ${LIST_OTHER_TEST_FILES})
+  endforeach ()
   add_custom_target(h5ls_files ALL COMMENT "Copying files needed by h5ls tests" DEPENDS ${h5ls_files_list})
 
 ##############################################################################
@@ -118,7 +118,7 @@
       if (NOT "${last_test}" STREQUAL "")
         set_tests_properties (H5LS-${resultfile} PROPERTIES DEPENDS ${last_test})
       endif ()
-    else (HDF5_ENABLE_USING_MEMCHECKER)
+    else ()
       add_test (
           NAME H5LS-${resultfile}
           COMMAND "${CMAKE_COMMAND}"
@@ -130,8 +130,35 @@
               -D "TEST_REFERENCE=${resultfile}.ls"
               -P "${HDF_RESOURCES_EXT_DIR}/runTest.cmake"
       )
-    endif (HDF5_ENABLE_USING_MEMCHECKER)
-  ENDMACRO (ADD_H5_TEST file)
+    endif ()
+  ENDMACRO ()
+
+  MACRO (ADD_H5_UD_TEST testname resultcode resultfile)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
+      # Remove any output file left over from previous test run
+      add_test (
+          NAME H5LS_UD-${testname}-clearall-objects
+          COMMAND    ${CMAKE_COMMAND}
+              -E remove
+              testfiles/${resultfile}.out
+              testfiles/${resultfile}.out.err
+      )
+      add_test (
+          NAME H5LS_UD-${testname}
+          COMMAND "${CMAKE_COMMAND}"
+              -D "TEST_PROGRAM=$<TARGET_FILE:h5ls>"
+              -D "TEST_ARGS=${ARGN}"
+              -D "TEST_FOLDER=${PROJECT_BINARY_DIR}/testfiles"
+              -D "TEST_OUTPUT=${resultfile}.out"
+              -D "TEST_EXPECT=${resultcode}"
+              -D "TEST_REFERENCE=${resultfile}.ls"
+              -D "TEST_ENV_VAR=HDF5_PLUGIN_PATH"
+              -D "TEST_ENV_VALUE=${CMAKE_BINARY_DIR}/plugins"
+              -P "${HDF_RESOURCES_EXT_DIR}/runTest.cmake"
+      )
+      set_tests_properties (H5LS_UD-${testname} PROPERTIES DEPENDS H5LS_UD-${testname}-clearall-objects)
+    endif ()
+  ENDMACRO ()
 
 ##############################################################################
 ##############################################################################
@@ -255,9 +282,22 @@
     set_tests_properties (H5LS-clearall-objects PROPERTIES WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles")
     if (NOT "${last_test}" STREQUAL "")
       set_tests_properties (H5LS-clearall-objects PROPERTIES DEPENDS ${last_test})
-    endif (NOT "${last_test}" STREQUAL "")
+    endif ()
     set (last_test "H5LS-clearall-objects")
-  endif (HDF5_ENABLE_USING_MEMCHECKER)
+  endif ()
+
+# See which filters are usable (and skip tests for filters we
+# don't have).  Do this by searching H5pubconf.h to see which
+# filters are defined.
+
+# detect whether the encoder is present.
+  if (H5_HAVE_FILTER_DEFLATE)
+    set (USE_FILTER_DEFLATE "true")
+  endif ()
+
+  if (H5_HAVE_FILTER_SZIP)
+    set (USE_FILTER_SZIP "true")
+  endif ()
 
   # test the help syntax
   ADD_H5_TEST (help-1 0 -w80 -h)
