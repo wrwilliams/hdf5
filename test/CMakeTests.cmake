@@ -176,6 +176,12 @@ set (HDF5_REFERENCE_TEST_FILES
     fsm_aggr_nopersist.h5
     fsm_aggr_persist.h5
     group_old.h5
+    h5fc_ext1_i.h5
+    h5fc_ext1_f.h5
+    h5fc_ext2_if.h5
+    h5fc_ext2_sf.h5
+    hfc_ext3_isf.h5
+    h5fc_ext_none.h5
     le_data.h5
     le_extlink1.h5
     le_extlink2.h5
