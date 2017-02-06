@@ -374,6 +374,8 @@
 ./c++/src/H5Include.h
 ./c++/src/H5IntType.cpp
 ./c++/src/H5IntType.h
+./c++/src/H5LaccProp.cpp
+./c++/src/H5LaccProp.h
 ./c++/src/H5Library.cpp
 ./c++/src/H5Library.h
 ./c++/src/H5Location.cpp
@@ -955,6 +957,8 @@
 ./test/flush2.c
 ./test/fsm_aggr_nopersist.h5
 ./test/fsm_aggr_persist.h5
+./test/genall5.c
+./test/genall5.h
 ./test/gen_bad_ohdr.c
 ./test/gen_bad_compound.c
 ./test/gen_bogus.c
@@ -978,8 +982,6 @@
 ./test/gen_sizes_lheap.c
 ./test/gen_specmetaread.c
 ./test/gen_udlinks.c
-./test/genall5.h
-./test/genall5.c
 ./test/getname.c
 ./test/gheap.c
 ./test/group_old.h5
