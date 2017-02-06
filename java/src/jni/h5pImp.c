@@ -4881,7 +4881,6 @@ Java_hdf_hdf5lib_H5_H5Pset_1virtual_1printf_1gap
         h5libraryError(env);
 } /* end Java_hdf_hdf5lib_H5_H5Pset_1virtual_1printf_1gap */
 
-
 /*
  * Class:     hdf_hdf5lib_H5
  * Method:    H5Pget_file_space_strategy
