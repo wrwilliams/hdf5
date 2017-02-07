@@ -39,14 +39,6 @@ static int verify_filters(hid_t pid, hid_t tid, int nfilters, filter_info_t *fil
  * Programmer: Pedro Vicente, pvn@hdfgroup.org
  *
  * Date: December 19, 2003
- *  Modified: December, 19, 2007 (exactly 4 years later :-) )
- *  Separate into 3 cases
- *  1) no filter input, get all datasets and compare DCPLs. TO DO
- *  2) filter input on selected datasets, get each one trough OBJ and match
- *  3) filter input on all datasets, get all objects and match
- *
- * Vailin Choi; April 2013
- * Add verification for file space info setting.
  *
  *-------------------------------------------------------------------------
  */
@@ -326,7 +318,6 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
         HGOTO_ERROR(FAIL, H5E_tools_min_id_g, "H5Pclose failed");
     if (H5Fclose(fidin) < 0)
         HGOTO_ERROR(FAIL, H5E_tools_min_id_g, "H5Fclose failed");
-
     if (H5Fclose(fidout) < 0)
         HGOTO_ERROR(FAIL, H5E_tools_min_id_g, "H5Fclose failed");
 

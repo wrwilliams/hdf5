@@ -1262,7 +1262,7 @@ dump_fcpl(hid_t fid)
     /* Take out this because the driver used can be different from the
      * standard output. */
     /*indentation(dump_indent + COL);
-    PRINTSTREAM(rawoutstream, "%s %s\n","FILE_DRIVER", dname)*/
+    PRINTSTREAM(rawoutstream, "%s %s\n","FILE_DRIVER", dname);*/
 #endif
     indentation(dump_indent + COL);
     PRINTSTREAM(rawoutstream, "%s %u\n","ISTORE_K", istore_ik);

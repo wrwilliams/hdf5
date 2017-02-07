@@ -29,6 +29,7 @@
       ${HDF5_TOOLS_DIR}/testfiles/tslink.h5
       ${HDF5_TOOLS_DIR}/testfiles/tsoftlinks.h5
       ${HDF5_TOOLS_DIR}/testfiles/tstr.h5
+      ${HDF5_TOOLS_DIR}/testfiles/tudfilter.h5
       ${HDF5_TOOLS_DIR}/testfiles/tudlink.h5
       ${HDF5_TOOLS_DIR}/testfiles/tvldtypes1.h5
   )
@@ -86,6 +87,7 @@
       ${HDF5_TOOLS_DIR}/testfiles/tsaf.ls
       ${HDF5_TOOLS_DIR}/testfiles/tslink-1.ls
       ${HDF5_TOOLS_DIR}/testfiles/tstr-1.ls
+      ${HDF5_TOOLS_DIR}/testfiles/tudfilter.ls
       ${HDF5_TOOLS_DIR}/testfiles/tudlink-1.ls
       ${HDF5_TOOLS_DIR}/testfiles/tvldtypes1.ls
       ${HDF5_TOOLS_DIR}/testfiles/tvldtypes2le.ls
@@ -428,3 +430,8 @@
   else (H5_WORDS_BIGENDIAN)
     ADD_H5_TEST (tdataregle 0 -v tdatareg.h5)
   endif (H5_WORDS_BIGENDIAN)
+
+##############################################################################
+###    P L U G I N  T E S T S
+##############################################################################
+ADD_H5_UD_TEST (h5ls_plugin_test 0 tudfilter -w80 -d tudfilter.h5)

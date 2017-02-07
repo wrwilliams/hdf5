@@ -230,21 +230,22 @@ static void leave(int ret)
 }
 
 /*-------------------------------------------------------------------------
-* Function: read_info
-*
-* Purpose: read comp and chunk options from a file
-*
-* Return: void, exit on error
-*
-* Programmer: pvn@ncsa.uiuc.edu
-*
-* Date: September, 22, 2003
-*
-*-------------------------------------------------------------------------
-*/
-static int read_info(const char *filename, pack_opt_t *options)
+ * Function: read_info
+ *
+ * Purpose: read comp and chunk options from a file
+ *
+ * Return: void, exit on error
+ *
+ * Programmer: pvn@ncsa.uiuc.edu
+ *
+ * Date: September, 22, 2003
+ *
+ *-------------------------------------------------------------------------
+ */
+static
+int read_info(const char *filename, pack_opt_t *options)
 {
-    char stype[10];
+    char stype[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     char comp_info[1024];
     FILE *fp = NULL;
     char c;
@@ -371,13 +372,14 @@ done:
 }
 
 /*-------------------------------------------------------------------------
-* Function: parse_command_line
-*
-* Purpose: parse command line input
-*
-*-------------------------------------------------------------------------
-*/
-static int parse_command_line(int argc, const char **argv, pack_opt_t* options)
+ * Function: parse_command_line
+ *
+ * Purpose: parse command line input
+ *
+ *-------------------------------------------------------------------------
+ */
+static
+int parse_command_line(int argc, const char **argv, pack_opt_t* options)
 {
     int opt;
     int ret_value = 0;
@@ -475,7 +477,7 @@ static int parse_command_line(int argc, const char **argv, pack_opt_t* options)
                     int idx = 0;
                     int ssize = 0;
                     char *msgPtr = HDstrchr( opt_arg, ':');
-                    options->latest = 1; /* must use latest format */
+                    options->latest = TRUE; /* must use latest format */
                     if (msgPtr == NULL) {
                         ssize = HDatoi( opt_arg );
                         for (idx = 0; idx < 5; idx++)
@@ -642,14 +644,14 @@ int main(int argc, const char **argv)
     }
 
     /* initialize options  */
-    h5repack_init(&options, 0);
+    h5repack_init(&options, 0, FALSE);
 
     if (parse_command_line(argc, argv, &options) < 0)
         goto done;
 
     /* get file names if they were not yet got */
-    if (has_i_o == 0)
-    {
+    if (has_i_o == 0) {
+
         if (argv[opt_ind] != NULL && argv[opt_ind + 1] != NULL) {
             infile = argv[opt_ind];
             outfile = argv[opt_ind + 1];

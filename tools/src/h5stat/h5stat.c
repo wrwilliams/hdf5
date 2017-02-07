@@ -1494,9 +1494,6 @@ print_attr_info(const iter_t *iter)
  *
  * Programmer: Vailin Choi; July 7th, 2009
  *
- * Modifications:
- *	Vailin Choi; April 2013
- *	Modifications due to changes for H5Fget_file_space_strategy().
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1702,9 +1699,7 @@ print_statistics(const char *name, const iter_t *iter)
  * Modifications:
  *      2/2010; Vailin Choi
  *      Get the size of user block
- *	
- *	Vailin Choi; April 2013
- *	Modifications due to changes for H5Fget_file_space_strategy().
+ *
  *-------------------------------------------------------------------------
  */
 int

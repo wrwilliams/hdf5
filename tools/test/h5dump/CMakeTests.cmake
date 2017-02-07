@@ -166,6 +166,7 @@
       ${HDF5_TOOLS_DIR}/testfiles/tstring2.ddl
       ${HDF5_TOOLS_DIR}/testfiles/tstringe.ddl
       ${HDF5_TOOLS_DIR}/testfiles/tszip.ddl
+      ${HDF5_TOOLS_DIR}/testfiles/tudfilter.ddl
       ${HDF5_TOOLS_DIR}/testfiles/tudlink-1.ddl
       ${HDF5_TOOLS_DIR}/testfiles/tudlink-2.ddl
       ${HDF5_TOOLS_DIR}/testfiles/tuserfilter.ddl
@@ -291,6 +292,7 @@
       ${HDF5_TOOLS_DIR}/testfiles/tstr.h5
       ${HDF5_TOOLS_DIR}/testfiles/tstr2.h5
       ${HDF5_TOOLS_DIR}/testfiles/tstr3.h5
+      ${HDF5_TOOLS_DIR}/testfiles/tudfilter.h5
       ${HDF5_TOOLS_DIR}/testfiles/tudlink.h5
       ${HDF5_TOOLS_DIR}/testfiles/tvldtypes1.h5
       ${HDF5_TOOLS_DIR}/testfiles/tvldtypes2.h5
@@ -1448,3 +1450,8 @@
 
   # test for non-existing file
   ADD_H5_TEST (non_existing 1 --enable-error-stack tgroup.h5 non_existing.h5)
+
+##############################################################################
+###    P L U G I N  T E S T S
+##############################################################################
+ADD_H5_UD_TEST (h5dump_plugin_test 0 tudfilter --enable-error-stack tudfilter.h5)

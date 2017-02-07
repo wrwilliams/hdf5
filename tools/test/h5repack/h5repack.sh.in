@@ -347,6 +347,7 @@ VERIFY_LAYOUT_VDS()
     shift
     shift
     shift
+
     TESTING  $H5REPACK $@
     (
         cd $TESTDIR
