@@ -1421,6 +1421,7 @@
 
 ./tools/src/misc/Makefile.am
 ./tools/src/misc/h5cc.in
+./tools/src/misc/h5clear.c
 ./tools/src/misc/h5debug.c
 ./tools/src/misc/h5mkgrp.c
 ./tools/src/misc/h5redeploy.in
@@ -1446,6 +1447,9 @@
 ./tools/test/misc/vds/UC_5.h
 ./tools/test/misc/vds/UC_5_stride_gen.c
 ./tools/test/misc/vds/UC_common.h
+./tools/test/misc/h5clear_gentest.c
+./tools/test/misc/clear_open_chk.c
+./tools/test/misc/testh5clear.sh.in
 
 # h5stat sources
 ./tools/src/h5stat/Makefile.am

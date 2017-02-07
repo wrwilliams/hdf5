@@ -3405,6 +3405,7 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  tools/test/h5copy/Makefile
                  tools/test/h5copy/testh5copy.sh
                  tools/test/misc/Makefile
+                 tools/test/misc/testh5clear.sh
                  tools/test/misc/testh5mkgrp.sh
                  tools/test/misc/testh5repart.sh
                  tools/test/misc/vds/Makefile
