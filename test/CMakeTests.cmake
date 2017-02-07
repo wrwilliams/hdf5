@@ -544,6 +544,9 @@ set (test_CLEANFILES
     vds_dapl.h5
     vds_src_0.h5
     vds_src_1.h5
+    use_use_append_chunk.h5
+    use_append_mchunks.h5
+    use_disable_mdc_flushes.h5
     tbogus.h5.copy
     accum_swmr_big.h5
     cache_logging.h5
@@ -975,6 +978,11 @@ set_tests_properties (H5PLUGIN-plugin PROPERTIES
     ENVIRONMENT "HDF5_PLUGIN_PATH=${CMAKE_BINARY_DIR}/testdir1${CMAKE_SEP}${CMAKE_BINARY_DIR}/testdir2;srcdir=${HDF5_TEST_BINARY_DIR}"
     WORKING_DIRECTORY ${HDF5_TEST_BINARY_DIR}
 )
+
+##############################################################################
+###    S W M R  T E S T S
+##############################################################################
+#       test_usecases.sh: use_append_chunk, use_append_mchunks, use_disable_mdc_flushes
 
 ##############################################################################
 ##############################################################################

@@ -28,8 +28,11 @@ AM_CPPFLAGS+=-I$(top_srcdir)/src -I$(top_builddir)/src
 #       testlibinfo.sh:
 #       testcheck_version.sh: tcheck_version
 #       tetlinks_env.sh: links_env
-TEST_SCRIPT = testerror.sh testlibinfo.sh testcheck_version.sh testlinks_env.sh
-SCRIPT_DEPEND = error_test$(EXEEXT) err_compat$(EXEEXT) links_env$(EXEEXT)
+#       test_usecases.sh: use_append_chunk, use_append_mchunks, use_disable_mdc_flushes
+TEST_SCRIPT = testerror.sh testlibinfo.sh testcheck_version.sh testlinks_env.sh \
+    test_usecases.sh
+SCRIPT_DEPEND = error_test$(EXEEXT) err_compat$(EXEEXT) links_env$(EXEEXT) \
+    use_append_chunk$(EXEEXT) use_append_mchunks$(EXEEXT) use_disable_mdc_flushes$(EXEEXT)
 if HAVE_SHARED_CONDITIONAL
   TEST_SCRIPT += test_plugin.sh
   SCRIPT_DEPEND += plugin$(EXEEXT)
@@ -58,12 +61,13 @@ TEST_PROG= testhdf5 \
 # tcheck_version is used by testcheck_version.sh.
 # accum_swmr_reader is used by accum.c.
 # links_env is used by testlinks_env.sh
+# use_append_chunk, use_append_mchunks and use_disable_mdc_flushes are used by test_usecases.sh
 # 'make check' doesn't run them directly, so they are not included in TEST_PROG.
 # Also build testmeta, which is used for timings test.  It builds quickly,
 # and this lets automake keep all its test programs in one place.
 check_PROGRAMS=$(TEST_PROG) error_test err_compat tcheck_version \
     testmeta accum_swmr_reader \
-    links_env 
+    links_env use_append_chunk use_append_mchunks use_disable_mdc_flushes
 if HAVE_SHARED_CONDITIONAL
   check_PROGRAMS+= plugin
 endif
@@ -174,6 +178,12 @@ testhdf5_SOURCES=testhdf5.c tarray.c tattr.c tchecksum.c tconfig.c tfile.c \
     trefer.c trefstr.c tselect.c tskiplist.c tsohm.c ttime.c ttst.c tunicode.c \
     tvlstr.c tvltypes.c
 
+# Sources for Use Cases
+use_append_chunk_SOURCES=use_append_chunk.c use_common.c
+use_append_mchunks_SOURCES=use_append_mchunks.c use_common.c
+use_disable_mdc_flushes_SOURCES=use_disable_mdc_flushes.c
+
 # Temporary files.
-DISTCLEANFILES=testerror.sh testlibinfo.sh testcheck_version.sh testlinks_env.sh test_plugin.sh
+DISTCLEANFILES=testerror.sh testlibinfo.sh testcheck_version.sh testlinks_env.sh test_plugin.sh \
+    test_usecases.sh
 include $(top_srcdir)/config/conclude.am
