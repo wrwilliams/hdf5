@@ -43,6 +43,21 @@ set (HDF5_TEST_FILES
   tnullspace.h5
 )
 
+add_custom_command (
+    TARGET     accum_swmr_reader
+    POST_BUILD
+    COMMAND    ${CMAKE_COMMAND}
+    ARGS       -E copy_if_different "$<TARGET_FILE:accum_swmr_reader>" "${PROJECT_BINARY_DIR}/H5TEST/accum_swmr_reader"
+)
+if (BUILD_SHARED_LIBS)
+  add_custom_command (
+      TARGET     accum_swmr_reader
+      POST_BUILD
+      COMMAND    ${CMAKE_COMMAND}
+      ARGS       -E copy_if_different "$<TARGET_FILE:accum_swmr_reader>" "${PROJECT_BINARY_DIR}/H5TEST-shared/accum_swmr_reader"
+  )
+endif ()
+
 foreach (h5_tfile ${HDF5_TEST_FILES})
   HDFTEST_COPY_FILE("${HDF5_TOOLS_DIR}/testfiles/${h5_tfile}" "${PROJECT_BINARY_DIR}/H5TEST/${h5_tfile}" "HDF5_TEST_LIB_files")
   if (BUILD_SHARED_LIBS)
@@ -455,6 +470,13 @@ set (test_CLEANFILES
     tvlstr.h5
     tvlstr2.h5
     flush.h5
+    flush-swmr.h5
+    noflush.h5
+    noflush-swmr.h5
+    flush_extend.h5
+    flush_extend-swmr.h5
+    noflush_extend.h5
+    noflush_extend-swmr.h5
     enum1.h5
     titerate.h5
     ttsafe.h5
@@ -523,6 +545,7 @@ set (test_CLEANFILES
     vds_src_0.h5
     vds_src_1.h5
     tbogus.h5.copy
+    accum_swmr_big.h5
     cache_logging.h5
     cache_logging.out
 )

@@ -348,6 +348,21 @@ foreach (test ${H5_CHECK_TESTS})
   ADD_H5_EXE(${test})
 endforeach ()
 
+#-- Adding test for accum_swmr_reader
+#   This has to be copied to the test directory for execve() to find it
+#   and it can't be renamed (i.e., no <foo>-shared).
+add_executable (accum_swmr_reader ${HDF5_TEST_SOURCE_DIR}/accum_swmr_reader.c)
+TARGET_NAMING (accum_swmr_reader STATIC)
+TARGET_C_PROPERTIES (accum_swmr_reader STATIC " " " ")
+target_link_libraries (accum_swmr_reader ${HDF5_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
+set_target_properties (accum_swmr_reader PROPERTIES FOLDER test)
+
+#-- Set accum dependencies
+set_target_properties (accum PROPERTIES DEPENDS accum_swmr_reader)
+if (BUILD_SHARED_LIBS)
+  set_target_properties (accum-shared PROPERTIES DEPENDS accum_swmr_reader)
+endif ()
+
 #-- Adding test for libinfo
 set (GREP_RUNNER ${PROJECT_BINARY_DIR}/GrepRunner.cmake)
 file (WRITE ${GREP_RUNNER}

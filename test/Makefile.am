@@ -56,12 +56,13 @@ TEST_PROG= testhdf5 \
 # List programs to be built when testing here.
 # error_test and err_compat are built at the same time as the other tests, but executed by testerror.sh.
 # tcheck_version is used by testcheck_version.sh.
+# accum_swmr_reader is used by accum.c.
 # links_env is used by testlinks_env.sh
 # 'make check' doesn't run them directly, so they are not included in TEST_PROG.
 # Also build testmeta, which is used for timings test.  It builds quickly,
 # and this lets automake keep all its test programs in one place.
 check_PROGRAMS=$(TEST_PROG) error_test err_compat tcheck_version \
-    testmeta \
+    testmeta accum_swmr_reader \
     links_env 
 if HAVE_SHARED_CONDITIONAL
   check_PROGRAMS+= plugin
