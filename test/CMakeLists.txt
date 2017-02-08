@@ -345,6 +345,7 @@ set (H5_CHECK_TESTS
     atomic_writer
     atomic_reader
     links_env
+    flushrefresh
 )
 
 foreach (test ${H5_CHECK_TESTS})

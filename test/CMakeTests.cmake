@@ -549,6 +549,12 @@ set (test_CLEANFILES
     use_append_mchunks.h5
     use_disable_mdc_flushes.h5
     tbogus.h5.copy
+    flushrefresh.h5
+    flushrefresh_VERIFICATION_START
+    flushrefresh_VERIFICATION_CHECKPOINT1
+    flushrefresh_VERIFICATION_CHECKPOINT2
+    flushrefresh_VERIFICATION_DONE
+    atomic_data
     accum_swmr_big.h5
     cache_logging.h5
     cache_logging.out
@@ -984,6 +990,7 @@ set_tests_properties (H5PLUGIN-plugin PROPERTIES
 ##############################################################################
 ###    S W M R  T E S T S
 ##############################################################################
+#       testflushrefresh.sh: flushrefresh
 #       test_usecases.sh: use_append_chunk, use_append_mchunks, use_disable_mdc_flushes
 
 ##############################################################################
