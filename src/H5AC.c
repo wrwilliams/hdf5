@@ -404,8 +404,7 @@ H5AC_cache_image_pending(const H5F_t *f)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr, 
-            H5AC_cache_image_config_t * image_config_ptr)
+H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr, H5AC_cache_image_config_t * image_config_ptr)
 {
 #ifdef H5_HAVE_PARALLEL
     char 	 prefix[H5C__PREFIX_LEN] = "";
@@ -946,8 +945,7 @@ H5AC_get_entry_status(const H5F_t *f, haddr_t addr, unsigned *status)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Bad param(s) on entry.")
 
     if(H5C_get_entry_status(f, addr, NULL, &in_cache, &is_dirty,
-            &is_protected, &is_pinned, &is_corked, &is_flush_dep_parent, 
-            &is_flush_dep_child, &image_is_up_to_date) < 0)
+            &is_protected, &is_pinned, &is_corked, &is_flush_dep_parent, &is_flush_dep_child, &image_is_up_to_date) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_get_entry_status() failed.")
 
     if(in_cache) {
@@ -1047,7 +1045,7 @@ H5AC_insert_entry(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t add
 
     /* Check for invalid access request */
     if(0 == (H5F_INTENT(f) & H5F_ACC_RDWR))
-        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "no write intent on file")
+	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "no write intent on file")
 
 #if H5AC__TRACE_FILE_ENABLED
     /* For the insert, only the addr, size, type id and flags are really
@@ -1608,24 +1606,21 @@ done:
 herr_t
 H5AC_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
 {
-    herr_t                      ret_value = SUCCEED;      /* Return value */
+    herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    /* sanity checks */
+    /* Sanity checks */
     HDassert(f);
     HDassert(f->shared);
     HDassert(f->shared->cache);
 
     if(H5C_prep_for_file_close(f, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                    "cache prep for file close failed")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "cache prep for file close failed")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
-
-} /* H5C_prep_for_file_close() */
+} /* H5AC_prep_for_file_close() */
 
 
 /*-------------------------------------------------------------------------

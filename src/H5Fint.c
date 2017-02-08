@@ -147,8 +147,6 @@ H5F_get_access_plist(H5F_t *f, hbool_t app_ref)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
 
     /* Copy properties of the file access property list */
-    if(H5P_set(new_plist, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME, &(f->shared->mdc_initCacheImageCfg)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set initial metadata cache resize config.")
     if(H5P_set(new_plist, H5F_ACS_META_CACHE_INIT_CONFIG_NAME, &(f->shared->mdc_initCacheCfg)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set initial metadata cache resize config.")
     if(H5P_set(new_plist, H5F_ACS_DATA_CACHE_NUM_SLOTS_NAME, &(f->shared->rdcc_nslots)) < 0)
@@ -196,6 +194,8 @@ H5F_get_access_plist(H5F_t *f, hbool_t app_ref)
     if(H5P_set(new_plist, H5F_ACS_COLL_MD_WRITE_FLAG_NAME, &(f->coll_md_write)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set collective metadata read flag")
 #endif /* H5_HAVE_PARALLEL */
+    if(H5P_set(new_plist, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME, &(f->shared->mdc_initCacheImageCfg)) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set initial metadata cache resize config.")
 
     /* Prepare the driver property */
     driver_prop.driver_id = f->shared->lf->driver_id;
@@ -652,16 +652,13 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
 
         /* Temporary for multi/split drivers: fail file creation 
              when persisting free-space or using paged aggregation strategy */
-        if(H5F_HAS_FEATURE(f, H5FD_FEAT_PAGED_AGGR)) {
+        if(H5F_HAS_FEATURE(f, H5FD_FEAT_PAGED_AGGR))
             if(f->shared->fs_strategy == H5F_FSPACE_STRATEGY_PAGE || f->shared->fs_persist)
                 HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't open with this strategy or persistent fs")
-        }
 
         /* Get the FAPL values to cache */
         if(NULL == (plist = (H5P_genplist_t *)H5I_object(fapl_id)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not file access property list")
-        if(H5P_get(plist, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME, &(f->shared->mdc_initCacheImageCfg)) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get initial metadata cache resize config")
         if(H5P_get(plist, H5F_ACS_META_CACHE_INIT_CONFIG_NAME, &(f->shared->mdc_initCacheCfg)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get initial metadata cache resize config")
         if(H5P_get(plist, H5F_ACS_DATA_CACHE_NUM_SLOTS_NAME, &(f->shared->rdcc_nslots)) < 0)
@@ -704,6 +701,8 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
         if(H5P_get(plist, H5F_ACS_COLL_MD_WRITE_FLAG_NAME, &(f->coll_md_write)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get collective metadata write flag")
 #endif /* H5_HAVE_PARALLEL */
+        if(H5P_get(plist, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME, &(f->shared->mdc_initCacheImageCfg)) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get initial metadata cache resize config")
 
         /* Get the VFD values to cache */
         f->shared->maxaddr = H5FD_get_maxaddr(lf);
@@ -904,7 +903,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
          *
          * Verify this.
          */
-        HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
+        HDassert(H5AC_cache_is_clean(f, H5AC_RING_MDFSM));
 
         /* Release objects that depend on the superblock being initialized */
         if(f->shared->sblock) {
@@ -932,7 +931,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                 /* at this point, only the superblock and superblock
                  * extension should be dirty.
                  */
-                HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
+                HDassert(H5AC_cache_is_clean(f, H5AC_RING_MDFSM));
 
                 /* Flush the file again (if requested), as shutting down the
                  * free space manager may dirty some data structures again.
@@ -944,6 +943,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
 
                     /* Mark superblock dirty in cache, so change will get encoded */
                     if(H5F_super_dirty(f) < 0)
+                        /* Push error, but keep going*/
                         HDONE_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
 
                     /* Release any space allocated to space aggregators, 
@@ -955,19 +955,18 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                      */
                     if(H5MF_free_aggrs(f, dxpl_id) < 0)
                         /* Push error, but keep going*/
-                        HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, \
-                                    "can't release file space")
+                        HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file space")
 
                     /* Truncate the file to the current allocated size */
                     if(H5FD_truncate(f->shared->lf, dxpl_id, TRUE) < 0)
-                        HDONE_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, \
-                                    "low level truncate failed")
+                        /* Push error, but keep going*/
+                        HDONE_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "low level truncate failed")
 
                     /* at this point, only the superblock and superblock
                      * extension should be dirty.
                      */
-                    HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
-                } /* end if(flush) */
+                    HDassert(H5AC_cache_is_clean(f, H5AC_RING_MDFSM));
+		} /* end if */
             } /* end if */
 
             /* if it exists, unpin the driver information block cache entry,
@@ -990,8 +989,8 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
          *
          * Verify this.
          */
-        HDassert(H5AC_cache_is_clean(f, H5C_RING_MDFSM));
-
+        HDassert(H5AC_cache_is_clean(f, H5AC_RING_MDFSM));
+ 
         /* Remove shared file struct from list of open files */
         if(H5F_sfile_remove(f->shared) < 0)
             /* Push error, but keep going*/
@@ -1339,7 +1338,7 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get minimum metadata fraction of page buffer")
         if(H5P_get(a_plist, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_NAME, &page_buf_min_raw_perc) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get minimum raw data fraction of page buffer")
-    }
+    } /* end if */
 
     /*
      * Read or write the file superblock, depending on whether the file is
@@ -1373,11 +1372,6 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
         /* Read the superblock if it hasn't been read before. */
         if(H5F__super_read(file, dxpl_id, TRUE) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_READERROR, NULL, "unable to read superblock")
-
-        /* create the page buffer after reading the superblock */
-        if(page_buf_size)
-            if(H5PB_create(file, page_buf_size, page_buf_min_meta_perc, page_buf_min_raw_perc) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to create page buffer")
 
         /* Open the root group */
         if(H5G_mkroot(file, dxpl_id, FALSE) < 0)
@@ -1489,10 +1483,9 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
     ret_value = file;
 
 done:
-    if(!ret_value && file)
+    if((NULL == ret_value) && file)
         if(H5F_dest(file, dxpl_id, FALSE) < 0)
             HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, NULL, "problems closing file")
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F_open() */
 
@@ -1554,9 +1547,9 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush metadata cache")
 
-
     /* Truncate the file to the current allocated size */
     if(H5FD_truncate(f->shared->lf, dxpl_id, closing) < 0)
+        /* Push error, but keep going*/
         HDONE_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "low level truncate failed")
 
     /* Flush the entire metadata cache again since the EOA could have changed in the truncate call. */
@@ -1567,6 +1560,7 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
     /* Set up I/O info for operation */
     fio_info.f = f;
     if(NULL == (fio_info.dxpl = (H5P_genplist_t *)H5I_object(dxpl_id)))
+        /* Push error, but keep going*/
         HDONE_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
 
     /* Flush out the metadata accumulator */

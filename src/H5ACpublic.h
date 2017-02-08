@@ -563,15 +563,10 @@ typedef struct H5AC_cache_config_t
 #define H5AC__CACHE_IMAGE__ENTRY_AGEOUT__MAX	100
 
 typedef struct H5AC_cache_image_config_t {
-
     int32_t                             version;
-
     hbool_t                             generate_image;
-
     hbool_t                             save_resize_status;
-
     int32_t                             entry_ageout;
-
 } H5AC_cache_image_config_t;
 
 #ifdef __cplusplus

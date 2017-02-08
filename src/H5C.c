@@ -136,8 +136,7 @@ static herr_t H5C__autoadjust__ageout__remove_all_markers(H5C_t * cache_ptr);
 static herr_t H5C__autoadjust__ageout__remove_excess_markers(H5C_t * cache_ptr);
 
 static herr_t H5C__flash_increase_cache_size(H5C_t * cache_ptr,
-                                             size_t old_entry_size,
-                                             size_t new_entry_size);
+    size_t old_entry_size, size_t new_entry_size);
 
 static herr_t H5C_flush_invalidate_cache(const H5F_t *  f,
                                           hid_t    dxpl_id,
@@ -306,7 +305,7 @@ H5C_create(size_t		      max_cache_size,
     } /* end for */
 
     if(NULL == (cache_ptr = H5FL_CALLOC(H5C_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     if(NULL == (cache_ptr->slist_ptr = H5SL_create(H5SL_TYPE_HADDR, NULL)))
         HGOTO_ERROR(H5E_CACHE, H5E_CANTCREATE, NULL, "can't create skip list.")
