@@ -2608,6 +2608,8 @@
 ./hl/tools/gif2h5/testfiles/image1.gif
 ./hl/tools/gif2h5/testfiles/h52giftst.h5
 #
+./hl/tools/h5watch/CMakeLists.txt
+./hl/tools/h5watch/CMakeTests.cmake
 ./hl/tools/h5watch/Makefile.am
 ./hl/tools/h5watch/extend_dset.c
 ./hl/tools/h5watch/h5watch.c
