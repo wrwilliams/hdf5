@@ -91,7 +91,8 @@ create_file(const char *filename, hbool_t verbose, FILE *verbose_file,
     /* We ALWAYS select the latest file format for SWMR */
     if(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
         return -1;
-#if 0
+
+#ifdef QAK
     if(verbose) {
         char verbose_name[1024];
 
@@ -99,7 +100,8 @@ create_file(const char *filename, hbool_t verbose, FILE *verbose_file,
 
         H5Pset_fapl_log(fapl, verbose_name, H5FD_LOG_ALL, (size_t)(512 * 1024 * 1024));
     } /* end if */
-#endif
+#endif /* QAK */
+
     /* Create file creation property list */
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         return -1;

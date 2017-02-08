@@ -184,15 +184,15 @@ H5FD_term_package(void)
 /*-------------------------------------------------------------------------
  * Function:	H5FD_free_cls
  *
- * Purpose:	Frees a file driver class struct and returns an indication of
+ * Purpose: Frees a file driver class struct and returns an indication of
  *          success. This function is used as the free callback for the
  *          virtual file layer object identifiers (cf H5FD__init_package).
  *
- * Return:	Success:	Non-negative
+ * Return:  Success:	Non-negative
  *
  *          Failure:	Negative
  *
- * Programmer:	Robb Matzke
+ * Programmer:  Robb Matzke
  *              Monday, July 26, 1999
  *
  * Modifications:
