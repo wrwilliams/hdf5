@@ -223,6 +223,7 @@ set (H5_TESTS
     objcopy
     links
     unlink
+    twriteorder
     big
     mtime
     fillval
@@ -341,6 +342,8 @@ set (H5_CHECK_TESTS
     err_compat
     tcheck_version
     testmeta
+    atomic_writer
+    atomic_reader
     links_env
 )
 

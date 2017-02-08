@@ -469,6 +469,7 @@ set (test_CLEANFILES
     tvltypes.h5
     tvlstr.h5
     tvlstr2.h5
+    twriteorder.dat
     flush.h5
     flush-swmr.h5
     noflush.h5
@@ -592,6 +593,7 @@ set (H5TEST_TESTS
     objcopy
     links
     unlink
+    twriteorder
     big
     mtime
     fillval

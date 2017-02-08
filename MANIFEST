@@ -890,15 +890,21 @@
 ./src/libhdf5.settings.in
 ./src/H5win32defs.h
 
+./test/AtomicWriterReader.txt
 ./test/COPYING
 ./test/H5srcdir.h
 ./test/H5srcdir_str.h.in
 ./test/Makefile.am
+./test/POSIX_Order_Write_Test_Report.docx
+./test/POSIX_Order_Write_Test_Report.pdf
+./test/SWMR_POSIX_Order_UG.txt
 ./test/SWMR_UseCase_UG.txt
 ./test/accum.c
 ./test/accum_swmr_reader.c
 ./test/aggr.h5
 ./test/app_ref.c
+./test/atomic_reader.c
+./test/atomic_writer.c
 ./test/bad_compound.h5
 ./test/be_data.h5
 ./test/be_extlink1.h5
@@ -1076,6 +1082,7 @@
 ./test/tunicode.c
 ./test/tvlstr.c
 ./test/tvltypes.c
+./test/twriteorder.c
 ./test/unlink.c
 ./test/unregister.c
 ./test/use_append_chunk.c

@@ -51,7 +51,7 @@ TEST_PROG= testhdf5 \
            evict_on_close farray earray btree2 fheap \
            pool accum hyperslab istore bittests dt_arith \
            dtypes dsets cmpd_dset filter_fail extend external efc objcopy links unlink \
-           big mtime fillval mount flush1 flush2 app_ref enum \
+           twriteorder big mtime fillval mount flush1 flush2 app_ref enum \
            set_extent ttsafe enc_dec_plist enc_dec_plist_cross_platform\
            getname vfd ntypes dangle dtransform reserved cross_read \
            freespace mf vds file_image unregister cache_logging cork swmr
@@ -60,13 +60,14 @@ TEST_PROG= testhdf5 \
 # error_test and err_compat are built at the same time as the other tests, but executed by testerror.sh.
 # tcheck_version is used by testcheck_version.sh.
 # accum_swmr_reader is used by accum.c.
+# atomic_writer and atomic_reader are standalone programs.
 # links_env is used by testlinks_env.sh
 # use_append_chunk, use_append_mchunks and use_disable_mdc_flushes are used by test_usecases.sh
 # 'make check' doesn't run them directly, so they are not included in TEST_PROG.
 # Also build testmeta, which is used for timings test.  It builds quickly,
 # and this lets automake keep all its test programs in one place.
 check_PROGRAMS=$(TEST_PROG) error_test err_compat tcheck_version \
-    testmeta accum_swmr_reader \
+    testmeta accum_swmr_reader atomic_writer atomic_reader \
     links_env use_append_chunk use_append_mchunks use_disable_mdc_flushes
 if HAVE_SHARED_CONDITIONAL
   check_PROGRAMS+= plugin
@@ -155,7 +156,9 @@ CHECK_CLEANFILES+=accum.h5 cmpd_dset.h5 compact_dataset.h5 dataset.h5 dset_offse
     stdio.h5 sec2.h5 dtypes[0-9].h5 dtypes1[0].h5 dt_arith[1-2].h5 tattr.h5 \
     tselect.h5 mtime.h5 unlink.h5 unicode.h5 coord.h5 \
     fillval_[0-9].h5 fillval.raw mount_[0-9].h5 testmeta.h5 ttime.h5 \
-    trefer[1-3].h5 tvltypes.h5 tvlstr.h5 tvlstr2.h5 flush.h5         \
+    trefer[1-3].h5 tvltypes.h5 tvlstr.h5 tvlstr2.h5 twriteorder.dat \
+    flush.h5 flush-swmr.h5 noflush.h5 noflush-swmr.h5 flush_extend.h5 \
+    flush_extend-swmr.h5 noflush_extend.h5 noflush_extend-swmr.h5 \
     enum1.h5 titerate.h5 ttsafe.h5 tarray1.h5 tgenprop.h5            \
     tmisc[0-9]*.h5 set_extent[1-5].h5 ext[12].bin           \
     getname.h5 getname[1-3].h5 sec2_file.h5 direct_file.h5           \
@@ -170,6 +173,7 @@ CHECK_CLEANFILES+=accum.h5 cmpd_dset.h5 compact_dataset.h5 dataset.h5 dset_offse
     split_get_file_image_test-m.h5 split_get_file_image_test-r.h5    \
     file_image_core_test.h5.copy unregister_filter_1.h5 unregister_filter_2.h5 \
     vds_virt.h5 vds_dapl.h5 vds_src_[0-1].h5 \
+    use_use_append_chunk.h5 use_append_mchunks.h5 use_disable_mdc_flushes.h5     \
     cache_logging.h5 cache_logging.out tbogus.h5.copy \
     swmr[0-2].h5
 # Sources for testhdf5 executable
