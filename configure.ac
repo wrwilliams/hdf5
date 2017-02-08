@@ -3457,6 +3457,8 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  hl/tools/Makefile
                  hl/tools/gif2h5/Makefile
                  hl/tools/gif2h5/h52giftest.sh
+                 hl/tools/h5watch/Makefile
+                 hl/tools/h5watch/testh5watch.sh
                  hl/examples/Makefile
                  hl/examples/run-hlc-ex.sh
                  hl/c++/Makefile
