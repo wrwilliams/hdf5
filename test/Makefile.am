@@ -30,10 +30,16 @@ AM_CPPFLAGS+=-I$(top_srcdir)/src -I$(top_builddir)/src
 #       tetlinks_env.sh: links_env
 #       testflushrefresh.sh: flushrefresh
 #       test_usecases.sh: use_append_chunk, use_append_mchunks, use_disable_mdc_flushes
+#       testswmr.sh: swmr*
+#       testvdsswmr.sh: vds_swmr*
 TEST_SCRIPT = testerror.sh testlibinfo.sh testcheck_version.sh testlinks_env.sh \
-    testflushrefresh.sh test_usecases.sh
+    testswmr.sh testvdsswmr.sh testflushrefresh.sh test_usecases.sh
 SCRIPT_DEPEND = error_test$(EXEEXT) err_compat$(EXEEXT) links_env$(EXEEXT) \
-    flushrefresh$(EXEEXT) use_append_chunk$(EXEEXT) use_append_mchunks$(EXEEXT) use_disable_mdc_flushes$(EXEEXT)
+    flushrefresh$(EXEEXT) use_append_chunk$(EXEEXT) use_append_mchunks$(EXEEXT) use_disable_mdc_flushes$(EXEEXT) \
+    swmr_generator$(EXEEXT) swmr_reader$(EXEEXT) swmr_writer$(EXEEXT) \
+    swmr_remove_reader$(EXEEXT) swmr_remove_writer$(EXEEXT) swmr_addrem_writer$(EXEEXT) \
+    swmr_sparse_reader$(EXEEXT) swmr_sparse_writer$(EXEEXT) swmr_start_write$(EXEEXT) \
+    vds_swmr_gen$(EXEEXT) vds_swmr_reader$(EXEEXT) vds_swmr_writer$(EXEEXT)
 if HAVE_SHARED_CONDITIONAL
   TEST_SCRIPT += test_plugin.sh
   SCRIPT_DEPEND += plugin$(EXEEXT)
@@ -65,13 +71,17 @@ TEST_PROG= testhdf5 \
 # links_env is used by testlinks_env.sh
 # flushrefresh is used by testflushrefresh.sh.
 # use_append_chunk, use_append_mchunks and use_disable_mdc_flushes are used by test_usecases.sh
+# swmr_* files (besides swmr.c) are used by testswmr.sh.
+# vds_swmr_* files are used by testvdsswmr.sh
 # 'make check' doesn't run them directly, so they are not included in TEST_PROG.
 # Also build testmeta, which is used for timings test.  It builds quickly,
 # and this lets automake keep all its test programs in one place.
 check_PROGRAMS=$(TEST_PROG) error_test err_compat tcheck_version \
     testmeta accum_swmr_reader atomic_writer atomic_reader \
     links_env flushrefresh use_append_chunk use_append_mchunks use_disable_mdc_flushes \
-    swmr_check_compat_vfd
+    swmr_generator swmr_start_write swmr_reader swmr_writer swmr_remove_reader \
+    swmr_remove_writer swmr_addrem_writer swmr_sparse_reader swmr_sparse_writer \
+    swmr_check_compat_vfd vds_swmr_gen vds_swmr_reader vds_swmr_writer
 if HAVE_SHARED_CONDITIONAL
   check_PROGRAMS+= plugin
 endif
@@ -112,7 +122,7 @@ else
   noinst_LTLIBRARIES=libh5test.la
 endif
 
-libh5test_la_SOURCES=h5test.c testframe.c cache_common.c genall5.c
+libh5test_la_SOURCES=h5test.c testframe.c cache_common.c swmr_common.c genall5.c
 
 # Use libhd5test.la to compile all of the tests
 LDADD=libh5test.la $(LIBHDF5)
@@ -176,13 +186,14 @@ CHECK_CLEANFILES+=accum.h5 cmpd_dset.h5 compact_dataset.h5 dataset.h5 dset_offse
     split_get_file_image_test-m.h5 split_get_file_image_test-r.h5    \
     file_image_core_test.h5.copy unregister_filter_1.h5 unregister_filter_2.h5 \
     vds_virt.h5 vds_dapl.h5 vds_src_[0-1].h5 \
-    use_use_append_chunk.h5 use_append_mchunks.h5 use_disable_mdc_flushes.h5     \
+    swmr_data.h5 use_use_append_chunk.h5 use_append_mchunks.h5 use_disable_mdc_flushes.h5     \
     flushrefresh.h5 flushrefresh_VERIFICATION_START                  \
     flushrefresh_VERIFICATION_CHECKPOINT1 flushrefresh_VERIFICATION_CHECKPOINT2 \
-    flushrefresh_VERIFICATION_DONE atomic_data accum_swmr_big.h5 \
-    cache_logging.h5 cache_logging.out tbogus.h5.copy \
-    swmr[0-2].h5 \
+    flushrefresh_VERIFICATION_DONE atomic_data accum_swmr_big.h5 ohdr_swmr.h5 \
+    test_swmr*.h5 cache_logging.h5 cache_logging.out vds_swmr.h5 vds_swmr_src_*.h5 \
+    swmr[0-2].h5 swmr_writer.out swmr_writer.log.* swmr_reader.out.* swmr_reader.log.* \
     tbogus.h5.copy
+
 # Sources for testhdf5 executable
 testhdf5_SOURCES=testhdf5.c tarray.c tattr.c tchecksum.c tconfig.c tfile.c \
     tgenprop.c th5o.c th5s.c tcoords.c theap.c tid.c titerate.c tmeta.c tmisc.c \
@@ -196,5 +207,6 @@ use_disable_mdc_flushes_SOURCES=use_disable_mdc_flushes.c
 
 # Temporary files.
 DISTCLEANFILES=testerror.sh testlibinfo.sh testcheck_version.sh testlinks_env.sh test_plugin.sh \
-    test_usecases.sh testflushrefresh.sh
+    testswmr.sh testvdsswmr.sh test_usecases.sh testflushrefresh.sh
+
 include $(top_srcdir)/config/conclude.am

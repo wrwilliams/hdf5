@@ -20,11 +20,13 @@ set (TEST_LIB_SOURCES
     ${HDF5_TEST_SOURCE_DIR}/h5test.c
     ${HDF5_TEST_SOURCE_DIR}/testframe.c
     ${HDF5_TEST_SOURCE_DIR}/cache_common.c
+    ${HDF5_TEST_SOURCE_DIR}/swmr_common.c
 )
 
 set (TEST_LIB_HEADERS
     ${HDF5_TEST_SOURCE_DIR}/h5test.h
     ${HDF5_TEST_SOURCE_DIR}/cache_common.h
+    ${HDF5_TEST_SOURCE_DIR}/swmr_common.h
 )
 
 add_library (${HDF5_TEST_LIB_TARGET} STATIC ${TEST_LIB_SOURCES} ${TEST_LIB_HEADERS})
@@ -257,6 +259,33 @@ foreach (test ${H5_TESTS})
   ADD_H5_EXE(${test})
 endforeach ()
 
+set (H5_SWMR_TESTS
+    swmr_addrem_writer
+    swmr_check_compat_vfd
+    swmr_generator
+    swmr_reader
+    swmr_remove_reader
+    swmr_remove_writer
+    swmr_sparse_reader
+    swmr_sparse_writer
+    swmr_start_write
+    swmr_writer
+)
+
+foreach (test ${H5_SWMR_TESTS})
+  ADD_H5_EXE(${test})
+endforeach ()
+
+set (H5_VDS_SWMR_TESTS
+    vds_swmr_gen
+    vds_swmr_reader
+    vds_swmr_writer
+)
+
+foreach (test ${H5_VDS_SWMR_TESTS})
+  ADD_H5_EXE(${test})
+endforeach (test ${H5_VDS_SWMR_TESTS})
+
 ##############################################################################
 ##############################################################################
 ###           A D D I T I O N A L   T E S T S                              ###
@@ -266,7 +295,6 @@ endforeach ()
 #-- Adding test for cache_image
 add_executable (cache_image
     ${HDF5_TEST_SOURCE_DIR}/cache_image.c
-    ${HDF5_TEST_SOURCE_DIR}/cache_common.c
     ${HDF5_TEST_SOURCE_DIR}/genall5.c
 )
 TARGET_NAMING (cache_image STATIC)
@@ -276,7 +304,6 @@ set_target_properties (cache_image PROPERTIES FOLDER test)
 if (BUILD_SHARED_LIBS)
   add_executable (cache_image-shared
     ${HDF5_TEST_SOURCE_DIR}/cache_image.c
-    ${HDF5_TEST_SOURCE_DIR}/cache_common.c
     ${HDF5_TEST_SOURCE_DIR}/genall5.c
   )
   TARGET_NAMING (cache_image-shared SHARED)

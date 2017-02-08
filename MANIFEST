@@ -1033,7 +1033,18 @@
 ./test/specmetaread.h5
 ./test/stab.c
 ./test/swmr.c
+./test/swmr_addrem_writer.c
 ./test/swmr_check_compat_vfd.c
+./test/swmr_common.c
+./test/swmr_common.h
+./test/swmr_generator.c
+./test/swmr_reader.c
+./test/swmr_remove_reader.c
+./test/swmr_remove_writer.c
+./test/swmr_sparse_reader.c
+./test/swmr_sparse_writer.c
+./test/swmr_start_write.c
+./test/swmr_writer.c
 ./test/tarray.c
 ./test/tarrold.h5
 ./test/tattr.c
@@ -1054,6 +1065,8 @@
 ./test/test_plugin.sh.in
 ./test/test_usecases.sh.in
 ./test/testmeta.c
+./test/testswmr.sh.in
+./test/testvdsswmr.sh.in
 ./test/tfile.c
 ./test/tgenprop.c
 ./test/th5o.c
@@ -1098,6 +1111,10 @@
 ./test/gen_filters.c
 ./test/chunk_info.c
 ./test/vds.c
+./test/vds_swmr.h
+./test/vds_swmr_gen.c
+./test/vds_swmr_reader.c
+./test/vds_swmr_writer.c
 
 ./test/testfiles/err_compat_1
 ./test/testfiles/err_compat_2

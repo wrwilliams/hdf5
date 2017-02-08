@@ -376,6 +376,10 @@ set (test_CLEANFILES
     layout_extend.h5
     zero_chunk.h5
     chunk_single.h5
+    swmr_non_latest.h5
+    earray_hdr_fd.h5
+    farray_hdr_fd.h5
+    bt2_hdr_fd.h5
     storage_size.h5
     dls_01_strings.h5
     extend.h5
@@ -545,6 +549,7 @@ set (test_CLEANFILES
     vds_dapl.h5
     vds_src_0.h5
     vds_src_1.h5
+    swmr_data.h5
     use_use_append_chunk.h5
     use_append_mchunks.h5
     use_disable_mdc_flushes.h5
@@ -556,8 +561,12 @@ set (test_CLEANFILES
     flushrefresh_VERIFICATION_DONE
     atomic_data
     accum_swmr_big.h5
+    ohdr_swmr.h5
+    test_swmr*.h5
     cache_logging.h5
     cache_logging.out
+    vds_swmr.h5
+    vds_swmr_src_*.h5
 )
 
 # Remove any output file left over from previous test run
