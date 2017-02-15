@@ -567,14 +567,24 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
     if(NULL == (dxpl = (H5P_genplist_t *)H5I_object(dxpl_id)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
 
-    /* if page buffering is disabled, 
-       or the I/O size is large than that of a single page, 
-       or if this is a parallel raw data access,
-       go to VFD directly */
+    /*  if page buffering is disabled,
+        or the I/O size is large than that of a single page,
+        or if this is a parallel raw data access,
+        go to VFD directly */
+    /*  Instead of going to the VFD directly, the accumulator is enabled.
+     *  Passing through the metadata accumulator layer fixes the long running time 
+     *  for test/fheap.c with the core driver.
+     *  But the real issue is with the core driver which will be addressed later.
+     */
     if(NULL == page_buf || size >= page_buf->page_size ||
        (mpio_bypass_pb && H5FD_MEM_DRAW == type)) {
-        if(H5FD_read(f->shared->lf, dxpl, type, addr, size, buf) < 0)
-            HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "driver read request failed");
+        H5F_io_info_t fio_info;             /* I/O info for operation */
+
+        /* Set up I/O info for operation */
+        fio_info.f = f;
+        fio_info.dxpl = dxpl;
+        if(H5F__accum_read(&fio_info, type, addr, size, buf) < 0)
+            HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "read through metadata accumulator failed")
 #if H5PB_COLLECT_STATS
         if(page_buf) {
             if(type == H5FD_MEM_DRAW)
@@ -865,13 +875,23 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
     if(NULL == (dxpl = (H5P_genplist_t *)H5I_object(dxpl_id)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
 
-    /* if page buffering is not enabled, 
-       or the I/O size is large than that of a single page, 
-       or if this is parallel access with mpio vfd, 
-       go to VFD directly */
+    /*  If page buffering is not enabled,
+        or the I/O size is large than that of a single page,
+        or if this is parallel access with mpio vfd,
+        go to VFD directly */
+    /*  Instead of going to the VFD directly, the accumulator is enabled.
+     *  Passing through the metadata accumulator layer fixes the long running time 
+     *  for test/fheap.c with the core driver.
+     *  But the real issue is with the core driver which will be addressed later.
+     */
     if(NULL == page_buf || size >= page_buf->page_size || mpio_bypass_pb) {
-        if(H5FD_write(f->shared->lf, dxpl, type, addr, size, buf) < 0)
-            HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "driver write request failed")
+        H5F_io_info_t fio_info;     /* I/O info for operation */
+
+        /* Set up I/O info for operation */
+        fio_info.f = f;
+        fio_info.dxpl = dxpl;
+        if(H5F__accum_write(&fio_info, type, addr, size, buf) < 0)
+            HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "write through metadata accumulator failed")
 #if H5PB_COLLECT_STATS
         if(page_buf) {
             if(type == H5FD_MEM_DRAW)

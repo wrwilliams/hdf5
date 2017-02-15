@@ -126,6 +126,7 @@ typedef struct fheap_test_param_t {
     fheap_test_fill_t fill;             /* How to "bulk" fill heap blocks */
     size_t actual_id_len;               /* The actual length of heap IDs for a test */
     fheap_test_comp_t comp;             /* Whether to compress the blocks or not */
+    hid_t my_fcpl;                      /* File creation property list with file space strategy setting */
 } fheap_test_param_t;
 
 /* Heap state information */
@@ -642,7 +643,7 @@ open_heap(char *filename, hid_t fapl, hid_t dxpl, const H5HF_create_t *cparam,
     h5_fixname(FILENAME[0], fapl, filename, (size_t)FHEAP_FILENAME_LEN);
 
     /* Create the file to work on */
-    if((*file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((*file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Check for deleting the entire heap */
@@ -1827,7 +1828,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static unsigned
-test_create(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t H5_ATTR_UNUSED *tparam)
+test_create(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tparam)
 {
     hid_t	file = -1;              /* File ID */
     char	filename[FHEAP_FILENAME_LEN];         /* Filename to use */
@@ -1844,7 +1845,7 @@ test_create(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t H5_ATTR_UNUSED
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC,  tparam->my_fcpl, fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Close file */
@@ -1944,7 +1945,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static unsigned
-test_reopen(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t H5_ATTR_UNUSED *tparam)
+test_reopen(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tparam)
 {
     hid_t	file = -1;              /* File ID */
     char	filename[FHEAP_FILENAME_LEN];         /* Filename to use */
@@ -1961,7 +1962,7 @@ test_reopen(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t H5_ATTR_UNUSED
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Close file */
@@ -2090,7 +2091,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static unsigned
-test_open_twice(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t H5_ATTR_UNUSED *tparam)
+test_open_twice(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tparam)
 {
     hid_t	file = -1;              /* File ID */
     hid_t	file2 = -1;             /* File ID */
@@ -2110,7 +2111,7 @@ test_open_twice(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t H5_ATTR_UN
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Close file */
@@ -2262,7 +2263,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static unsigned
-test_delete_open(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t H5_ATTR_UNUSED *tparam)
+test_delete_open(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tparam)
 {
     hid_t	file = -1;              /* File ID */
     char	filename[FHEAP_FILENAME_LEN];         /* Filename to use */
@@ -2280,7 +2281,7 @@ test_delete_open(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t H5_ATTR_U
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Close file */
@@ -2433,7 +2434,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static unsigned
-test_id_limits(hid_t fcpl, hid_t fapl, H5HF_create_t *cparam)
+test_id_limits(hid_t fapl, H5HF_create_t *cparam)
 {
     hid_t	file = -1;              /* File ID */
     hid_t       dxpl = H5AC_ind_read_dxpl_id;     /* DXPL to use */
@@ -2451,7 +2452,7 @@ test_id_limits(hid_t fcpl, hid_t fapl, H5HF_create_t *cparam)
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Get a pointer to the internal file object */
@@ -3199,7 +3200,7 @@ test_man_insert_weird(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tpa
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Get a pointer to the internal file object */
@@ -3309,7 +3310,7 @@ test_man_insert_first(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tpa
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Get a pointer to the internal file object */
@@ -3410,7 +3411,7 @@ test_man_insert_second(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tp
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -3507,7 +3508,7 @@ test_man_insert_root_mult(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t 
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -3606,7 +3607,7 @@ test_man_insert_force_indirect(hid_t fapl, H5HF_create_t *cparam, fheap_test_par
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -3712,7 +3713,7 @@ test_man_insert_fill_second(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -3819,7 +3820,7 @@ test_man_insert_third_direct(hid_t fapl, H5HF_create_t *cparam, fheap_test_param
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -3930,7 +3931,7 @@ test_man_fill_first_row(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *t
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -4026,7 +4027,7 @@ test_man_start_second_row(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t 
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -4129,7 +4130,7 @@ test_man_fill_second_row(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -4230,7 +4231,7 @@ test_man_start_third_row(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -4341,7 +4342,7 @@ test_man_fill_fourth_row(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -4438,7 +4439,7 @@ test_man_fill_all_root_direct(hid_t fapl, H5HF_create_t *cparam, fheap_test_para
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -4534,7 +4535,7 @@ test_man_first_recursive_indirect(hid_t fapl, H5HF_create_t *cparam, fheap_test_
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -4636,7 +4637,7 @@ test_man_second_direct_recursive_indirect(hid_t fapl, H5HF_create_t *cparam, fhe
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -4746,7 +4747,7 @@ test_man_fill_first_recursive_indirect(hid_t fapl, H5HF_create_t *cparam, fheap_
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -4849,7 +4850,7 @@ test_man_second_recursive_indirect(hid_t fapl, H5HF_create_t *cparam, fheap_test
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -4960,7 +4961,7 @@ test_man_fill_second_recursive_indirect(hid_t fapl, H5HF_create_t *cparam, fheap
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -5068,7 +5069,7 @@ test_man_fill_recursive_indirect_row(hid_t fapl, H5HF_create_t *cparam, fheap_te
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -5166,7 +5167,7 @@ test_man_start_2nd_recursive_indirect(hid_t fapl, H5HF_create_t *cparam, fheap_t
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -5275,7 +5276,7 @@ test_man_recursive_indirect_two_deep(hid_t fapl, H5HF_create_t *cparam, fheap_te
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -5378,7 +5379,7 @@ test_man_start_3rd_recursive_indirect(hid_t fapl, H5HF_create_t *cparam, fheap_t
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -5488,7 +5489,7 @@ test_man_fill_first_3rd_recursive_indirect(hid_t fapl, H5HF_create_t *cparam, fh
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -5599,7 +5600,7 @@ test_man_fill_3rd_recursive_indirect_row(hid_t fapl, H5HF_create_t *cparam, fhea
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -5706,7 +5707,7 @@ test_man_fill_all_3rd_recursive_indirect(hid_t fapl, H5HF_create_t *cparam, fhea
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -5814,7 +5815,7 @@ test_man_start_4th_recursive_indirect(hid_t fapl, H5HF_create_t *cparam, fheap_t
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -5929,7 +5930,7 @@ test_man_fill_first_4th_recursive_indirect(hid_t fapl, H5HF_create_t *cparam, fh
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -6049,7 +6050,7 @@ test_man_fill_4th_recursive_indirect_row(hid_t fapl, H5HF_create_t *cparam, fhea
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -6161,7 +6162,7 @@ test_man_fill_all_4th_recursive_indirect(hid_t fapl, H5HF_create_t *cparam, fhea
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -6276,7 +6277,7 @@ test_man_start_5th_recursive_indirect(hid_t fapl, H5HF_create_t *cparam, fheap_t
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -6410,7 +6411,7 @@ test_man_remove_bogus(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tpa
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -6563,7 +6564,7 @@ test_man_remove_one(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tpara
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -6727,7 +6728,7 @@ test_man_remove_two(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tpara
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -6920,7 +6921,7 @@ test_man_remove_one_larger(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -7089,7 +7090,7 @@ test_man_remove_two_larger(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -7333,7 +7334,7 @@ test_man_remove_three_larger(hid_t fapl, H5HF_create_t *cparam, fheap_test_param
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         TEST_ERROR
 
     /* Get a pointer to the internal file object */
@@ -7632,7 +7633,7 @@ test_man_incr_insert_remove(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, tparam->my_fcpl, fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Get a pointer to the internal file object */
@@ -16359,19 +16360,9 @@ main(void)
     unsigned    u;                  /* Local index variable */
     unsigned	nerrors = 0;        /* Cumulative error count */
     int		ExpressMode;            /* Express testing level */
-    hbool_t contig_addr_vfd;        /* Whether VFD used has a contigous address space */
-    const char *envval;
 
     /* Reset library */
     h5_reset();
-
-    /* Don't run this test using certain file drivers */
-    envval = HDgetenv("HDF5_DRIVER");
-    if(envval == NULL)
-        envval = "nomatch";
-
-    /* Current VFD that does not support contigous address space */
-    contig_addr_vfd = (hbool_t)(HDstrcmp(envval, "split") && HDstrcmp(envval, "multi"));
 
     fapl = h5_fileaccess();
     ExpressMode = GetTestExpress();
@@ -16392,9 +16383,9 @@ main(void)
         TEST_ERROR
     if((fcpl2 = H5Pcopy(fcpl)) < 0) TEST_ERROR
 
-    /* Set file space strategy to paged aggregation and persisting free-space */
-    /* Later: modify more tests to test with paged aggregation enabled */
-    if(H5Pset_file_space_strategy(fcpl2, H5F_FSPACE_STRATEGY_PAGE, TRUE, (hsize_t)1) < 0)
+    /* Set file space strategy and persisting free-space */
+    /* This will be modified later on to run the test with different file space strategy setting */
+    if(H5Pset_file_space_strategy(fcpl2, H5F_FSPACE_STRATEGY_FSM_AGGR, FALSE, (hsize_t)1) < 0)
         TEST_ERROR
 
     /* Initialize the shared write buffer for objects */
@@ -16405,12 +16396,6 @@ main(void)
 #ifndef QAK
     for(curr_test = FHEAP_TEST_NORMAL; curr_test < FHEAP_TEST_NTESTS; H5_INC_ENUM(fheap_test_type_t, curr_test)) {
 
-        hid_t my_fcpl;
-        if(contig_addr_vfd)
-            my_fcpl = fcpl2;
-        else
-            my_fcpl = fcpl;
-
 #else /* QAK */
 HDfprintf(stderr, "Uncomment test loop!\n");
 curr_test = FHEAP_TEST_NORMAL;
@@ -16419,6 +16404,9 @@ curr_test = FHEAP_TEST_NORMAL;
         /* Clear the testing parameters */
         HDmemset(&tparam, 0, sizeof(fheap_test_param_t));
         tparam.actual_id_len = HEAP_ID_LEN;
+
+        /* This will be modified later on to run the test with different file space strategy setting */
+        tparam.my_fcpl = fcpl2;
 
         /* Set appropriate testing parameters for each test */
         switch(curr_test) {
@@ -16446,7 +16434,7 @@ curr_test = FHEAP_TEST_NORMAL;
         nerrors += test_open_twice(fapl, &small_cparam, &tparam);
         nerrors += test_delete_open(fapl, &small_cparam, &tparam);
 
-        nerrors += test_id_limits(my_fcpl, fapl, &small_cparam);
+        nerrors += test_id_limits(fapl, &small_cparam);
 
         nerrors += test_filtered_create(fapl, &small_cparam);
         nerrors += test_size(fapl, &small_cparam);
