@@ -201,6 +201,8 @@ public class HDF5Constants {
     public static final int H5F_ACC_RDWR = H5F_ACC_RDWR();
     public static final int H5F_ACC_TRUNC = H5F_ACC_TRUNC();
     public static final int H5F_ACC_DEFAULT = H5F_ACC_DEFAULT();
+    public static final int H5F_ACC_SWMR_READ = H5F_ACC_SWMR_READ();
+    public static final int H5F_ACC_SWMR_WRITE = H5F_ACC_SWMR_WRITE();
     public static final int H5F_CLOSE_DEFAULT = H5F_CLOSE_DEFAULT();
     public static final int H5F_CLOSE_SEMI = H5F_CLOSE_SEMI();
     public static final int H5F_CLOSE_STRONG = H5F_CLOSE_STRONG();
@@ -218,6 +220,7 @@ public class HDF5Constants {
     public static final int H5F_SCOPE_LOCAL = H5F_SCOPE_LOCAL();
     public static final int H5F_UNLIMITED = H5F_UNLIMITED();
 
+    public static final int H5F_FSPACE_STRATEGY_FSM_AGGR = H5F_FSPACE_STRATEGY_FSM_AGGR();
     public static final int H5F_FSPACE_STRATEGY_AGGR = H5F_FSPACE_STRATEGY_AGGR();
     public static final int H5F_FSPACE_STRATEGY_PAGE = H5F_FSPACE_STRATEGY_PAGE();
     public static final int H5F_FSPACE_STRATEGY_NONE = H5F_FSPACE_STRATEGY_NONE();
@@ -983,6 +986,10 @@ public class HDF5Constants {
 
     private static native final int H5F_ACC_DEFAULT();
 
+    private static native final int H5F_ACC_SWMR_READ();
+
+    private static native final int H5F_ACC_SWMR_WRITE();
+
     private static native final int H5F_CLOSE_DEFAULT();
 
     private static native final int H5F_CLOSE_SEMI();
@@ -1016,6 +1023,8 @@ public class HDF5Constants {
     private static native final int H5F_SCOPE_LOCAL();
 
     private static native final int H5F_UNLIMITED();
+
+    private static native final int H5F_FSPACE_STRATEGY_FSM_AGGR();
 
     private static native final int H5F_FSPACE_STRATEGY_AGGR();
 

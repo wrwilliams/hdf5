@@ -32,7 +32,6 @@ import hdf.hdf5lib.structs.H5AC_cache_config_t;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -1325,7 +1324,7 @@ public class TestH5Pfapl {
         }
     }
 
-    @Ignore
+    @Test
     public void testH5Fmdc_logging() {
         boolean[] mdc_logging_status = {false, false};
         boolean[] mdc_log_options = {false, false};
@@ -1333,7 +1332,7 @@ public class TestH5Pfapl {
         try {
             boolean is_enabled = true;
             boolean start_on_access = false;
-            //H5.H5Pset_mdc_log_options(fapl_id, is_enabled, H5_LOG_FILE, start_on_access);
+            H5.H5Pset_mdc_log_options(fapl_id, is_enabled, H5_LOG_FILE, start_on_access);
 
             String location = H5.H5Pget_mdc_log_options(fapl_id, mdc_log_options);
             assertTrue("H5.H5Pget_mdc_log_options: is_enabled", mdc_log_options[0]);
@@ -1348,7 +1347,7 @@ public class TestH5Pfapl {
         _createH5File(fapl_id);
 
         try {
-            //H5.H5Fget_mdc_logging_status(H5fid, mdc_logging_status);
+            H5.H5Fget_mdc_logging_status(H5fid, mdc_logging_status);
         }
         catch (Throwable err) {
             fail("H5.H5Fget_mdc_logging_status: " + err);
@@ -1357,8 +1356,8 @@ public class TestH5Pfapl {
         assertFalse("initial: is_currently_logging", mdc_logging_status[1]);
 
         try {
-            //H5.H5Fstart_mdc_logging(H5fid);
-            //H5.H5Fget_mdc_logging_status(H5fid, mdc_logging_status);
+            H5.H5Fstart_mdc_logging(H5fid);
+            H5.H5Fget_mdc_logging_status(H5fid, mdc_logging_status);
         }
         catch (Throwable err) {
             fail("start H5.H5Fget_mdc_logging_status: " + err);
@@ -1367,8 +1366,8 @@ public class TestH5Pfapl {
         assertTrue("start: is_currently_logging", mdc_logging_status[1]);
 
         try {
-            //H5.H5Fstop_mdc_logging(H5fid);
-            //H5.H5Fget_mdc_logging_status(H5fid, mdc_logging_status);
+            H5.H5Fstop_mdc_logging(H5fid);
+            H5.H5Fget_mdc_logging_status(H5fid, mdc_logging_status);
         }
         catch (Throwable err) {
             fail("stop H5.H5Fget_mdc_logging_status: " + err);

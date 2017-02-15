@@ -23,14 +23,16 @@
  *
  *-------------------------------------------------------------------------
  */
+#define H5F_FRIEND          /*suppress error about including H5Fpkg   */
+#include "H5Omodule.h"      /* This source code file is part of the H5O module */
 
-#include "H5Omodule.h"          /* This source code file is part of the H5O module */
 
 
-#include "H5private.h"		/* Generic Functions	*/
-#include "H5Eprivate.h"		/* Error handling	*/
-#include "H5FLprivate.h"	/* Free lists          	*/
-#include "H5Opkg.h"             /* Object headers	*/
+#include "H5private.h"      /* Generic Functions    */
+#include "H5Eprivate.h"     /* Error handling	    */
+#include "H5FLprivate.h"    /* Free lists           */
+#include "H5Opkg.h"         /* Object headers       */
+#include "H5Fpkg.h"         /* File access              */
 
 /* PRIVATE PROTOTYPES */
 static void *H5O_fsinfo_decode(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, unsigned mesg_flags, unsigned *ioflags, const uint8_t *p);
@@ -66,7 +68,8 @@ const H5O_msg_class_t H5O_MSG_FSINFO[1] = {{
 }};
 
 /* Current version of free-space manager info information */
-#define H5O_FSINFO_VERSION 	0
+#define H5O_FSINFO_VERSION_0 	0
+#define H5O_FSINFO_VERSION_1 	1
 
 /* Declare a free list to manage the H5O_fsinfo_t struct */
 H5FL_DEFINE_STATIC(H5O_fsinfo_t);
@@ -85,11 +88,12 @@ H5FL_DEFINE_STATIC(H5O_fsinfo_t);
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_fsinfo_decode(H5F_t *f, hid_t H5_ATTR_UNUSED dxpl_id, H5O_t H5_ATTR_UNUSED *open_oh,
+H5O_fsinfo_decode(H5F_t *f, hid_t dxpl_id, H5O_t H5_ATTR_UNUSED *open_oh,
     unsigned H5_ATTR_UNUSED mesg_flags, unsigned H5_ATTR_UNUSED *ioflags, const uint8_t *p)
 {
     H5O_fsinfo_t    *fsinfo = NULL;     /* File space info message */
     H5F_mem_page_t  ptype;              /* Memory type for iteration */
+    unsigned        vers;               /* message version */
     void            *ret_value = NULL;  /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -98,31 +102,83 @@ H5O_fsinfo_decode(H5F_t *f, hid_t H5_ATTR_UNUSED dxpl_id, H5O_t H5_ATTR_UNUSED *
     HDassert(f);
     HDassert(p);
 
-    /* Version of message */
-    if(*p++ != H5O_FSINFO_VERSION)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad version number for message")
-
     /* Allocate space for message */
     if(NULL == (fsinfo = H5FL_CALLOC(H5O_fsinfo_t)))
-	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
-    fsinfo->strategy = (H5F_fspace_strategy_t)*p++; /* File space strategy */
-    fsinfo->persist = *p++;                         /* Free-space persist or not */
-    H5F_DECODE_LENGTH(f, p, fsinfo->threshold);     /* Free-space section threshold */
+    for(ptype = H5F_MEM_PAGE_SUPER; ptype < H5F_MEM_PAGE_NTYPES; H5_INC_ENUM(H5F_mem_page_t, ptype))
+        fsinfo->fs_addr[ptype - 1] = HADDR_UNDEF;
 
-    H5F_DECODE_LENGTH(f, p, fsinfo->page_size); /* File space page size */
-    UINT16DECODE(p, fsinfo->pgend_meta_thres);  /* Page end metdata threshold */
-    H5F_addr_decode(f, &p, &(fsinfo->eoa_pre_fsm_fsalloc)); /* EOA before free-space header and section info */
+    /* Version of message */
+    vers = *p++;
 
-    /* Decode addresses of free space managers, if persisting */
-    if(fsinfo->persist) {
-        for(ptype = H5F_MEM_PAGE_SUPER; ptype < H5F_MEM_PAGE_NTYPES; H5_INC_ENUM(H5F_mem_page_t, ptype))
-            H5F_addr_decode(f, &p, &(fsinfo->fs_addr[ptype - 1]));
-    } /* end if */
-    else {
-        for(ptype = H5F_MEM_PAGE_SUPER; ptype < H5F_MEM_PAGE_NTYPES; H5_INC_ENUM(H5F_mem_page_t, ptype))
-            fsinfo->fs_addr[ptype - 1] = HADDR_UNDEF;
-    } /* end else */
+    if(vers == H5O_FSINFO_VERSION_0) {
+        H5F_file_space_type_t strategy;     /* Strategy */
+        hsize_t threshold;                  /* Threshold */
+        H5FD_mem_t type;                    /* Memory type for iteration */
+
+        fsinfo->persist = H5F_FREE_SPACE_PERSIST_DEF;
+        fsinfo->threshold = H5F_FREE_SPACE_THRESHOLD_DEF;
+        fsinfo->page_size = H5F_FILE_SPACE_PAGE_SIZE_DEF;
+        fsinfo->pgend_meta_thres = H5F_FILE_SPACE_PGEND_META_THRES;
+        fsinfo->eoa_pre_fsm_fsalloc = HADDR_UNDEF;
+
+        strategy = (H5F_file_space_type_t)*p++; /* File space strategy */
+        H5F_DECODE_LENGTH(f, p, threshold);     /* Free-space section threshold */
+
+        /* Map version 0 (deprecated) to version 1 message */
+        switch(strategy) {
+
+            case H5F_FILE_SPACE_ALL_PERSIST:
+                fsinfo->strategy = H5F_FSPACE_STRATEGY_FSM_AGGR;
+                fsinfo->persist = TRUE;
+                fsinfo->threshold = threshold;
+                if(HADDR_UNDEF == (fsinfo->eoa_pre_fsm_fsalloc = H5F_get_eoa(f, H5FD_MEM_DEFAULT)) )
+                    HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "unable to get file size")
+                for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
+                    H5F_addr_decode(f, &p, &(fsinfo->fs_addr[type-1]));
+                break;
+
+            case H5F_FILE_SPACE_ALL:
+                fsinfo->strategy = H5F_FSPACE_STRATEGY_FSM_AGGR;
+                fsinfo->threshold = threshold;
+                break;
+
+            case H5F_FILE_SPACE_AGGR_VFD:
+                fsinfo->strategy = H5F_FSPACE_STRATEGY_AGGR;
+                break;
+
+            case H5F_FILE_SPACE_VFD:
+                fsinfo->strategy = H5F_FSPACE_STRATEGY_NONE;
+                break;
+
+            case H5F_FILE_SPACE_NTYPES:
+            case H5F_FILE_SPACE_DEFAULT:
+            default:
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid file space strategy")
+        } /* end switch */
+
+        fsinfo->mapped = TRUE;
+       
+    } else {
+        HDassert(vers == H5O_FSINFO_VERSION_1);
+
+        fsinfo->strategy = (H5F_fspace_strategy_t)*p++; /* File space strategy */
+        fsinfo->persist = *p++;                         /* Free-space persist or not */
+        H5F_DECODE_LENGTH(f, p, fsinfo->threshold);     /* Free-space section threshold */
+
+        H5F_DECODE_LENGTH(f, p, fsinfo->page_size); /* File space page size */
+        UINT16DECODE(p, fsinfo->pgend_meta_thres);  /* Page end metdata threshold */
+        H5F_addr_decode(f, &p, &(fsinfo->eoa_pre_fsm_fsalloc)); /* EOA before free-space header and section info */
+
+        /* Decode addresses of free space managers, if persisting */
+        if(fsinfo->persist) {
+            for(ptype = H5F_MEM_PAGE_SUPER; ptype < H5F_MEM_PAGE_NTYPES; H5_INC_ENUM(H5F_mem_page_t, ptype))
+                H5F_addr_decode(f, &p, &(fsinfo->fs_addr[ptype - 1]));
+        } /* end if */
+
+        fsinfo->mapped = FALSE;
+    };
 
     /* Set return value */
     ret_value = fsinfo;
@@ -159,8 +215,8 @@ H5O_fsinfo_encode(H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p, c
     HDassert(p);
     HDassert(fsinfo);
 
-    *p++ = H5O_FSINFO_VERSION;	/* message version */
-    *p++ = fsinfo->strategy;	/* File space strategy */
+    *p++ = H5O_FSINFO_VERSION_1;	/* message version */
+    *p++ = fsinfo->strategy;	    /* File space strategy */
     *p++ = (unsigned char)fsinfo->persist;	/* Free-space persist or not */
     H5F_ENCODE_LENGTH(f, p, fsinfo->threshold); /* Free-space section size threshold */
 
@@ -306,12 +362,16 @@ H5O_fsinfo_debug(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, const vo
 
     HDfprintf(stream, "%*s%-*s ", indent, "", fwidth, "File space strategy:");
     switch(fsinfo->strategy) {
-        case H5F_FSPACE_STRATEGY_AGGR:
-            HDfprintf(stream, "%s\n", "H5F_FSPACE_STRATEGY_AGGR");
+        case H5F_FSPACE_STRATEGY_FSM_AGGR:
+            HDfprintf(stream, "%s\n", "H5F_FSPACE_STRATEGY_FSM_AGGR");
             break;
 
         case H5F_FSPACE_STRATEGY_PAGE:
             HDfprintf(stream, "%s\n", "H5F_FSPACE_STRATEGY_PAGE");
+            break;
+
+        case H5F_FSPACE_STRATEGY_AGGR:
+            HDfprintf(stream, "%s\n", "H5F_FSPACE_STRATEGY_AGGR");
             break;
 
         case H5F_FSPACE_STRATEGY_NONE:

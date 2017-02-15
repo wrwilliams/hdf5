@@ -19,12 +19,12 @@
 #define NELMTS(X)    	(sizeof(X)/sizeof(X[0]))	/* # of elements */
 
 const char *FILENAMES[] = {
-    "aggr_nopersist.h5",	/* H5F_FSPACE_STRATEGY_AGGR + not persisting free-space */
-    "aggr_persist.h5",		/* H5F_FSPACE_STRATEGY_AGGR + persisting free-space */
-    "paged_nopersist.h5",	/* H5F_FSPACE_STRATEGY_PAGE + not persisting free-space */
-    "paged_persist.h5",		/* H5F_FSPACE_STRATEGY_PAGE + persisting free-space */
-    "none_nopersist.h5",	/* H5F_FSPACE_STRATEGY_NONE + not persisting free-space */
-    "none_persist.h5"		/* H5F_FSPACE_STRATEGY_NONE + persisting free-space */
+    "fsm_aggr_nopersist.h5",	/* H5F_FSPACE_STRATEGY_FSM_AGGR + not persisting free-space */
+    "fsm_aggr_persist.h5",		/* H5F_FSPACE_STRATEGY_FSM_AGGR + persisting free-space */
+    "paged_nopersist.h5",	    /* H5F_FSPACE_STRATEGY_PAGE + not persisting free-space */
+    "paged_persist.h5",		    /* H5F_FSPACE_STRATEGY_PAGE + persisting free-space */
+    "aggr.h5",	                /* H5F_FSPACE_STRATEGY_AGGR */
+    "none.h5"		            /* H5F_FSPACE_STRATEGY_NONE */
 };
 
 #define DATASET		"dset"
@@ -35,7 +35,7 @@ const char *FILENAMES[] = {
 
 /*
  * Compile and run this program in the trunk to generate
- * HDF5 files with combinations of 3 file space strategies
+ * HDF5 files with combinations of 4 file space strategies
  * and persist/not persist free-space.
  * The library creates the file space info message with "mark if unknown"
  * in these files.
@@ -60,8 +60,12 @@ int main(void)
     unsigned fs_persist;     /* Persisting free-space or not */
 
     j = 0;
-    for(fs_strategy = H5F_FSPACE_STRATEGY_AGGR; fs_strategy < H5F_FSPACE_STRATEGY_NTYPES; INC_ENUM(H5F_fspace_strategy_t, fs_strategy)) {
+    for(fs_strategy = H5F_FSPACE_STRATEGY_FSM_AGGR; fs_strategy < H5F_FSPACE_STRATEGY_NTYPES; INC_ENUM(H5F_fspace_strategy_t, fs_strategy)) {
         for(fs_persist = FALSE; fs_persist <= TRUE; fs_persist++) {
+
+            if(fs_persist && fs_strategy >= H5F_FSPACE_STRATEGY_AGGR)
+                continue;
+
             /* Get a copy of the default file creation property */
             if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
                 goto error;

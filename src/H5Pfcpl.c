@@ -1290,9 +1290,9 @@ done:
  * Function:	H5Pset_file_space_strategy
  *
  * Purpose:	Sets the "strategy" that the library employs in managing file space
- *		Sets the "persist" value as to persist free-space or not
- *		Sets the "threshold" value that the file's free space
- *			manager(s) will use to track free space sections.
+ *		    Sets the "persist" value as to persist free-space or not
+ *		    Sets the "threshold" value that the free space manager(s) will use to track free space sections.
+ *          Ignore "persist" and "threshold" for strategies that do not use free-space managers
  *
  * Return:	Non-negative on success/Negative on failure
  *
@@ -1319,13 +1319,17 @@ H5Pset_file_space_strategy(hid_t plist_id, H5F_fspace_strategy_t strategy, hbool
 
     /* Set value(s), if non-zero */
     if(H5P_set(plist, H5F_CRT_FILE_SPACE_STRATEGY_NAME, &strategy) < 0)
-	HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set file space strategy")
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set file space strategy")
 
-    if(H5P_set(plist, H5F_CRT_FREE_SPACE_PERSIST_NAME, &persist) < 0)
-	HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set free-space persisting status")
+    /* Ignore persist and threshold settings for strategies that do not use FSM */
+    if(strategy ==  H5F_FSPACE_STRATEGY_FSM_AGGR || strategy == H5F_FSPACE_STRATEGY_PAGE) {
 
-    if(H5P_set(plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, &threshold) < 0)
-	HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set free-space threshold")
+        if(H5P_set(plist, H5F_CRT_FREE_SPACE_PERSIST_NAME, &persist) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set free-space persisting status")
+
+        if(H5P_set(plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, &threshold) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set free-space threshold")
+    }
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1336,7 +1340,7 @@ done:
  * Function:	H5Pget_file_space_strategy
  *
  * Purpose:	Retrieves the strategy, persist, and threshold that the library 
- *		uses in managing file space.
+ *          uses in managing file space.
  *
  * Return:	Non-negative on success/Negative on failure
  *
@@ -1479,7 +1483,7 @@ H5Pset_file_space_page_size(hid_t plist_id, hsize_t fsp_size)
 
     /* Set the value*/
     if(H5P_set(plist, H5F_CRT_FILE_SPACE_PAGE_SIZE_NAME, &fsp_size) < 0)
-	HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set file space page size")
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set file space page size")
 
 done:
     FUNC_LEAVE_API(ret_value)

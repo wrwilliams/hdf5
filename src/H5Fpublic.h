@@ -183,12 +183,24 @@ typedef enum H5F_libver_t {
 
 /* File space handling strategy */
 typedef enum H5F_fspace_strategy_t {
-    H5F_FSPACE_STRATEGY_AGGR = 0,   /* Aggregation: mechanisms are free-space managers, aggregators, and virtual file driver */
-                                    /* This is the library default when not set */
-    H5F_FSPACE_STRATEGY_PAGE = 1,   /* Paged aggregation: mechanisms are free-space managers with embedded paged aggregation and virtual file driver */
-    H5F_FSPACE_STRATEGY_NONE = 2,   /* No aggregation: mechanisms are free-space managers and virtual file driver */
+    H5F_FSPACE_STRATEGY_FSM_AGGR = 0,   /* Mechanisms: free-space managers, aggregators, and virtual file drivers */
+                                        /* This is the library default when not set */
+    H5F_FSPACE_STRATEGY_PAGE = 1,   /* Mechanisms: free-space managers with embedded paged aggregation and virtual file drivers */
+    H5F_FSPACE_STRATEGY_AGGR = 2,   /* Mechanisms: aggregators and virtual file drivers */
+    H5F_FSPACE_STRATEGY_NONE = 3,   /* Mechanisms: virtual file drivers */
     H5F_FSPACE_STRATEGY_NTYPES      /* must be last */
 } H5F_fspace_strategy_t;
+
+/* Deprecated: File space handling strategy for release 1.10.0 */
+/* They are mapped to H5F_fspace_strategy_t as defined above from release 1.10.1 onwards */
+typedef enum H5F_file_space_type_t {
+    H5F_FILE_SPACE_DEFAULT = 0,     /* Default (or current) free space strategy setting */
+    H5F_FILE_SPACE_ALL_PERSIST = 1, /* Persistent free space managers, aggregators, virtual file driver */
+    H5F_FILE_SPACE_ALL = 2,         /* Non-persistent free space managers, aggregators, virtual file driver */
+    H5F_FILE_SPACE_AGGR_VFD = 3,    /* Aggregators, Virtual file driver */
+    H5F_FILE_SPACE_VFD = 4,         /* Virtual file driver */
+    H5F_FILE_SPACE_NTYPES           /* must be last */
+} H5F_file_space_type_t;
 
 /* Data structure to report the collection of read retries for metadata items with checksum */
 /* Used by public routine H5Fget_metadata_read_retry_info() */

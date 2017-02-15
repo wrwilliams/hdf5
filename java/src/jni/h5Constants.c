@@ -363,6 +363,10 @@ JNIEXPORT jint JNICALL
 Java_hdf_hdf5lib_HDF5Constants_H5F_1ACC_1TRUNC(JNIEnv *env, jclass cls) { return H5F_ACC_TRUNC; }
 JNIEXPORT jint JNICALL
 Java_hdf_hdf5lib_HDF5Constants_H5F_1ACC_1DEFAULT(JNIEnv *env, jclass cls) { return H5F_ACC_DEFAULT; }
+JNIEXPORT jint JNICALL
+Java_hdf_hdf5lib_HDF5Constants_H5F_1ACC_1SWMR_1READ(JNIEnv *env, jclass cls) { return H5F_ACC_SWMR_READ; }
+JNIEXPORT jint JNICALL
+Java_hdf_hdf5lib_HDF5Constants_H5F_1ACC_1SWMR_1WRITE(JNIEnv *env, jclass cls) { return H5F_ACC_SWMR_WRITE; }
 #pragma GCC diagnostic pop
 
 JNIEXPORT jint JNICALL
@@ -398,6 +402,8 @@ Java_hdf_hdf5lib_HDF5Constants_H5F_1SCOPE_1LOCAL(JNIEnv *env, jclass cls) { retu
 JNIEXPORT jint JNICALL
 Java_hdf_hdf5lib_HDF5Constants_H5F_1UNLIMITED(JNIEnv *env, jclass cls) { return (jint)H5F_UNLIMITED; }
 
+JNIEXPORT jint JNICALL
+Java_hdf_hdf5lib_HDF5Constants_H5F_1FSPACE_1STRATEGY_1FSM_1AGGR(JNIEnv *env, jclass cls) { return H5F_FSPACE_STRATEGY_FSM_AGGR; }
 JNIEXPORT jint JNICALL
 Java_hdf_hdf5lib_HDF5Constants_H5F_1FSPACE_1STRATEGY_1AGGR(JNIEnv *env, jclass cls) { return H5F_FSPACE_STRATEGY_AGGR; }
 JNIEXPORT jint JNICALL

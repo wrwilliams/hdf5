@@ -217,7 +217,6 @@ int copy_objects(const char* fnamein, const char* fnameout, pack_opt_t *options)
                         HGOTO_ERROR(FAIL, H5E_tools_min_id_g, "H5Pclose failed");
                     } /* end if */
                 } /* end for */
-
             } /* if (nindex>0) */
 
             /* Create file access property list */
@@ -233,7 +232,7 @@ int copy_objects(const char* fnamein, const char* fnameout, pack_opt_t *options)
         } /* end if */
     } /* end if */
 #if defined (H5REPACK_DEBUG_USER_BLOCK)
-    print_user_block(fnamein, fidin);
+print_user_block(fnamein, fidin);
 #endif
 
     /*-------------------------------------------------------------------------
@@ -346,15 +345,15 @@ int copy_objects(const char* fnamein, const char* fnameout, pack_opt_t *options)
     if(set_pagesize != FS_PAGESIZE_DEF) /* Set non-default file space page size as specified */
         if(H5Pset_file_space_page_size(fcpl, set_pagesize) < 0) {
             error_msg("failed to set file space page size\n");
-	    HGOTO_ERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Pclose failed");
+	    HGOTO_ERROR(FAIL, H5E_tools_min_id_g, "H5Pclose failed");
         }
 
     /*-------------------------------------------------------------------------
-    * create the output file
-    *-------------------------------------------------------------------------
-    */
-    if(options->verbose)
-        printf("Making file <%s>...\n",fnameout);
+     * create the output file
+     *-------------------------------------------------------------------------
+     */
+    if (options->verbose)
+        printf("Making file <%s>...\n", fnameout);
 
     if ((fidout = H5Fcreate(fnameout, H5F_ACC_TRUNC, fcpl, fapl)) < 0) {
         error_msg("<%s>: Could not create file\n", fnameout);

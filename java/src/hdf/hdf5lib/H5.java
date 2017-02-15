@@ -151,7 +151,7 @@ import hdf.hdf5lib.structs.H5O_info_t;
  * layout of the source and destination, and the data for the array passed as a block of bytes, for instance,
  *
  * <pre>
- *      herr_t H5Dread(int fid, int filetype, int memtype, int memspace,
+ *      herr_t H5Dread(long fid, long filetype, long memtype, long memspace,
  *      void * data);
  * </pre>
  *
@@ -171,7 +171,7 @@ import hdf.hdf5lib.structs.H5O_info_t;
  * library. So the function above would be declared:
  *
  * <pre>
- * public synchronized static native int H5Dread(int fid, int filetype, int memtype, int memspace, Object data);
+ * public synchronized static native int H5Dread(long fid, long filetype, long memtype, long memspace, Object data);
  * </pre>
  *            OPEN_IDS.addElement(id);
 
@@ -192,7 +192,7 @@ import hdf.hdf5lib.structs.H5O_info_t;
  * can be accessed as public variables of the Java class, such as:
  *
  * <pre>
- * int data_type = HDF5CDataTypes.JH5T_NATIVE_INT;
+ * long data_type = HDF5CDataTypes.JH5T_NATIVE_INT;
  * </pre>
  *
  * The Java application uses both types of constants the same way, the only difference is that the
@@ -2853,6 +2853,40 @@ public class H5 implements java.io.Serializable {
     public synchronized static native void H5Fclear_elink_file_cache(long file_id) throws HDF5LibraryException;
 
     /**
+     * H5Fstart_swmr_write will activate SWMR writing mode for a file associated with file_id. This routine will
+     * prepare and ensure the file is safe for SWMR writing.
+     *
+     * @param file_id
+     *            IN: Identifier of the target file.
+     *
+     * @exception HDF5LibraryException
+     *                - Error from the HDF-5 Library.
+     **/
+    public synchronized static native void H5Fstart_swmr_write(long file_id) throws HDF5LibraryException;
+
+    /**
+     * H5Fstart_mdc_logging starts logging metadata cache events if logging was previously enabled.
+     *
+     * @param file_id
+     *            IN: Identifier of the target file.
+     *
+     * @exception HDF5LibraryException
+     *                - Error from the HDF-5 Library.
+     **/
+    public synchronized static native void H5Fstart_mdc_logging(long file_id) throws HDF5LibraryException;
+
+    /**
+     * H5Fstop_mdc_logging stops logging metadata cache events if logging was previously enabled and is currently ongoing.
+     *
+     * @param file_id
+     *            IN: Identifier of the target file.
+     *
+     * @exception HDF5LibraryException
+     *                - Error from the HDF-5 Library.
+     **/
+    public synchronized static native void H5Fstop_mdc_logging(long file_id) throws HDF5LibraryException;
+
+    /**
      * H5Fget_mdc_logging_status gets the current metadata cache logging status.
      *
      * @param file_id
@@ -5329,13 +5363,15 @@ public class H5 implements java.io.Serializable {
      *            IN: File creation property list identifier
      * @param strategy
      *            IN: The strategy for file space management.
-     *                H5F_FSPACE_STRATEGY_AGGR
-     *                        Aggregation: mechanisms are free-space managers, aggregators, and virtual file driver
+     *                H5F_FSPACE_STRATEGY_FSM_AGGR
+     *                        Mechanisms: free-space managers, aggregators, and virtual file drivers
      *                        This is the library default when not set.
      *                H5F_FSPACE_STRATEGY_PAGE
-     *                        Paged aggregation: mechanisms are free-space managers with embedded paged aggregation and virtual file driver.
+     *                        Mechanisms: free-space managers with embedded paged aggregation and virtual file drivers
+     *                H5F_FSPACE_STRATEGY_AGGR
+     *                        Mechanisms: aggregators and virtual file drivers
      *                H5F_FSPACE_STRATEGY_NONE
-     *                        No aggregation: mechanisms are free-space managers and virtual file driver.
+     *                        Mechanisms: virtual file drivers
      * @param persist
      *            IN: True to persist free-space.
      * @param threshold

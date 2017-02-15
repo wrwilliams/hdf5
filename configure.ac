@@ -26,7 +26,7 @@ AC_PREREQ([2.69])
 ## NOTE: Do not forget to change the version number here when we do a
 ## release!!!
 ##
-AC_INIT([HDF5], [1.9.235], [help@hdfgroup.org])
+AC_INIT([HDF5], [1.9.236], [help@hdfgroup.org])
 
 AC_CONFIG_SRCDIR([src/H5.c])
 AC_CONFIG_HEADERS([src/H5config.h])
@@ -2055,6 +2055,48 @@ case "X-$ASSERTS" in
 esac
 
 ## ----------------------------------------------------------------------
+## Check if developer warnings should be turned on
+## These are warnings that provide suggestions like gcc's -Wsuggest-attribute.
+## They do not indicate code problems.
+##
+## Note that developers don't need to build with these regularly. They
+## are just handy to check once in a while (before releases, etc.).
+##
+AC_MSG_CHECKING([enable developer warnings])
+AC_ARG_ENABLE([developer-warnings],
+              [AS_HELP_STRING([--enable-developer-warnings],
+                              [Determines whether developer warnings will be
+                               emitted. These are usually performance suggestions
+                               (e.g. -Wsuggest-attribute) and do not flag poor code
+                               quality.
+                               [default=no]
+                               ])],
+              [DEV_WARNINGS=$enableval])
+
+## Set default
+if test "X-$DEV_WARNINGS" = X- ; then
+  DEV_WARNINGS=no
+fi
+
+## Allow this variable to be substituted in
+## other files (src/libhdf5.settings.in, etc.)
+AC_SUBST([DEV_WARNINGS])
+
+case "X-$DEV_WARNINGS" in
+  X-yes)
+    H5_CFLAGS="$H5_CFLAGS $DEVELOPER_WARNING_CFLAGS"
+    AC_MSG_RESULT([yes])
+    ;;
+  X-no)
+    H5_CFLAGS="$H5_CFLAGS $NO_DEVELOPER_WARNING_CFLAGS"
+    AC_MSG_RESULT([no])
+    ;;
+  *)
+    AC_MSG_ERROR([Unrecognized value: $DEV_WARNINGS])
+    ;;
+esac
+
+## ----------------------------------------------------------------------
 ## Check if the compiler should use profiling flags/settings
 ##
 AC_MSG_CHECKING([profiling])
@@ -3317,10 +3359,14 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  test/Makefile
                  test/testcheck_version.sh
                  test/testerror.sh
+                 test/testflushrefresh.sh
                  test/H5srcdir_str.h
                  test/testlibinfo.sh
                  test/testlinks_env.sh
+                 test/testswmr.sh
                  test/test_plugin.sh
+                 test/test_usecases.sh
+                 test/testvdsswmr.sh
                  testpar/Makefile
                  tools/Makefile
                  tools/lib/Makefile
@@ -3337,16 +3383,19 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  tools/src/h5stat/Makefile
                  tools/test/Makefile
                  tools/test/h5dump/Makefile
+                 tools/test/h5dump/h5dump_plugin.sh
                  tools/test/h5dump/testh5dump.sh
                  tools/test/h5dump/testh5dumppbits.sh
                  tools/test/h5dump/testh5dumpvds.sh
                  tools/test/h5dump/testh5dumpxml.sh
                  tools/test/h5ls/Makefile
+                 tools/test/h5ls/h5ls_plugin.sh
                  tools/test/h5ls/testh5ls.sh
                  tools/test/h5ls/testh5lsvds.sh
                  tools/test/h5import/Makefile
                  tools/test/h5import/h5importtestutil.sh
                  tools/test/h5diff/Makefile
+                 tools/test/h5diff/h5diff_plugin.sh
                  tools/test/h5diff/testh5diff.sh
                  tools/test/h5diff/testph5diff.sh
                  tools/src/h5format_convert/Makefile
@@ -3360,6 +3409,7 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  tools/test/h5copy/Makefile
                  tools/test/h5copy/testh5copy.sh
                  tools/test/misc/Makefile
+                 tools/test/misc/testh5clear.sh
                  tools/test/misc/testh5mkgrp.sh
                  tools/test/misc/testh5repart.sh
                  tools/test/misc/vds/Makefile
@@ -3407,6 +3457,8 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  hl/tools/Makefile
                  hl/tools/gif2h5/Makefile
                  hl/tools/gif2h5/h52giftest.sh
+                 hl/tools/h5watch/Makefile
+                 hl/tools/h5watch/testh5watch.sh
                  hl/examples/Makefile
                  hl/examples/run-hlc-ex.sh
                  hl/c++/Makefile

@@ -17,6 +17,9 @@
 
 srcdir=@srcdir@
 
+USE_FILTER_SZIP="@USE_FILTER_SZIP@"
+USE_FILTER_DEFLATE="@USE_FILTER_DEFLATE@"
+
 TESTNAME=h5ls
 EXIT_SUCCESS=0
 EXIT_FAILURE=1
@@ -183,7 +186,7 @@ COPY_TESTFILES_TO_TESTDIR()
     	        $CP -f $tstfile $TESTDIR
                 if [ $? -ne 0 ]; then
                     echo "Error: FAILED to copy $tstfile ."
-                
+
                     # Comment out this to CREATE expected file
                     exit $EXIT_FAILURE
                 fi
@@ -240,8 +243,8 @@ TOOLTEST() {
     (
 	cd $TESTDIR
         $RUNSERIAL $H5LS_BIN "$@"
-    ) >$actual 2>$actual_err 
-    
+    ) >$actual 2>$actual_err
+
     exitcode=$?
     # save actual and actual_err in case they are needed later.
     cp $actual $actual_sav
@@ -339,7 +342,7 @@ TOOLTEST textlinksrc-3-old.ls 0 -w80 -Er textlinksrc.h5/ext_link1
 TOOLTEST textlinksrc-6-old.ls 0 -w80 -E textlinksrc.h5
 TOOLTEST textlinksrc-7-old.ls 0 -w80 -E textlinksrc.h5/ext_link1
 
-# tests for no-dangling-links 
+# tests for no-dangling-links
 # if this option is given on dangling link, h5ls should return exit code 1
 # when used alone , expect to print out help and return exit code 1
 TOOLTEST textlinksrc-nodangle-1.ls 1 -w80 --no-dangling-links textlinksrc.h5
@@ -374,7 +377,7 @@ TOOLTEST tnestcomp-4.ls 0 -w80 -r -d -l -S tnestedcomp.h5
 # test for loop detection
 TOOLTEST tloop-1.ls 0 -w80 -r -d tloop.h5
 
-# test for string 
+# test for string
 TOOLTEST tstr-1.ls 0 -w80 -r -d tstr.h5
 
 # test test file created from lib SAF team
@@ -405,24 +408,28 @@ fi
 # test for non-existing file
 TOOLTEST nosuchfile.ls 1 nosuchfile.h5
 
-# test for variable length data types in verbose mode 
+# test for variable length data types in verbose mode
 if test $WORDS_BIGENDIAN != "yes"; then
  TOOLTEST tvldtypes2le.ls 0 -v tvldtypes1.h5
 else
  TOOLTEST tvldtypes2be.ls 0 -v tvldtypes1.h5
-fi 
+fi
 
 
-# test for dataset region references data types in verbose mode 
+# test for dataset region references data types in verbose mode
 if test $WORDS_BIGENDIAN != "yes"; then
  TOOLTEST tdataregle.ls 0 -v tdatareg.h5
 else
  TOOLTEST tdataregbe.ls 0 -v tdatareg.h5
-fi 
+fi
 
 # test for file with datasets that use Fixed Array chunk indices
-#echo "***skip testing tdset_idx.h5"
-TOOLTEST tdset_idx.ls 0 -w80 -d tdset_idx.h5
+if test $USE_FILTER_DEFLATE = "yes" ; then
+  # data read internal filters
+  TOOLTEST tdset_idx.ls 0 -w80 -d tdset_idx.h5
+else
+  echo "***skip testing tdset_idx.h5"
+fi
 
 # Clean up temporary files/directories
 CLEAN_TESTFILES_AND_TESTDIR

@@ -67,6 +67,11 @@
 #define H5F_FS_MERGE_METADATA           0x01    /* Section can merge with metadata aggregator */
 #define H5F_FS_MERGE_RAWDATA            0x02    /* Section can merge with small 'raw' data aggregator */
 
+/* Macro to abstract checking whether file is using a free space manager */
+#define H5F_HAVE_FREE_SPACE_MANAGER(F)  \
+    ((F)->shared->fs_strategy == H5F_FSPACE_STRATEGY_FSM_AGGR ||                        \
+     (F)->shared->fs_strategy == H5F_FSPACE_STRATEGY_PAGE)
+
 /* Macros for encoding/decoding superblock */
 #define H5F_MAX_DRVINFOBLOCK_SIZE  1024         /* Maximum size of superblock driver info buffer */
 #define H5F_DRVINFOBLOCK_HDR_SIZE 16            /* Size of superblock driver info header */

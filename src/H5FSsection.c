@@ -2549,9 +2549,9 @@ H5FS_vfd_alloc_hdr_and_section_info_if_needed(H5F_t *f, hid_t dxpl_id,
      * This will probably change -- at which point this assertion should 
      * be revisited.
      */
-    HDassert((f->shared->fs_strategy == H5F_FSPACE_STRATEGY_AGGR) ||
-             (f->shared->fs_strategy == H5F_FSPACE_STRATEGY_PAGE) ||
-             (f->shared->fs_strategy == H5F_FSPACE_STRATEGY_NONE));
+    /* Updated: Only the following two strategies enable the free-space managers */
+    HDassert((f->shared->fs_strategy == H5F_FSPACE_STRATEGY_FSM_AGGR) ||
+             (f->shared->fs_strategy == H5F_FSPACE_STRATEGY_PAGE));
 
     if ( fspace->serial_sect_count > 0 ) {
 

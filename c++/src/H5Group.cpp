@@ -20,7 +20,6 @@
 #endif
 #include <string>
 
-#include "H5private.h"		// for HDstrcpy
 #include "H5Include.h"
 #include "H5Exception.h"
 #include "H5IdComponent.h"
@@ -30,6 +29,7 @@
 #include "H5OcreatProp.h"
 #include "H5DcreatProp.h"
 #include "H5DxferProp.h"
+#include "H5LaccProp.h"
 #include "H5Location.h"
 #include "H5Object.h"
 #include "H5AbstractDs.h"

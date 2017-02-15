@@ -25,6 +25,7 @@
 #include "H5OcreatProp.h"
 #include "H5DcreatProp.h"
 #include "H5DxferProp.h"
+#include "H5LaccProp.h"
 #include "H5Location.h"
 #include "H5Object.h"
 #include "H5DataType.h"
@@ -268,7 +269,7 @@ int H5Object::iterateAttrs( attr_operator_t user_op, unsigned *_idx, void *op_da
 ///             - version number is not one of the valid values above
 // Programmer   Binh-Minh Ribler - December, 2016
 //--------------------------------------------------------------------------
- /* unsigned H5Object::objVersion() const
+unsigned H5Object::objVersion() const
 {
     H5O_info_t objinfo;
     unsigned version = 0;
@@ -288,7 +289,6 @@ int H5Object::iterateAttrs( attr_operator_t user_op, unsigned *_idx, void *op_da
     }
     return(version);
 }
- */ 
 
 //--------------------------------------------------------------------------
 // Function:	H5Object::getNumAttrs
