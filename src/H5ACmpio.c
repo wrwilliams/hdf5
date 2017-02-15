@@ -54,28 +54,6 @@
 /* Local Typedefs */
 /******************/
 
-/****************************************************************************
- *
- * structure H5AC_slist_entry_t
- *
- * The dirty entry list maintained via the d_slist_ptr field of H5AC_aux_t
- * and the cleaned entry list maintained via the c_slist_ptr field of
- * H5AC_aux_t are just lists of the file offsets of the dirty/cleaned
- * entries.  Unfortunately, the slist code makes us define a dynamically
- * allocated structure to store these offsets in.  This structure serves
- * that purpose.  Its fields are as follows:
- *
- * addr:	file offset of a metadata entry.  Entries are added to this
- *		list (if they aren't there already) when they are marked
- *		dirty in an unprotect, inserted, or moved.  They are
- *		removed when they appear in a clean entries broadcast.
- *
- ****************************************************************************/
-typedef struct H5AC_slist_entry_t
-{
-    haddr_t     addr;
-} H5AC_slist_entry_t;
-
 /* User data for address list building callbacks */
 typedef struct H5AC_addr_list_ud_t
 {
@@ -388,10 +366,13 @@ H5AC__broadcast_cache_image(H5AC_t *cache_ptr, size_t image_len,
 
     if(MPI_SUCCESS != (mpi_result = MPI_Bcast(image_buffer, (int)image_len, 
             MPI_BYTE, 0, aux_ptr->mpi_comm)))
+
         HMPI_GOTO_ERROR(FAIL, "MPI_Bcast failed", mpi_result)
 
 done:
+
     FUNC_LEAVE_NOAPI(ret_value)
+
 } /* H5AC__broadcast_cache_image() */
 
 
@@ -817,11 +798,14 @@ H5AC__log_dirtied_entry(const H5AC_info_t *entry_ptr)
              * add its size to the dirty_bytes count.
              */
             if(NULL == (slist_entry_ptr = H5FL_MALLOC(H5AC_slist_entry_t)))
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "Can't allocate dirty slist entry .")
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, \
+                            "Can't allocate dirty slist entry .")
             slist_entry_ptr->addr  = addr;
 
-            if(H5SL_insert(aux_ptr->d_slist_ptr, slist_entry_ptr, &(slist_entry_ptr->addr)) < 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTINSERT, FAIL, "can't insert entry into dirty entry slist.")
+            if(H5SL_insert(aux_ptr->d_slist_ptr, slist_entry_ptr, 
+                           &(slist_entry_ptr->addr)) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTINSERT, FAIL, \
+                            "can't insert entry into dirty entry slist.")
 
             aux_ptr->dirty_bytes += entry_ptr->size;
 #if H5AC_DEBUG_DIRTY_BYTES_CREATION
@@ -833,7 +817,8 @@ H5AC__log_dirtied_entry(const H5AC_info_t *entry_ptr)
         /* the entry is dirty.  If it exists on the cleaned entries list,
          * remove it.
          */
-        if(NULL != (slist_entry_ptr = (H5AC_slist_entry_t *)H5SL_remove(aux_ptr->c_slist_ptr, (void *)(&addr))))
+        if(NULL != (slist_entry_ptr = (H5AC_slist_entry_t *)
+                    H5SL_remove(aux_ptr->c_slist_ptr, (void *)(&addr))))
             slist_entry_ptr = H5FL_FREE(H5AC_slist_entry_t, slist_entry_ptr);
     } /* end if */
     else {
@@ -1697,6 +1682,7 @@ H5AC__receive_cache_image(const H5AC_t *cache_ptr, size_t image_len,
     /* Retrieve the contents of the metadata cache image from process 0 */
     if(MPI_SUCCESS != (mpi_result = MPI_Bcast(image_buffer, (int)image_len, 
             MPI_BYTE, 0, aux_ptr->mpi_comm)))
+
         HMPI_GOTO_ERROR(FAIL, "can't receive cache image MPI_Bcast", mpi_result)
 
 done:
@@ -1998,6 +1984,7 @@ H5AC__rsp__p0_only__flush(H5F_t *f, hid_t dxpl_id)
 
     /* Flush data to disk, from rank 0 process */
     if(aux_ptr->mpi_rank == 0) {
+
         herr_t        result;
 
         /* Enable writes during this operation */
@@ -2019,7 +2006,7 @@ H5AC__rsp__p0_only__flush(H5F_t *f, hid_t dxpl_id)
          */
         if(aux_ptr->write_done)
             (aux_ptr->write_done)();
-    } /* end if */
+    }
 
     /* Propagate cleaned entries to other ranks. */
     if(H5AC__propagate_flushed_and_still_clean_entries_list(f, dxpl_id) < 0)
@@ -2277,6 +2264,7 @@ HDfprintf(stdout, "%d:H5AC_propagate...:%u: (u/uu/i/iu/r/ru) = %zu/%u/%zu/%u/%zu
 #endif /* H5AC_DEBUG_DIRTY_BYTES_CREATION */
 
 done:
+
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__run_sync_point() */
 

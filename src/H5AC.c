@@ -650,12 +650,21 @@ H5AC_dest(H5F_t *f, hid_t dxpl_id)
 
 #ifdef H5_HAVE_PARALLEL
     if(aux_ptr != NULL) {
-        if(aux_ptr->d_slist_ptr != NULL)
+        if(aux_ptr->d_slist_ptr != NULL) {
+
+            HDassert(H5SL_count(aux_ptr->d_slist_ptr) == 0);
             H5SL_close(aux_ptr->d_slist_ptr);
-        if(aux_ptr->c_slist_ptr != NULL)
+        }
+        if(aux_ptr->c_slist_ptr != NULL) {
+
+            HDassert(H5SL_count(aux_ptr->c_slist_ptr) == 0);
             H5SL_close(aux_ptr->c_slist_ptr);
-        if(aux_ptr->candidate_slist_ptr != NULL)
+        }
+        if(aux_ptr->candidate_slist_ptr != NULL) {
+
+            HDassert(H5SL_count(aux_ptr->candidate_slist_ptr) == 0);
             H5SL_close(aux_ptr->candidate_slist_ptr);
+        }
         aux_ptr->magic = 0;
         aux_ptr = H5FL_FREE(H5AC_aux_t, aux_ptr);
     } /* end if */
