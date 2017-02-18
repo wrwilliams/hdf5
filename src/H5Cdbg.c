@@ -101,7 +101,7 @@ H5C_dump_cache(H5C_t * cache_ptr, const char *  cache_name)
 
     /* First, create a skip list */
     if(NULL == (slist_ptr = H5SL_create(H5SL_TYPE_HADDR, NULL)))
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTCREATE, FAIL, "can't create skip list.")
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTCREATE, FAIL, "can't create skip list")
 
     /* Next, scan the index, and insert all entries in the skip list.
      * Do this, as we want to display cache entries in increasing address
@@ -237,9 +237,9 @@ H5C_dump_cache_skip_list(H5C_t * cache_ptr, char * calling_fcn)
                (int)(entry_ptr->is_dirty),
                entry_ptr->type->name);
 
-            HDfprintf(stdout, "		node_ptr = 0x%llx, item = 0x%llx\n",
+            HDfprintf(stdout, "		node_ptr = 0x%llx, item = %p\n",
                       (unsigned long long)node_ptr,
-                      (unsigned long long)H5SL_item(node_ptr));
+                      H5SL_item(node_ptr));
 
             /* increment node_ptr before we delete its target */
             node_ptr = H5SL_next(node_ptr);
@@ -281,7 +281,7 @@ H5C_set_prefix(H5C_t * cache_ptr, char * prefix)
 
     if((cache_ptr == NULL) || (cache_ptr->magic != H5C__H5C_T_MAGIC) ||
             (prefix == NULL) || (HDstrlen(prefix) >= H5C__PREFIX_LEN))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Bad param(s) on entry.")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Bad param(s) on entry")
 
     HDstrncpy(&(cache_ptr->prefix[0]), prefix, (size_t)(H5C__PREFIX_LEN));
 

@@ -91,8 +91,8 @@
 /********************/
 
 /* Helper routines */
-static size_t H5C_cache_image_block_entry_header_size(H5F_t *f);
-static size_t H5C_cache_image_block_header_size(H5F_t *f);
+static size_t H5C__cache_image_block_entry_header_size(const H5F_t *f);
+static size_t H5C__cache_image_block_header_size(const H5F_t *f);
 static herr_t H5C_decode_cache_image_buffer(H5F_t *f, H5C_t *cache_ptr);
 static const uint8_t * H5C_decode_cache_image_header(H5F_t *f,
     H5C_t *cache_ptr, const uint8_t *buf);
@@ -104,8 +104,8 @@ static uint8_t * H5C_encode_cache_image_header(H5F_t *f, H5C_t *cache_ptr,
     uint8_t *buf);
 static uint8_t * H5C_encode_cache_image_entry(H5F_t *f, H5C_t *cache_ptr, 
     uint8_t *buf, int entry_num, size_t expected_entry_header_len);
-static herr_t H5C_prep_for_file_close__compute_fd_heights(H5C_t *cache_ptr);
-static void H5C_prep_for_file_close__compute_fd_heights_real(
+static herr_t H5C__prep_for_file_close__compute_fd_heights(const H5C_t *cache_ptr);
+static void H5C__prep_for_file_close__compute_fd_heights_real(
     H5C_cache_entry_t  *entry_ptr, uint32_t fd_height);
 static void H5C_prep_for_file_close__partition_image_entries_array(
     H5C_t *cache_ptr, int bottom, int *middle_ptr, int top);
@@ -278,7 +278,7 @@ H5C_construct_cache_image_buffer(H5F_t * f, H5C_t *cache_ptr)
 
 
     /* Construct the cache entry images */
-    entry_header_size = H5C_cache_image_block_entry_header_size(f);
+    entry_header_size = H5C__cache_image_block_entry_header_size(f);
     for ( i = 0; i < cache_ptr->num_entries_in_image; i++ ) {
 	p = H5C_encode_cache_image_entry(f, cache_ptr, p, i, entry_header_size);
 	if ( NULL ==  p )
@@ -519,7 +519,7 @@ H5C_deserialize_prefetched_entry(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr,
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for fd child ptr array")
 
         if(H5C_destroy_pf_entry_child_flush_deps(cache_ptr, pf_entry_ptr, fd_children) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL, "can't destroy pf entry child flush dependency(s).")
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL, "can't destroy pf entry child flush dependency(s)")
     } /* end if */
 
     /* Since the size of the on disk image is known exactly, there is 
@@ -725,7 +725,7 @@ H5C_deserialize_prefetched_entry(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr,
             HDassert(found);
 
             if(H5C_create_flush_dependency(ds_entry_ptr, fd_children[i]) < 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTDEPEND, FAIL, "Can't restore child flush dependency.")
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTDEPEND, FAIL, "Can't restore child flush dependency")
 
             i++;
         } /* end while */
@@ -932,7 +932,7 @@ hbool_t
 H5C_get_serialization_in_progress(H5F_t *f)
 {
     H5C_t * cache_ptr;
-    hbool_t ret_value;          /* Return value */
+    hbool_t ret_value = FALSE;  /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -1124,7 +1124,6 @@ H5C_load_cache_image(H5F_t *f, hid_t dxpl_id)
 
 	/* If directed, free the on disk metadata cache image */
         if(cache_ptr->delete_image) { 
-
 	    HDassert(HADDR_UNDEF != cache_ptr->image_addr);
             HDassert(first_alloc_dealloc == f->shared->first_alloc_dealloc);
             HDassert(eoa_pre_fsm_fsalloc == f->shared->eoa_pre_fsm_fsalloc);
@@ -1161,33 +1160,23 @@ H5C_load_cache_image(H5F_t *f, hid_t dxpl_id)
              * before the first metadata cache access.  However, given
              * time constraints, I don't want to go there now.
              */
-            if ( f->shared->first_alloc_dealloc ) {
-
+            if(f->shared->first_alloc_dealloc) {
                 HDassert(HADDR_UNDEF != f->shared->eoa_pre_fsm_fsalloc);
-                HDassert(H5F_addr_ge(cache_ptr->image_addr,
-                                     f->shared->eoa_pre_fsm_fsalloc));
+                HDassert(H5F_addr_ge(cache_ptr->image_addr, f->shared->eoa_pre_fsm_fsalloc));
+                if(H5MF_tidy_self_referential_fsm_hack(f, dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFREE, FAIL, "tidy of self referential fsm hack failed")
 
-                if ( SUCCEED != 
-                     H5MF_tidy_self_referential_fsm_hack(f, dxpl_id) )
-                    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, \
-                                "tidy of self referential fsm hack failed.")
+            } /* end if */
+            else {
+                if(H5MF_xfree(f, H5FD_MEM_SUPER, dxpl_id, cache_ptr->image_addr, (hsize_t)(cache_ptr->image_len)) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFREE, FAIL, "unable to free file space for cache image block")
+            } /* end else */
 
-            }
-            else
-            {
-                if ( H5MF_xfree(f, H5FD_MEM_SUPER, dxpl_id, 
-                                cache_ptr->image_addr, 
-                                (hsize_t)(cache_ptr->image_len)) < 0)
-
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFREE, FAIL, \
-                            "unable to free file space for cache image block.")
-            }
-
-            /* clean up */
+            /* Clean up */
             cache_ptr->image_len = 0;
             cache_ptr->image_data_len = 0;
             cache_ptr->image_addr = HADDR_UNDEF;
-        }
+        } /* end if */
 
         /* free the image entries array.  Note that all on disk image 
          * image buffers and fd parent address arrays have been transferred 
@@ -1216,25 +1205,20 @@ H5C_load_cache_image(H5F_t *f, hid_t dxpl_id)
 	cache_ptr->num_entries_in_image = 0;
 
         cache_ptr->image_loaded = TRUE;
-    }
+    } /* end if */
 
-    /* do this at the end of the function, as freeing of the file space 
+    /* Do this at the end of the function, as freeing of the file space 
      * used by the cache image must be the first file space allocation / 
      * deallocation operation after file open under some circumstances.
      */
-    if ( cache_ptr->delete_image ) {
+    if(cache_ptr->delete_image) {
+        if(H5F_super_ext_remove_msg(f, dxpl_id, H5O_MDCI_MSG_ID) < 0)
+	    HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove metadata cache image message from superblock extension")
 
-        if ( H5F_super_ext_remove_msg(f, dxpl_id, H5O_MDCI_MSG_ID) < 0 )
-
-	    HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, \
-         "can't remove metadata cache image message from superblock extension")
-
-	/* this shouldn't be necessary, but must mark the superblock dirty */
-	if ( H5F_super_dirty(f) < 0 )
-
-	    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, \
-                        "can't mark superblock dirty")
-    }
+	/* This shouldn't be necessary, but must mark the superblock dirty */
+	if(H5F_super_dirty(f) < 0)
+	    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "can't mark superblock dirty")
+    } /* end if */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1409,7 +1393,7 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
              */
             if(cache_ptr->image_ctl.flags & H5C_CI__GEN_MDCI_SBE_MESG)
 		if(H5C__write_cache_image_superblock_msg(f, dxpl_id, TRUE) < 0)
-		    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "creation of cache image SB mesg failed.")
+		    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "creation of cache image SB mesg failed")
 
 	    /* Serialize the cache */
 	    if(H5C_serialize_cache(f, dxpl_id) < 0)
@@ -1493,7 +1477,7 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
              * we destroy the metadata cache.
              */
             HDassert(HADDR_UNDEF == f->shared->eoa_post_mdci_fsalloc);
-            if(ADDR_UNDEF == (f->shared->eoa_post_mdci_fsalloc = H5FD_get_eoa(f->shared->lf, H5FD_MEM_DEFAULT)))
+            if(HADDR_UNDEF == (f->shared->eoa_post_mdci_fsalloc = H5FD_get_eoa(f->shared->lf, H5FD_MEM_DEFAULT)))
                 HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to get file size")
 
 	    /* For now, drop any fragment left over from the allocation of the
@@ -1527,7 +1511,7 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
              */
             if(cache_ptr->image_ctl.flags & H5C_CI__GEN_MDC_IMAGE_BLK)
 	        if(H5C__write_cache_image_superblock_msg(f, dxpl_id, FALSE) < 0)
-	            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "update of cache image SB mesg failed.")
+	            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "update of cache image SB mesg failed")
 
 	    /* At this point:
              *
@@ -1565,7 +1549,7 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
              */
 	    if(cache_ptr->num_entries_in_image > 0) {
 		if(H5C_prep_for_file_close__setup_image_entries_array(cache_ptr) < 0)
-		    HGOTO_ERROR(H5E_CACHE, H5E_CANTINIT, FAIL, "can't setup image entries array.")
+		    HGOTO_ERROR(H5E_CACHE, H5E_CANTINIT, FAIL, "can't setup image entries array")
 
 		H5C_prep_for_file_close__qsort_image_entries_array(cache_ptr, 0, cache_ptr->num_entries_in_image - 1);
 	    } /* end if */
@@ -1579,7 +1563,7 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
                  */
                 if(cache_ptr->image_ctl.flags & H5C_CI__GEN_MDC_IMAGE_BLK)
                     if(H5F_super_ext_remove_msg(f, dxpl_id, H5O_MDCI_MSG_ID) < 0)
-		        HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove MDC image msg from superblock ext.")
+		        HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove MDC image msg from superblock ext")
 
 		cache_ptr->image_ctl.generate_image = FALSE;
 	    } /* end else */
@@ -1759,7 +1743,7 @@ done:
 /*************************************************************************/
 
 /*-------------------------------------------------------------------------
- * Function:    H5C_cache_image_block_entry_header_size
+ * Function:    H5C__cache_image_block_entry_header_size
  *
  * Purpose:     Compute the size of the header of the metadata cache
  *		image block, and return the value.
@@ -1772,12 +1756,12 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-size_t
-H5C_cache_image_block_entry_header_size(H5F_t * f)
+static size_t
+H5C__cache_image_block_entry_header_size(const H5F_t * f)
 {
     size_t ret_value = 0;       /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
+    FUNC_ENTER_STATIC_NOERR
 
     /* Set return value */
     ret_value = (size_t)( 4 +                   /* signature                */
@@ -1793,11 +1777,11 @@ H5C_cache_image_block_entry_header_size(H5F_t * f)
 			  H5F_SIZEOF_SIZE(f) ); /* entry length             */
 
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5C_cache_image_block_entry_header_size() */
+} /* H5C__cache_image_block_entry_header_size() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5C_cache_image_block_header_size
+ * Function:    H5C__cache_image_block_header_size
  *
  * Purpose:     Compute the size of the header of the metadata cache
  *		image block, and return the value.
@@ -1810,12 +1794,12 @@ H5C_cache_image_block_entry_header_size(H5F_t * f)
  *
  *-------------------------------------------------------------------------
  */
-size_t
-H5C_cache_image_block_header_size(H5F_t * f)
+static size_t
+H5C__cache_image_block_header_size(const H5F_t * f)
 {
     size_t ret_value = 0;       /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
+    FUNC_ENTER_STATIC_NOERR
 
     /* Set return value */
     ret_value = (size_t)( 4 +                   /* signature           */
@@ -1825,7 +1809,7 @@ H5C_cache_image_block_header_size(H5F_t * f)
 			  4 );			/* num_entries         */
 
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5C_cache_image_block_header_size() */
+} /* H5C__cache_image_block_header_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -1876,52 +1860,33 @@ H5C_decode_cache_image_buffer(H5F_t * f, H5C_t * cache_ptr)
     p = (uint8_t *)cache_ptr->image_buffer;
 
     /* decode metadata cache image header */
-
-    if ( NULL == (p = H5C_decode_cache_image_header(f, cache_ptr, p)) )
-
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTOPENFILE, FAIL, \
-		    "cache image header decode failed.")
-
-    HDassert((size_t)(p - (uint8_t *)cache_ptr->image_buffer) < 
-             cache_ptr->image_len);
+    if(NULL == (p = H5C_decode_cache_image_header(f, cache_ptr, p)))
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTOPENFILE, FAIL, "cache image header decode failed")
+    HDassert((size_t)(p - (uint8_t *)cache_ptr->image_buffer) < cache_ptr->image_len);
 
     /* cache_ptr->image_data_len should be defined now */
     HDassert(cache_ptr->image_data_len > 0);
     HDassert(cache_ptr->image_data_len <= cache_ptr->image_len);
 
-
     /* we should now have cache_ptr->num_entries_in_image -- allocate the
      * image entries array.
      */
     HDassert(cache_ptr->num_entries_in_image > 0);
-
-    cache_ptr->image_entries = (H5C_image_entry_t *)
-                H5MM_malloc(sizeof(H5C_image_entry_t) *
-                            (size_t)(cache_ptr->num_entries_in_image + 1));
-
-    if ( NULL == cache_ptr->image_entries )
-
-	HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, \
-                    "memory allocation failed image entries array")
-
+    cache_ptr->image_entries = (H5C_image_entry_t *)H5MM_malloc(sizeof(H5C_image_entry_t) * (size_t)(cache_ptr->num_entries_in_image + 1));
+    if(NULL == cache_ptr->image_entries)
+	HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed image entries array")
 
     /* load the image entries */
-
-    entry_header_size = H5C_cache_image_block_entry_header_size(f);
-
+    entry_header_size = H5C__cache_image_block_entry_header_size(f);
     for ( i = 0; i < cache_ptr->num_entries_in_image; i++ ) {
-
 	(cache_ptr->image_entries)[i].magic = H5C__H5C_IMAGE_ENTRY_T_MAGIC;
         (cache_ptr->image_entries)[i].image_fd_height = 0;
         (cache_ptr->image_entries)[i].image_index = i;
         (cache_ptr->image_entries)[i].image_ptr = NULL;
 
 	p = H5C_decode_cache_image_entry(f, cache_ptr, p, i, entry_header_size);
-
 	if ( NULL ==  p )
-
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTOPENFILE, FAIL, \
-                        "entry image decode failed.")
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTOPENFILE, FAIL, "entry image decode failed")
     }
 
     HDassert((size_t)(p - (uint8_t *)cache_ptr->image_buffer) < 
@@ -1944,14 +1909,10 @@ H5C_decode_cache_image_buffer(H5F_t * f, H5C_t * cache_ptr)
                     (size_t)(cache_ptr->image_data_len - H5F_SIZEOF_CHKSUM), 0);
 
     if ( read_chksum != computed_chksum )
-
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTOPENFILE, FAIL, 
-	    "bad checksum on metadata cache image block")
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTOPENFILE, FAIL, "bad checksum on metadata cache image block")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5C_decode_cache_image_buffer() */
 
 
@@ -2012,7 +1973,7 @@ H5C_decode_cache_image_header(H5F_t *f, H5C_t *cache_ptr, const uint8_t *buf)
 	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, NULL, "MDC resize status not yet supported")
 
     /* Read image data length */
-    H5F_DECODE_LENGTH(f, p, cache_ptr->image_data_len);
+    H5F_DECODE_LENGTH(f, p, image_data_len);
 
     /* For now -- will become <= eventually */
     if(image_data_len != cache_ptr->image_len)
@@ -2028,9 +1989,9 @@ H5C_decode_cache_image_header(H5F_t *f, H5C_t *cache_ptr, const uint8_t *buf)
 
     /* Verify expected length of header */
     actual_header_len = (size_t)(p - buf);
-    expected_header_len = H5C_cache_image_block_header_size(f);
+    expected_header_len = H5C__cache_image_block_header_size(f);
     if(actual_header_len != expected_header_len)
-        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, NULL, "Bad header image len.")
+        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, NULL, "Bad header image len")
 
     ret_value = p;
 
@@ -2069,7 +2030,6 @@ H5C_decode_cache_image_entry(H5F_t * f, H5C_t *cache_ptr,
     hbool_t		is_fd_parent = FALSE;
     hbool_t		is_fd_child = FALSE;
 #endif /* NDEBUG */ /* only used in assertions */
-    int			i;
     haddr_t 		addr;
     size_t		size = 0;
     void *		image_ptr;
@@ -2407,9 +2367,9 @@ H5C_encode_cache_image_header(H5F_t * f, H5C_t * cache_ptr, uint8_t * buf)
 
     /* verify expected length of header */
     actual_header_len = (size_t)(p - buf);
-    expected_header_len = H5C_cache_image_block_header_size(f);
+    expected_header_len = H5C__cache_image_block_header_size(f);
     if(actual_header_len != expected_header_len)
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, NULL, "Bad header image len.")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, NULL, "Bad header image len")
 
     ret_value = p;
 
@@ -2469,7 +2429,7 @@ H5C_encode_cache_image_entry(H5F_t *f, H5C_t *cache_ptr, uint8_t *buf,
 
     /* Encode type */
     if((ie_ptr->type_id < 0) || (ie_ptr->type_id > 255))
-        HGOTO_ERROR(H5E_CACHE, H5E_BADRANGE, FAIL, "type_id out of range.")
+        HGOTO_ERROR(H5E_CACHE, H5E_BADRANGE, NULL, "type_id out of range")
     *p++ = (uint8_t)(ie_ptr->type_id);
 
     /* Compose and encode flags */
@@ -2501,7 +2461,7 @@ H5C_encode_cache_image_entry(H5F_t *f, H5C_t *cache_ptr, uint8_t *buf,
 
     /* Validate and encode dependency parent count */
     if(ie_ptr->fd_parent_count > H5C__MDCI_MAX_FD_PARENTS)
-        HGOTO_ERROR(H5E_CACHE, H5E_BADRANGE, NULL, "fd_parent_count out of rang.")
+        HGOTO_ERROR(H5E_CACHE, H5E_BADRANGE, NULL, "fd_parent_count out of range")
     UINT16ENCODE(p, (uint16_t)(ie_ptr->fd_parent_count));
 
     /* Encode index in LRU */
@@ -2514,8 +2474,8 @@ H5C_encode_cache_image_entry(H5F_t *f, H5C_t *cache_ptr, uint8_t *buf,
     H5F_ENCODE_LENGTH(f, p, ie_ptr->size);
 
     /* Verify expected length of entry image */
-    if((size_t)(p - *buf) != H5C__cache_image_block_entry_header_size(f))
-        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Bad entry image len")
+    if((size_t)(p - buf) != H5C__cache_image_block_entry_header_size(f))
+        HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, NULL, "Bad entry image len")
 
     /* Encode dependency parent offsets -- if any */
     for(i = 0; i < (int)(ie_ptr->fd_parent_count); i++)
@@ -2534,7 +2494,7 @@ done:
 
 /*-------------------------------------------------------------------------
  *
- * Function:    H5C_prep_for_file_close__compute_fd_heights
+ * Function:    H5C__prep_for_file_close__compute_fd_heights
  *
  * Purpose:     Recent modifications to flush dependency support in the
  *		metadata cache have removed the notion of flush dependency
@@ -2596,8 +2556,8 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
-H5C_prep_for_file_close__compute_fd_heights(H5C_t *cache_ptr)
+static herr_t
+H5C__prep_for_file_close__compute_fd_heights(const H5C_t *cache_ptr)
 {
     H5C_cache_entry_t * entry_ptr;
     H5C_cache_entry_t * parent_ptr;
@@ -2609,7 +2569,7 @@ H5C_prep_for_file_close__compute_fd_heights(H5C_t *cache_ptr)
     int			j;
     herr_t              ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI(FAIL)
+    FUNC_ENTER_STATIC
 
     /* sanity checks */
     HDassert(cache_ptr);
@@ -2769,7 +2729,7 @@ H5C_prep_for_file_close__compute_fd_heights(H5C_t *cache_ptr)
 
 	        HDassert(parent_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
 	        if(parent_ptr->include_in_image && parent_ptr->image_fd_height <= 0) 
-		    H5C_prep_for_file_close__compute_fd_heights_real(parent_ptr, 1);
+		    H5C__prep_for_file_close__compute_fd_heights_real(parent_ptr, 1);
 	    } /* end for */
         } /* end if */
 
@@ -2783,7 +2743,7 @@ done:
 
 /*-------------------------------------------------------------------------
  *
- * Function:    H5C_prep_for_file_close__compute_fd_heights_real
+ * Function:    H5C__prep_for_file_close__compute_fd_heights_real
  *
  * Purpose:     H5C_prep_for_file_close__compute_fd_heights() prepares
  *		for the computation of flush dependency heights of all
@@ -2831,7 +2791,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void
-H5C_prep_for_file_close__compute_fd_heights_real(H5C_cache_entry_t  *entry_ptr,
+H5C__prep_for_file_close__compute_fd_heights_real(H5C_cache_entry_t  *entry_ptr,
     uint32_t fd_height)
 {
     int i;
@@ -2854,12 +2814,12 @@ H5C_prep_for_file_close__compute_fd_heights_real(H5C_cache_entry_t  *entry_ptr,
 	    HDassert(parent_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
 
 	    if(parent_ptr->include_in_image && parent_ptr->image_fd_height <= fd_height)
-		H5C_prep_for_file_close__compute_fd_heights_real(parent_ptr, fd_height + 1);
+		H5C__prep_for_file_close__compute_fd_heights_real(parent_ptr, fd_height + 1);
         } /* end for */
     } /* end if */
 
     FUNC_LEAVE_NOAPI_VOID
-} /* H5C_prep_for_file_close__compute_fd_heights_real() */
+} /* H5C__prep_for_file_close__compute_fd_heights_real() */
 
 
 /*-------------------------------------------------------------------------
@@ -3282,8 +3242,8 @@ H5C_prep_for_file_close__scan_entries(H5F_t *f, hid_t H5_ATTR_UNUSED dxpl_id, H5
     /* Initialize image len to the size of the metadata cache image block
      * header.
      */
-    image_len        = H5C_cache_image_block_header_size(f);
-    entry_header_len = H5C_cache_image_block_entry_header_size(f);
+    image_len        = H5C__cache_image_block_header_size(f);
+    entry_header_len = H5C__cache_image_block_entry_header_size(f);
 
     /* Scan each entry on the index list */
     entry_ptr = cache_ptr->il_head;
@@ -3520,12 +3480,12 @@ H5C_reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
     HDassert(cache_ptr->image_entries != NULL);
     HDassert(cache_ptr->num_entries_in_image > 0);
 
-    for ( i = 0; i < cache_ptr->num_entries_in_image; i++ ) {
+    for(i = 0; i < cache_ptr->num_entries_in_image; i++) {
 
 	/* Create the prefetched entry described by the ith
          * entry in cache_ptr->image_entrise.
          */
-	if(NULL == (pf_entry_ptr = H5C_reconstruct_cache_entry(cache_ptr, i))
+	if(NULL == (pf_entry_ptr = H5C_reconstruct_cache_entry(cache_ptr, i)))
             HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "reconstruction of cache entry failed")
 
 	/* Note that we make no checks on available cache space before 
@@ -3551,7 +3511,7 @@ H5C_reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
 	/* If the prefetched entry is the child in one or more flush 
          * dependency relationships, recreate those flush dependencies.
          */
-	for( j = 0; j < (int)(pf_entry_ptr->fd_parent_count); j++) {
+	for(j = 0; j < (int)(pf_entry_ptr->fd_parent_count); j++) {
             /* Sanity checks */
 	    HDassert(pf_entry_ptr->fd_parent_addrs);
 	    HDassert(H5F_addr_defined(pf_entry_ptr->fd_parent_addrs[j]));
@@ -3587,7 +3547,7 @@ H5C_reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
     /* Scan the image_entries array, and verify that each entry has
      * the expected flush dependency status.
      */
-    for ( i = 0; i < cache_ptr->num_entries_in_image; i++ ) {
+    for(i = 0; i < cache_ptr->num_entries_in_image; i++) {
 	ie_ptr = &(cache_ptr->image_entries[i]);
         HDassert(ie_ptr->magic == H5C__H5C_IMAGE_ENTRY_T_MAGIC);
         HDassert(ie_ptr->image_index == i);
@@ -3599,8 +3559,7 @@ H5C_reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
 	HDassert(pf_entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
 	HDassert(pf_entry_ptr->prefetched);
 	HDassert(ie_ptr->fd_parent_count == pf_entry_ptr->fd_parent_count);
-        HDassert(pf_entry_ptr->fd_parent_count == 
-                 pf_entry_ptr->flush_dep_nparents);
+        HDassert(pf_entry_ptr->fd_parent_count == pf_entry_ptr->flush_dep_nparents);
 	HDassert(ie_ptr->lru_rank == pf_entry_ptr->lru_rank);
 
         for(j = 0; j < (int)(pf_entry_ptr->fd_parent_count); j++) {
@@ -3702,7 +3661,7 @@ H5C_reconstruct_cache_entry(H5C_t *cache_ptr, int i)
     H5C_cache_entry_t *pf_entry_ptr = NULL;
     H5C_image_entry_t *ie_ptr;
     hbool_t            file_is_rw;
-    H5C_cache_entry_t *ret_value;               /* Return value */
+    H5C_cache_entry_t *ret_value = NULL;        /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
@@ -3750,7 +3709,7 @@ H5C_reconstruct_cache_entry(H5C_t *cache_ptr, int i)
      * setting the prefetched_dirty field, and hiding such entries from
      * the eviction candidate selection algorithm.
      */
-    pf_entry_ptr->is_dirty = (is_dirty && file_is_rw);
+    pf_entry_ptr->is_dirty = (ie_ptr->is_dirty && file_is_rw);
 
     /* Initialize cache image related fields */
     pf_entry_ptr->lru_rank                      = ie_ptr->lru_rank;
@@ -4208,7 +4167,7 @@ H5C_serialize_ring(const H5F_t *f, hid_t dxpl_id, H5C_ring_t ring)
 	            if(H5C_serialize_single_entry(f, dxpl_id,  cache_ptr, entry_ptr, &restart_list_scan) < 0)
 		        HGOTO_ERROR(H5E_CACHE, H5E_CANTSERIALIZE, FAIL, "entry serialization failed")
 
-		    if(restart_list_scan) {
+		    if(restart_list_scan)
 		        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "flush_me_last entry serialization triggered restart")
 
                     HDassert(entry_ptr->flush_dep_nunser_children == 0);
@@ -4359,7 +4318,7 @@ H5C_serialize_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr,
          *     tests will be necessary.
          */
         if(cache_ptr->aux_ptr != NULL)
-            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "resize/move in serialize occured in parallel case.")
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "resize/move in serialize occured in parallel case")
 #endif /* H5_HAVE_PARALLEL */
 
         /* Resize the buffer if required */
