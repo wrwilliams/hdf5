@@ -119,7 +119,6 @@ static herr_t H5C_reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id,
     H5C_t *cache_ptr);
 static H5C_cache_entry_t * H5C_reconstruct_cache_entry(H5C_t *cache_ptr, 
     int i);
-static herr_t H5C_serialize_cache(H5F_t *f, hid_t dxpl_id);
 static herr_t H5C_serialize_ring(const H5F_t *f, hid_t dxpl_id, 
     H5C_ring_t ring);
 static herr_t H5C_serialize_single_entry(const H5F_t *f, hid_t dxpl_id, 
@@ -631,6 +630,10 @@ H5C_deserialize_prefetched_entry(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr,
     ds_entry_ptr->prefetched	            	= FALSE;
     ds_entry_ptr->prefetch_type_id          	= 0;
     ds_entry_ptr->age		          	= 0;
+    ds_entry_ptr->prefetched_dirty              = pf_entry_ptr->prefetched_dirty;
+#ifndef NDEBUG  /* debugging field */
+    ds_entry_ptr->serialization_count           = 0;
+#endif /* NDEBUG */
 
     H5C__RESET_CACHE_ENTRY_STATS(ds_entry_ptr);
 
@@ -1580,8 +1583,51 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
 
 		cache_ptr->image_ctl.generate_image = FALSE;
 	    } /* end else */
-        } /* end if ( cache_ptr->image_ctl.generate_image ) */
+        } /* if ( cache_ptr->image_ctl.generate_image ) */
+#ifdef H5_HAVE_PARALLEL
+        else if(cache_ptr->aux_ptr != NULL && f->shared->fs_persist) {
+            /* if persistant free space managers are enabled, flushing the
+             * metadata cache may result in the deletion, insertion, and/or
+             * dirtying of entries.  
+             *
+             * This is a problem in PHDF5, as it breaks two invarients of 
+             * our management of the metadata cache across all processes:
+             *
+             * 1) Entries will not be dirtied, deleted, inserted, or moved 
+             *    during flush in the parallel case.
+             *
+             * 2) All processes contain the same set of dirty metadata 
+             *    entries on entry to a sync point.
+             *
+             * To solve this problem for the persistant free space managers,
+             * serialize the metadata cache on all processes prior to the 
+             * first sync point on file shutdown.  The shutdown warning is 
+             * a convenient location for this call.
+             *
+             * This is sufficient since:
+             *
+             * 1) FSM settle routines are only invoked on file close.  Since
+             *    seriaization make the same settle calls as flush on file 
+             *    close, and since the close warning is issued after all 
+             *    non FSM related space allocations and just before the 
+             *    first sync point on close, this call will leave the caches 
+             *    in a consistant state across the processes if they were 
+             *    consistant before.
+             *
+             * 2) Since the FSM settle routines are only invoked once during
+             *    file close, invoking them now will prevent their invocation
+             *    during a flush, and thus avoid any resulting entrie dirties,
+             *    deletions, insertion, or moves during the flush.
+             * of the metadata cache across all processes, serialize all the
+             */
+            H5AC_aux_t * aux_ptr;
 
+            aux_ptr = (H5AC_aux_t *)cache_ptr->aux_ptr;
+            HDassert(aux_ptr->write_permitted == FALSE);
+            if(H5C_serialize_cache(f, dxpl_id) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTSERIALIZE, FAIL, "serialization of the cache failed")
+        } /* end else-if */
+#endif /* H5_HAVE_PARALLEL */
     } /* end if ( cache_ptr->close_warning_received ) */
 
 done:
@@ -2160,7 +2206,6 @@ H5C_decode_cache_image_entry(H5F_t * f, H5C_t *cache_ptr,
     ie_ptr->fd_parent_count      = (uint64_t)fd_parent_count;
     ie_ptr->fd_parent_addrs      = fd_parent_addrs;
     ie_ptr->image_ptr            = image_ptr;
-
 
     ret_value = p;
 
@@ -3131,6 +3176,8 @@ H5C_prep_for_file_close__setup_image_entries_array(H5C_t *cache_ptr)
 		image_entries[j].age              = 0;
 	    } /* end else */
 
+            HDassert(entry_ptr->image_dirty == entry_ptr->is_dirty);
+
 	    image_entries[j].image_index          = j;
 	    image_entries[j].lru_rank             = entry_ptr->lru_rank;
 	    image_entries[j].is_dirty             = entry_ptr->is_dirty;
@@ -3653,8 +3700,9 @@ H5C_cache_entry_t *
 H5C_reconstruct_cache_entry(H5C_t *cache_ptr, int i)
 {
     H5C_cache_entry_t *pf_entry_ptr = NULL;
-    H5C_image_entry_t * ie_ptr = NULL;
-    H5C_cache_entry_t *ret_value = NULL;        /* Return value */
+    H5C_image_entry_t *ie_ptr;
+    hbool_t            file_is_rw;
+    H5C_cache_entry_t *ret_value;               /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
@@ -3671,10 +3719,12 @@ H5C_reconstruct_cache_entry(H5C_t *cache_ptr, int i)
     HDassert(ie_ptr->size > 0);
     HDassert(ie_ptr->image_ptr);
 
+    /* Key R/W access off of whether the image will be deleted */
+    file_is_rw = cache_ptr->delete_image;
+
     /* Allocate space for the prefetched cache entry */
     if(NULL == (pf_entry_ptr = H5FL_CALLOC(H5C_cache_entry_t)))
 	HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, NULL, "memory allocation failed for prefetched cache entry")
-
 
     /* initialize the prefetched entry from the entry image */
     pf_entry_ptr->magic				= H5C__H5C_CACHE_ENTRY_T_MAGIC;
@@ -3686,39 +3736,48 @@ H5C_reconstruct_cache_entry(H5C_t *cache_ptr, int i)
     pf_entry_ptr->image_ptr			= ie_ptr->image_ptr;
     pf_entry_ptr->image_up_to_date		= TRUE;
     pf_entry_ptr->type				= &H5C__prefetched_entry_class;
+    pf_entry_ptr->tag_info                      = NULL;
 
     /* Force dirty entries to clean if the file read only -- must do 
      * this as otherwise the cache will attempt to write them on file
      * close.  Since the file is R/O, the metadata cache image superblock
      * extension message and the cache image block will not be removed.
-     * Hence no danger in this.
+     * Hence no danger in this for subsequent opens.
+     *
+     * However, if the dirty entry (marked clean for purposes of the R/O
+     * file open) is evicted and then referred to, the cache will read
+     * either invalid or obsolete data from the file.  Handle this by 
+     * setting the prefetched_dirty field, and hiding such entries from
+     * the eviction candidate selection algorithm.
      */
-    pf_entry_ptr->is_dirty = (is_dirty && cache_ptr->delete_image);
+    pf_entry_ptr->is_dirty = (is_dirty && file_is_rw);
 
     /* Initialize cache image related fields */
-    pf_entry_ptr->lru_rank			= ie_ptr->lru_rank;
-    pf_entry_ptr->image_index			= -1;
-    pf_entry_ptr->fd_parent_count		= ie_ptr->fd_parent_count;
-    pf_entry_ptr->fd_parent_addrs		= ie_ptr->fd_parent_addrs;
-    pf_entry_ptr->fd_child_count		= ie_ptr->fd_child_count;
-    pf_entry_ptr->fd_dirty_child_count		= ie_ptr->fd_dirty_child_count;
-    pf_entry_ptr->prefetched			= TRUE;
-    pf_entry_ptr->prefetch_type_id		= ie_ptr->type_id;
-    pf_entry_ptr->age				= ie_ptr->age;
+    pf_entry_ptr->lru_rank                      = ie_ptr->lru_rank;
+    pf_entry_ptr->image_index                   = -1;
+    pf_entry_ptr->fd_parent_count               = ie_ptr->fd_parent_count;
+    pf_entry_ptr->fd_parent_addrs               = ie_ptr->fd_parent_addrs;
+    pf_entry_ptr->fd_child_count                = ie_ptr->fd_child_count;
+    if(file_is_rw) 
+        pf_entry_ptr->fd_dirty_child_count      = ie_ptr->fd_dirty_child_count;
+    else
+        pf_entry_ptr->fd_dirty_child_count      = 0;
+    pf_entry_ptr->prefetched                    = TRUE;
+    pf_entry_ptr->prefetch_type_id              = ie_ptr->type_id;
+    pf_entry_ptr->age                           = ie_ptr->age;
+    pf_entry_ptr->prefetched_dirty              = ie_ptr->is_dirty && (!file_is_rw);
 
-    /* array of addresses of flush dependency parents is now transferred to
+    /* Array of addresses of flush dependency parents is now transferred to
      * the prefetched entry.  Thus set ie_ptr->fd_parent_addrs to NULL.
      */
     HDassert(pf_entry_ptr->fd_parent_addrs == ie_ptr->fd_parent_addrs);
     HDassert(pf_entry_ptr->fd_parent_count == ie_ptr->fd_parent_count);
-
     if(pf_entry_ptr->fd_parent_count > 0) {
 	HDassert(ie_ptr->fd_parent_addrs);
         ie_ptr->fd_parent_addrs = NULL;
-    } else {
+    } /* end if */
+    else
         HDassert(ie_ptr->fd_parent_addrs == NULL);
-    }
-
 
     /* On disk image of entry is now transferred to the prefetched entry.
      * Thus set ie_ptr->image_ptr to NULL.
@@ -3726,18 +3785,14 @@ H5C_reconstruct_cache_entry(H5C_t *cache_ptr, int i)
     HDassert(pf_entry_ptr->image_ptr == ie_ptr->image_ptr);
     ie_ptr->image_ptr = NULL;
 
-
     H5C__RESET_CACHE_ENTRY_STATS(pf_entry_ptr)
-
 
     /* Sanity checks */
     HDassert(pf_entry_ptr->size > 0 && pf_entry_ptr->size < H5C_MAX_ENTRY_SIZE);
 
-
     ret_value = pf_entry_ptr;
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5C_reconstruct_cache_entry() */
 
@@ -3778,7 +3833,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
+herr_t
 H5C_serialize_cache(H5F_t *f, hid_t dxpl_id)
 {
 #if H5C_DO_SANITY_CHECKS

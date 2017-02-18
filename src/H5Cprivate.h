@@ -1532,6 +1532,46 @@ typedef int H5C_ring_t;
  *
  *		This field must be zero if prefetched is FALSE.  
  *
+ * prefetched_dirty:  Boolean field that must be set to FALSE unless the
+ *		following conditions hold:
+ *
+ *		    1) The file has been opened R/O.
+ *
+ *		    2) The entry is either a prefetched entry, or was 
+ *                     re-constructed from a prefetched entry.
+ *
+ *                  3) The base prefetched entry was marked dirty.
+ *
+ *              This field exists to solve the following problem with 
+ *              files containing cache images that are opened R/O.
+ *
+ *              If the cache image contains a dirty entry, that entry
+ *              must be marked clean when it is inserted into the cache
+ *              in the read only case, as otherwise the metadata cache 
+ *              will attempt to flush it on file close -- which is poor 
+ *              form in the read only case.
+ *
+ *              However, since the entry is marked clean, it is possible 
+ *              that the metadata cache will evict it if the size of the 
+ *              metadata in the file exceeds the size of the metadata cache,
+ *              and the application visits much of this data.
+ *
+ *              If this happens, and the metadata cache is then asked for
+ *              this entry, it will attempt to read it from file, and will
+ *              obtain either obsolete or invalid data depending on whether
+ *              the entry has ever been written to it assigned location in
+ *              the file.
+ *
+ *              With this background, the purpose of this field should be 
+ *              obvious -- when set, it allows the eviction candidate 
+ *              selection code to skip over the entry, thus avoiding the 
+ *              issue.
+ *
+ *              Since the issue only arrises in the R/O case, there is 
+ *              no possible interaction with SWMR.  There are also 
+ *              potential interactions with Evict On Close -- at present,
+ *              we deal with this by disabling EOC in the R/O case.
+ *
  * serialization_count:  Integer field used to maintain a count of the 
  *		number of times each entry is serialized during cache 
  *		serialization.  While no entry should be serialized more than
@@ -1649,6 +1689,7 @@ typedef struct H5C_cache_entry_t {
     hbool_t                     prefetched;
     int                         prefetch_type_id;
     int32_t                     age;
+    hbool_t			prefetched_dirty;
 
 #ifndef NDEBUG	/* debugging field */
     int                         serialization_count;
@@ -2279,6 +2320,7 @@ H5_DLL void * H5C_protect(H5F_t *f, hid_t dxpl_id, const H5C_class_t *type,
     haddr_t addr, void *udata, unsigned flags);
 H5_DLL herr_t H5C_reset_cache_hit_rate_stats(H5C_t *cache_ptr);
 H5_DLL herr_t H5C_resize_entry(void *thing, size_t new_size);
+H5_DLL herr_t H5C_serialize_cache(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5C_set_cache_auto_resize_config(H5C_t *cache_ptr, H5C_auto_size_ctl_t *config_ptr);
 H5_DLL herr_t H5C_set_cache_image_config(const H5F_t *f, H5C_t *cache_ptr,
     H5C_cache_image_ctl_t *config_ptr);

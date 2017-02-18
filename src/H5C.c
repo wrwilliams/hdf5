@@ -75,7 +75,7 @@
 /****************/
 
 #include "H5Cmodule.h"          /* This source code file is part of the H5C module */
-#define H5F_FRIEND		/*suppress error about including H5Fpkg	  */
+#define H5F_FRIEND		/* suppress error about including H5Fpkg  */
 
 
 /***********/
@@ -1149,8 +1149,11 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 		} /* end switch */
             } /* end if */
 
-	    if(H5C_flush_ring(f, dxpl_id, ring, flags) < 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "flush ring failed.")
+	    if ( H5C_flush_ring(f, dxpl_id, ring, flags) < 0 )
+
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
+                            "flush ring failed.")
+
             ring++;
         } /* end while */
     } /* end else */
@@ -1504,20 +1507,21 @@ H5C_insert_entry(H5F_t *             f,
     entry_ptr->aux_prev = NULL;
 
     /* initialize cache image related fields */
-    entry_ptr->include_in_image 		= FALSE;
-    entry_ptr->lru_rank         		= 0;
-    entry_ptr->image_index			= -1;
-    entry_ptr->image_dirty			= FALSE;
-    entry_ptr->fd_parent_count			= 0;
-    entry_ptr->fd_parent_addrs			= NULL;
-    entry_ptr->fd_child_count			= 0;
-    entry_ptr->fd_dirty_child_count		= 0;
-    entry_ptr->image_fd_height			= 0;
-    entry_ptr->prefetched			= FALSE;
-    entry_ptr->prefetch_type_id			= 0;
-    entry_ptr->age				= 0;
+    entry_ptr->include_in_image                 = FALSE;
+    entry_ptr->lru_rank                         = 0;
+    entry_ptr->image_index                      = -1;
+    entry_ptr->image_dirty                      = FALSE;
+    entry_ptr->fd_parent_count                  = 0;
+    entry_ptr->fd_parent_addrs                  = NULL;
+    entry_ptr->fd_child_count                   = 0;
+    entry_ptr->fd_dirty_child_count             = 0;
+    entry_ptr->image_fd_height                  = 0;
+    entry_ptr->prefetched                       = FALSE;
+    entry_ptr->prefetch_type_id	                = 0;
+    entry_ptr->age                              = 0;
+    entry_ptr->prefetched_dirty                 = FALSE;
 #ifndef NDEBUG  /* debugging field */
-    entry_ptr->serialization_count		= 0;
+    entry_ptr->serialization_count              = 0;
 #endif /* NDEBUG */
 
 #ifdef H5_HAVE_PARALLEL
@@ -4762,6 +4766,25 @@ done:
  *
  *                                              JRM -- 4/6/15
  *
+ *              Modified function to skip entries marked as being 
+ *              prefetched dirty.  
+ *
+ *              The issue here is dirty entries that are included in 
+ *              a cache image.  If a file containing a cache image is 
+ *              opened R/O, any dirty entries in the cache image must 
+ *              be marked as clean when they are inserted into the metadata
+ *              cache.  However, this allows them to be evicted.  If the 
+ *              entry is later referenced, the metadata cache will attempt
+ *              to load the entry from file -- resulting in either out
+ *              dated or invalid data.
+ *
+ *              To address this problem, such entries are marked by setting
+ *              the prefetched_dirty field to TRUE, and skipping these
+ *              entries when they are encountered in the make space in 
+ *              cache or autoadjust eviction routines.
+ *
+                                                JRM -- 1/29/17
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -4769,9 +4792,11 @@ H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * f,
                                                 hid_t   dxpl_id,
                                                 hbool_t write_permitted)
 {
+    int32_t             prefetched_dirty_entries_skipped = 0;
     H5C_t *		cache_ptr = f->shared->cache;
     size_t		eviction_size_limit;
     size_t		bytes_evicted = 0;
+    hbool_t             skipping_entry;
     hbool_t		prev_is_dirty = FALSE;
     hbool_t             restart_scan;
     H5C_cache_entry_t * entry_ptr;
@@ -4809,12 +4834,12 @@ H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * f,
                 ( (entry_ptr->type)->id != H5AC_EPOCH_MARKER_ID ) &&
                 ( bytes_evicted < eviction_size_limit ) )
         {
-	    hbool_t		corked = FALSE;
-
             HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
             HDassert( ! (entry_ptr->is_protected) );
             HDassert( ! (entry_ptr->is_read_only) );
             HDassert( (entry_ptr->ro_ref_count) == 0 );
+
+            skipping_entry = FALSE;
 
 	    next_ptr = entry_ptr->next;
             prev_ptr = entry_ptr->prev;
@@ -4823,10 +4848,15 @@ H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * f,
                 prev_is_dirty = prev_ptr->is_dirty;
 
             if(entry_ptr->is_dirty ) {
+
+                HDassert(!entry_ptr->prefetched_dirty);
+
                 /* dirty corked entry is skipped */
-                if(entry_ptr->tag_info && entry_ptr->tag_info->corked)
-                    corked = TRUE;
-                else {
+                if ( entry_ptr->tag_info && entry_ptr->tag_info->corked ) {
+
+                    skipping_entry = TRUE;
+
+                } else {
                     /* reset entries_removed_counter and
                      * last_entry_removed_ptr prior to the call to
                      * H5C__flush_single_entry() so that we can spot
@@ -4838,35 +4868,52 @@ H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * f,
                     cache_ptr->entries_removed_counter = 0;
                     cache_ptr->last_entry_removed_ptr  = NULL;
 
-                    if(H5C__flush_single_entry(f, dxpl_id, entry_ptr, H5C__NO_FLAGS_SET) < 0)
-                        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush entry")
+                    if(H5C__flush_single_entry(f, dxpl_id, entry_ptr, 
+                                               H5C__NO_FLAGS_SET) < 0)
 
-                    if(cache_ptr->entries_removed_counter > 1 || cache_ptr->last_entry_removed_ptr == prev_ptr)
+                        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
+                                    "unable to flush entry")
+
+                    if ( cache_ptr->entries_removed_counter > 1 || 
+                         cache_ptr->last_entry_removed_ptr == prev_ptr )
+
                         restart_scan = TRUE;
+
                 } /* end else */
             } /* end if */
-            else {
+            else if ( !entry_ptr->prefetched_dirty ) {
 
                 bytes_evicted += entry_ptr->size;
 
-                if(H5C__flush_single_entry(f, dxpl_id, entry_ptr, H5C__FLUSH_INVALIDATE_FLAG | H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG) < 0 )
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush entry")
+                if ( H5C__flush_single_entry(f, dxpl_id, entry_ptr, 
+                                     H5C__FLUSH_INVALIDATE_FLAG | 
+                                     H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG) < 0 )
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
+                                "unable to flush entry")
+            } else {
+
+                HDassert(!entry_ptr->is_dirty);
+                HDassert(entry_ptr->prefetched_dirty);
+
+                skipping_entry = TRUE;
+                prefetched_dirty_entries_skipped++;
             }
 
             if ( prev_ptr != NULL ) {
 
-		if(corked)   /* dirty corked entry is skipped */
+                if ( skipping_entry ) {
+
                     entry_ptr = prev_ptr;
 
-		else if ( ( restart_scan )
-                     ||
-                     ( prev_ptr->is_dirty != prev_is_dirty )
-                     ||
-                     ( prev_ptr->next != next_ptr )
-                     ||
-                     ( prev_ptr->is_protected )
-                     ||
-                     ( prev_ptr->is_pinned ) ) {
+		} else if ( ( restart_scan )
+                          ||
+                          ( prev_ptr->is_dirty != prev_is_dirty )
+                          ||
+                          ( prev_ptr->next != next_ptr )
+                          ||
+                          ( prev_ptr->is_protected )
+                          ||
+                          ( prev_ptr->is_pinned ) ) {
 
                     /* something has happened to the LRU -- start over
 		     * from the tail.
@@ -4931,9 +4978,19 @@ H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * f,
 
             prev_ptr = entry_ptr->prev;
 
-            if ( ! (entry_ptr->is_dirty) ) {
-                if(H5C__flush_single_entry(f, dxpl_id, entry_ptr, H5C__FLUSH_INVALIDATE_FLAG | H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG) < 0)
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush clean entry")
+            if ( ( ! (entry_ptr->is_dirty) ) && 
+                 ( ! (entry_ptr->prefetched_dirty) ) ) {
+
+                if ( H5C__flush_single_entry(f, dxpl_id, entry_ptr, 
+                                      H5C__FLUSH_INVALIDATE_FLAG | 
+                                      H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG) < 0)
+
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
+                                "unable to flush clean entry")
+
+            } else if ( entry_ptr->prefetched_dirty ) {
+
+                prefetched_dirty_entries_skipped++;
             }
             /* just skip the entry if it is dirty, as we can't do
              * anything with it now since we can't write.
@@ -4941,6 +4998,17 @@ H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * f,
 	     * Since all entries are clean, serialize() will not be called,
 	     * and thus we needn't test to see if the LRU has been changed
 	     * out from under us.
+             *
+             * Update: Entries can be marked prefetched_dirty iff the file
+             *         is opened R/O, the file contains a cache image, and 
+             *         the image contains one or more entries that are 
+             *         marked dirty.  Since the file is opened R/O, these
+             *         entries must be marked clean to prevent attempts to 
+             *         write them to file.  However, this allows them to 
+             *         to be evicted, which causes problems if they are 
+             *         later accessed.  Solve the problem by marking them
+             *         prefetched_dirty, and preventing the make space in 
+             *         cache and adaptive resize code from evicting them.
              */
 
             entry_ptr = prev_ptr;
@@ -6415,8 +6483,11 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
         HDassert(entry_ptr->is_dirty);
 
 #if H5C_DO_SANITY_CHECKS
-        if(cache_ptr->check_write_permitted && !(cache_ptr->write_permitted))
-            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Write when writes are always forbidden!?!?!")
+        if ( ( NULL == cache_ptr->check_write_permitted ) && 
+             ( !(cache_ptr->write_permitted) ) )
+
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+                        "Write when writes are always forbidden!?!?!")
 #endif /* H5C_DO_SANITY_CHECKS */
 
         /* Write the image to disk unless the write is suppressed.
@@ -6566,8 +6637,11 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
                     (entry_ptr->type->notify)(H5C_NOTIFY_ACTION_ENTRY_CLEANED, entry_ptr) < 0)
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry dirty flag cleared")
 
-            /* Propagate the clean flag up the flush dependency chain if appropriate */
-            HDassert(entry_ptr->flush_dep_ndirty_children == 0);
+            /* Propagate the clean flag up the flush dependency chain if 
+             * appropriate 
+             */
+            if ( entry_ptr->flush_dep_ndirty_children != 0 )
+                HDassert(entry_ptr->flush_dep_ndirty_children == 0);
             if(entry_ptr->flush_dep_nparents > 0)
                 if(H5C__mark_flush_dep_clean(entry_ptr) < 0)
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "Can't propagate flush dep clean flag")
@@ -6849,7 +6923,10 @@ H5C_load_entry(H5F_t *              f,
     HDassert(!((type->flags & H5C__CLASS_SKIP_READS) &&
                (type->flags & H5C__CLASS_SPECULATIVE_LOAD_FLAG)));
 
-    /* Call the get_initial_load_size callback, to retrieve the initial size of image */
+
+    /* Call the get_initial_load_size callback, to retrieve the initial 
+     * size of image 
+     */
     if(type->get_initial_load_size(udata, &len) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTGET, NULL, "can't retrieve image size")
     HDassert(len > 0);
@@ -7101,6 +7178,7 @@ H5C_load_entry(H5F_t *              f,
     entry->prefetched                   = FALSE;
     entry->prefetch_type_id             = 0;
     entry->age                          = 0;
+    entry->prefetched_dirty             = FALSE;
 #ifndef NDEBUG  /* debugging field */
     entry->serialization_count          = 0;
 #endif /* NDEBUG */
@@ -7188,6 +7266,32 @@ done:
  *
  *						JRM -- 4/6/15
  *
+ *              Modified function to skip over entries with the 
+ *              prefetched_dirty flag set.
+ *
+ *              This is a fix for an issue with files with cache images
+ *              which are loaded R/O.  In this case, dirty entries in the
+ *              cache image must be marked as clean, as otherwise the 
+ *              metadata cache will attempt to write them on file close --
+ *              in which we would no longer be R/O.  However, this allows
+ *              the cache to evict them to make space if needed.  Should 
+ *              the entry be needed again later in the session, the 
+ *              metadata cache will attempt to read it from file, which 
+ *              will yield obsolete or invalid data.
+ *
+ *              Solve this by setting the prefetched_dirty flag on such 
+ *              entries, and ignoring entries so marked in the candidate 
+ *              selection code.  This solution isn't particularly efficient,
+ *              so we should try to do better in the future.
+ *
+ *              Note that Evict on Close can also cause this issue.  For 
+ *              now, we deal with it by disabling EOC in the R/O case.
+ *
+ *              SWMR is also a possible problem, but it is irrelevant in 
+ *              the R/O case.
+ *
+ *                                              JRM -- 1/27/17
+ *             
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -7197,6 +7301,7 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     H5C_t *		cache_ptr = f->shared->cache;
 #if H5C_COLLECT_CACHE_STATS
     int32_t             clean_entries_skipped = 0;
+    int32_t             dirty_pf_entries_skipped = 0;
     int32_t             total_entries_scanned = 0;
 #endif /* H5C_COLLECT_CACHE_STATS */
     int32_t		entries_examined = 0;
@@ -7271,7 +7376,8 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
                 didnt_flush_entry = TRUE;
 
 	    } else if ( ( (entry_ptr->type)->id != H5AC_EPOCH_MARKER_ID ) &&
-                 ( ! entry_ptr->flush_in_progress ) ) {
+                        ( ! entry_ptr->flush_in_progress ) &&
+                        ( ! entry_ptr->prefetched_dirty ) ) {
 
                 didnt_flush_entry = FALSE;
 
@@ -7337,10 +7443,16 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
 
             } else {
 
-                /* Skip epoch markers and entries that are in the process
-                 * of being flushed.
+                /* Skip epoch markers, entries that are in the process
+                 * of being flushed, and entries marked as prefetched_dirty
+                 * (occurs in the R/O case only).
                  */
                 didnt_flush_entry = TRUE;
+
+#if H5C_COLLECT_CACHE_STATS
+                if ( entry_ptr->prefetched_dirty )
+                    dirty_pf_entries_skipped++;
+#endif /* H5C_COLLECT_CACHE_STATS */
             }
 
 	    if ( prev_ptr != NULL ) {
@@ -7405,11 +7517,20 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
         cache_ptr->calls_to_msic++;
 
         cache_ptr->total_entries_skipped_in_msic += clean_entries_skipped;
+        cache_ptr->total_dirty_pf_entries_skipped_in_msic += 
+            dirty_pf_entries_skipped;
         cache_ptr->total_entries_scanned_in_msic += total_entries_scanned;
 
         if ( clean_entries_skipped > cache_ptr->max_entries_skipped_in_msic ) {
 
             cache_ptr->max_entries_skipped_in_msic = clean_entries_skipped;
+        }
+
+        if ( dirty_pf_entries_skipped > 
+             cache_ptr->max_dirty_pf_entries_skipped_in_msic ) {
+
+            cache_ptr->max_dirty_pf_entries_skipped_in_msic = 
+                dirty_pf_entries_skipped;
         }
 
         if ( total_entries_scanned > cache_ptr->max_entries_scanned_in_msic ) {

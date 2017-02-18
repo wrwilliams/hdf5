@@ -1015,13 +1015,15 @@ attempt_swmr_open_hdf5_file(const hbool_t create_file,
         if ( create_file ) {
 
             H5E_BEGIN_TRY {
-                file_id = H5Fcreate(hdf_file_name, H5F_ACC_TRUNC | H5F_ACC_SWMR_WRITE, 
+                file_id = H5Fcreate(hdf_file_name, 
+                                    H5F_ACC_TRUNC | H5F_ACC_SWMR_WRITE, 
 			            H5P_DEFAULT, fapl_id);
             } H5E_END_TRY;
         } else {
 
             H5E_BEGIN_TRY {
-                file_id = H5Fopen(hdf_file_name, H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE, fapl_id);
+                file_id = H5Fopen(hdf_file_name, 
+                                  H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE, fapl_id);
             } H5E_END_TRY;
         }
 
@@ -4668,7 +4670,7 @@ cache_image_smoke_check_4(void)
  *		   If sufficient zoos have been created, continue to 
  *                 10).  Otherwise goto 5)
  *
- *	       10) Open the file.  
+ *	       10) Open the file R/O.  
  *
  *		   Verify that the file contains a metadata cache
  *		   image superblock extension message.
@@ -4677,16 +4679,25 @@ cache_image_smoke_check_4(void)
  *
  *	       12) Close the file.
  *
- *	       13) Open the file.
+ *	       13) Open the file.  
  *
- *		   Verify that the file doesn't contain a metadata cache
+ *		   Verify that the file contains a metadata cache
  *		   image superblock extension message.
  *
  *	       14) Validate all the zoos.
  *
  *	       15) Close the file.
  *
- *	       16) Delete the file.
+ *	       16) Open the file.
+ *
+ *		   Verify that the file doesn't contain a metadata cache
+ *		   image superblock extension message.
+ *
+ *	       17) Validate all the zoos.
+ *
+ *	       18) Close the file.
+ *
+ *	       19) Delete the file.
  *
  * Return:      void
  *
@@ -4695,7 +4706,11 @@ cache_image_smoke_check_4(void)
  *
  * Modifications:
  *
- *		None.
+ *		Modified the test to open the file and verify it R/O, 
+ *              before repeating the process R/W.  This modification
+ *              verifies correct handling of dirty metadata cache image
+ *              entries in the R/O case.
+ *                                                JRM -- 1/29/17
  *
  *-------------------------------------------------------------------------
  */
@@ -4933,9 +4948,8 @@ cache_image_smoke_check_5(void)
     } /* end while */
     cp += 5;
  
- 
- 
-    /* 10) Open the file. 
+
+    /* 10) Open the file read only. 
      *
      *    Verify that the file contains a metadata cache image 
      *    superblock extension message.
@@ -4945,7 +4959,7 @@ cache_image_smoke_check_5(void)
 
         open_hdf5_file(/* create_file        */ FALSE,
 		       /* mdci_sbem_expected */ TRUE,
-                       /* read_only          */ FALSE,
+                       /* read_only          */ TRUE,
                        /* set_mdci_fapl      */ FALSE,
 		       /* config_fsm         */ FALSE,
                        /* hdf_file_name      */ filename,
@@ -4993,9 +5007,69 @@ cache_image_smoke_check_5(void)
             failure_mssg = "H5Fclose() failed.\n";
         }
     }
+
+ 
+    /* 13) Open the file R/W. 
+     *
+     *    Verify that the file contains a metadata cache image 
+     *    superblock extension message.
+     */
+
+    if ( pass ) {
+
+        open_hdf5_file(/* create_file        */ FALSE,
+		       /* mdci_sbem_expected */ TRUE,
+                       /* read_only          */ FALSE,
+                       /* set_mdci_fapl      */ FALSE,
+		       /* config_fsm         */ FALSE,
+                       /* hdf_file_name      */ filename,
+                       /* cache_image_flags  */ 0,
+                       /* file_id_ptr        */ &file_id,
+                       /* file_ptr_ptr       */ &file_ptr,
+                       /* cache_ptr_ptr      */ &cache_ptr);
+    }
+
+    if ( show_progress ) 
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+
+
+    /* 14) Validate all the zoos. */
+    i = min_group;
+    while ( ( pass ) && ( i <= max_group ) ) {
+
+	sprintf(process_group_name, "/process_%d", i);
+        validate_zoo(file_id, process_group_name, i++);
+    }
+ 
+#if H5C_COLLECT_CACHE_STATS
+    if ( pass ) {
+
+        if ( cache_ptr->images_loaded == 0 ) {
+
+            pass = FALSE;
+            failure_mssg = "metadata cache image block not loaded(2).";
+        }
+    }
+#endif /* H5C_COLLECT_CACHE_STATS */
+
+
+    if ( show_progress ) 
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+
+
+    /* 15) Close the file. */
+
+    if ( pass ) {
+
+        if ( H5Fclose(file_id) < 0  ) {
+
+            pass = FALSE;
+            failure_mssg = "H5Fclose() failed.\n";
+        }
+    }
  
  
-    /* 13) Open the file. 
+    /* 16) Open the file. 
      *
      *    Verify that the file doesn't contain a metadata cache image 
      *    superblock extension message.
@@ -5019,7 +5093,7 @@ cache_image_smoke_check_5(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 14) Validate all the zoos.
+    /* 17) Validate all the zoos.
      *
      *    Verify that the metadata cache image superblock 
      *    extension message has been deleted.
@@ -5047,7 +5121,7 @@ cache_image_smoke_check_5(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
 
-    /* 15) Close the file. */
+    /* 18) Close the file. */
 
     if ( pass ) {
 
@@ -5062,7 +5136,7 @@ cache_image_smoke_check_5(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
 
-    /* 16) Delete the file */
+    /* 19) Delete the file */
 
     if ( pass ) {
 
@@ -6421,7 +6495,7 @@ cache_image_api_error_check_3(void)
     }
 
     if ( show_progress ) 
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        HDfprintf(stdout, "%s: cp = %d, pass = %d*.\n", fcn_name, cp++, pass);
  
 
     /* 2) Try to start SWMR write -- should fail. */
@@ -6432,7 +6506,7 @@ cache_image_api_error_check_3(void)
             if ( H5Fstart_swmr_write(file_id) == SUCCEED ) {
 
                 pass = FALSE;
-                failure_mssg = "metadata cache image block loaded(1).";
+                failure_mssg = "SWMR start succeeded in file with cache image.";
             }
         } H5E_END_TRY;
     }
@@ -7118,7 +7192,6 @@ main(void)
 #if 0 /* uncomment once we have SWMR */ /* JRM */
     nerrs += cache_image_api_error_check_3();
 #endif /* uncomment once we have SWMR */ /* JRM */
-
     nerrs += get_free_sections_test();
 
     return(nerrs > 0);

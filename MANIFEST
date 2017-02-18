@@ -1221,6 +1221,7 @@
 ./testpar/COPYING
 ./testpar/Makefile.am
 ./testpar/t_cache.c
+./testpar/t_cache_image.c
 ./testpar/t_chunk_alloc.c
 ./testpar/t_coll_chunk.c
 ./testpar/t_dset.c

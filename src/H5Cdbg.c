@@ -385,6 +385,7 @@ H5C_stats(H5C_t * cache_ptr,
     double	average_successful_search_depth = 0.0f;
     double	average_failed_search_depth = 0.0f;
     double      average_entries_skipped_per_calls_to_msic = 0.0f;
+    double      average_dirty_pf_entries_skipped_per_call_to_msic = 0.0f;
     double      average_entries_scanned_per_calls_to_msic = 0.0f;
 #endif /* H5C_COLLECT_CACHE_STATS */
     herr_t	ret_value = SUCCEED;   /* Return value */
@@ -618,6 +619,17 @@ H5C_stats(H5C_t * cache_ptr,
               cache_ptr->prefix,
               (double)average_entries_skipped_per_calls_to_msic,
               (long)(cache_ptr->max_entries_skipped_in_msic));
+
+    if (cache_ptr->calls_to_msic > 0)
+        average_dirty_pf_entries_skipped_per_call_to_msic =
+            (((double)(cache_ptr->total_dirty_pf_entries_skipped_in_msic)) /
+            ((double)(cache_ptr->calls_to_msic)));
+
+    HDfprintf(stdout, 
+              "%s  MSIC: Average/max dirty pf entries skipped  = %lf / %ld\n",
+              cache_ptr->prefix,
+              average_dirty_pf_entries_skipped_per_call_to_msic,
+              (long)(cache_ptr->max_dirty_pf_entries_skipped_in_msic));
 
     if(cache_ptr->calls_to_msic > 0)
         average_entries_scanned_per_calls_to_msic =
@@ -887,12 +899,14 @@ H5C_stats__reset(H5C_t H5_ATTR_UNUSED * cache_ptr)
     cache_ptr->max_pel_len			= 0;
     cache_ptr->max_pel_size			= (size_t)0;
 
-    cache_ptr->calls_to_msic                    = 0;
-    cache_ptr->total_entries_skipped_in_msic    = 0;
-    cache_ptr->total_entries_scanned_in_msic    = 0;
-    cache_ptr->max_entries_skipped_in_msic      = 0;
-    cache_ptr->max_entries_scanned_in_msic      = 0;
-    cache_ptr->entries_scanned_to_make_space    = 0;
+    cache_ptr->calls_to_msic                          = 0;
+    cache_ptr->total_entries_skipped_in_msic          = 0;
+    cache_ptr->total_dirty_pf_entries_skipped_in_msic = 0;
+    cache_ptr->total_entries_scanned_in_msic          = 0;
+    cache_ptr->max_entries_skipped_in_msic            = 0;
+    cache_ptr->max_dirty_pf_entries_skipped_in_msic   = 0;
+    cache_ptr->max_entries_scanned_in_msic            = 0;
+    cache_ptr->entries_scanned_to_make_space          = 0;
 
     cache_ptr->slist_scan_restarts		= 0;
     cache_ptr->LRU_scan_restarts		= 0;
