@@ -200,9 +200,8 @@ H5_DLL herr_t H5MF_sect_free(H5FS_section_info_t *sect);
 
 
 /* Block aggregator routines */
-H5_DLL htri_t H5MF_aggr_try_extend(H5F_t *f, hid_t dxpl_id, 
-    H5F_blk_aggr_t *aggr, H5FD_mem_t type, haddr_t abs_blk_end, 
-    hsize_t extra_requested);
+H5_DLL htri_t H5MF_aggr_try_extend(H5F_t *f, hid_t dxpl_id, H5F_blk_aggr_t *aggr,
+    H5FD_mem_t type, haddr_t abs_blk_end, hsize_t extra_requested);
 H5_DLL htri_t H5MF_aggr_can_absorb(const H5F_t *f, const H5F_blk_aggr_t *aggr,
     const H5MF_free_section_t *sect, H5MF_shrink_type_t *shrink);
 H5_DLL herr_t H5MF_aggr_absorb(const H5F_t *f, H5F_blk_aggr_t *aggr,

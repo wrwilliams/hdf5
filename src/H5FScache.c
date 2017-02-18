@@ -585,7 +585,7 @@ H5FS__cache_hdr_pre_serialize(const H5F_t *f, hid_t dxpl_id, void *_thing,
             /* for one reason or another (see comment above) there should
              * not be any file space allocated for the section info.
              */
-            HDassert(!H5F_addr_defined(fspace->sect_addr));
+	    HDassert(!H5F_addr_defined(fspace->sect_addr));
         } /* end else */
     } /* end if */
     else if(H5F_addr_defined(fspace->sect_addr)) {

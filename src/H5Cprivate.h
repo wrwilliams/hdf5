@@ -191,21 +191,21 @@
  *      H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG
  *      H5C__GENERATE_IMAGE_FLAG
  */
-#define H5C__NO_FLAGS_SET                       0x00000
-#define H5C__SET_FLUSH_MARKER_FLAG              0x00001
-#define H5C__DELETED_FLAG                       0x00002
-#define H5C__DIRTIED_FLAG                       0x00004
-#define H5C__PIN_ENTRY_FLAG                     0x00008
-#define H5C__UNPIN_ENTRY_FLAG                   0x00010
-#define H5C__FLUSH_INVALIDATE_FLAG              0x00020
-#define H5C__FLUSH_CLEAR_ONLY_FLAG              0x00040
-#define H5C__FLUSH_MARKED_ENTRIES_FLAG          0x00080
-#define H5C__FLUSH_IGNORE_PROTECTED_FLAG        0x00100
-#define H5C__READ_ONLY_FLAG                     0x00200
-#define H5C__FREE_FILE_SPACE_FLAG               0x00400
-#define H5C__TAKE_OWNERSHIP_FLAG                0x00800
-#define H5C__FLUSH_LAST_FLAG                    0x01000
-#define H5C__FLUSH_COLLECTIVELY_FLAG            0x02000
+#define H5C__NO_FLAGS_SET			0x00000
+#define H5C__SET_FLUSH_MARKER_FLAG		0x00001
+#define H5C__DELETED_FLAG			0x00002
+#define H5C__DIRTIED_FLAG			0x00004
+#define H5C__PIN_ENTRY_FLAG			0x00008
+#define H5C__UNPIN_ENTRY_FLAG			0x00010
+#define H5C__FLUSH_INVALIDATE_FLAG		0x00020
+#define H5C__FLUSH_CLEAR_ONLY_FLAG		0x00040
+#define H5C__FLUSH_MARKED_ENTRIES_FLAG		0x00080
+#define H5C__FLUSH_IGNORE_PROTECTED_FLAG	0x00100
+#define H5C__READ_ONLY_FLAG			0x00200
+#define H5C__FREE_FILE_SPACE_FLAG		0x00400
+#define H5C__TAKE_OWNERSHIP_FLAG		0x00800
+#define H5C__FLUSH_LAST_FLAG			0x01000
+#define H5C__FLUSH_COLLECTIVELY_FLAG		0x02000
 #define H5C__EVICT_ALLOW_LAST_PINS_FLAG         0x04000
 #define H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG     0x08000
 #define H5C__DURING_FLUSH_FLAG                  0x10000 /* Set when the entire cache is being flushed */
@@ -1583,29 +1583,29 @@ typedef int H5C_ring_t;
  *
  ****************************************************************************/
 typedef struct H5C_cache_entry_t {
-    uint32_t                    magic;
+    uint32_t			magic;
     H5C_t                      *cache_ptr;
-    haddr_t                     addr;
-    size_t                      size;
-    void                       *image_ptr;
-    hbool_t                     image_up_to_date;
-    const H5C_class_t          *type;
-    hbool_t                     is_dirty;
-    hbool_t                     dirtied;
-    hbool_t                     is_protected;
-    hbool_t                     is_read_only;
-    int                         ro_ref_count;
-    hbool_t                     is_pinned;
-    hbool_t                     in_slist;
-    hbool_t                     flush_marker;
+    haddr_t			addr;
+    size_t			size;
+    void  		       *image_ptr;
+    hbool_t			image_up_to_date;
+    const H5C_class_t	       *type;
+    hbool_t			is_dirty;
+    hbool_t			dirtied;
+    hbool_t			is_protected;
+    hbool_t			is_read_only;
+    int				ro_ref_count;
+    hbool_t			is_pinned;
+    hbool_t			in_slist;
+    hbool_t			flush_marker;
     hbool_t                     flush_me_last;
 #ifdef H5_HAVE_PARALLEL
-    hbool_t                     clear_on_unprotect;
-    hbool_t                     flush_immediately;
-    hbool_t                     coll_access;
+    hbool_t			clear_on_unprotect;
+    hbool_t			flush_immediately;
+    hbool_t			coll_access;
 #endif /* H5_HAVE_PARALLEL */
-    hbool_t                     flush_in_progress;
-    hbool_t                     destroy_in_progress;
+    hbool_t			flush_in_progress;
+    hbool_t			destroy_in_progress;
 
     /* fields supporting rings for purposes of flush ordering */
     H5C_ring_t                  ring;
@@ -1617,8 +1617,8 @@ typedef struct H5C_cache_entry_t {
     unsigned                    flush_dep_nchildren;
     unsigned                    flush_dep_ndirty_children;
     unsigned                    flush_dep_nunser_children;
-    hbool_t                     pinned_from_client;
-    hbool_t                     pinned_from_cache;
+    hbool_t			pinned_from_client;
+    hbool_t			pinned_from_cache;
 
     /* fields supporting the hash table: */
     struct H5C_cache_entry_t   *ht_next;
@@ -1661,10 +1661,10 @@ typedef struct H5C_cache_entry_t {
 
 #if H5C_COLLECT_CACHE_ENTRY_STATS
     /* cache entry stats fields */
-    int32_t                     accesses;
-    int32_t                     clears;
-    int32_t                     flushes;
-    int32_t                     pins;
+    int32_t			accesses;
+    int32_t			clears;
+    int32_t			flushes;
+    int32_t			pins;
 #endif /* H5C_COLLECT_CACHE_ENTRY_STATS */
 } H5C_cache_entry_t;
 
@@ -1674,7 +1674,7 @@ typedef struct H5C_cache_entry_t {
  * structure H5C_image_entry_t
  *
  * Instances of the H5C_image_entry_t structure are used to store data on
- * metadatat cache entries used in the construction of the metadat cache 
+ * metadata cache entries used in the construction of the metadata cache 
  * image block.  In essence this structure is a greatly simplified version
  * of H5C_cache_entry_t.
  *
@@ -1731,7 +1731,7 @@ typedef struct H5C_cache_entry_t {
  *
  *              Since the image_fd_height is used to order entries in the
  *              cache image so that fd parents preceed fd children, for
- *              purposes of this field, and entry is at flush dependency
+ *              purposes of this field, an entry is at flush dependency
  *              level 0 if it either has no children, or if all of its
  *              children are not in the cache image.
  *
@@ -1757,7 +1757,7 @@ typedef struct H5C_cache_entry_t {
  *              cache image, and its parent is dirty and not in the cache
  *              image, then the entry must be removed from the cache image
  *              to avoid violating the flush dependency flush ordering.
- *		This should have happended before the construction of 
+ *		This should have happened before the construction of 
  *		the instance of H5C_image_entry_t.
  *
  * fd_parent_addrs: If the entry is a child in one or more flush dependency
@@ -1779,7 +1779,7 @@ typedef struct H5C_cache_entry_t {
  *              cache image, and its parent is dirty and not in the cache
  *              image, then the entry must be removed from the cache image
  *              to avoid violating the flush dependency flush ordering.
- *		This should have happended before the construction of 
+ *		This should have happened before the construction of 
  *		the instance of H5C_image_entry_t.
  *
  * fd_child_count: If the entry is a parent in a flush dependency 
@@ -2203,17 +2203,11 @@ typedef struct H5C_auto_size_ctl_t {
 }
 
 typedef struct H5C_cache_image_ctl_t {
-
     int32_t				version;
-
     hbool_t				generate_image;
-
     hbool_t                             save_resize_status;
-
     int32_t                             entry_ageout;
-
     unsigned				flags;
-
 } H5C_cache_image_ctl_t;
 
 /***************************************/
@@ -2308,10 +2302,10 @@ H5_DLL herr_t H5C_retag_entries(H5C_t * cache_ptr, haddr_t src_tag, haddr_t dest
 H5_DLL herr_t H5C_cork(H5C_t *cache_ptr, haddr_t obj_addr, unsigned action, hbool_t *corked);
 H5_DLL herr_t H5C_get_entry_ring(const H5F_t *f, haddr_t addr, H5C_ring_t *ring);
 H5_DLL herr_t H5C_unsettle_ring(H5F_t * f, H5C_ring_t ring);
+H5_DLL herr_t H5C_remove_entry(void *thing);
 H5_DLL herr_t H5C_cache_image_status(H5F_t * f, hbool_t *load_ci_ptr, 
     hbool_t *write_ci_ptr);
 H5_DLL hbool_t H5C_cache_image_pending(const H5C_t *cache_ptr);
-H5_DLL herr_t H5C_remove_entry(void * thing);
 
 #ifdef H5_HAVE_PARALLEL
 H5_DLL herr_t H5C_apply_candidate_list(H5F_t *f, hid_t dxpl_id,
@@ -2334,7 +2328,7 @@ H5_DLL herr_t H5C_flush_dependency_exists(H5C_t *cache_ptr, haddr_t parent_addr,
 H5_DLL herr_t H5C_verify_entry_type(H5C_t *cache_ptr, haddr_t addr,
     const H5C_class_t *expected_type, hbool_t *in_cache_ptr,
     hbool_t *type_ok_ptr);
-H5_DLL herr_t H5C_validate_index_list(H5C_t * cache_ptr);
+H5_DLL herr_t H5C_validate_index_list(H5C_t *cache_ptr);
 #endif /* NDEBUG */
 
 #endif /* !_H5Cprivate_H */

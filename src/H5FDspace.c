@@ -103,7 +103,7 @@ H5FD_extend(H5FD_t *file, H5FD_mem_t type, hsize_t size)
 {
     hsize_t orig_size = size;   /* Original allocation size */
     haddr_t eoa;                /* Address of end-of-allocated space */
-    hsize_t extra;              /* Extra space to allocate, to align request */
+    hsize_t extra;        	/* Extra space to allocate, to align request */
     haddr_t ret_value = HADDR_UNDEF;    /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -217,7 +217,7 @@ HDfprintf(stderr, "%s: type = %u, size = %Hu\n", FUNC, (unsigned)type, size);
     /* Post-condition sanity check */
     if(!file->paged_aggr && file->alignment > 1 && orig_size >= file->threshold)
         HDassert(!(ret_value % file->alignment));
-    
+
     /* Convert absolute file offset to relative address */
     ret_value -= file->base_addr;
 
@@ -379,8 +379,8 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5FD_free(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type, H5F_t *f, haddr_t addr,
-    hsize_t size)
+H5FD_free(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type, H5F_t *f,
+    haddr_t addr, hsize_t size)
 {
     herr_t      ret_value = SUCCEED;       /* Return value */
 

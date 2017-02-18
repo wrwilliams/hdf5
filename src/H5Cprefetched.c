@@ -252,6 +252,8 @@ H5C__prefetched_entry_notify(H5C_notify_action_t action, void *_thing)
         case H5C_NOTIFY_ACTION_ENTRY_CLEANED: 
         case H5C_NOTIFY_ACTION_CHILD_DIRTIED: 
         case H5C_NOTIFY_ACTION_CHILD_CLEANED: 
+        case H5C_NOTIFY_ACTION_CHILD_UNSERIALIZED: 
+        case H5C_NOTIFY_ACTION_CHILD_SERIALIZED: 
             /* do nothing */
             break;
 
@@ -304,10 +306,6 @@ done:
  *
  * Programmer:  John Mainzer
  *              8/13/15
- *
- * Changes:	Updated routine to free the fd parent addrs array if 
- *		appropriate.
- *						JRM -- 9/13/16
  *
  *-------------------------------------------------------------------------
  */

@@ -374,10 +374,11 @@ H5C_apply_candidate_list(H5F_t * f,
                 if(f->shared->page_buf && f->shared->page_buf->page_size >= entry_ptr->size) {
                     if(!entry_ptr->image_up_to_date || entry_ptr->image_ptr == NULL)
                         if(H5C__generate_image(f, cache_ptr, entry_ptr, dxpl_id) < 0)
-                            HGOTO_ERROR(H5E_CACHE, H5E_CANTGET, FAIL, "Can't generate cache entry image");
+                            HGOTO_ERROR(H5E_CACHE, H5E_CANTSERIALIZE, FAIL, "Can't generate cache entry image")
+
                     if(H5PB_update_entry(f->shared->page_buf, entry_ptr->addr, entry_ptr->size, entry_ptr->image_ptr) > 0)
-                        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Failed to update PB with metadata cache\n");
-                }
+                        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Failed to update PB with metadata cache")
+                } /* end if */
             } /* end else */
 
             /* Entries marked as collectively accessed and are in the
@@ -1233,10 +1234,11 @@ H5C_mark_entries_as_clean(H5F_t *  f,
             if(f->shared->page_buf && f->shared->page_buf->page_size >= entry_ptr->size) {
                 if(!entry_ptr->image_up_to_date || entry_ptr->image_ptr == NULL)
                     if(H5C__generate_image(f, cache_ptr, entry_ptr, dxpl_id) < 0)
-                        HGOTO_ERROR(H5E_CACHE, H5E_CANTGET, FAIL, "Can't generate cache entry image");
+                        HGOTO_ERROR(H5E_CACHE, H5E_CANTSERIALIZE, FAIL, "Can't generate cache entry image")
+
                 if(H5PB_update_entry(f->shared->page_buf, entry_ptr->addr, entry_ptr->size, entry_ptr->image_ptr) > 0)
-                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Failed to update PB with metadata cache\n");
-            }
+                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Failed to update PB with metadata cache")
+            } /* end if */
         } else {
 
             entry_ptr = entry_ptr->prev;

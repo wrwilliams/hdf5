@@ -87,7 +87,7 @@
 herr_t
 H5C_dump_cache(H5C_t * cache_ptr, const char *  cache_name)
 {
-    H5C_cache_entry_t * entry_ptr = NULL;
+    H5C_cache_entry_t * entry_ptr;
     H5SL_t *            slist_ptr = NULL;
     int                 i;                      /* Local index variable */
     herr_t              ret_value = SUCCEED;    /* Return value */
@@ -255,7 +255,6 @@ H5C_dump_cache_skip_list(H5C_t * cache_ptr, char * calling_fcn)
     HDfprintf(stdout, "\n\n");
 
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5C_dump_cache_skip_list() */
 #endif /* NDEBUG */
 
@@ -338,19 +337,6 @@ done:
  *
  * Programmer:  John Mainzer
  *              6/2/04
- *
- *		JRM -- 11/13/08
- *		Added code displaying the max_clean_index_size and
- *		max_dirty_index_size.
- *
- *              MAM -- 01/06/09
- *              Added code displaying the calls_to_msic,
- *              total_entries_skipped_in_msic, total_entries_scanned_in_msic,
- *              and max_entries_skipped_in_msic fields.
- *
- *		JRM -- 4/11/15
- *		Added code displaying the new slist_scan_restarts,
- *		LRU_scan_restarts, and hash_bucket_scan_restarts fields;
  *
  *-------------------------------------------------------------------------
  */
@@ -611,7 +597,7 @@ H5C_stats(H5C_t * cache_ptr,
 	      "%s  Total entry pins (dirty) / unpins  = %ld (%ld) / %ld\n",
               cache_ptr->prefix,
               (long)total_pins,
-              (long)total_dirty_pins,
+	      (long)total_dirty_pins,
               (long)total_unpins);
 
     HDfprintf(stdout, "%s  Total pinned flushes / clears      = %ld / %ld\n",
@@ -706,7 +692,7 @@ H5C_stats(H5C_t * cache_ptr,
     HDfprintf(stdout, "%s  aggregate max_size / max_pins      = %d / %d\n",
               cache_ptr->prefix,
               (int)aggregate_max_size,
-              (int)aggregate_max_pins);
+	      (int)aggregate_max_pins);
 
 #endif /* H5C_COLLECT_CACHE_ENTRY_STATS */
 
@@ -806,7 +792,7 @@ H5C_stats(H5C_t * cache_ptr,
                       "%s    entry max_size / max_pins      = %d / %d\n",
                       cache_ptr->prefix,
                       (int)(cache_ptr->max_size[i]),
-                      (int)(cache_ptr->max_pins[i]));
+		      (int)(cache_ptr->max_pins[i]));
 
 
 #endif /* H5C_COLLECT_CACHE_ENTRY_STATS */
@@ -832,20 +818,6 @@ done:
  * Return:      void
  *
  * Programmer:  John Mainzer, 4/28/04
- *
- *		JRM 11/13/08
- *		Added initialization for the new max_clean_index_size and
- *		max_dirty_index_size fields.
- *
- *              MAM -- 01/06/09
- *              Added code to initalize the calls_to_msic,
- *              total_entries_skipped_in_msic, total_entries_scanned_in_msic,
- *              and max_entries_skipped_in_msic fields.
- *
- *		JRM 4/11/15
- *		Added code to initialize the new slist_scan_restarts,
- *		LRU_scan_restarts, hash_bucket_scan_restarts, and 
- *		take_ownerships fields.
  *
  *-------------------------------------------------------------------------
  */
@@ -890,8 +862,8 @@ H5C_stats__reset(H5C_t H5_ATTR_UNUSED * cache_ptr)
         cache_ptr->pinned_clears[i]	 	= 0;
         cache_ptr->size_increases[i] 		= 0;
         cache_ptr->size_decreases[i] 		= 0;
-        cache_ptr->entry_flush_size_changes[i]	= 0;
-        cache_ptr->cache_flush_size_changes[i]	= 0;
+	cache_ptr->entry_flush_size_changes[i]	= 0;
+	cache_ptr->cache_flush_size_changes[i]	= 0;
     } /* end for */
 
     cache_ptr->total_ht_insertions		= 0;
@@ -985,7 +957,7 @@ H5C__dump_children_cb(H5C_cache_entry_t *entry_ptr, void *_ctx)
                 H5C__dump_entry(ctx->cache_ptr, entry_ptr, ctx->dump_parents, ctx->prefix, ctx->indent + 2);
     } /* end if */
 
-    return H5_ITER_CONT;
+    return(H5_ITER_CONT);
 } /* end H5C__dump_children_cb() */
 
 static void
@@ -1141,31 +1113,31 @@ H5C_validate_index_list(H5C_t *cache_ptr)
 
     if(((cache_ptr->il_head == NULL) || (cache_ptr->il_tail == NULL))
             && (cache_ptr->il_head != cache_ptr->il_tail))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 1 failed")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Index list pointer validation failed")
 
     if(cache_ptr->index_len < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 2 failed")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Index list length validation failed")
 
     if((cache_ptr->index_len == 1) && ((cache_ptr->il_head != cache_ptr->il_tail)
             || (cache_ptr->il_head == NULL) || (cache_ptr->il_head->size != cache_ptr->index_size)))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 3 failed")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Index list pointer sanity checks failed")
 
     if((cache_ptr->index_len >= 1)
             && ((cache_ptr->il_head == NULL)
                 || (cache_ptr->il_head->il_prev != NULL)
                 || (cache_ptr->il_tail == NULL)
                 || (cache_ptr->il_tail->il_next != NULL)))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 4 failed")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Index list length sanity checks failed")
 
     entry_ptr = cache_ptr->il_head;
     while(entry_ptr != NULL) {
         if((entry_ptr != cache_ptr->il_head)
                 && ((entry_ptr->il_prev == NULL) || (entry_ptr->il_prev->il_next != entry_ptr)))
-            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 5 failed")
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Index list pointers for entry are invalid")
 
         if((entry_ptr != cache_ptr->il_tail)
                 && ((entry_ptr->il_next == NULL) || (entry_ptr->il_next->il_prev != entry_ptr)))
-            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 6 failed")
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Index list pointers for entry are invalid")
 
 	HDassert(entry_ptr->ring > 0);
 	HDassert(entry_ptr->ring < H5C_RING_NTYPES);
@@ -1193,7 +1165,7 @@ H5C_validate_index_list(H5C_t *cache_ptr)
             || (cache_ptr->clean_index_size != clean_size)
             || (cache_ptr->dirty_index_size != dirty_size)
             || (clean_size + dirty_size != size))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 7 failed")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Index, clean and dirty sizes for cache are invalid")
 
     size = 0;
     clean_size = 0;
@@ -1207,7 +1179,7 @@ H5C_validate_index_list(H5C_t *cache_ptr)
     if((cache_ptr->index_size != size)
             || (cache_ptr->clean_index_size != clean_size)
             || (cache_ptr->dirty_index_size != dirty_size))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Check 8 failed")
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Index, clean and dirty sizes for cache are invalid")
 
 done:
     if(ret_value != SUCCEED)

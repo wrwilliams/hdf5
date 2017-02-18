@@ -386,6 +386,7 @@
 #endif /* H5_HAVE_PARALLEL */
 #endif /* H5F_MODULE */
 
+
 /* Macros to encode/decode offset/length's for storing in the file */
 #define H5F_ENCODE_OFFSET(f,p,o) switch(H5F_SIZEOF_ADDR(f)) {		      \
     case 4: UINT32ENCODE(p,o); break;					      \
@@ -463,8 +464,6 @@
 
 
 /* ========= File Access properties ============ */
-#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME \
-						"mdc_initCacheImageCfg" /* Initial metadata cache image creation configuration */
 #define H5F_ACS_META_CACHE_INIT_CONFIG_NAME	"mdc_initCacheCfg" /* Initial metadata cache resize configuration */
 #define H5F_ACS_DATA_CACHE_NUM_SLOTS_NAME       "rdcc_nslots"   /* Size of raw data chunk cache(slots) */
 #define H5F_ACS_DATA_CACHE_BYTE_SIZE_NAME       "rdcc_nbytes"   /* Size of raw data chunk cache(bytes) */
@@ -498,6 +497,7 @@
 #define H5F_ACS_PAGE_BUFFER_MIN_META_PERC_NAME  "page_buffer_min_meta_perc" /* the min metadata percentage for the page buffer cache */
 #define H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_NAME   "page_buffer_min_raw_perc" /* the min raw data percentage for the page buffer cache */
 #define H5F_ACS_COLL_MD_WRITE_FLAG_NAME         "collective_metadata_write" /* property indicating whether metadata writes are done collectively or not */
+#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME "mdc_initCacheImageCfg" /* Initial metadata cache image creation configuration */
 
 /* ======================== File Mount properties ====================*/
 #define H5F_MNT_SYM_LOCAL_NAME 		"local"                 /* Whether absolute symlinks local to file. */
@@ -772,15 +772,15 @@ H5_DLL herr_t H5F_set_grp_btree_shared(H5F_t *f, struct H5UC_t *rc);
 H5_DLL hbool_t H5F_use_tmp_space(const H5F_t *f);
 H5_DLL hbool_t H5F_is_tmp_addr(const H5F_t *f, haddr_t addr);
 H5_DLL herr_t H5F_set_latest_flags(H5F_t *f, unsigned flags);
-H5_DLL hbool_t H5F_use_mdc_logging(const H5F_t *f);
-H5_DLL hbool_t H5F_start_mdc_log_on_access(const H5F_t *f);
-H5_DLL char *H5F_mdc_log_location(const H5F_t *f);
 H5_DLL hsize_t H5F_get_alignment(const H5F_t *f);
 H5_DLL hsize_t H5F_get_threshold(const H5F_t *f);
 #ifdef H5_HAVE_PARALLEL
 H5_DLL H5P_coll_md_read_flag_t H5F_coll_md_read(const H5F_t *f);
 H5_DLL void H5F_set_coll_md_read(H5F_t *f, H5P_coll_md_read_flag_t flag);
 #endif /* H5_HAVE_PARALLEL */
+H5_DLL hbool_t H5F_use_mdc_logging(const H5F_t *f);
+H5_DLL hbool_t H5F_start_mdc_log_on_access(const H5F_t *f);
+H5_DLL char *H5F_mdc_log_location(const H5F_t *f);
 
 /* Functions that retrieve values from VFD layer */
 H5_DLL hid_t H5F_get_driver_id(const H5F_t *f);

@@ -1483,9 +1483,9 @@ done:
  * Function:    H5Fget_free_sections
  *
  * Purpose:     To get free-space section information for free-space manager with
- *              TYPE that is associated with file FILE_ID.
- *              If SECT_INFO is null, this routine returns the total # of free-space
- *              sections.
+ *		TYPE that is associated with file FILE_ID.
+ *		If SECT_INFO is null, this routine returns the total # of free-space
+ *		sections.
  *
  * Return:      Success:        non-negative, the total # of free space sections
  *              Failure:        negative
@@ -1495,7 +1495,8 @@ done:
  *-------------------------------------------------------------------------
  */
 ssize_t
-H5Fget_free_sections(hid_t file_id, H5F_mem_t type, size_t nsects, H5F_sect_info_t *sect_info/*out*/)
+H5Fget_free_sections(hid_t file_id, H5F_mem_t type, size_t nsects,
+    H5F_sect_info_t *sect_info/*out*/)
 {
     H5F_t         *file;        /* Top file in mount hierarchy */
     ssize_t       ret_value;    /* Return value */
@@ -1983,3 +1984,4 @@ H5Fformat_convert(hid_t fid)
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Fformat_convert() */
+

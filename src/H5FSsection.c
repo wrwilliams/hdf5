@@ -236,7 +236,7 @@ HDfprintf(stderr, "%s: fspace->alloc_sect_size = %Hu, fspace->sect_size = %Hu\n"
 
         if(fspace->sinfo_protected && accmode != fspace->sinfo_accmode) {
             /* Check if we need to switch from read-only access to read-write */
-            if(0 == (accmode & (unsigned)(~H5AC__READ_ONLY_FLAG))) {
+	    if(0 == (accmode & (unsigned)(~H5AC__READ_ONLY_FLAG))) {
                 /* Unprotect the read-only section info */
                 if(H5AC_unprotect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, fspace->sinfo, H5AC__NO_FLAGS_SET) < 0)
                     HGOTO_ERROR(H5E_FSPACE, H5E_CANTUNPROTECT, FAIL, "unable to release free space section info")
@@ -1514,7 +1514,7 @@ if(_section_)
              *  possible neighboring nodes and is not at the end of the file
              *  (or it would have been eliminated), etc)
              */
-            if((addr + size) == sect->addr && sect->size >= extra_requested) {
+            if(sect->size >= extra_requested && (addr + size) == sect->addr) {
                 H5FS_section_class_t *cls;          /* Section's class */
 
                 /* Remove section from data structures */
@@ -2390,25 +2390,25 @@ H5FS_sect_try_shrink_eoa(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, void *op_data)
             /* Get the pointer to the last section, from the last node */
             tmp_sect = (H5FS_section_info_t *)H5SL_item(last_node);
             HDassert(tmp_sect);
-            tmp_sect_cls = &fspace->sect_cls[tmp_sect->type];
-            if(tmp_sect_cls->can_shrink) {
+	    tmp_sect_cls = &fspace->sect_cls[tmp_sect->type];
+	    if(tmp_sect_cls->can_shrink) {
                 /* Check if the section can be shrunk away */
-                if((ret_value = (*tmp_sect_cls->can_shrink)(tmp_sect, op_data)) < 0)
-                    HGOTO_ERROR(H5E_FSPACE, H5E_CANTSHRINK, FAIL, "can't check for shrinking container")
-                else if(ret_value > 0) {
-                    HDassert(tmp_sect_cls->shrink);
+		if((ret_value = (*tmp_sect_cls->can_shrink)(tmp_sect, op_data)) < 0)
+		    HGOTO_ERROR(H5E_FSPACE, H5E_CANTSHRINK, FAIL, "can't check for shrinking container")
+		if(ret_value > 0) {
+		    HDassert(tmp_sect_cls->shrink);
 
                     /* Remove section from free space manager */
-                    if(H5FS_sect_remove_real(fspace, tmp_sect) < 0)
-                        HGOTO_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't remove section from internal data structures")
+		    if(H5FS_sect_remove_real(fspace, tmp_sect) < 0)
+			HGOTO_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't remove section from internal data structures")
                     section_removed = TRUE;
 
                     /* Shrink away section */
-                    if((*tmp_sect_cls->shrink)(&tmp_sect, op_data) < 0)
-                        HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't shrink free space container")
-                } /* end if */
-            } /* end if */
-        } /* end if */
+		    if((*tmp_sect_cls->shrink)(&tmp_sect, op_data) < 0)
+			HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't shrink free space container")
+		} /* end if */
+	    } /* end if */
+	} /* end if */
     } /* end if */
 
 done:
@@ -2418,7 +2418,6 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS_sect_try_shrink_eoa() */
-
 
 
 /*-------------------------------------------------------------------------

@@ -45,26 +45,26 @@ static herr_t H5O_fsinfo_debug(H5F_t *f, hid_t dxpl_id, const void *_mesg,
 
 /* This message derives from H5O message class */
 const H5O_msg_class_t H5O_MSG_FSINFO[1] = {{
-    H5O_FSINFO_ID,              /* message id number                        */
-    "fsinfo",                   /* message name for debugging               */
-    sizeof(H5O_fsinfo_t),       /* native message size                      */
-    0,                          /* messages are sharable?                   */
-    H5O_fsinfo_decode,          /* decode message                           */
-    H5O_fsinfo_encode,          /* encode message                           */
-    H5O_fsinfo_copy,            /* copy the native value                    */
-    H5O_fsinfo_size,            /* size of free-space manager info message  */
-    NULL,                       /* default reset method                     */
-    H5O_fsinfo_free,            /* free method                              */
-    NULL,                       /* file delete method                       */
-    NULL,                       /* link method                              */
-    NULL,                       /* set share method                         */
-    NULL,                       /* can share method                         */
-    NULL,                       /* pre copy native value to file            */
-    NULL,                       /* copy native value to file                */
-    NULL,                       /* post copy native value to file           */
-    NULL,                       /* get creation index                       */
-    NULL,                       /* set creation index                       */
-    H5O_fsinfo_debug            /* debug the message                        */
+    H5O_FSINFO_ID,            	/* message id number             	*/
+    "fsinfo",                 	/* message name for debugging    	*/
+    sizeof(H5O_fsinfo_t),     	/* native message size           	*/
+    0,				/* messages are sharable?        	*/
+    H5O_fsinfo_decode,        	/* decode message                	*/
+    H5O_fsinfo_encode,        	/* encode message                	*/
+    H5O_fsinfo_copy,          	/* copy the native value         	*/
+    H5O_fsinfo_size,          	/* size of free-space manager info message */
+    NULL,                   	/* default reset method         	*/
+    H5O_fsinfo_free,	        /* free method				*/
+    NULL,        		/* file delete method			*/
+    NULL,			/* link method				*/
+    NULL,			/* set share method			*/
+    NULL,		    	/* can share method			*/
+    NULL,			/* pre copy native value to file 	*/
+    NULL,			/* copy native value to file    	*/
+    NULL,			/* post copy native value to file	*/
+    NULL,			/* get creation index			*/
+    NULL,			/* set creation index			*/
+    H5O_fsinfo_debug          	/* debug the message            	*/
 }};
 
 /* Current version of free-space manager info information */
@@ -104,7 +104,7 @@ H5O_fsinfo_decode(H5F_t *f, hid_t dxpl_id, H5O_t H5_ATTR_UNUSED *open_oh,
 
     /* Allocate space for message */
     if(NULL == (fsinfo = H5FL_CALLOC(H5O_fsinfo_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     for(ptype = H5F_MEM_PAGE_SUPER; ptype < H5F_MEM_PAGE_NTYPES; H5_INC_ENUM(H5F_mem_page_t, ptype))
         fsinfo->fs_addr[ptype - 1] = HADDR_UNDEF;
@@ -178,7 +178,7 @@ H5O_fsinfo_decode(H5F_t *f, hid_t dxpl_id, H5O_t H5_ATTR_UNUSED *open_oh,
         } /* end if */
 
         fsinfo->mapped = FALSE;
-    };
+    }
 
     /* Set return value */
     ret_value = fsinfo;
@@ -260,7 +260,7 @@ H5O_fsinfo_copy(const void *_mesg, void *_dest)
     /* check args */
     HDassert(fsinfo);
     if(!dest && NULL == (dest = H5FL_CALLOC(H5O_fsinfo_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* copy */
     *dest = *fsinfo;
@@ -348,7 +348,7 @@ static herr_t
 H5O_fsinfo_debug(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, const void *_mesg, FILE * stream,
 	       int indent, int fwidth)
 {
-    const H5O_fsinfo_t  *fsinfo = (const H5O_fsinfo_t *) _mesg;
+    const H5O_fsinfo_t	*fsinfo = (const H5O_fsinfo_t *) _mesg;
     H5F_mem_page_t  ptype;      /* Free-space types for iteration */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -406,3 +406,4 @@ H5O_fsinfo_debug(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, const vo
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O_fsinfo_debug() */
+

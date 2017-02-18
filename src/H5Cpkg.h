@@ -55,7 +55,6 @@
 /* Initial allocated size of the "flush_dep_parent" array */
 #define H5C_FLUSH_DEP_PARENT_INIT 8
 
-
 /****************************************************************************
  *
  * We maintain doubly linked lists of instances of H5C_cache_entry_t for a
@@ -599,27 +598,6 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
  * The sole exception to this rule is
  * H5C__UPDATE_CACHE_HIT_RATE_STATS(), which is always active as
  * the cache hit rate stats are always collected and available.
- *
- * Changes:
- *
- * 	JRM -- 3/21/06
- * 	Added / updated macros for pinned entry related stats.
- *
- * 	JRM -- 8/9/06
- * 	More pinned entry stats related updates.
- *
- * 	JRM -- 3/31/07
- * 	Updated H5C__UPDATE_STATS_FOR_PROTECT() to keep stats on
- * 	read and write protects.
- *
- *      MAM -- 1/15/09
- *      Created H5C__UPDATE_MAX_INDEX_SIZE_STATS to contain
- *      common code within macros that update the maximum
- *      index, clean_index, and dirty_index statistics fields.
- *
- *	JRM -- 8/20/15
- *	Added macros to collect metadata cache and prefetch related
- *	stats.
  *
  ***********************************************************************/
 
@@ -1508,14 +1486,14 @@ if ( ( (cache_ptr)->index_size !=                                           \
     (cache_ptr)->index_size += (new_size);                                  \
     ((cache_ptr)->index_ring_size[entry_ptr->ring]) -= (old_size);          \
     ((cache_ptr)->index_ring_size[entry_ptr->ring]) += (new_size);          \
-    if ( was_clean ) {                                                      \
+    if(was_clean) {                                                         \
         (cache_ptr)->clean_index_size -= (old_size);                        \
         ((cache_ptr)->clean_index_ring_size[entry_ptr->ring])-= (old_size); \
     } else {                                                                \
 	(cache_ptr)->dirty_index_size -= (old_size);                        \
         ((cache_ptr)->dirty_index_ring_size[entry_ptr->ring])-= (old_size); \
     }                                                                       \
-    if ( (entry_ptr)->is_dirty ) {                                          \
+    if((entry_ptr)->is_dirty) {                                             \
         (cache_ptr)->dirty_index_size += (new_size);                        \
         ((cache_ptr)->dirty_index_ring_size[entry_ptr->ring])+= (new_size); \
     } else {                                                                \
@@ -2292,10 +2270,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
  * Return:      N/A
  *
  * Programmer:  John Mainzer, 8/15/15
- *
- * Modifications:
- *
- *		None.
  *
  *-------------------------------------------------------------------------
  */
@@ -3618,6 +3592,9 @@ typedef struct H5C_tag_info_t {
  *              clean data so as to avoid case b) above.  Again, this is
  *              a soft limit.
  *
+ * close_warning_received: Boolean flag indicating that a file closing 
+ *		warning has been received.
+ *
  *
  * In addition to the call back functions required for each entry, the
  * cache requires the following call back functions for this instance of
@@ -4236,9 +4213,6 @@ typedef struct H5C_tag_info_t {
  *		call, which is in turn required for sanity checks in some
  *		cache clients.
  *
- * close_warning_received: Boolean flag indicating that a file closing 
- *		warning has been received.
- *
  * load_image:	Boolean flag indicating that the metadata cache image 
  *		superblock extension message exists and should be 
  *		read, and the image block read and decoded on the next
@@ -4333,10 +4307,10 @@ typedef struct H5C_tag_info_t {
  *
  * Free Space Manager Related fields:
  *
- * The free space managers must be informed when we are about to close
+ * The free space managers must be informed when we are about to close 
  * or flush the file so that they order themselves accordingly.  This used
- * to be done much later in the close process, but with cache image and
- * page buffering, this is no longer viable, as we must finalize the on
+ * to be done much later in the close process, but with cache image and 
+ * page buffering, this is no longer viable, as we must finalize the on 
  * disk image of all metadata much sooner.
  *
  * This is handled by the H5MF_settle_raw_data_fsm() and
@@ -4350,22 +4324,22 @@ typedef struct H5C_tag_info_t {
  * flush is complete.
  *
  * rdfsm_settled:  Boolean flag indicating whether the raw data free space
- *              manager is settled -- i.e. whether the correct space has
- *              been allocated for it in the file.
+ *		manager is settled -- i.e. whether the correct space has 
+ *		been allocated for it in the file.
  *
- *              Note that the name of this field is deceptive.  In the
- *              multi file case, the flag applies to all free space
- *              managers that are not involved in allocating space for
- *              free space manager metadata.
+ *		Note that the name of this field is deceptive.  In the 
+ *		multi file case, the flag applies to all free space 
+ *		managers that are not involved in allocating space for
+ *		free space manager metadata.
  *
  * mdfsm_settled:  Boolean flag indicating whether the meta data free space
  *              manager is settled -- i.e. whether the correct space has
  *              been allocated for it in the file.
  *
- *              Note that the name of this field is deceptive.  In the
- *              multi file case, the flag applies only to free space
- *              managers that are involved in allocating space for free
- *              space managers.
+ *              Note that the name of this field is deceptive.  In the 
+ *              multi file case, the flag applies only to free space 
+ *		managers that are involved in allocating space for free 
+ *		space managers.
  *
  *
  * Statistics collection fields:
@@ -4693,6 +4667,7 @@ struct H5C_t {
     hbool_t			write_permitted;
     H5C_log_flush_func_t	log_flush;
     hbool_t			evictions_enabled;
+    hbool_t			close_warning_received;
 
     /* Fields for maintaining [hash table] index of entries */
     int32_t                     index_len;
@@ -4799,7 +4774,6 @@ struct H5C_t {
     /* fields supporting generation of a cache image on file close */
     H5C_cache_image_ctl_t	image_ctl;
     hbool_t			serialization_in_progress;
-    hbool_t			close_warning_received;
     hbool_t			load_image;
     hbool_t                     image_loaded;
     hbool_t			delete_image;
