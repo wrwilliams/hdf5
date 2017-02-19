@@ -765,7 +765,7 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
         if((status = H5O_msg_exists(&ext_loc, H5O_MDCI_MSG_ID, dxpl_id)) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_EXISTS, FAIL, "unable to read object header")
         if(status) {
-            hbool_t 		rw = ((rw_flags & H5AC__READ_ONLY_FLAG) == 0);
+            hbool_t 	rw = ((rw_flags & H5AC__READ_ONLY_FLAG) == 0);
             H5O_mdci_msg_t  mdci_msg;
 
 	    /* if the metadata cache image superblock extension message exists,
@@ -1218,7 +1218,7 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
             for(ptype = H5F_MEM_PAGE_SUPER; ptype < H5F_MEM_PAGE_NTYPES; H5_INC_ENUM(H5F_mem_page_t, ptype))
                 fsinfo.fs_addr[ptype - 1] = HADDR_UNDEF;
 
-            if(H5O_msg_create(&ext_loc, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE|H5O_MSG_FLAG_MARK_IF_UNKNOWN, H5O_UPDATE_TIME, &fsinfo, dxpl_id) < 0)
+            if(H5O_msg_create(&ext_loc, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE | H5O_MSG_FLAG_MARK_IF_UNKNOWN, H5O_UPDATE_TIME, &fsinfo, dxpl_id) < 0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to update free-space info header message")
 	} /* end if */
     } /* end if */

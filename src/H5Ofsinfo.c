@@ -23,16 +23,15 @@
  *
  *-------------------------------------------------------------------------
  */
-#define H5F_FRIEND          /*suppress error about including H5Fpkg   */
-#include "H5Omodule.h"      /* This source code file is part of the H5O module */
+#define H5F_FRIEND              /*suppress error about including H5Fpkg   */
+#include "H5Omodule.h"          /* This source code file is part of the H5O module */
 
 
-
-#include "H5private.h"      /* Generic Functions    */
-#include "H5Eprivate.h"     /* Error handling	    */
-#include "H5FLprivate.h"    /* Free lists           */
-#include "H5Opkg.h"         /* Object headers       */
-#include "H5Fpkg.h"         /* File access              */
+#include "H5private.h"		/* Generic Functions	*/
+#include "H5Eprivate.h"		/* Error handling	*/
+#include "H5Fpkg.h"             /* File access          */
+#include "H5FLprivate.h"	/* Free lists          	*/
+#include "H5Opkg.h"             /* Object headers	*/
 
 /* PRIVATE PROTOTYPES */
 static void *H5O_fsinfo_decode(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, unsigned mesg_flags, unsigned *ioflags, const uint8_t *p);

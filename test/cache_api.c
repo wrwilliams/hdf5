@@ -2338,37 +2338,24 @@ main(void)
         if(paged)
             my_fcpl = fcpl2_id;
 
-        if ( !check_fapl_mdc_api_calls(paged, my_fcpl) ) {
-
+        if(!check_fapl_mdc_api_calls(paged, my_fcpl))
             nerrs += 1;
-        }
 
-        if ( !check_file_mdc_api_calls(paged, my_fcpl) ) {
-
+        if(!check_file_mdc_api_calls(paged, my_fcpl))
             nerrs += 1;
-        }
 
-        if ( !mdc_api_call_smoke_check(express_test, paged, my_fcpl) ) {
-
+        if(!mdc_api_call_smoke_check(express_test, paged, my_fcpl))
             nerrs += 1;
-        }
 
-        if ( !check_file_mdc_api_errs(paged, my_fcpl) ) {
-
+        if(!check_file_mdc_api_errs(paged, my_fcpl))
             nerrs += 1;
-        }
-
     } /* end for paged */
 
-    if ( !check_fapl_mdc_api_errs() ) {
-
+    if(!check_fapl_mdc_api_errs())
         nerrs += 1;
-    }
 
-    if ( invalid_configs ) {
-
+    if(invalid_configs )
         HDfree(invalid_configs);
-    }
 
     if(H5Pclose(fcpl_id) < 0 ) {
         failure_mssg = "H5Pclose() failed.\n";
@@ -2376,14 +2363,9 @@ main(void)
         return EXIT_FAILURE;
     }
 
-    if ( nerrs > 0 ) {
-
+    if(nerrs > 0)
         return EXIT_FAILURE;
-
-    } else {
-
+    else
         return EXIT_SUCCESS;
-    }
-
 } /* main() */
 

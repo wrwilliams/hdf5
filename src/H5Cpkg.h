@@ -3557,10 +3557,8 @@ typedef struct H5C_tag_info_t {
  *		types are stored in the type_name_table discussed below, and
  *		indexed by the ids.
  *
- * type_name_table_ptr: Pointer to an array of pointer to char of length
- *              max_type_id + 1.  The strings pointed to by the entries
- *              in the array are the names of the entry types associated
- *              with the indexing type IDs.
+ * class_table_ptr: Pointer to an array of H5C_class_t of length
+ *              max_type_id + 1.  Entry classes for the cache.
  *
  * max_cache_size:  Nominal maximum number of bytes that may be stored in the
  *              cache.  This value should be viewed as a soft limit, as the
@@ -4670,7 +4668,7 @@ struct H5C_t {
     FILE *			log_file_ptr;
     void *			aux_ptr;
     int32_t			max_type_id;
-    const char *                (* type_name_table_ptr);
+    const H5C_class_t * const   *class_table_ptr;
     size_t                      max_cache_size;
     size_t                      min_clean_size;
     H5C_write_permitted_func_t	check_write_permitted;
@@ -4902,13 +4900,6 @@ typedef int (*H5C_tag_iter_cb_t)(H5C_cache_entry_t *entry, void *ctx);
 /* Package Private Variables */
 /*****************************/
 
-/* Internal metadata cache classes */
-H5_DLLVAR const H5C_class_t H5C__epoch_marker_class;
-H5_DLLVAR const H5C_class_t H5C__prefetched_entry_class;
-
-/* Memory type for each client */
-H5_DLLVAR const H5FD_mem_t H5C__class_mem_types[];
-
 
 /******************************/
 /* Package Private Prototypes */
@@ -4919,9 +4910,9 @@ H5_DLL herr_t H5C_deserialize_prefetched_entry(H5F_t * f, hid_t dxpl_id,
     const H5C_class_t * type, haddr_t addr, void * udata);
 
 /* General routines */
-H5_DLL herr_t H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id,
+H5_DLL herr_t H5C__flush_single_entry(H5F_t *f, hid_t dxpl_id,
     H5C_cache_entry_t *entry_ptr, unsigned flags);
-H5_DLL herr_t H5C__generate_image(const H5F_t *f, H5C_t * cache_ptr, H5C_cache_entry_t *entry_ptr, 
+H5_DLL herr_t H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, 
     hid_t dxpl_id);
 H5_DLL herr_t H5C_free_image_entries_array(H5C_t * cache_ptr);
 H5_DLL herr_t H5C_load_cache_image(H5F_t *f, hid_t dxpl_id);

@@ -169,54 +169,6 @@ static herr_t H5C_flush_candidates_in_ring(H5F_t *f, hid_t dxpl_id,
  * Programmer:  John Mainzer
  *              3/17/10
  *
- * Changes:     Ported code to detect next entry status changes as the 
- *              the result of a flush from the serial code in the scan of 
- *              the LRU.  Also added code to detect and adapt to the 
- *              removal from the cache of the next entry in the scan of 
- *		the LRU.
- *
- *		Note that at present, all of these changes should not 
- *		be required as the operations on entries as they are 
- *		flushed that can cause these condiditions are not premitted
- *		in the parallel case.  However, Quincey indicates that 
- *		this may change, and thus has requested the modification.
- *
- *		Note the assert(FALSE) in the if statement whose body 
- *		restarts the scan of the LRU.  As the body of the if 
- *		statement should be unreachable, it should never be 
- *		triggered until the constraints on the parallel case 
- *		are relaxed.  Please remove the assertion at that time.
- *
- *		Also added warning on the Pinned Entry List scan, as it
- *		is potentially subject to the same issue.  As there is 
- *		no cognate of this scan in the serial code, I don't have
- *		a fix to port to it.
- *
- *						JRM -- 4/10/19
- *		
- *              Modified the scan of the pinned entry list to respect
- *              flush dependencies. (note that this is not an issue
- *              at present with the LRU, as no entry can be on the
- *              LRU unless it has no flush depencency children.)
- *
- *              With the addition of flush dependencies outside of
- *              SWMR, it is now possible that entries with flush
- *              dependency children will appear in the candidates
- *              list.  A call to H5C__flush_single_entry() on such
- *              an entry before all its children have been marked clean
- *              will result in an assertion failure.
- *
- *              At present it is doubtful that this is really an issue,
- *              as in theory, entries should not be able to move, resize,
- *              load, dirty, or remove should be possible as the result
- *              of a flush (but note the exception with the free space
- *              managers).  However, it is easier and (I think) prudent
- *              to modify this routine to respect flush dependencies
- *              in stead of carving a hole in the sanity checking of
- *              H5C__flush_single_entry().
- *
- *                                              JRM -- 2/9/17
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -700,54 +652,6 @@ done:
  *
  * Programmer:  John Mainzer
  *              7/5/05
- *
- * Changes:     Tidied up code, removeing some old commented out 
- *		code that had been left in pending success of the 
- *		new version.
- *
- *		Note that unlike H5C_apply_candidate_list(), 
- *		H5C_mark_entries_as_clean() makes all its calls to 
- *		H5C__flush_single_entry() with the 
- *		H5C__FLUSH_CLEAR_ONLY_FLAG set.  As a result, 
- *		the pre_serialize() and serialize calls are not made.
- *
- *		This then implies that (assuming such actions were 
- *		permitted in the parallel case) no loads, dirties, 
- *		resizes, or removals of other entries can occur as 
- *		a side effect of the flush.  Hence, there is no need
- *		for the checks for entry removal / status change 
- *		that I ported to H5C_apply_candidate_list().
- *
- *		However, if (in addition to allowing such operations
- *		in the parallel case), we allow such operations outside
- *		of the pre_serialize / serialize routines, this may 
- *		cease to be the case -- requiring a review of this 
- *		function.
- *
- *                                               JRM -- ???
- *
- *              Modified the scan of the pinned entry list to respect 
- *              flush dependencies. (note that this is not an issue
- *              at present with the LRU, as no entry can be on the 
- *              LRU unless it has no flush depencency children.)
- *
- *              With the addition of flush dependencies outside of 
- *              SWMR, it is now possible that entries with flush
- *              dependency children will appear in the cleaned entry 
- *              array.  A call to H5C__flush_single_entry() on such 
- *              an entry before all its children have been marked clean
- *              will result in an assertion failure.
- *
- *              At present it is doubtful that this is really an issue,
- *              as in theory, entries should not be able to move, resize,
- *              load, dirty, or remove should be possible as the result 
- *              of a flush (but note the exception with the free space 
- *              managers).  However, it is easier and (I think) prudent
- *              to modify this routine to respect flush dependencies
- *              in stead of carving a hold in the sanity checking of 
- *              H5C__flush_single_entry().
- *
- *                                              JRM -- 2/9/17
  *
  *-------------------------------------------------------------------------
  */

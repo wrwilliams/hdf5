@@ -41,7 +41,7 @@
 /**************************/
 
 /* Cache configuration settings */
-#define H5C__MAX_NUM_TYPE_IDS   31
+#define H5C__MAX_NUM_TYPE_IDS   30
 #define H5C__PREFIX_LEN         32
 
 /* This sanity checking constant was picked out of the air.  Increase
@@ -71,7 +71,6 @@
 /* The following flags may only appear in test code */
 #define H5C__CLASS_SKIP_READS               ((unsigned)0x2)
 #define H5C__CLASS_SKIP_WRITES              ((unsigned)0x4)
-#define H5C__CLASS_SKIP_MEM_TYPE_CHECKS     ((unsigned)0x8)
 
 /* Flags for pre-serialize callback */
 #define H5C__SERIALIZE_NO_FLAGS_SET	((unsigned)0)
@@ -98,10 +97,6 @@
 /* Values for cache entry magic field */
 #define H5C__H5C_CACHE_ENTRY_T_MAGIC		0x005CAC0A
 #define H5C__H5C_CACHE_ENTRY_T_BAD_MAGIC	0xDeadBeef
-
-/* Values for image entry magic field */
-#define H5C__H5C_IMAGE_ENTRY_T_MAGIC		0x005CAC08
-#define H5C__H5C_IMAGE_ENTRY_T_BAD_MAGIC	0xBeefDead
 
 /* Cache configuration validation definitions */
 #define H5C_RESIZE_CFG__VALIDATE_GENERAL        0x1
@@ -330,13 +325,6 @@ typedef struct H5C_t H5C_t;
  *	H5C__CLASS_SKIP_WRITES: This flags is intended only for use in test
  *		code.  When it is set, writes of buffers prepared by the 
  *		serialize callback will be skipped.
- *
- *	H5C__CLASS_SKIP_MEM_TYPE_CHECKS: This flag is intended only for use
- *		in test code.  When it is set, sanity checks to verify
- *		agreement between class and expected disk mem type are 
- *		skipped.  This allows us to create a new set of client
- *		classes for testing that use the same ID space as the regular
- *		client classes.
  *
  * GET_INITIAL_LOAD_SIZE: Pointer to the 'get initial load size' function.
  *
@@ -1724,8 +1712,8 @@ typedef struct H5C_cache_entry_t {
  *						JRM - 8/5/15
  *
  * magic:	Unsigned 32 bit integer that must always be set to
- *              H5C__H5C_IMAGE_ENTRY_T_MAGIC when the entry is valid.
- *              The field must be set to H5C__H5C_IMAGE__ENTRY_T_BAD_MAGIC
+ *              H5C_IMAGE_ENTRY_T_MAGIC when the entry is valid.
+ *              The field must be set to H5C_IMAGE_ENTRY_T_BAD_MAGIC
  *              just before the entry is freed.
  *
  * addr:	Base address of the cache entry on disk.
@@ -2256,7 +2244,7 @@ typedef struct H5C_cache_image_ctl_t {
 /***************************************/
 
 H5_DLL H5C_t *H5C_create(size_t max_cache_size, size_t min_clean_size,
-    int max_type_id, const char *(*type_name_table_ptr),
+    int max_type_id, const H5C_class_t * const *class_table_ptr,
     H5C_write_permitted_func_t check_write_permitted, hbool_t write_permitted,
     H5C_log_flush_func_t log_flush, void *aux_ptr);
 H5_DLL herr_t H5C_set_up_logging(H5C_t *cache_ptr, const char log_location[], hbool_t start_immediately);
@@ -2288,7 +2276,6 @@ H5_DLL herr_t H5C_get_cache_auto_resize_config(const H5C_t *cache_ptr,
     H5C_auto_size_ctl_t *config_ptr);
 H5_DLL herr_t H5C_get_cache_image_config(const H5C_t * cache_ptr,
     H5C_cache_image_ctl_t *config_ptr);
-H5_DLL hbool_t H5C_get_serialization_in_progress(H5F_t * f);
 H5_DLL herr_t H5C_get_cache_size(H5C_t *cache_ptr, size_t *max_size_ptr,
     size_t *min_clean_size_ptr, size_t *cur_size_ptr,
     int32_t *cur_num_entries_ptr);
@@ -2343,6 +2330,7 @@ H5_DLL hbool_t H5C_get_ignore_tags(const H5C_t *cache_ptr);
 H5_DLL herr_t H5C_retag_entries(H5C_t * cache_ptr, haddr_t src_tag, haddr_t dest_tag);
 H5_DLL herr_t H5C_cork(H5C_t *cache_ptr, haddr_t obj_addr, unsigned action, hbool_t *corked);
 H5_DLL herr_t H5C_get_entry_ring(const H5F_t *f, haddr_t addr, H5C_ring_t *ring);
+H5_DLL herr_t H5C_unsettle_entry_ring(void *thing);
 H5_DLL herr_t H5C_unsettle_ring(H5F_t * f, H5C_ring_t ring);
 H5_DLL herr_t H5C_remove_entry(void *thing);
 H5_DLL herr_t H5C_cache_image_status(H5F_t * f, hbool_t *load_ci_ptr, 
@@ -2361,6 +2349,7 @@ H5_DLL herr_t H5C_mark_entries_as_clean(H5F_t *f, hid_t dxpl_id, int32_t ce_arra
 #endif /* H5_HAVE_PARALLEL */
 
 #ifndef NDEBUG	/* debugging functions */
+H5_DLL hbool_t H5C_get_serialization_in_progress(H5F_t * f);
 H5_DLL hbool_t H5C_cache_is_clean(const H5C_t *cache_ptr, H5C_ring_t inner_ring);
 H5_DLL herr_t H5C_dump_cache_skip_list(H5C_t *cache_ptr, char *calling_fcn);
 H5_DLL herr_t H5C_get_entry_ptr_from_addr(H5C_t *cache_ptr, haddr_t addr,

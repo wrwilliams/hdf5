@@ -294,31 +294,13 @@ const haddr_t alt_base_addrs[NUMBER_OF_ENTRY_TYPES] =
     NOTIFY_ALT_BASE_ADDR
 };
 
-const char *entry_type_names[NUMBER_OF_ENTRY_TYPES] =
-{
-    "pico entries -- 1 B",
-    "nano entries -- 4 B",
-    "micro entries -- 16 B",
-    "tiny entries -- 64 B",
-    "small entries -- 256 B",
-    "medium entries -- 1 KB",
-    "large entries -- 4 KB",
-    "huge entries -- 16 KB",
-    "monster entries -- 64 KB",
-    "variable entries -- 1B - 10KB",
-    "notify entries -- 1B"
-};
-
 
-/* callback table declaration */
-
-const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
-{
-  {
+/* Callback classes */
+static const H5C_class_t pico_class[1] = {{
     PICO_ENTRY_TYPE,
     "pico_entry",
     H5FD_MEM_DEFAULT,
-    H5C__CLASS_SKIP_MEM_TYPE_CHECKS,
+    H5C__CLASS_NO_FLAGS_SET,
     pico_get_initial_load_size,
     NULL,
     NULL,
@@ -329,12 +311,13 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     NULL,
     pico_free_icr,
     NULL,
-  },
-  {
+}};
+
+static const H5C_class_t nano_class[1] = {{
     NANO_ENTRY_TYPE,
     "nano_entry",
     H5FD_MEM_DEFAULT,
-    H5C__CLASS_SKIP_MEM_TYPE_CHECKS,
+    H5C__CLASS_NO_FLAGS_SET,
     nano_get_initial_load_size,
     NULL,
     NULL,
@@ -345,12 +328,13 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     NULL,
     nano_free_icr,
     NULL,
-  },
-  {
+}};
+
+static const H5C_class_t micro_class[1] = {{
     MICRO_ENTRY_TYPE,
     "micro_entry",
     H5FD_MEM_DEFAULT,
-    H5C__CLASS_SKIP_MEM_TYPE_CHECKS,
+    H5C__CLASS_NO_FLAGS_SET,
     micro_get_initial_load_size,
     NULL,
     NULL,
@@ -361,12 +345,13 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     NULL,
     micro_free_icr,
     NULL,
-  },
-  {
+}};
+
+static const H5C_class_t tiny_class[1] = {{
     TINY_ENTRY_TYPE,
     "tiny_entry",
     H5FD_MEM_DEFAULT,
-    H5C__CLASS_SKIP_MEM_TYPE_CHECKS,
+    H5C__CLASS_NO_FLAGS_SET,
     tiny_get_initial_load_size,
     NULL,
     NULL,
@@ -377,12 +362,13 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     NULL,
     tiny_free_icr,
     NULL,
-  },
-  {
+}};
+
+static const H5C_class_t small_class[1] = {{
     SMALL_ENTRY_TYPE,
     "small_entry",
     H5FD_MEM_DEFAULT,
-    H5C__CLASS_SKIP_MEM_TYPE_CHECKS,
+    H5C__CLASS_NO_FLAGS_SET,
     small_get_initial_load_size,
     NULL,
     NULL,
@@ -393,12 +379,13 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     NULL,
     small_free_icr,
     NULL,
-  },
-  {
+}};
+
+static const H5C_class_t medium_class[1] = {{
     MEDIUM_ENTRY_TYPE,
     "medium_entry",
     H5FD_MEM_DEFAULT,
-    H5C__CLASS_SKIP_MEM_TYPE_CHECKS,
+    H5C__CLASS_NO_FLAGS_SET,
     medium_get_initial_load_size,
     NULL,
     NULL,
@@ -409,12 +396,13 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     NULL,
     medium_free_icr,
     NULL,
-  },
-  {
+}};
+
+static const H5C_class_t large_class[1] = {{
     LARGE_ENTRY_TYPE,
     "large_entry",
     H5FD_MEM_DEFAULT,
-    H5C__CLASS_SKIP_MEM_TYPE_CHECKS,
+    H5C__CLASS_NO_FLAGS_SET,
     large_get_initial_load_size,
     NULL,
     NULL,
@@ -425,12 +413,13 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     NULL,
     large_free_icr,
     NULL,
-  },
-  {
+}};
+
+static const H5C_class_t huge_class[1] = {{
     HUGE_ENTRY_TYPE,
     "huge_entry",
     H5FD_MEM_DEFAULT,
-    H5C__CLASS_SKIP_MEM_TYPE_CHECKS,
+    H5C__CLASS_NO_FLAGS_SET,
     huge_get_initial_load_size,
     NULL,
     NULL,
@@ -441,12 +430,13 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     NULL,
     huge_free_icr,
     NULL,
-  },
-  {
+}};
+
+static const H5C_class_t monster_class[1] = {{
     MONSTER_ENTRY_TYPE,
     "monster_entry",
     H5FD_MEM_DEFAULT,
-    H5C__CLASS_SKIP_MEM_TYPE_CHECKS,
+    H5C__CLASS_NO_FLAGS_SET,
     monster_get_initial_load_size,
     NULL,
     NULL,
@@ -457,12 +447,13 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     NULL,
     monster_free_icr,
     NULL,
-  },
-  {
+}};
+
+static const H5C_class_t variable_class[1] = {{
     VARIABLE_ENTRY_TYPE,
     "variable_entry",
     H5FD_MEM_DEFAULT,
-    H5C__CLASS_SPECULATIVE_LOAD_FLAG | H5C__CLASS_SKIP_MEM_TYPE_CHECKS,
+    H5C__CLASS_SPECULATIVE_LOAD_FLAG,
     variable_get_initial_load_size,
     variable_get_final_load_size,
     variable_verify_chksum,
@@ -473,12 +464,13 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     NULL,
     variable_free_icr,
     NULL,
-  },
-  {
+}};
+
+static const H5C_class_t notify_class[1] = {{
     NOTIFY_ENTRY_TYPE,
     "notify_entry",
     H5FD_MEM_DEFAULT,
-    H5C__CLASS_SKIP_MEM_TYPE_CHECKS,
+    H5C__CLASS_NO_FLAGS_SET,
     notify_get_initial_load_size,
     NULL,
     NULL,
@@ -489,7 +481,22 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     notify_notify,
     notify_free_icr,
     NULL,
-  }
+}};
+
+/* callback table declaration */
+
+const H5C_class_t *types[NUMBER_OF_ENTRY_TYPES] = {
+    pico_class,
+    nano_class,
+    micro_class,
+    tiny_class,
+    small_class,
+    medium_class,
+    large_class,
+    huge_class,
+    monster_class,
+    variable_class,
+    notify_class
 };
 
 /* address translation functions: */
@@ -3338,7 +3345,7 @@ setup_cache(size_t max_cache_size,
         cache_ptr = H5C_create(max_cache_size,
                                min_clean_size,
                                (NUMBER_OF_ENTRY_TYPES - 1),
-			       (const char **)entry_type_names,
+                               types,
                                check_write_permitted,
                                TRUE,
                                NULL,
@@ -3577,7 +3584,7 @@ expunge_entry(H5F_t * file_ptr,
 	HDassert( ! ( entry_ptr->is_pinned ) );
 
         result = H5C_expunge_entry(file_ptr, H5AC_ind_read_dxpl_id,
-                &(types[type]), entry_ptr->addr, H5C__NO_FLAGS_SET);
+                types[type], entry_ptr->addr, H5C__NO_FLAGS_SET);
 
         if ( result < 0 ) {
 
@@ -3798,11 +3805,11 @@ insert_entry(H5F_t * file_ptr,
         }
 
         result = H5C_insert_entry(file_ptr, xfer,
-	        &(types[type]), entry_ptr->addr, (void *)entry_ptr, flags);
+	        types[type], entry_ptr->addr, (void *)entry_ptr, flags);
 
         if ( ( result < 0 ) ||
              ( entry_ptr->header.is_protected ) ||
-             ( entry_ptr->header.type != &(types[type]) ) ||
+             ( entry_ptr->header.type != types[type] ) ||
              ( entry_ptr->size != entry_ptr->header.size ) ||
              ( entry_ptr->addr != entry_ptr->header.addr ) ) {
 
@@ -3815,8 +3822,8 @@ insert_entry(H5F_t * file_ptr,
             HDfprintf(stdout, "entry_ptr->header.is_protected = %d\n",
                       (int)(entry_ptr->header.is_protected));
             HDfprintf(stdout,
-		      "entry_ptr->header.type != &(types[type]) = %d\n",
-                      (int)(entry_ptr->header.type != &(types[type])));
+		      "entry_ptr->header.type != types[type] = %d\n",
+                      (int)(entry_ptr->header.type != types[type]));
             HDfprintf(stdout,
                       "entry_ptr->size != entry_ptr->header.size = %d\n",
                       (int)(entry_ptr->size != entry_ptr->header.size));
@@ -3899,7 +3906,7 @@ mark_entry_dirty(int32_t type,
              ( !entry_ptr->header.is_protected && !entry_ptr->header.is_pinned ) ||
              ( entry_ptr->header.is_protected && !entry_ptr->header.dirtied ) ||
              ( !entry_ptr->header.is_protected && !entry_ptr->header.is_dirty ) ||
-             ( entry_ptr->header.type != &(types[type]) ) ||
+             ( entry_ptr->header.type != types[type] ) ||
              ( entry_ptr->size != entry_ptr->header.size ) ||
              ( entry_ptr->addr != entry_ptr->header.addr ) ) {
 
@@ -3992,7 +3999,7 @@ move_entry(H5C_t * cache_ptr,
                 mark_flush_dep_dirty(entry_ptr);
 
             entry_ptr->action = TEST_ENTRY_ACTION_MOVE;
-            result = H5C_move_entry(cache_ptr, &(types[type]), old_addr, new_addr);
+            result = H5C_move_entry(cache_ptr, types[type], old_addr, new_addr);
             entry_ptr->action = TEST_ENTRY_ACTION_NUL;
         }
 
@@ -4071,12 +4078,12 @@ protect_entry(H5F_t * file_ptr, int32_t type, int32_t idx)
         } /* end if */
 
         cache_entry_ptr = (H5C_cache_entry_t *)H5C_protect(file_ptr, xfer,
-                &(types[type]), entry_ptr->addr, &entry_ptr->addr, 
+                types[type], entry_ptr->addr, &entry_ptr->addr, 
                 H5C__NO_FLAGS_SET);
 
         if ( ( cache_entry_ptr != (void *)entry_ptr ) ||
              ( !(entry_ptr->header.is_protected) ) ||
-             ( entry_ptr->header.type != &(types[type]) ) ||
+             ( entry_ptr->header.type != types[type] ) ||
              ( entry_ptr->size != entry_ptr->header.size ) ||
              ( entry_ptr->addr != entry_ptr->header.addr ) ) {
 
@@ -4093,8 +4100,8 @@ protect_entry(H5F_t * file_ptr, int32_t type, int32_t idx)
             HDfprintf(stdout, "entry_ptr->header.is_protected = %d\n",
                       (int)(entry_ptr->header.is_protected));
             HDfprintf(stdout,
-                      "( entry_ptr->header.type != &(types[type]) ) = %d\n",
-                      (int)( entry_ptr->header.type != &(types[type]) ));
+                      "( entry_ptr->header.type != types[type] ) = %d\n",
+                      (int)( entry_ptr->header.type != types[type] ));
             HDfprintf(stdout,
                       "entry_ptr->size = %d, entry_ptr->header.size = %d\n",
                       (int)(entry_ptr->size), (int)(entry_ptr->header.size));
@@ -4175,13 +4182,13 @@ protect_entry_ro(H5F_t * file_ptr,
 		    ( entry_ptr->ro_ref_count > 0 ) ) );
 
         cache_entry_ptr = (H5C_cache_entry_t *)H5C_protect(file_ptr, H5AC_ind_read_dxpl_id,
-                &(types[type]), entry_ptr->addr, &entry_ptr->addr, H5C__READ_ONLY_FLAG);
+                types[type], entry_ptr->addr, &entry_ptr->addr, H5C__READ_ONLY_FLAG);
 
         if ( ( cache_entry_ptr != (void *)entry_ptr ) ||
              ( !(entry_ptr->header.is_protected) ) ||
              ( !(entry_ptr->header.is_read_only) ) ||
              ( entry_ptr->header.ro_ref_count <= 0 ) ||
-             ( entry_ptr->header.type != &(types[type]) ) ||
+             ( entry_ptr->header.type != types[type] ) ||
              ( entry_ptr->size != entry_ptr->header.size ) ||
              ( entry_ptr->addr != entry_ptr->header.addr ) ) {
 
@@ -4312,7 +4319,7 @@ unpin_entry(int32_t type,
         if ( ( result < 0 ) ||
              ( entry_ptr->header.pinned_from_client ) ||
              ( entry_ptr->header.is_pinned && !entry_ptr->header.pinned_from_cache ) ||
-             ( entry_ptr->header.type != &(types[type]) ) ||
+             ( entry_ptr->header.type != types[type] ) ||
              ( entry_ptr->size != entry_ptr->header.size ) ||
              ( entry_ptr->addr != entry_ptr->header.addr ) ) {
 
@@ -4397,7 +4404,7 @@ unprotect_entry(H5F_t * file_ptr,
              ( ( entry_ptr->header.is_protected ) &&
 	       ( ( ! ( entry_ptr->is_read_only ) ) ||
 		 ( entry_ptr->ro_ref_count <= 0 ) ) ) ||
-             ( entry_ptr->header.type != &(types[type]) ) ||
+             ( entry_ptr->header.type != types[type] ) ||
              ( entry_ptr->size != entry_ptr->header.size ) ||
              ( entry_ptr->addr != entry_ptr->header.addr ) ) {
 

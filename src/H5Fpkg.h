@@ -333,13 +333,12 @@ struct H5F_file_t {
     haddr_t eoa_post_mdci_fsalloc;          /* eoa past file space allocation */
                                             /* for metadata cache image, or   */
                                             /* HADDR_UNDEF if no cache image. */
- 
 
     /* Free-space aggregation info */
-    unsigned fs_aggr_merge[H5FD_MEM_NTYPES];        /* Flags for whether free space can merge with aggregator(s) */
-    H5FD_mem_t fs_type_map[H5FD_MEM_NTYPES];        /* Mapping of "real" file space type into tracked type */
-    H5F_blk_aggr_t meta_aggr;   	                /* Metadata aggregation info (if aggregating metadata allocations) */
-    H5F_blk_aggr_t sdata_aggr;                      /* "Small data" aggregation info */
+    unsigned fs_aggr_merge[H5FD_MEM_NTYPES];    /* Flags for whether free space can merge with aggregator(s) */
+    H5FD_mem_t fs_type_map[H5FD_MEM_NTYPES];    /* Mapping of "real" file space type into tracked type */
+    H5F_blk_aggr_t meta_aggr;   	        /* Metadata aggregation info (if aggregating metadata allocations) */
+    H5F_blk_aggr_t sdata_aggr;                  /* "Small data" aggregation info (if aggregating "small data" allocations) */
 
     /* Paged aggregation info */
     hsize_t fs_page_size;                           /* File space page size */
@@ -389,9 +388,6 @@ H5FL_EXTERN(H5F_t);
 
 /* Declare a free list to manage the H5F_file_t struct */
 H5FL_EXTERN(H5F_file_t);
-
-H5_DLLVAR const H5AC_class_t H5AC_SUPERBLOCK[1];
-H5_DLLVAR const H5AC_class_t H5AC_DRVRINFO[1];
 
 
 /******************************/

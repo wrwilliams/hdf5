@@ -54,6 +54,28 @@
 /* Local Typedefs */
 /******************/
 
+/****************************************************************************
+ *
+ * structure H5AC_slist_entry_t
+ *
+ * The dirty entry list maintained via the d_slist_ptr field of H5AC_aux_t
+ * and the cleaned entry list maintained via the c_slist_ptr field of
+ * H5AC_aux_t are just lists of the file offsets of the dirty/cleaned
+ * entries.  Unfortunately, the slist code makes us define a dynamically
+ * allocated structure to store these offsets in.  This structure serves
+ * that purpose.  Its fields are as follows:
+ *
+ * addr:	file offset of a metadata entry.  Entries are added to this
+ *		list (if they aren't there already) when they are marked
+ *		dirty in an unprotect, inserted, or moved.  They are
+ *		removed when they appear in a clean entries broadcast.
+ *
+ ****************************************************************************/
+typedef struct H5AC_slist_entry_t
+{
+    haddr_t     addr;
+} H5AC_slist_entry_t;
+
 /* User data for address list building callbacks */
 typedef struct H5AC_addr_list_ud_t
 {
@@ -798,14 +820,11 @@ H5AC__log_dirtied_entry(const H5AC_info_t *entry_ptr)
              * add its size to the dirty_bytes count.
              */
             if(NULL == (slist_entry_ptr = H5FL_MALLOC(H5AC_slist_entry_t)))
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, \
-                            "Can't allocate dirty slist entry .")
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "Can't allocate dirty slist entry .")
             slist_entry_ptr->addr  = addr;
 
-            if(H5SL_insert(aux_ptr->d_slist_ptr, slist_entry_ptr, 
-                           &(slist_entry_ptr->addr)) < 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTINSERT, FAIL, \
-                            "can't insert entry into dirty entry slist.")
+            if(H5SL_insert(aux_ptr->d_slist_ptr, slist_entry_ptr, &(slist_entry_ptr->addr)) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTINSERT, FAIL, "can't insert entry into dirty entry slist.")
 
             aux_ptr->dirty_bytes += entry_ptr->size;
 #if H5AC_DEBUG_DIRTY_BYTES_CREATION
@@ -817,8 +836,7 @@ H5AC__log_dirtied_entry(const H5AC_info_t *entry_ptr)
         /* the entry is dirty.  If it exists on the cleaned entries list,
          * remove it.
          */
-        if(NULL != (slist_entry_ptr = (H5AC_slist_entry_t *)
-                    H5SL_remove(aux_ptr->c_slist_ptr, (void *)(&addr))))
+        if(NULL != (slist_entry_ptr = (H5AC_slist_entry_t *)H5SL_remove(aux_ptr->c_slist_ptr, (void *)(&addr))))
             slist_entry_ptr = H5FL_FREE(H5AC_slist_entry_t, slist_entry_ptr);
     } /* end if */
     else {

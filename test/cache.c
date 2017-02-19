@@ -175,7 +175,6 @@ static unsigned check_flush_protected_err(unsigned paged);
 static unsigned check_destroy_pinned_err(unsigned paged);
 static unsigned check_destroy_protected_err(unsigned paged);
 static unsigned check_duplicate_insert_err(unsigned paged);
-static unsigned check_move_err(unsigned paged);
 static unsigned check_double_pin_err(unsigned paged);
 static unsigned check_double_unpin_err(unsigned paged);
 static unsigned check_pin_entry_errs(unsigned paged);
@@ -183,9 +182,11 @@ static unsigned check_double_protect_err(unsigned paged);
 static unsigned check_double_unprotect_err(unsigned paged);
 static unsigned check_mark_entry_dirty_errs(unsigned paged);
 static unsigned check_expunge_entry_errs(unsigned paged);
+static unsigned check_move_entry_errs(unsigned paged);
 static unsigned check_resize_entry_errs(unsigned paged);
 static unsigned check_unprotect_ro_dirty_err(unsigned paged);
 static unsigned check_protect_ro_rw_err(unsigned paged);
+static unsigned check_protect_retries(unsigned paged);
 static unsigned check_check_evictions_enabled_err(unsigned paged);
 static unsigned check_auto_cache_resize(hbool_t cork_ageout, unsigned paged);
 static unsigned check_auto_cache_resize_disable(unsigned paged);
@@ -242,11 +243,10 @@ smoke_check_1(int express_test, unsigned paged)
     int mile_stone = 1;
     H5F_t * file_ptr = NULL;
 
-    if(paged) {
-        TESTING("smoke check #1 -- all clean, ins, dest, ren, 4/2 MB cache, paged aggregation");
-    } else {
-        TESTING("smoke check #1 -- all clean, ins, dest, ren, 4/2 MB cache");
-    }
+    if(paged)
+        TESTING("smoke check #1 -- all clean, ins, dest, ren, 4/2 MB cache, paged aggregation")
+    else
+        TESTING("smoke check #1 -- all clean, ins, dest, ren, 4/2 MB cache")
 
     switch (express_test)
     {
@@ -281,8 +281,7 @@ smoke_check_1(int express_test, unsigned paged)
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
                   FUNC, mile_stone++, (int)pass);
 
-    file_ptr = setup_cache((size_t)(4 * 1024 * 1024),
-                            (size_t)(2 * 1024 * 1024), paged);
+    file_ptr = setup_cache((size_t)(4 * 1024 * 1024), (size_t)(2 * 1024 * 1024), paged);
 
     if(show_progress) /* 3 */
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
@@ -445,11 +444,10 @@ smoke_check_2(int express_test, unsigned paged)
     int mile_stone = 1;
     H5F_t * file_ptr = NULL;
 
-    if(paged) {
-        TESTING("smoke check #2 -- ~1/2 dirty, ins, dest, ren, 4/2 MB cache, paged aggregation");
-    } else {
-        TESTING("smoke check #2 -- ~1/2 dirty, ins, dest, ren, 4/2 MB cache");
-    }
+    if(paged)
+        TESTING("smoke check #2 -- ~1/2 dirty, ins, dest, ren, 4/2 MB cache, paged aggregation")
+    else
+        TESTING("smoke check #2 -- ~1/2 dirty, ins, dest, ren, 4/2 MB cache")
 
     switch (express_test)
     {
@@ -484,8 +482,7 @@ smoke_check_2(int express_test, unsigned paged)
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
                   FUNC, mile_stone++, (int)pass);
 
-    file_ptr = setup_cache((size_t)(4 * 1024 * 1024),
-                            (size_t)(2 * 1024 * 1024), paged);
+    file_ptr = setup_cache((size_t)(4 * 1024 * 1024), (size_t)(2 * 1024 * 1024), paged);
 
     if(show_progress) /* 3 */
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
@@ -647,11 +644,10 @@ smoke_check_3(int express_test, unsigned paged)
     int mile_stone = 1;
     H5F_t * file_ptr = NULL;
 
-    if(paged) {
-        TESTING("smoke check #3 -- all clean, ins, dest, ren, 2/1 KB cache, paged aggregation");
-    } else {
-        TESTING("smoke check #3 -- all clean, ins, dest, ren, 2/1 KB cache");
-    }
+    if(paged)
+        TESTING("smoke check #3 -- all clean, ins, dest, ren, 2/1 KB cache, paged aggregation")
+    else
+        TESTING("smoke check #3 -- all clean, ins, dest, ren, 2/1 KB cache")
 
     switch (express_test)
     {
@@ -686,8 +682,7 @@ smoke_check_3(int express_test, unsigned paged)
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
                   FUNC, mile_stone++, (int)pass);
 
-    file_ptr = setup_cache((size_t)(2 * 1024),
-                            (size_t)(1 * 1024), paged);
+    file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
     if(show_progress) /* 3 */
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
@@ -850,11 +845,10 @@ smoke_check_4(int express_test, unsigned paged)
     int mile_stone = 1;
     H5F_t * file_ptr = NULL;
 
-    if(paged) {
-        TESTING("smoke check #4 -- ~1/2 dirty, ins, dest, ren, 2/1 KB cache, paged aggregation");
-    } else {
-        TESTING("smoke check #4 -- ~1/2 dirty, ins, dest, ren, 2/1 KB cache");
-    }
+    if(paged)
+        TESTING("smoke check #4 -- ~1/2 dirty, ins, dest, ren, 2/1 KB cache, paged aggregation")
+    else
+        TESTING("smoke check #4 -- ~1/2 dirty, ins, dest, ren, 2/1 KB cache")
 
     switch (express_test)
     {
@@ -889,8 +883,7 @@ smoke_check_4(int express_test, unsigned paged)
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
                   FUNC, mile_stone++, (int)pass);
 
-    file_ptr = setup_cache((size_t)(2 * 1024),
-                            (size_t)(1 * 1024), paged);
+    file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
     if(show_progress) /* 3 */
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
@@ -1101,11 +1094,10 @@ smoke_check_5(int express_test, unsigned paged)
         /* double      empty_reserve          = */ 0.5f
     };
 
-    if(paged) {
-        TESTING("smoke check #5 -- all clean, ins, prot, unprot, AR cache 1, paged aggregation");
-    } else {
-        TESTING("smoke check #5 -- all clean, ins, prot, unprot, AR cache 1");
-    }
+    if(paged)
+        TESTING("smoke check #5 -- all clean, ins, prot, unprot, AR cache 1, paged aggregation")
+    else
+        TESTING("smoke check #5 -- all clean, ins, prot, unprot, AR cache 1")
 
     switch (express_test)
     {
@@ -1140,8 +1132,7 @@ smoke_check_5(int express_test, unsigned paged)
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
                   FUNC, mile_stone++, (int)pass);
 
-    file_ptr = setup_cache((size_t)(2 * 1024),
-                            (size_t)(1 * 1024), paged);
+    file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
     cache_ptr = file_ptr->shared->cache;
 
     if(pass) {
@@ -1341,11 +1332,10 @@ smoke_check_6(int express_test, unsigned paged)
         /* double      empty_reserve          = */ 0.05f
     };
 
-    if(paged) {
-        TESTING("smoke check #6 -- ~1/2 dirty, ins, prot, unprot, AR cache 1, paged aggregation");
-    } else {
-        TESTING("smoke check #6 -- ~1/2 dirty, ins, prot, unprot, AR cache 1");
-    }
+    if(paged)
+        TESTING("smoke check #6 -- ~1/2 dirty, ins, prot, unprot, AR cache 1, paged aggregation")
+    else
+        TESTING("smoke check #6 -- ~1/2 dirty, ins, prot, unprot, AR cache 1")
 
     pass = TRUE;
 
@@ -1380,8 +1370,7 @@ smoke_check_6(int express_test, unsigned paged)
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
                   FUNC, mile_stone++, (int)pass);
 
-    file_ptr = setup_cache((size_t)(2 * 1024),
-                            (size_t)(1 * 1024), paged);
+    file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
     cache_ptr = file_ptr->shared->cache;
 
     if(pass) {
@@ -1582,11 +1571,10 @@ smoke_check_7(int express_test, unsigned paged)
         /* double      empty_reserve          = */ 0.1f
     };
 
-    if(paged) {
-        TESTING("smoke check #7 -- all clean, ins, prot, unprot, AR cache 2, paged aggregation");
-    } else {
-        TESTING("smoke check #7 -- all clean, ins, prot, unprot, AR cache 2");
-    }
+    if(paged)
+        TESTING("smoke check #7 -- all clean, ins, prot, unprot, AR cache 2, paged aggregation")
+    else
+        TESTING("smoke check #7 -- all clean, ins, prot, unprot, AR cache 2")
 
     switch (express_test)
     {
@@ -1621,8 +1609,7 @@ smoke_check_7(int express_test, unsigned paged)
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
                   FUNC, mile_stone++, (int)pass);
 
-    file_ptr = setup_cache((size_t)(2 * 1024),
-                            (size_t)(1 * 1024), paged);
+    file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
     cache_ptr = file_ptr->shared->cache;
 
     if(pass) {
@@ -1823,11 +1810,10 @@ smoke_check_8(int express_test, unsigned paged)
         /* double      empty_reserve          = */ 0.1f
     };
 
-    if(paged) {
-        TESTING("smoke check #8 -- ~1/2 dirty, ins, prot, unprot, AR cache 2, paged aggregation");
-    } else {
-        TESTING("smoke check #8 -- ~1/2 dirty, ins, prot, unprot, AR cache 2");
-    }
+    if(paged)
+        TESTING("smoke check #8 -- ~1/2 dirty, ins, prot, unprot, AR cache 2, paged aggregation")
+    else
+        TESTING("smoke check #8 -- ~1/2 dirty, ins, prot, unprot, AR cache 2")
 
     switch (express_test)
     {
@@ -2024,11 +2010,10 @@ smoke_check_9(int express_test, unsigned paged)
     H5F_t * file_ptr = NULL;
     H5C_t * cache_ptr = NULL;
 
-    if(paged) {
-        TESTING("smoke check #9 -- all clean, ins, dest, ren, 4/2 MB, corked, paged aggregation");
-    } else {
-        TESTING("smoke check #9 -- all clean, ins, dest, ren, 4/2 MB, corked");
-    }
+    if(paged)
+        TESTING("smoke check #9 -- all clean, ins, dest, ren, 4/2 MB, corked, paged aggregation")
+    else
+        TESTING("smoke check #9 -- all clean, ins, dest, ren, 4/2 MB, corked")
 
     switch (express_test)
     {
@@ -2063,8 +2048,7 @@ smoke_check_9(int express_test, unsigned paged)
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
                   FUNC, mile_stone++, (int)pass);
 
-    file_ptr = setup_cache((size_t)(4 * 1024 * 1024),
-                            (size_t)(2 * 1024 * 1024), paged);
+    file_ptr = setup_cache((size_t)(4 * 1024 * 1024), (size_t)(2 * 1024 * 1024), paged);
     cache_ptr = file_ptr->shared->cache;
 
     /* disable evictions */
@@ -2348,11 +2332,10 @@ smoke_check_10(int express_test, unsigned paged)
     H5F_t * file_ptr = NULL;
     H5C_t * cache_ptr = NULL;
 
-    if(paged) {
-        TESTING("smoke check #10 -- ~1/2 dirty, ins, dest, ren, 4/2 MB, corked, paged aggregation");
-    } else {
-        TESTING("smoke check #10 -- ~1/2 dirty, ins, dest, ren, 4/2 MB, corked");
-    }
+    if(paged)
+        TESTING("smoke check #10 -- ~1/2 dirty, ins, dest, ren, 4/2 MB, corked, paged aggregation")
+    else
+        TESTING("smoke check #10 -- ~1/2 dirty, ins, dest, ren, 4/2 MB, corked")
 
     switch (express_test)
     {
@@ -2387,8 +2370,7 @@ smoke_check_10(int express_test, unsigned paged)
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
                   FUNC, mile_stone++, (int)pass);
 
-    file_ptr = setup_cache((size_t)(4 * 1024 * 1024),
-                            (size_t)(2 * 1024 * 1024), paged);
+    file_ptr = setup_cache((size_t)(4 * 1024 * 1024), (size_t)(2 * 1024 * 1024), paged);
     cache_ptr = file_ptr->shared->cache;
 
     if(show_progress) /* 3 */
@@ -2666,11 +2648,10 @@ express_test, unsigned paged)
 
 #endif /* H5C_MAINTAIN_CLEAN_AND_DIRTY_LRU_LISTS */
 
-    if(paged) {
-        TESTING("write permitted check -- 1/0 MB cache, paged aggregation");
-    } else {
-        TESTING("write permitted check -- 1/0 MB cache");
-    }
+    if(paged)
+        TESTING("write permitted check -- 1/0 MB cache, paged aggregation")
+    else
+        TESTING("write permitted check -- 1/0 MB cache")
 
 #if H5C_MAINTAIN_CLEAN_AND_DIRTY_LRU_LISTS
 
@@ -2707,8 +2688,7 @@ express_test, unsigned paged)
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
                   FUNC, mile_stone++, (int)pass);
 
-    file_ptr = setup_cache((size_t)(1 * 1024 * 1024),
-                            (size_t)(0), paged);
+    file_ptr = setup_cache((size_t)(1 * 1024 * 1024), (size_t)0, paged);
 
     if(show_progress) /* 3 */
         HDfprintf(stdout, "%s() - %0d -- pass = %d\n",
@@ -2886,12 +2866,10 @@ check_insert_entry(unsigned paged)
     test_entry_t *             entry_ptr;
     struct H5C_cache_entry_t * search_ptr;
 
-
-    if(paged) {
-        TESTING("H5C_insert_entry() functionality (paged aggregation)");
-    } else {
-        TESTING("H5C_insert_entry() functionality");
-    }
+    if(paged)
+        TESTING("H5C_insert_entry() functionality (paged aggregation)")
+    else
+        TESTING("H5C_insert_entry() functionality")
 
     pass = TRUE;
 
@@ -2909,8 +2887,7 @@ check_insert_entry(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024 * 1024),
-                                (size_t)(1 * 1024 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024 * 1024), (size_t)(1 * 1024 * 1024), paged);
         cache_ptr = file_ptr->shared->cache;
     }
 
@@ -3170,11 +3147,10 @@ check_flush_cache(unsigned paged)
 {
     H5F_t *      file_ptr = NULL;
 
-    if(paged) {
-        TESTING("H5C_flush_cache() functionality (paged aggregation)");
-    } else {
-        TESTING("H5C_flush_cache() functionality");
-    }
+    if(paged)
+        TESTING("H5C_flush_cache() functionality (paged aggregation)")
+    else
+        TESTING("H5C_flush_cache() functionality")
 
     pass = TRUE;
 
@@ -3187,8 +3163,7 @@ check_flush_cache(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024 * 1024),
-                                (size_t)(1 * 1024 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024 * 1024), (size_t)(1 * 1024 * 1024), paged);
     }
 
     /* first test behaviour on an empty cache.  Can't do much sanity
@@ -12801,11 +12776,10 @@ check_get_entry_status(unsigned paged)
     test_entry_t * base_addr = NULL;
     test_entry_t * entry_ptr = NULL;
 
-    if(paged) {
-        TESTING("H5C_get_entry_status() functionality (paged aggregation)");
-    } else {
-        TESTING("H5C_get_entry_status() functionality");
-    }
+    if(paged)
+        TESTING("H5C_get_entry_status() functionality (paged aggregation)")
+    else
+        TESTING("H5C_get_entry_status() functionality")
 
     pass = TRUE;
 
@@ -12813,8 +12787,7 @@ check_get_entry_status(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024 * 1024),
-                                (size_t)(1 * 1024 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024 * 1024), (size_t)(1 * 1024 * 1024), paged);
 
         if(file_ptr == NULL) {
 
@@ -13034,11 +13007,10 @@ check_expunge_entry(unsigned paged)
     test_entry_t * base_addr;
     test_entry_t * entry_ptr;
 
-    if(paged) {
-        TESTING("H5C_expunge_entry() functionality (paged aggregation)");
-    } else {
-        TESTING("H5C_expunge_entry() functionality");
-    }
+    if(paged)
+        TESTING("H5C_expunge_entry() functionality (paged aggregation)")
+    else
+        TESTING("H5C_expunge_entry() functionality")
 
     pass = TRUE;
 
@@ -13046,8 +13018,7 @@ check_expunge_entry(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024 * 1024),
-                                (size_t)(1 * 1024 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024 * 1024), (size_t)(1 * 1024 * 1024), paged);
 
         base_addr = entries[0];
         entry_ptr = &(base_addr[0]);
@@ -13342,11 +13313,10 @@ check_multiple_read_protect(unsigned paged)
 #endif /* H5C_COLLECT_CACHE_STATS */
     test_entry_t * entry_ptr;
 
-    if(paged) {
-        TESTING("multiple read only protects on a single entry (paged aggregation)");
-    } else {
-        TESTING("multiple read only protects on a single entry");
-    }
+    if(paged)
+        TESTING("multiple read only protects on a single entry (paged aggregation)")
+    else
+        TESTING("multiple read only protects on a single entry")
 
     pass = TRUE;
 
@@ -13375,8 +13345,7 @@ check_multiple_read_protect(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 #if H5C_COLLECT_CACHE_STATS
         cache_ptr = file_ptr->shared->cache;
 #endif /* H5C_COLLECT_CACHE_STATS */
@@ -13792,11 +13761,10 @@ check_move_entry(unsigned paged)
       }
     };
 
-    if(paged) {
-        TESTING("H5C_move_entry() functionality (paged aggregation)");
-    } else {
-        TESTING("H5C_move_entry() functionality");
-    }
+    if(paged)
+        TESTING("H5C_move_entry() functionality (paged aggregation)")
+    else
+        TESTING("H5C_move_entry() functionality")
 
     pass = TRUE;
 
@@ -13829,8 +13797,7 @@ check_move_entry(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024 * 1024),
-                                (size_t)(1 * 1024 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024 * 1024), (size_t)(1 * 1024 * 1024), paged);
     }
 
     i = 0;
@@ -13965,9 +13932,7 @@ check_move_entry__run_test(H5F_t * file_ptr,
 
                 while((test_ptr != NULL) &&
                         (test_ptr != (H5C_cache_entry_t *)entry_ptr))
-                {
                     test_ptr = test_ptr->next;
-                }
 
                 if(test_ptr == NULL) {
 
@@ -14036,11 +14001,10 @@ check_pin_protected_entry(unsigned paged)
     test_entry_t * base_addr;
     test_entry_t * entry_ptr;
 
-    if(paged) {
-        TESTING("H5C_pin_protected_entry() functionality (paged aggregation)");
-    } else {
-        TESTING("H5C_pin_protected_entry() functionality");
-    }
+    if(paged)
+        TESTING("H5C_pin_protected_entry() functionality (paged aggregation)")
+    else
+        TESTING("H5C_pin_protected_entry() functionality")
 
     pass = TRUE;
 
@@ -14053,8 +14017,7 @@ check_pin_protected_entry(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024 * 1024),
-                                (size_t)(1 * 1024 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024 * 1024), (size_t)(1 * 1024 * 1024), paged);
 
         if(file_ptr == NULL) {
 
@@ -14146,11 +14109,10 @@ check_resize_entry(unsigned paged)
     test_entry_t * base_addr;
     test_entry_t * entry_ptr = NULL;
 
-    if(paged) {
-        TESTING("entry resize functionality (paged aggregation_");
-    } else {
-        TESTING("entry resize functionality");
-    }
+    if(paged)
+        TESTING("entry resize functionality (paged aggregation)")
+    else
+        TESTING("entry resize functionality")
 
     /* Setup a cache and verify that it is empty.
      *
@@ -15144,11 +15106,10 @@ check_evictions_enabled(unsigned paged)
     test_entry_t * base_addr = NULL;
     test_entry_t * entry_ptr;
 
-    if(paged) {
-        TESTING("evictions enabled/disabled functionality (paged aggregation)");
-    } else {
-        TESTING("evictions enabled/disabled functionality");
-    }
+    if(paged)
+        TESTING("evictions enabled/disabled functionality (paged aggregation)")
+    else
+        TESTING("evictions enabled/disabled functionality")
 
     /* Setup a cache and verify that it is empty.
      *
@@ -15871,11 +15832,10 @@ check_flush_protected_err(unsigned paged)
 {
     H5F_t * file_ptr = NULL;
 
-    if(paged) {
-        TESTING("flush cache with protected entry error (paged aggregation)");
-    } else {
-        TESTING("flush cache with protected entry error");
-    }
+    if(paged)
+        TESTING("flush cache with protected entry error (paged aggregation)")
+    else
+        TESTING("flush cache with protected entry error")
 
     pass = TRUE;
 
@@ -15888,8 +15848,7 @@ check_flush_protected_err(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         protect_entry(file_ptr, 0, 0);
 
@@ -15949,11 +15908,10 @@ check_destroy_pinned_err(unsigned paged)
 {
     H5F_t * file_ptr = NULL;
 
-    if(paged) {
-        TESTING("destroy cache with permanently pinned entry error (paged aggregation)");
-    } else {
-        TESTING("destroy cache with permanently pinned entry error");
-    }
+    if(paged)
+        TESTING("destroy cache with permanently pinned entry error (paged aggregation)")
+    else
+        TESTING("destroy cache with permanently pinned entry error")
 
     pass = TRUE;
 
@@ -16033,11 +15991,10 @@ check_destroy_protected_err(unsigned paged)
 {
     H5F_t * file_ptr = NULL;
 
-    if(paged) {
-        TESTING("destroy cache with protected entry error (paged aggregation)");
-    } else {
-        TESTING("destroy cache with protected entry error");
-    }
+    if(paged)
+        TESTING("destroy cache with protected entry error (paged aggregation)")
+    else
+        TESTING("destroy cache with protected entry error")
 
     pass = TRUE;
 
@@ -16050,8 +16007,7 @@ check_destroy_protected_err(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         /* Note: normally this call would go just before the series of
          * flushes prior to file close -- in particular, all entries
@@ -16130,11 +16086,10 @@ check_duplicate_insert_err(unsigned paged)
     test_entry_t * base_addr;
     test_entry_t * entry_ptr;
 
-    if(paged) {
-        TESTING("duplicate entry insertion error (paged aggregation)");
-    } else {
-        TESTING("duplicate entry insertion error");
-    }
+    if(paged)
+        TESTING("duplicate entry insertion error (paged aggregation)")
+    else
+        TESTING("duplicate entry insertion error")
 
     pass = TRUE;
 
@@ -16147,8 +16102,7 @@ check_duplicate_insert_err(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         protect_entry(file_ptr, 0, 0);
 
@@ -16158,7 +16112,7 @@ check_duplicate_insert_err(unsigned paged)
             entry_ptr = &(base_addr[0]);
 
             result = H5C_insert_entry(file_ptr, H5AC_ind_read_dxpl_id,
-                                      &(types[0]), entry_ptr->addr,
+                                      types[0], entry_ptr->addr,
                                       (void *)entry_ptr, H5C__NO_FLAGS_SET);
 
             if(result >= 0) {
@@ -16189,104 +16143,6 @@ check_duplicate_insert_err(unsigned paged)
 
 
 /*-------------------------------------------------------------------------
- * Function:	check_move_err()
- *
- * Purpose:	Verify that an attempt to move an entry to the address
- *		of an existing entry will generate an error.
- *
- * Return:	void
- *
- * Programmer:	John Mainzer
- *              6/24/04
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-
-static unsigned
-check_move_err(unsigned paged)
-{
-    herr_t result;
-    H5F_t * file_ptr = NULL;
-    H5C_t * cache_ptr = NULL;
-    test_entry_t * entry_0_0_ptr;
-    test_entry_t * entry_0_1_ptr;
-    test_entry_t * entry_1_0_ptr;
-
-    if(paged) {
-        TESTING("move to existing entry errors (paged aggregation)");
-    } else {
-        TESTING("move to existing entry errors");
-    }
-
-    pass = TRUE;
-
-    /* allocate a cache, and insert several entries.  Try to move
-     * entries to other entries resident in the cache.  This should
-     * fail.  Destroy the cache -- should succeed.
-     */
-
-    if(pass) {
-
-        reset_entries();
-
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
-        cache_ptr = file_ptr->shared->cache;
-
-        insert_entry(file_ptr, 0, 0, H5C__NO_FLAGS_SET);
-        insert_entry(file_ptr, 0, 1, H5C__NO_FLAGS_SET);
-        insert_entry(file_ptr, 1, 0, H5C__NO_FLAGS_SET);
-
-        entry_0_0_ptr = &((entries[0])[0]);
-        entry_0_1_ptr = &((entries[0])[1]);
-        entry_1_0_ptr = &((entries[1])[0]);
-    }
-
-    if(pass) {
-
-        result = H5C_move_entry(cache_ptr, &(types[0]),
-                                  entry_0_0_ptr->addr, entry_0_1_ptr->addr);
-
-        if(result >= 0) {
-
-            pass = FALSE;
-            failure_mssg = "move to addr of same type succeeded.\n";
-        }
-    }
-
-    if(pass) {
-
-        result = H5C_move_entry(cache_ptr, &(types[0]),
-                                  entry_0_0_ptr->addr, entry_1_0_ptr->addr);
-
-        if(result >= 0) {
-
-            pass = FALSE;
-            failure_mssg = "move to addr of different type succeeded.\n";
-        }
-    }
-
-    if(pass) {
-
-        takedown_cache(file_ptr, FALSE, FALSE);
-    }
-
-    if(pass) { PASSED(); } else { H5_FAILED(); }
-
-    if(!pass) {
-
-        HDfprintf(stdout, "%s: failure_mssg = \"%s\".\n",
-                  FUNC, failure_mssg);
-    }
-
-    return (unsigned)!pass;
-
-} /* check_move_err() */
-
-
-/*-------------------------------------------------------------------------
  * Function:	check_double_pin_err()
  *
  * Purpose:	Verify that an attempt to pin an entry that is already
@@ -16311,11 +16167,10 @@ check_double_pin_err(unsigned paged)
     H5F_t * file_ptr = NULL;
     test_entry_t * entry_ptr;
 
-    if(paged) {
-        TESTING("pin a pinned entry error (paged aggregation)");
-    } else {
-        TESTING("pin a pinned entry error");
-    }
+    if(paged)
+        TESTING("pin a pinned entry error (paged aggregation)")
+    else
+        TESTING("pin a pinned entry error")
 
     pass = TRUE;
 
@@ -16329,8 +16184,7 @@ check_double_pin_err(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         protect_entry(file_ptr, 0, 0);
 
@@ -16401,11 +16255,10 @@ check_double_unpin_err(unsigned paged)
     H5F_t * file_ptr = NULL;
     test_entry_t * entry_ptr;
 
-    if(paged) {
-        TESTING("unpin an unpinned entry error (paged aggregation)");
-    } else {
-        TESTING("unpin an unpinned entry error");
-    }
+    if(paged)
+        TESTING("unpin an unpinned entry error (paged aggregation)")
+    else
+        TESTING("unpin an unpinned entry error")
 
     pass = TRUE;
 
@@ -16421,8 +16274,7 @@ check_double_unpin_err(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         protect_entry(file_ptr, 0, 0);
 
@@ -16502,11 +16354,10 @@ check_pin_entry_errs(unsigned paged)
     H5F_t * file_ptr = NULL;
     test_entry_t * entry_ptr;
 
-    if(paged) {
-        TESTING("pin entry related errors (paged aggregation)");
-    } else {
-        TESTING("pin entry related errors");
-    }
+    if(paged)
+        TESTING("pin entry related errors (paged aggregation)")
+    else
+        TESTING("pin entry related errors")
 
     pass = TRUE;
 
@@ -16526,8 +16377,7 @@ check_pin_entry_errs(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         protect_entry(file_ptr, 0, 0);
 
@@ -16612,11 +16462,10 @@ check_double_protect_err(unsigned paged)
     test_entry_t * entry_ptr;
     H5C_cache_entry_t * cache_entry_ptr;
 
-    if(paged) {
-        TESTING("protect a protected entry error (paged aggregation)");
-    } else {
-        TESTING("protect a protected entry error");
-    }
+    if(paged)
+        TESTING("protect a protected entry error (paged aggregation)")
+    else
+        TESTING("protect a protected entry error")
 
     pass = TRUE;
 
@@ -16629,8 +16478,7 @@ check_double_protect_err(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         protect_entry(file_ptr, 0, 0);
 
@@ -16640,7 +16488,7 @@ check_double_protect_err(unsigned paged)
     if(pass) {
 
         cache_entry_ptr = (H5C_cache_entry_t *)H5C_protect(file_ptr, H5AC_ind_read_dxpl_id,
-			               &(types[0]), entry_ptr->addr,
+			               types[0], entry_ptr->addr,
 				       &entry_ptr->addr, H5C__NO_FLAGS_SET);
 
         if(cache_entry_ptr != NULL) {
@@ -16694,11 +16542,10 @@ check_double_unprotect_err(unsigned paged)
     H5F_t * file_ptr = NULL;
     test_entry_t * entry_ptr;
 
-    if(paged) {
-        TESTING("unprotect an unprotected entry error (paged aggregation)");
-    } else {
-        TESTING("unprotect an unprotected entry error");
-    }
+    if(paged)
+        TESTING("unprotect an unprotected entry error (paged aggregation)")
+    else
+        TESTING("unprotect an unprotected entry error")
 
     pass = TRUE;
 
@@ -16711,8 +16558,7 @@ check_double_unprotect_err(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         protect_entry(file_ptr, 0, 0);
 
@@ -16776,11 +16622,10 @@ check_mark_entry_dirty_errs(unsigned paged)
     H5F_t * file_ptr = NULL;
     test_entry_t * entry_ptr;
 
-    if(paged) {
-        TESTING("mark entry dirty related errors (paged aggregation)");
-    } else {
-        TESTING("mark entry dirty related errors");
-    }
+    if(paged)
+        TESTING("mark entry dirty related errors (paged aggregation)")
+    else
+        TESTING("mark entry dirty related errors")
 
     pass = TRUE;
 
@@ -16794,8 +16639,7 @@ check_mark_entry_dirty_errs(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         protect_entry(file_ptr, 0, 0);
 
@@ -16860,11 +16704,10 @@ check_expunge_entry_errs(unsigned paged)
     H5F_t * file_ptr = NULL;
     test_entry_t * entry_ptr;
 
-    if(paged) {
-        TESTING("expunge entry related errors (paged aggregation)");
-    } else {
-        TESTING("expunge entry related errors");
-    }
+    if(paged)
+        TESTING("expunge entry related errors (paged aggregation)")
+    else
+        TESTING("expunge entry related errors")
 
     pass = TRUE;
 
@@ -16884,8 +16727,7 @@ check_expunge_entry_errs(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         entry_ptr = &((entries[0])[0]);
 
@@ -16896,7 +16738,7 @@ check_expunge_entry_errs(unsigned paged)
     if(pass) {
 
 	result = H5C_expunge_entry(file_ptr, H5AC_ind_read_dxpl_id,
-                &(types[0]), entry_ptr->addr, H5C__NO_FLAGS_SET);
+                types[0], entry_ptr->addr, H5C__NO_FLAGS_SET);
 
         if(result > 0) {
 
@@ -16914,7 +16756,7 @@ check_expunge_entry_errs(unsigned paged)
     if(pass) {
 
 	result = H5C_expunge_entry(file_ptr, H5AC_ind_read_dxpl_id,
-                &(types[0]), entry_ptr->addr, H5C__NO_FLAGS_SET);
+                types[0], entry_ptr->addr, H5C__NO_FLAGS_SET);
 
         if(result > 0) {
 
@@ -16932,7 +16774,7 @@ check_expunge_entry_errs(unsigned paged)
     if(pass) {
 
 	result = H5C_expunge_entry(file_ptr, H5AC_ind_read_dxpl_id,
-                &(types[0]), entry_ptr->addr, H5C__NO_FLAGS_SET);
+                types[0], entry_ptr->addr, H5C__NO_FLAGS_SET);
 
         if(result < 0) {
 
@@ -16963,6 +16805,123 @@ check_expunge_entry_errs(unsigned paged)
 
 
 /*-------------------------------------------------------------------------
+ * Function:	check_move_entry_errs()
+ *
+ * Purpose:	Verify that invalid calls to H5C_move_entry()
+ * 		generates errors as expected.
+ *
+ * Return:	void
+ *
+ * Programmer:	Quincey Koziol
+ *              12/10/16
+ *
+ *-------------------------------------------------------------------------
+ */
+static unsigned
+check_move_entry_errs(unsigned paged)
+{
+    herr_t result;
+    H5F_t * file_ptr = NULL;
+    H5C_t * cache_ptr = NULL;
+    test_entry_t * entry_ptr = NULL;
+    test_entry_t * entry_0_0_ptr;
+    test_entry_t * entry_0_1_ptr;
+    test_entry_t * entry_1_0_ptr;
+
+    if(paged)
+        TESTING("move entry related errors (paged aggregation)")
+    else
+        TESTING("move entry related errors")
+
+    pass = TRUE;
+
+    /* allocate a cache, and insert several entries.  Try to move
+     * entries to other entries resident in the cache.  This should
+     * fail.  Destroy the cache -- should succeed.
+     */
+
+    if(pass) {
+        reset_entries();
+
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
+        cache_ptr = file_ptr->shared->cache;
+
+        insert_entry(file_ptr, 0, 0, H5C__NO_FLAGS_SET);
+        insert_entry(file_ptr, 0, 1, H5C__NO_FLAGS_SET);
+        insert_entry(file_ptr, 1, 0, H5C__NO_FLAGS_SET);
+
+        entry_0_0_ptr = &((entries[0])[0]);
+        entry_0_1_ptr = &((entries[0])[1]);
+        entry_1_0_ptr = &((entries[1])[0]);
+    } /* end if */
+
+    if(pass) {
+        result = H5C_move_entry(cache_ptr, types[0], entry_0_0_ptr->addr, entry_0_1_ptr->addr);
+
+        if(result >= 0) {
+            pass = FALSE;
+            failure_mssg = "move to addr of same type succeeded.\n";
+        } /* end if */
+    } /* end if */
+
+    if(pass) {
+        result = H5C_move_entry(cache_ptr, types[0], entry_0_0_ptr->addr, entry_1_0_ptr->addr);
+
+        if(result >= 0) {
+            pass = FALSE;
+            failure_mssg = "move to addr of different type succeeded.\n";
+        } /* end if */
+    } /* end if */
+
+    if(pass)
+        takedown_cache(file_ptr, FALSE, FALSE);
+
+    /* Allocate a cache, protect an entry R/O, and then call
+     * H5C_move_entry() to move it -- this should fail.
+     *
+     * Finally, unprotect the entry and destroy the cache.
+     * This should succeed.
+     */
+
+    if(pass) {
+        reset_entries();
+
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
+        cache_ptr = file_ptr->shared->cache;
+
+        insert_entry(file_ptr, 0, 0, H5C__NO_FLAGS_SET);
+        protect_entry_ro(file_ptr, 0, 0);
+
+        entry_ptr = &((entries[0])[0]);
+    } /* end if */
+
+    if(pass) {
+	result = H5C_move_entry(cache_ptr, types[0], entry_ptr->header.addr, entry_ptr->header.addr + 10);
+
+        if(result >= 0) {
+            pass = FALSE;
+            failure_mssg = "Call to H5C_move_entry on a R/O protected entry succeeded.\n";
+        } /* end if */
+        else
+            unprotect_entry(file_ptr, 0, 0, H5C__NO_FLAGS_SET);
+    } /* end if */
+
+    if(pass)
+        takedown_cache(file_ptr, FALSE, FALSE);
+
+    if(pass)
+        PASSED()
+    else {
+        H5_FAILED()
+
+        HDfprintf(stdout, "%s: failure_mssg = \"%s\".\n", FUNC, failure_mssg);
+    } /* end else */
+
+    return (unsigned)!pass;
+} /* check_move_entry_errs() */
+
+
+/*-------------------------------------------------------------------------
  * Function:	check_resize_entry_errs()
  *
  * Purpose:	Verify that invalid calls to H5C_resize_entry()
@@ -16983,11 +16942,10 @@ check_resize_entry_errs(unsigned paged)
     H5F_t * file_ptr = NULL;
     test_entry_t * entry_ptr;
 
-    if(paged) {
-        TESTING("resize entry related errors (paged aggregation)");
-    } else {
-        TESTING("resize entry related errors");
-    }
+    if(paged)
+        TESTING("resize entry related errors (paged aggregation)")
+    else
+        TESTING("resize entry related errors")
 
     pass = TRUE;
 
@@ -17006,8 +16964,7 @@ check_resize_entry_errs(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         entry_ptr = &((entries[0])[0]);
 
@@ -17088,11 +17045,10 @@ check_unprotect_ro_dirty_err(unsigned paged)
     H5F_t * file_ptr = NULL;
     test_entry_t * entry_ptr;
 
-    if(paged) {
-        TESTING("unprotect a read only entry dirty error (paged aggregation)");
-    } else {
-        TESTING("unprotect a read only entry dirty error");
-    }
+    if(paged)
+        TESTING("unprotect a read only entry dirty error (paged aggregation)")
+    else
+        TESTING("unprotect a read only entry dirty error")
 
     pass = TRUE;
 
@@ -17105,8 +17061,7 @@ check_unprotect_ro_dirty_err(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         protect_entry_ro(file_ptr, 0, 0);
 
@@ -17147,8 +17102,7 @@ check_unprotect_ro_dirty_err(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         protect_entry_ro(file_ptr, 0, 0);
         protect_entry_ro(file_ptr, 0, 0);
@@ -17219,11 +17173,10 @@ check_protect_ro_rw_err(unsigned paged)
     test_entry_t * entry_ptr;
     void * thing_ptr = NULL;
 
-    if(paged) {
-        TESTING("protect a read only entry rw error (paged aggregation)");
-    } else {
-        TESTING("protect a read only entry rw error");
-    }
+    if(paged)
+        TESTING("protect a read only entry rw error (paged aggregation)")
+    else
+        TESTING("protect a read only entry rw error")
 
     pass = TRUE;
 
@@ -17237,8 +17190,7 @@ check_protect_ro_rw_err(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         protect_entry_ro(file_ptr, 0, 0);
 
@@ -17248,7 +17200,7 @@ check_protect_ro_rw_err(unsigned paged)
     if(pass) {
 
         thing_ptr = (H5C_cache_entry_t *)H5C_protect(file_ptr, H5AC_ind_read_dxpl_id,
-			         &(types[0]), entry_ptr->addr,
+			         types[0], entry_ptr->addr,
 				 &entry_ptr->addr, H5C__NO_FLAGS_SET);
 
         if(thing_ptr != NULL) {
@@ -17294,7 +17246,7 @@ check_protect_ro_rw_err(unsigned paged)
  *-------------------------------------------------------------------------
  */
 static unsigned
-check_protect_retries(void)
+check_protect_retries(unsigned paged)
 {
     H5F_t * file_ptr = NULL;
     H5C_t *cache_ptr = NULL;
@@ -17304,7 +17256,10 @@ check_protect_retries(void)
     int32_t type;
     int32_t idx;
 
-    TESTING("protect an entry to verify retries");
+    if(paged)
+        TESTING("protect an entry to verify retries (paged aggregation)")
+    else
+        TESTING("protect an entry to verify retries")
 
     pass = TRUE;
 
@@ -17313,7 +17268,7 @@ check_protect_retries(void)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), FALSE);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
 	/* Set up read attempts for verifying checksum */
 	file_ptr->shared->read_attempts = 10;
@@ -17340,13 +17295,13 @@ check_protect_retries(void)
         entry_ptr->verify_ct = 0;
 
 	cache_entry_ptr = (H5C_cache_entry_t *)H5C_protect(file_ptr, H5AC_ind_read_dxpl_id,
-                &(types[type]), entry_ptr->addr, &entry_ptr->addr, H5C__READ_ONLY_FLAG);
+                types[type], entry_ptr->addr, &entry_ptr->addr, H5C__READ_ONLY_FLAG);
 
 	if((cache_entry_ptr != (void *)entry_ptr) ||
              (!(entry_ptr->header.is_protected)) ||
              (!(entry_ptr->header.is_read_only)) ||
              (entry_ptr->header.ro_ref_count <= 0) ||
-             (entry_ptr->header.type != &(types[type])) ||
+             (entry_ptr->header.type != types[type]) ||
              (entry_ptr->size != entry_ptr->header.size) ||
              (entry_ptr->addr != entry_ptr->header.addr) ||
 	     (entry_ptr->verify_ct != entry_ptr->max_verify_ct))  {
@@ -17385,7 +17340,7 @@ check_protect_retries(void)
         entry_ptr->verify_ct = 0;
 
 	cache_entry_ptr = (H5C_cache_entry_t *)H5C_protect(file_ptr, H5AC_ind_read_dxpl_id,
-                &(types[type]), entry_ptr->addr, &entry_ptr->addr, H5C__READ_ONLY_FLAG);
+                types[type], entry_ptr->addr, &entry_ptr->addr, H5C__READ_ONLY_FLAG);
 
 	/* H5C_protect() should fail after all retries fail */
 	if(cache_entry_ptr != NULL)
@@ -17435,11 +17390,10 @@ check_check_evictions_enabled_err(unsigned paged)
     H5F_t * file_ptr = NULL;
     H5C_t * cache_ptr = NULL;
 
-    if(paged) {
-        TESTING("get/set evictions enabled errors (paged aggregation)");
-    } else {
-        TESTING("get/set evictions enabled errors");
-    }
+    if(paged)
+        TESTING("get/set evictions enabled errors (paged aggregation)")
+    else
+        TESTING("get/set evictions enabled errors")
 
     pass = TRUE;
 
@@ -17460,8 +17414,7 @@ check_check_evictions_enabled_err(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
         cache_ptr = file_ptr->shared->cache;
     }
 
@@ -17638,11 +17591,10 @@ check_auto_cache_resize(hbool_t cork_ageout, unsigned paged)
         /* double      empty_reserve          = */ 0.05f
     };
 
-    if(paged) {
-        TESTING("automatic cache resizing (paged aggregation)");
-    } else {
-        TESTING("automatic cache resizing");
-    }
+    if(paged)
+        TESTING("automatic cache resizing (paged aggregation)")
+    else
+        TESTING("automatic cache resizing")
 
     pass = TRUE;
 
@@ -21712,11 +21664,10 @@ check_auto_cache_resize_disable(unsigned paged)
         /* double      empty_reserve          = */ 0.05f
     };
 
-    if(paged) {
-        TESTING("automatic cache resize disable (paged aggregation)");
-    } else {
-        TESTING("automatic cache resize disable");
-    }
+    if(paged)
+        TESTING("automatic cache resize disable (paged aggregation)")
+    else
+        TESTING("automatic cache resize disable")
 
     pass = TRUE;
 
@@ -21731,8 +21682,7 @@ check_auto_cache_resize_disable(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
 
         if(file_ptr == NULL) {
 
@@ -24442,11 +24392,10 @@ check_auto_cache_resize_epoch_markers(unsigned paged)
         /* double      empty_reserve          = */ 0.05f
     };
 
-    if(paged) {
-        TESTING("automatic cache resize epoch marker management (paged aggregation)");
-    } else {
-        TESTING("automatic cache resize epoch marker management");
-    }
+    if(paged)
+        TESTING("automatic cache resize epoch marker management (paged aggregation)")
+    else
+        TESTING("automatic cache resize epoch marker management")
 
     pass = TRUE;
 
@@ -24456,8 +24405,7 @@ check_auto_cache_resize_epoch_markers(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
         cache_ptr = file_ptr->shared->cache;
     }
 
@@ -25154,11 +25102,10 @@ check_auto_cache_resize_input_errs(unsigned paged)
     H5C_auto_size_ctl_t invalid_auto_size_ctl;
     H5C_auto_size_ctl_t test_auto_size_ctl;
 
-    if(paged) {
-        TESTING("automatic cache resize input errors (paged aggregation)");
-    } else {
-        TESTING("automatic cache resize input errors");
-    }
+    if(paged)
+        TESTING("automatic cache resize input errors (paged aggregation)")
+    else
+        TESTING("automatic cache resize input errors")
 
     pass = TRUE;
 
@@ -25172,8 +25119,7 @@ check_auto_cache_resize_input_errs(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
         cache_ptr = file_ptr->shared->cache;
     }
 
@@ -27572,11 +27518,10 @@ check_auto_cache_resize_aux_fcns(unsigned paged)
     };
 
 
-    if(paged) {
-        TESTING("automatic cache resize auxilary functions (paged aggregation)");
-    } else {
-        TESTING("automatic cache resize auxilary functions");
-    }
+    if(paged)
+        TESTING("automatic cache resize auxilary functions (paged aggregation)")
+    else
+        TESTING("automatic cache resize auxilary functions")
 
     pass = TRUE;
 
@@ -27587,8 +27532,7 @@ check_auto_cache_resize_aux_fcns(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024),
-                                (size_t)(1 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024), (size_t)(1 * 1024), paged);
         cache_ptr = file_ptr->shared->cache;
     }
 
@@ -28262,8 +28206,7 @@ check_metadata_blizzard_absence(hbool_t fill_via_insertion, unsigned paged)
          * The max_cache_size should have room for 50 entries.
          * The min_clean_size is half of that, or 25 entries.
          */
-        file_ptr = setup_cache((size_t)(50 * entry_size), /* max_cache_size */
-                                (size_t)(25 * entry_size), paged); /* min_clean_size */
+        file_ptr = setup_cache((size_t)(50 * entry_size), (size_t)(25 * entry_size), paged);
 
         if(file_ptr == NULL) {
 
@@ -28925,11 +28868,10 @@ check_flush_deps(unsigned paged)
       { PICO_ENTRY_TYPE, 4,	PICO_ENTRY_SIZE, FALSE,	TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE}
     };
 
-    if(paged) {
-        TESTING("flush dependencies (paged aggregation)");
-    } else {
-        TESTING("flush dependencies");
-    }
+    if(paged)
+        TESTING("flush dependencies (paged aggregation)")
+    else
+        TESTING("flush dependencies")
 
     pass = TRUE;
 
@@ -30653,11 +30595,10 @@ check_flush_deps_err(unsigned paged)
     int entry_type = PICO_ENTRY_TYPE;   /* Use very small entry size (size of entries doesn't matter) */
     unsigned test_count;                /* Test iteration variable */
 
-    if(paged) {
-        TESTING("flush dependency errors (paged aggregation)");
-    } else {
-        TESTING("flush dependency errors");
-    }
+    if(paged)
+        TESTING("flush dependency errors (paged aggregation)")
+    else
+        TESTING("flush dependency errors")
 
     pass = TRUE;
 
@@ -30890,11 +30831,10 @@ check_flush_deps_order(unsigned paged)
     };
     unsigned flush_order;       /* Index for tracking flush order */
 
-    if(paged) {
-        TESTING("flush dependencies flush order (paged aggregation)");
-    } else {
-        TESTING("flush dependencies flush order");
-    }
+    if(paged)
+        TESTING("flush dependencies flush order (paged aggregation)")
+    else
+        TESTING("flush dependencies flush order")
 
     pass = TRUE;
 
@@ -33463,11 +33403,10 @@ check_notify_cb(unsigned paged)
       { NOTIFY_ENTRY_TYPE, 4,	NOTIFY_ENTRY_SIZE, FALSE, TRUE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE,	FALSE, {0,0,0,0,0,0,0,0},       {0,0,0,0,0,0,0,0},      0, 0, 0,          -1, FALSE}
     };
 
-    if(paged) {
-        TESTING("'notify' callback (paged)");
-    } else {
-        TESTING("'notify' callback");
-    }
+    if(paged)
+        TESTING("'notify' callback (paged)")
+    else
+        TESTING("'notify' callback")
 
     pass = TRUE;
 
@@ -33829,14 +33768,10 @@ check_metadata_cork(hbool_t fill_via_insertion, unsigned paged)
 
     reset_entries();
 
-    if(fill_via_insertion) {
-
-        TESTING("to ensure cork/uncork metadata when inserting");
-
-    } else {
-
-        TESTING("to ensure cork/uncork metadata on protect/unprotect");
-    }
+    if(fill_via_insertion)
+        TESTING("to ensure cork/uncork metadata when inserting")
+    else
+        TESTING("to ensure cork/uncork metadata on protect/unprotect")
 
     if(show_progress) /* 0 */
          HDfprintf(stdout, "\n%s: check point %d -- pass %d\n",
@@ -33849,8 +33784,7 @@ check_metadata_cork(hbool_t fill_via_insertion, unsigned paged)
          * The max_cache_size should have room for 50 entries.
          * The min_clean_size is half of that, or 25 entries.
          */
-        file_ptr = setup_cache((size_t)(50 * entry_size), /* max_cache_size */
-                                (size_t)(25 * entry_size), paged); /* min_clean_size */
+        file_ptr = setup_cache((size_t)(50 * entry_size), (size_t)(25 * entry_size), paged);
 
         if(file_ptr == NULL) {
 
@@ -34403,11 +34337,10 @@ check_entry_deletions_during_scans(unsigned paged)
 {
     H5F_t *      file_ptr = NULL;
 
-    if(paged) {
-        TESTING("entry deletion during list scan detection and adaption (paged aggregation)");
-    } else {
-        TESTING("entry deletion during list scan detection and adaption");
-    }
+    if(paged)
+        TESTING("entry deletion during list scan detection and adaption (paged aggregation)")
+    else
+        TESTING("entry deletion during list scan detection and adaption")
 
     pass = TRUE;
 
@@ -34420,8 +34353,7 @@ check_entry_deletions_during_scans(unsigned paged)
 
         reset_entries();
 
-        file_ptr = setup_cache((size_t)(2 * 1024 * 1024),
-                                (size_t)(1 * 1024 * 1024), paged);
+        file_ptr = setup_cache((size_t)(2 * 1024 * 1024), (size_t)(1 * 1024 * 1024), paged);
     }
 
     /* run the tests.  This set of tests is somewhat eclectic, as 
@@ -35904,11 +35836,10 @@ check_stats(unsigned paged)
 
 #endif /* H5C_COLLECT_CACHE_STATS */
 
-    if(paged) {
-        TESTING("metadata cache statistics collection (paged aggregation)");
-    } else {
-        TESTING("metadata cache statistics collection");
-    }
+    if(paged)
+        TESTING("metadata cache statistics collection (paged aggregation)")
+    else
+        TESTING("metadata cache statistics collection")
 
 #if H5C_COLLECT_CACHE_STATS
 
@@ -35916,8 +35847,7 @@ check_stats(unsigned paged)
 
     reset_entries();
 
-    file_ptr = setup_cache((size_t)(2 * 1024 * 1024),
-                           (size_t)(1 * 1024 * 1024), paged);
+    file_ptr = setup_cache((size_t)(2 * 1024 * 1024), (size_t)(1 * 1024 * 1024), paged);
 
     if(pass) {
 
@@ -36419,7 +36349,6 @@ main(void)
     /* Test with paged aggregation enabled or not */
     /* Each test will call setup_cache() which set up the file space strategy according to "paged" */
     for(paged = FALSE; paged <= TRUE; paged++) {
-
         nerrs += smoke_check_1(express_test, paged);
         nerrs += smoke_check_2(express_test, paged);
         nerrs += smoke_check_3(express_test, paged);
@@ -36430,9 +36359,7 @@ main(void)
         nerrs += smoke_check_8(express_test, paged);
         nerrs += smoke_check_9(express_test, paged);
         nerrs += smoke_check_10(express_test, paged);
-
         nerrs += write_permitted_check(express_test, paged);
-
         nerrs += check_insert_entry(paged);
         nerrs += check_flush_cache(paged);
         nerrs += check_get_entry_status(paged);
@@ -36446,7 +36373,6 @@ main(void)
         nerrs += check_destroy_pinned_err(paged);
         nerrs += check_destroy_protected_err(paged);
         nerrs += check_duplicate_insert_err(paged);
-        nerrs += check_move_err(paged);
         nerrs += check_double_pin_err(paged);
         nerrs += check_double_unpin_err(paged);
         nerrs += check_pin_entry_errs(paged);
@@ -36454,9 +36380,11 @@ main(void)
         nerrs += check_double_unprotect_err(paged);
         nerrs += check_mark_entry_dirty_errs(paged);
         nerrs += check_expunge_entry_errs(paged);
+        nerrs += check_move_entry_errs(paged);
         nerrs += check_resize_entry_errs(paged);
         nerrs += check_unprotect_ro_dirty_err(paged);
         nerrs += check_protect_ro_rw_err(paged);
+        nerrs += check_protect_retries(paged);
         nerrs += check_check_evictions_enabled_err(paged);
         nerrs += check_auto_cache_resize(FALSE, paged);
         nerrs += check_auto_cache_resize(TRUE, paged);
@@ -36474,7 +36402,6 @@ main(void)
         nerrs += check_metadata_cork(FALSE, paged);
         nerrs += check_entry_deletions_during_scans(paged);
         nerrs += check_stats(paged);
-
     } /* end for */
 
     /* can't fail, returns void */

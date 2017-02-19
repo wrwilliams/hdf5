@@ -318,17 +318,16 @@
 #define H5F_USE_TMP_SPACE(F)    ((F)->shared->fs.use_tmp_space)
 #define H5F_IS_TMP_ADDR(F, ADDR) (H5F_addr_le((F)->shared->fs.tmp_addr, (ADDR)))
 #define H5F_SET_LATEST_FLAGS(F, FL)  ((F)->shared->latest_flags = (FL))
-#define H5F_ALIGNMENT(F)   	((F)->shared->alignment)
-#define H5F_THRESHOLD(F)   	((F)->shared->threshold)
-#define H5F_PGEND_META_THRES(F) ((F)->shared->fs.pgend_meta_thres)
-#define H5F_POINT_OF_NO_RETURN(F) ((F)->shared->fs.point_of_no_return)
-
 #ifdef H5_HAVE_PARALLEL
 #define H5F_COLL_MD_READ(F)     ((F)->coll_md_read)
 #endif /* H5_HAVE_PARALLEL */
 #define H5F_USE_MDC_LOGGING(F)  ((F)->shared->use_mdc_logging)
 #define H5F_START_MDC_LOG_ON_ACCESS(F)  ((F)->shared->start_mdc_log_on_access)
 #define H5F_MDC_LOG_LOCATION(F) ((F)->shared->mdc_log_location)
+#define H5F_ALIGNMENT(F)   	((F)->shared->alignment)
+#define H5F_THRESHOLD(F)   	((F)->shared->threshold)
+#define H5F_PGEND_META_THRES(F) ((F)->shared->fs.pgend_meta_thres)
+#define H5F_POINT_OF_NO_RETURN(F) ((F)->shared->fs.point_of_no_return)
 #else /* H5F_MODULE */
 #define H5F_INTENT(F)           (H5F_get_intent(F))
 #define H5F_OPEN_NAME(F)        (H5F_get_open_name(F))
@@ -374,6 +373,9 @@
 #define H5F_USE_TMP_SPACE(F)    (H5F_use_tmp_space(F))
 #define H5F_IS_TMP_ADDR(F, ADDR) (H5F_is_tmp_addr((F), (ADDR)))
 #define H5F_SET_LATEST_FLAGS(F, FL)  (H5F_set_latest_flags((F), (FL)))
+#ifdef H5_HAVE_PARALLEL
+#define H5F_COLL_MD_READ(F)     (H5F_coll_md_read(F))
+#endif /* H5_HAVE_PARALLEL */
 #define H5F_USE_MDC_LOGGING(F)  (H5F_use_mdc_logging(F))
 #define H5F_START_MDC_LOG_ON_ACCESS(F)  (H5F_start_mdc_log_on_access(F))
 #define H5F_MDC_LOG_LOCATION(F) (H5F_mdc_log_location(F))
@@ -381,9 +383,6 @@
 #define H5F_THRESHOLD(F)    	(H5F_get_threshold(F))
 #define H5F_PGEND_META_THRES(F) (H5F_get_pgend_meta_thres(F))
 #define H5F_POINT_OF_NO_RETURN(F) (H5F_get_point_of_no_return(F))
-#ifdef H5_HAVE_PARALLEL
-#define H5F_COLL_MD_READ(F)     (H5F_coll_md_read(F))
-#endif /* H5_HAVE_PARALLEL */
 #endif /* H5F_MODULE */
 
 
@@ -491,13 +490,13 @@
 #define H5F_ACS_MDC_LOG_LOCATION_NAME           "mdc_log_location" /* Name of metadata cache log location */
 #define H5F_ACS_START_MDC_LOG_ON_ACCESS_NAME    "start_mdc_log_on_access" /* Whether logging starts on file create/open */
 #define H5F_ACS_CORE_WRITE_TRACKING_FLAG_NAME   "core_write_tracking_flag" /* Whether or not core VFD backing store write tracking is enabled */
-#define H5F_ACS_CORE_WRITE_TRACKING_PAGE_SIZE_NAME "core_write_tracking_page_size" /* The page size in kiB when core VFD write tracking is enabled */
 #define H5F_ACS_EVICT_ON_CLOSE_FLAG_NAME        "evict_on_close_flag" /* Whether or not the metadata cache will evict objects on close */
+#define H5F_ACS_CORE_WRITE_TRACKING_PAGE_SIZE_NAME "core_write_tracking_page_size" /* The page size in kiB when core VFD write tracking is enabled */
+#define H5F_ACS_COLL_MD_WRITE_FLAG_NAME         "collective_metadata_write" /* property indicating whether metadata writes are done collectively or not */
+#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME "mdc_initCacheImageCfg" /* Initial metadata cache image creation configuration */
 #define H5F_ACS_PAGE_BUFFER_SIZE_NAME           "page_buffer_size" /* the maximum size for the page buffer cache */
 #define H5F_ACS_PAGE_BUFFER_MIN_META_PERC_NAME  "page_buffer_min_meta_perc" /* the min metadata percentage for the page buffer cache */
 #define H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_NAME   "page_buffer_min_raw_perc" /* the min raw data percentage for the page buffer cache */
-#define H5F_ACS_COLL_MD_WRITE_FLAG_NAME         "collective_metadata_write" /* property indicating whether metadata writes are done collectively or not */
-#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME "mdc_initCacheImageCfg" /* Initial metadata cache image creation configuration */
 
 /* ======================== File Mount properties ====================*/
 #define H5F_MNT_SYM_LOCAL_NAME 		"local"                 /* Whether absolute symlinks local to file. */

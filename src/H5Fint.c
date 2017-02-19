@@ -868,7 +868,7 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                 HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
         } /* end if */
         else {
-            /* notify the metadata cache that the file is about to be closed.
+            /* Notify the metadata cache that the file is about to be closed.
              * This allows the cache to set up for creating a metadata cache
              * image if this has been requested.
              *
@@ -907,11 +907,11 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
         /* Release objects that depend on the superblock being initialized */
         if(f->shared->sblock) {
             /* Shutdown file free space manager(s) */
-            /* (We should release the free space information now (before truncating
-             *      the file and before the metadata cache is shut down) since the
-             *      free space manager is holding some data structures in memory
-             *      and also because releasing free space can shrink the file's
-             *      'eoa' value)
+            /* (We should release the free space information now (before 
+             *      truncating the file and before the metadata cache is shut 
+             *      down) since the free space manager is holding some data 
+             *      structures in memory and also because releasing free space 
+             *      can shrink the file's 'eoa' value)
              *
              * Update 11/1/16:
              *
@@ -1300,8 +1300,15 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
             } /* end if */
 
         /* Create the 'top' file structure */
-        if(NULL == (file = H5F_new(NULL, flags, fcpl_id, fapl_id, lf)))
+        if(NULL == (file = H5F_new(NULL, flags, fcpl_id, fapl_id, lf))) {
+            /* If this is the only time the file has been opened and the struct
+             * returned is NULL, H5FD_close() will never be called via H5F_dest()
+             * so we have to close lf here before heading to the error handling.
+             */
+            if(H5FD_close(lf) < 0) 
+                HDONE_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
             HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to initialize file structure")
+        } /* end if */
 
         /* Need to set status_flags in the superblock if the driver has a 'lock' method */
         if(drvr->lock)
@@ -1326,10 +1333,9 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
 #ifdef H5_HAVE_PARALLEL
         /* Collective metadata writes are not supported with page buffering */
         if(file->coll_md_write)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, 
-                        "Collective metadata writes are not supported with page buffering.")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "Collective metadata writes are not supported with page buffering.")
 
-        /* Tempoarary: fail file create when page buffering feature is enabled for parallel */
+        /* Temporary: fail file create when page buffering feature is enabled for parallel */
         HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "Page buffering is disabled for parallel.")
 #endif /* H5_HAVE_PARALLEL */
         /* Query for other page buffer cache properties */
@@ -1518,7 +1524,6 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush dataset cache")
 
-
     /* Release any space allocated to space aggregators, so that the eoa value
      *  corresponds to the end of the space written to in the file.
      */
@@ -1529,7 +1534,7 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file space")
 
-    if ( closing ) {
+    if(closing) {
 
         /* notify the metadata cache that the file is about to be closed.
          * This allows the cache to set up for creating a metadata cache
@@ -2684,7 +2689,7 @@ H5F__set_paged_aggr(const H5F_t *f, hbool_t paged)
 
     /* Dispatch to driver */
     if(H5FD_set_paged_aggr(f->shared->lf, paged) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "driver set paged aggre mode failed")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "driver set paged aggr mode failed")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

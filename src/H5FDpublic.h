@@ -251,7 +251,7 @@ typedef enum H5F_mem_t	H5FD_mem_t;
      * means that the driver needs special file space mapping for paged aggregation.
      * This is specifically used for the multi/split driver.
      */
-#define H5FD_FEAT_PAGED_AGGR 0x00004000
+#define H5FD_FEAT_PAGED_AGGR		0x00004000
 
 /* Forward declaration */
 typedef struct H5FD_t H5FD_t;

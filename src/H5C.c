@@ -138,9 +138,9 @@ static herr_t H5C__autoadjust__ageout__remove_excess_markers(H5C_t * cache_ptr);
 static herr_t H5C__flash_increase_cache_size(H5C_t * cache_ptr,
     size_t old_entry_size, size_t new_entry_size);
 
-static herr_t H5C_flush_invalidate_cache(const H5F_t *f, hid_t dxpl_id, unsigned flags);
+static herr_t H5C_flush_invalidate_cache(H5F_t *f, hid_t dxpl_id, unsigned flags);
 
-static herr_t H5C_flush_invalidate_ring(const H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
+static herr_t H5C_flush_invalidate_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
     unsigned flags);
 
 static herr_t H5C_flush_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
@@ -185,48 +185,6 @@ static void H5C__assert_flush_dep_nocycle(const H5C_cache_entry_t * entry,
 
 /* Package initialization variable */
 hbool_t H5_PKG_INIT_VAR = FALSE;
-
-/* The H5C__class_mem_types array exists to allow lookups from 
- * class ID to the associated mem type.  This is needed 
- * to support writes of dirty prefetched entries with the 
- * correct mem type.
- *				JRM -- 8/14/15
- */
-const H5FD_mem_t H5C__class_mem_types[H5C__MAX_NUM_TYPE_IDS + 1] = 
-{
-   /*  0 H5AC_BT_ID               */ H5FD_MEM_BTREE,
-   /*  1 H5AC_SNODE_ID            */ H5FD_MEM_BTREE,
-   /*  2 H5AC_LHEAP_PRFX_ID       */ H5FD_MEM_LHEAP,
-   /*  3 H5AC_LHEAP_DBLK_ID       */ H5FD_MEM_LHEAP,
-   /*  4 H5AC_GHEAP_ID            */ H5FD_MEM_GHEAP,
-   /*  5 H5AC_OHDR_ID             */ H5FD_MEM_OHDR,
-   /*  6 H5AC_OHDR_CHK_ID         */ H5FD_MEM_OHDR,
-   /*  7 H5AC_BT2_HDR_ID          */ H5FD_MEM_BTREE,
-   /*  8 H5AC_BT2_INT_ID          */ H5FD_MEM_BTREE,
-   /*  9 H5AC_BT2_LEAF_ID         */ H5FD_MEM_BTREE,
-   /* 10 H5AC_FHEAP_HDR_ID        */ H5FD_MEM_FHEAP_HDR,
-   /* 11 H5AC_FHEAP_DBLOCK_ID     */ H5FD_MEM_FHEAP_DBLOCK,
-   /* 12 H5AC_FHEAP_IBLOCK_ID     */ H5FD_MEM_FHEAP_IBLOCK,
-   /* 13 H5AC_FSPACE_HDR_ID       */ H5FD_MEM_FSPACE_HDR,
-   /* 14 H5AC_FSPACE_SINFO_ID     */ H5FD_MEM_FSPACE_SINFO,
-   /* 15 H5AC_SOHM_TABLE_ID       */ H5FD_MEM_SOHM_TABLE,
-   /* 16 H5AC_SOHM_LIST_ID        */ H5FD_MEM_SOHM_TABLE,
-   /* 17 H5AC_EARRAY_HDR_ID       */ H5FD_MEM_EARRAY_HDR,
-   /* 18 H5AC_EARRAY_IBLOCK_ID    */ H5FD_MEM_EARRAY_IBLOCK,
-   /* 19 H5AC_EARRAY_SBLOCK_ID    */ H5FD_MEM_EARRAY_SBLOCK,
-   /* 20 H5AC_EARRAY_DBLOCK_ID    */ H5FD_MEM_EARRAY_DBLOCK,
-   /* 21 H5AC_EARRAY_DBLK_PAGE_ID */ H5FD_MEM_EARRAY_DBLK_PAGE,
-   /* 22 H5AC_FARRAY_HDR_ID       */ H5FD_MEM_FARRAY_HDR,
-   /* 23 H5AC_FARRAY_DBLOCK_ID    */ H5FD_MEM_FARRAY_DBLOCK,
-   /* 24 H5AC_FARRAY_DBLK_PAGE_ID */ H5FD_MEM_FARRAY_DBLK_PAGE,
-   /* 25 H5AC_SUPERBLOCK_ID       */ H5FD_MEM_SUPER,
-   /* 26 H5AC_DRVRINFO_ID         */ H5FD_MEM_SUPER,
-   /* 27 H5AC_PROXY_ENTRY_ID      */ H5FD_MEM_SUPER,
-   /* 28 H5AC_PREFETCHED_ENTRY_ID */ H5FD_MEM_DEFAULT,
-   /* 29 H5AC_EPOCH_MARKER_ID     */ H5FD_MEM_DEFAULT,
-   /* 30 H5AC_TEST_ID             */ H5FD_MEM_DEFAULT,
-   /* 31 H5AC_NTYPES              */ H5FD_MEM_DEFAULT
-};
 
 /* Declare a free list to manage the tag info struct */
 H5FL_DEFINE(H5C_tag_info_t);
@@ -277,7 +235,7 @@ H5C_t *
 H5C_create(size_t		      max_cache_size,
            size_t		      min_clean_size,
            int			      max_type_id,
-           const char *		      (* type_name_table_ptr),
+           const H5C_class_t * const * class_table_ptr,
            H5C_write_permitted_func_t check_write_permitted,
            hbool_t		      write_permitted,
            H5C_log_flush_func_t       log_flush,
@@ -295,11 +253,11 @@ H5C_create(size_t		      max_cache_size,
 
     HDassert( max_type_id >= 0 );
     HDassert( max_type_id < H5C__MAX_NUM_TYPE_IDS );
-    HDassert( type_name_table_ptr );
+    HDassert( class_table_ptr );
 
     for ( i = 0; i <= max_type_id; i++ ) {
-        HDassert( (type_name_table_ptr)[i] );
-        HDassert(HDstrlen((type_name_table_ptr)[i]) > 0);
+        HDassert( (class_table_ptr)[i] );
+        HDassert(HDstrlen((class_table_ptr)[i]->name) > 0);
     } /* end for */
 
     if(NULL == (cache_ptr = H5FL_CALLOC(H5C_t)))
@@ -331,7 +289,7 @@ H5C_create(size_t		      max_cache_size,
 
     cache_ptr->max_type_id			= max_type_id;
 
-    cache_ptr->type_name_table_ptr		= type_name_table_ptr;
+    cache_ptr->class_table_ptr			= class_table_ptr;
 
     cache_ptr->max_cache_size			= max_cache_size;
     cache_ptr->min_clean_size			= min_clean_size;
@@ -342,6 +300,7 @@ H5C_create(size_t		      max_cache_size,
     cache_ptr->log_flush			= log_flush;
 
     cache_ptr->evictions_enabled		= TRUE;
+    cache_ptr->close_warning_received		= FALSE;
 
     cache_ptr->index_len			= 0;
     cache_ptr->index_size			= (size_t)0;
@@ -468,7 +427,7 @@ H5C_create(size_t		      max_cache_size,
         ((cache_ptr->epoch_markers)[i]).magic		 =
 					       H5C__H5C_CACHE_ENTRY_T_MAGIC;
         ((cache_ptr->epoch_markers)[i]).addr		 = (haddr_t)i;
-        ((cache_ptr->epoch_markers)[i]).type		 = &H5C__epoch_marker_class;
+        ((cache_ptr->epoch_markers)[i]).type		 = H5AC_EPOCH_MARKER;
     }
 
     /* Initialize cache image generation on file close related fields.
@@ -482,7 +441,6 @@ H5C_create(size_t		      max_cache_size,
     cache_ptr->image_ctl.flags              = H5C_CI__ALL_FLAGS;
 
     cache_ptr->serialization_in_progress= FALSE;
-    cache_ptr->close_warning_received   = FALSE;
     cache_ptr->load_image		= FALSE;
     cache_ptr->image_loaded             = FALSE;
     cache_ptr->delete_image		= FALSE;
@@ -1106,9 +1064,7 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 			break;
 
 		    case H5C_RING_RDFSM:
-                        if ( ( f->shared->fs_persist ) &&
-                             ( ! f->shared->first_alloc_dealloc ) &&
-                             ( ! cache_ptr->rdfsm_settled ) ) {
+                        if(f->shared->fs_persist && !f->shared->first_alloc_dealloc && !cache_ptr->rdfsm_settled) {
 
                             if(H5MF_settle_raw_data_fsm(f, dxpl_id) < 0)
                                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "RD FSM settle failed")
@@ -1118,9 +1074,7 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 			break;
 
 		    case H5C_RING_MDFSM:
-                        if ( ( f->shared->fs_persist ) &&
-                             ( ! f->shared->first_alloc_dealloc ) &&
-                             ( ! cache_ptr->mdfsm_settled ) ) {
+                        if(f->shared->fs_persist && !f->shared->first_alloc_dealloc && !cache_ptr->mdfsm_settled) {
 
                             if(H5MF_settle_meta_data_fsm(f, dxpl_id) < 0)
                                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "MD FSM settle failed")
@@ -1381,8 +1335,7 @@ H5C_insert_entry(H5F_t *             f,
     HDassert( cache_ptr );
     HDassert( cache_ptr->magic == H5C__H5C_T_MAGIC );
     HDassert( type );
-    HDassert( ( type->flags & H5C__CLASS_SKIP_MEM_TYPE_CHECKS ) ||
-              ( type->mem_type == H5C__class_mem_types[type->id] ) );
+    HDassert( type->mem_type == cache_ptr->class_table_ptr[type->id]->mem_type );
     HDassert( type->image_len );
     HDassert( H5F_addr_defined(addr) );
     HDassert( thing );
@@ -1981,6 +1934,13 @@ H5C_move_entry(H5C_t *	     cache_ptr,
     HDassert(entry_ptr->addr == old_addr);
     HDassert(entry_ptr->type == type);
 
+    /* Check for R/W status, otherwise error */
+    /* (Moving a R/O entry would mark it dirty, which shouldn't
+     *  happen. QAK - 2016/12/02)
+     */
+    if(entry_ptr->is_read_only)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTMOVE, FAIL, "can't move R/O entry")
+
     H5C__SEARCH_INDEX(cache_ptr, new_addr, test_entry_ptr, FAIL)
 
     if(test_entry_ptr != NULL) { /* we are hosed */
@@ -2397,8 +2357,7 @@ H5C_protect(H5F_t *		f,
     HDassert( cache_ptr );
     HDassert( cache_ptr->magic == H5C__H5C_T_MAGIC );
     HDassert( type );
-    HDassert( ( type->flags & H5C__CLASS_SKIP_MEM_TYPE_CHECKS ) ||
-              ( type->mem_type == H5C__class_mem_types[type->id] ) );
+    HDassert( type->mem_type == cache_ptr->class_table_ptr[type->id]->mem_type );
     HDassert( H5F_addr_defined(addr) );
 
 #if H5C_DO_EXTREME_SANITY_CHECKS
@@ -3518,6 +3477,79 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ *
+ * Function:    H5C_unsettle_entry_ring
+ *
+ * Purpose:     Advise the metadata cache that the specified entry's free space
+ *              manager ring is no longer settled (if it was on entry).
+ *
+ *              If the target free space manager ring is already
+ *              unsettled, do nothing, and return SUCCEED.
+ *
+ *              If the target free space manager ring is settled, and
+ *              we are not in the process of a file shutdown, mark
+ *              the ring as unsettled, and return SUCCEED.
+ *
+ *              If the target free space manager is settled, and we
+ *              are in the process of a file shutdown, post an error
+ *              message, and return FAIL.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Quincey Koziol
+ *              January 3, 2017
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C_unsettle_entry_ring(void *_entry)
+{
+    H5C_cache_entry_t *entry = (H5C_cache_entry_t *)_entry;     /* Entry whose ring to unsettle */
+    H5C_t *cache;               /* Cache for file */
+    herr_t ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity checks */
+    HDassert(entry);
+    HDassert(entry->ring != H5C_RING_UNDEFINED);
+    HDassert((H5C_RING_USER == entry->ring) || (H5C_RING_RDFSM == entry->ring) || (H5C_RING_MDFSM == entry->ring));
+    cache = entry->cache_ptr;
+    HDassert(cache);
+    HDassert(cache->magic == H5C__H5C_T_MAGIC);
+
+    switch(entry->ring) {
+	case H5C_RING_USER:
+            /* Do nothing */
+	    break;
+
+	case H5C_RING_RDFSM:
+	    if(cache->rdfsm_settled) {
+		if(cache->flush_in_progress || cache->close_warning_received)
+		    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unexpected rdfsm ring unsettle")
+		cache->rdfsm_settled = FALSE;
+	    } /* end if */
+	    break;
+
+	case H5C_RING_MDFSM:
+	    if(cache->mdfsm_settled) {
+		if(cache->flush_in_progress || cache->close_warning_received)
+		    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unexpected mdfsm ring unsettle")
+		cache->mdfsm_settled = FALSE;
+	    } /* end if */
+	    break;
+
+	default:
+	    HDassert(FALSE); /* this should be un-reachable */
+	    break;
+    } /* end switch */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C_unsettle_entry_ring() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5C_unsettle_ring()
  *
  * Purpose:     Advise the metadata cache that the specified free space
@@ -3553,27 +3585,23 @@ H5C_unsettle_ring(H5F_t * f, H5C_ring_t ring)
     HDassert(f);
     HDassert(f->shared);
     HDassert(f->shared->cache);
+    HDassert((H5C_RING_RDFSM == ring) || (H5C_RING_MDFSM == ring));
     cache_ptr = f->shared->cache;
     HDassert(H5C__H5C_T_MAGIC == cache_ptr->magic);
-    HDassert((H5C_RING_RDFSM == ring) || (H5C_RING_MDFSM == ring));
 
     switch(ring) {
         case H5C_RING_RDFSM:
             if(cache_ptr->rdfsm_settled) {
-                if(cache_ptr->close_warning_received) {
-                    HDassert(FALSE);
+                if(cache_ptr->close_warning_received)
                     HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unexpected rdfsm ring unsettle")
-                } /* end if */
                 cache_ptr->rdfsm_settled = FALSE;
             } /* end if */
             break;
 
         case H5C_RING_MDFSM:
             if(cache_ptr->mdfsm_settled) {
-                if(cache_ptr->close_warning_received) {
-                    HDassert(FALSE);
+                if(cache_ptr->close_warning_received)
                     HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "unexpected mdfsm ring unsettle")
-                } /* end if */
                 cache_ptr->mdfsm_settled = FALSE;
             } /* end if */
             break;
@@ -4591,38 +4619,6 @@ done:
  *
  * Programmer:  John Mainzer, 11/22/04
  *
- * Changes:	Modified function to detect deletions of entries
- *              during a scan of the LRU, and where appropriate,
- *              restart the scan to avoid proceeding with a next
- *              entry that is no longer in the cache.
- *
- *              Note the absence of checks after flushes of clean
- *              entries.  As a second entry can only be removed by
- *              by a call to the pre_serialize or serialize callback
- *              of the first, and as these callbacks will not be called
- *              on clean entries, no checks are needed.
- *
- *                                              JRM -- 4/6/15
- *
- *              Modified function to skip entries marked as being 
- *              prefetched dirty.  
- *
- *              The issue here is dirty entries that are included in 
- *              a cache image.  If a file containing a cache image is 
- *              opened R/O, any dirty entries in the cache image must 
- *              be marked as clean when they are inserted into the metadata
- *              cache.  However, this allows them to be evicted.  If the 
- *              entry is later referenced, the metadata cache will attempt
- *              to load the entry from file -- resulting in either out
- *              dated or invalid data.
- *
- *              To address this problem, such entries are marked by setting
- *              the prefetched_dirty field to TRUE, and skipping these
- *              entries when they are encountered in the make space in 
- *              cache or autoadjust eviction routines.
- *
-                                                JRM -- 1/29/17
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -4686,15 +4682,12 @@ H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * f,
                 prev_is_dirty = prev_ptr->is_dirty;
 
             if(entry_ptr->is_dirty ) {
-
                 HDassert(!entry_ptr->prefetched_dirty);
 
                 /* dirty corked entry is skipped */
-                if ( entry_ptr->tag_info && entry_ptr->tag_info->corked ) {
-
+                if(entry_ptr->tag_info && entry_ptr->tag_info->corked)
                     skipping_entry = TRUE;
-
-                } else {
+                else {
                     /* reset entries_removed_counter and
                      * last_entry_removed_ptr prior to the call to
                      * H5C__flush_single_entry() so that we can spot
@@ -4802,17 +4795,6 @@ H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * f,
 	     * Since all entries are clean, serialize() will not be called,
 	     * and thus we needn't test to see if the LRU has been changed
 	     * out from under us.
-             *
-             * Update: Entries can be marked prefetched_dirty iff the file
-             *         is opened R/O, the file contains a cache image, and 
-             *         the image contains one or more entries that are 
-             *         marked dirty.  Since the file is opened R/O, these
-             *         entries must be marked clean to prevent attempts to 
-             *         write them to file.  However, this allows them to 
-             *         to be evicted, which causes problems if they are 
-             *         later accessed.  Solve the problem by marking them
-             *         prefetched_dirty, and preventing the make space in 
-             *         cache and adaptive resize code from evicting them.
              */
             entry_ptr = prev_ptr;
         } /* end while */
@@ -5240,7 +5222,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5C_flush_invalidate_cache(const H5F_t *f, hid_t dxpl_id, unsigned flags)
+H5C_flush_invalidate_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 {
     H5C_t *		cache_ptr;
     H5C_ring_t		ring;
@@ -5258,8 +5240,8 @@ H5C_flush_invalidate_cache(const H5F_t *f, hid_t dxpl_id, unsigned flags)
 #if H5C_DO_SANITY_CHECKS
 {
     int32_t		i;
-    int32_t		index_len = 0;
-    int32_t		slist_len = 0;
+    uint32_t		index_len = 0;
+    uint32_t		slist_len = 0;
     size_t		index_size = (size_t)0;
     size_t		clean_index_size = (size_t)0;
     size_t		dirty_index_size = (size_t)0;
@@ -5385,12 +5367,12 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5C_flush_invalidate_ring(const H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
+H5C_flush_invalidate_ring(H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
     unsigned flags)
 {
     H5C_t              *cache_ptr;
     hbool_t             restart_slist_scan;
-    int32_t             protected_entries = 0;
+    uint32_t            protected_entries = 0;
     int32_t             i;
     int32_t             cur_ring_pel_len;
     int32_t             old_ring_pel_len;
@@ -5832,7 +5814,7 @@ H5C_flush_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,  unsigned flags)
     hbool_t		ignore_protected;
     hbool_t		tried_to_flush_protected_entry = FALSE;
     hbool_t		restart_slist_scan;
-    int32_t		protected_entries = 0;
+    uint32_t		protected_entries = 0;
     H5SL_node_t * 	node_ptr = NULL;
     H5C_cache_entry_t *	entry_ptr = NULL;
     H5C_cache_entry_t *	next_entry_ptr = NULL;
@@ -6098,7 +6080,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_ptr,
+H5C__flush_single_entry(H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_ptr,
     unsigned flags)
 {
     H5C_t *	     	cache_ptr;              /* Cache for file */
@@ -6250,7 +6232,7 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
         HDassert(entry_ptr->is_dirty);
 
 #if H5C_DO_SANITY_CHECKS
-        if(NULL == cache_ptr->check_write_permitted && !(cache_ptr->write_permitted))
+        if(cache_ptr->check_write_permitted && !(cache_ptr->write_permitted))
             HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Write when writes are always forbidden!?!?!")
 #endif /* H5C_DO_SANITY_CHECKS */
 
@@ -6275,7 +6257,7 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
 
             if(entry_ptr->prefetched) {
                 HDassert(entry_ptr->type->id == H5AC_PREFETCHED_ENTRY_ID);
-                mem_type = H5C__class_mem_types[entry_ptr->prefetch_type_id];
+                mem_type = cache_ptr->class_table_ptr[entry_ptr->prefetch_type_id]->mem_type;
             } /* end if */
             else
                 mem_type = entry_ptr->type->mem_type;
@@ -6402,7 +6384,7 @@ H5C__flush_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry dirty flag cleared")
 
             /* Propagate the clean flag up the flush dependency chain if appropriate */
-            if ( entry_ptr->flush_dep_ndirty_children != 0 )
+            if(entry_ptr->flush_dep_ndirty_children != 0)
                 HDassert(entry_ptr->flush_dep_ndirty_children == 0);
             if(entry_ptr->flush_dep_nparents > 0)
                 if(H5C__mark_flush_dep_clean(entry_ptr) < 0)
@@ -6992,64 +6974,6 @@ done:
  *
  * Programmer:  John Mainzer, 5/14/04
  *
- * Changes:     Modified function to skip over entries with the 
- *		flush_in_progress flag set.  If this is not done,
- *		an infinite recursion is possible if the cache is 
- *		full, and the pre-serialize or serialize routine 
- *		attempts to load another entry.
- *
- *		This error was exposed by a re-factor of the 
- *		H5C__flush_single_entry() routine.  However, it was 
- *		a potential bug from the moment that entries were 
- *		allowed to load other entries on flush.
- *
- *		In passing, note that the primary and secondary dxpls 
- *		mentioned in the comment above have been replaced by 
- *		a single dxpl at some point, and thus the discussion 
- *		above is somewhat obsolete.  Date of this change is 
- *		unkown.
- *
- *						JRM -- 12/26/14
- *
- *		Modified function to detect deletions of entries 
- *		during a scan of the LRU, and where appropriate, 
- *		restart the scan to avoid proceeding with a next 
- *		entry that is no longer in the cache.
- *
- *		Note the absence of checks after flushes of clean 
- *		entries.  As a second entry can only be removed by 
- *		by a call to the pre_serialize or serialize callback
- *		of the first, and as these callbacks will not be called
- *		on clean entries, no checks are needed.
- *
- *						JRM -- 4/6/15
- *
- *              Modified function to skip over entries with the 
- *              prefetched_dirty flag set.
- *
- *              This is a fix for an issue with files with cache images
- *              which are loaded R/O.  In this case, dirty entries in the
- *              cache image must be marked as clean, as otherwise the 
- *              metadata cache will attempt to write them on file close --
- *              in which we would no longer be R/O.  However, this allows
- *              the cache to evict them to make space if needed.  Should 
- *              the entry be needed again later in the session, the 
- *              metadata cache will attempt to read it from file, which 
- *              will yield obsolete or invalid data.
- *
- *              Solve this by setting the prefetched_dirty flag on such 
- *              entries, and ignoring entries so marked in the candidate 
- *              selection code.  This solution isn't particularly efficient,
- *              so we should try to do better in the future.
- *
- *              Note that Evict on Close can also cause this issue.  For 
- *              now, we deal with it by disabling EOC in the R/O case.
- *
- *              SWMR is also a possible problem, but it is irrelevant in 
- *              the R/O case.
- *
- *                                              JRM -- 1/27/17
- *             
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -7284,12 +7208,8 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
             cache_ptr->max_entries_skipped_in_msic = clean_entries_skipped;
         }
 
-        if ( dirty_pf_entries_skipped > 
-             cache_ptr->max_dirty_pf_entries_skipped_in_msic ) {
-
-            cache_ptr->max_dirty_pf_entries_skipped_in_msic = 
-                dirty_pf_entries_skipped;
-        }
+        if(dirty_pf_entries_skipped > cache_ptr->max_dirty_pf_entries_skipped_in_msic)
+            cache_ptr->max_dirty_pf_entries_skipped_in_msic = dirty_pf_entries_skipped;
 
         if ( total_entries_scanned > cache_ptr->max_entries_scanned_in_msic ) {
 

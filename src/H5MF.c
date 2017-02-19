@@ -36,13 +36,13 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"      /* Generic Functions        */
-#include "H5Eprivate.h"     /* Error handling           */
-#include "H5Fpkg.h"         /* File access              */
-#include "H5FSpkg.h"        /* File access              */
-#include "H5Iprivate.h"     /* IDs                      */
-#include "H5MFpkg.h"        /* File memory management   */
-#include "H5VMprivate.h"    /* Vectors and arrays       */
+#include "H5private.h"		/* Generic Functions			*/
+#include "H5Eprivate.h"		/* Error handling		  	*/
+#include "H5Fpkg.h"             /* File access				*/
+#include "H5FSpkg.h"            /* File access              */
+#include "H5Iprivate.h"		/* IDs			  		*/
+#include "H5MFpkg.h"		/* File memory management		*/
+#include "H5VMprivate.h"	/* Vectors and arrays 			*/
 
 
 /****************/
@@ -825,8 +825,7 @@ HDfprintf(stderr, "%s: Check 1.0\n", FUNC);
 
     /* Check if we are using the free space manager for this file */
     if(H5F_HAVE_FREE_SPACE_MANAGER(f)) {
-
-        /* we are about to change the contents of the free space manager --
+        /* We are about to change the contents of the free space manager --
          * notify metadata cache that the associated fsm ring is
          * unsettled
          */
@@ -845,8 +844,7 @@ HDfprintf(stderr, "%s: Check 1.0\n", FUNC);
         if(f->shared->fs_man[fs_type])
             if(H5MF_find_sect(f, alloc_type, dxpl_id, size, f->shared->fs_man[fs_type], &ret_value) < 0)
                 HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, HADDR_UNDEF, "error locating a node")
-
-    }
+    } /* end if */
 
     /* If no space is found from the free-space manager, continue further action */
     if(!H5F_addr_defined(ret_value)) {
