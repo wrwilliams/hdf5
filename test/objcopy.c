@@ -13604,16 +13604,6 @@ main(void)
     int     configuration;  /* Configuration of tests. */
     int	ExpressMode;
     hbool_t same_file;  /* Whether to run tests that only use one file */
-    const char  *env_h5_drvr;           /* File Driver value from environment */
-    hbool_t contig_addr_vfd;    /* Whether VFD used has a contigous address space */
-
-    /* Get the VFD to use */
-    env_h5_drvr = HDgetenv("HDF5_DRIVER");
-    if(env_h5_drvr == NULL)
-        env_h5_drvr = "nomatch";
-
-    /* Current VFD that does not support contigous address space */
-    contig_addr_vfd = (hbool_t)(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi"));
 
     /* Setup */
     h5_reset();
@@ -13701,7 +13691,6 @@ main(void)
             puts("Testing with latest format for destination file:");
             dst_fapl = fapl2;
             same_file = FALSE;
-
         } /* end if */
         else {
             puts("Testing with oldest file format for destination file:");

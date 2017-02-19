@@ -727,8 +727,8 @@ notify_get_initial_load_size(void *udata, size_t *image_length)
  *-------------------------------------------------------------------------
  */
 static herr_t
-get_final_load_size(const void *image, size_t image_len, void *udata,
-    size_t *actual_len, int32_t entry_type)
+get_final_load_size(const void H5_ATTR_UNUSED *image, size_t H5_ATTR_UNUSED image_len,
+    void *udata, size_t *actual_len, int32_t entry_type)
 {
     test_entry_t *entry;
     test_entry_t *base_addr;
@@ -1571,6 +1571,8 @@ notify(H5C_notify_action_t action, void *thing, int32_t entry_type)
         case H5C_NOTIFY_ACTION_ENTRY_CLEANED:
         case H5C_NOTIFY_ACTION_CHILD_DIRTIED:
         case H5C_NOTIFY_ACTION_CHILD_CLEANED:
+        case H5C_NOTIFY_ACTION_CHILD_UNSERIALIZED:
+        case H5C_NOTIFY_ACTION_CHILD_SERIALIZED:
 	    /* do nothing */
 	    break;
 
@@ -3446,7 +3448,7 @@ takedown_cache(H5F_t * file_ptr,
             H5C_stats(cache_ptr, "test cache", dump_detailed_stats);
         }
 
-        if ( H5C_prep_for_file_close(file_ptr, H5P_DATASET_XFER_DEFAULT) < 0 ) {
+	if ( H5C_prep_for_file_close(file_ptr, H5P_DATASET_XFER_DEFAULT) < 0 ) {
 
             pass = FALSE;
             failure_mssg = "unexpected failure of prep for file close.\n";
@@ -3467,7 +3469,7 @@ takedown_cache(H5F_t * file_ptr,
     if ( saved_fapl_id != H5P_DEFAULT ) {
 
         H5Pclose(saved_fapl_id);
-        saved_fapl_id = H5P_DEFAULT;
+	saved_fapl_id = H5P_DEFAULT;
     }
 
     if ( saved_fcpl_id != H5P_DEFAULT ) {

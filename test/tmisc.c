@@ -1869,7 +1869,7 @@ test_misc11(void)
 
     /* This should fail as (32770*2) will exceed ^16 - 2 bytes for storing btree entries */
     H5E_BEGIN_TRY {
-        ret=H5Pset_istore_k(fcpl, 32770);
+	ret=H5Pset_istore_k(fcpl, 32770);
     } H5E_END_TRY;
     VERIFY(ret, FAIL, "H5Pset_istore_k");
 

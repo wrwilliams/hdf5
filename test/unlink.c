@@ -2081,7 +2081,6 @@ test_unlink_chunked_dataset(hid_t fapl)
     hsize_t max_dims[FILESPACE_NDIMS] = {H5S_UNLIMITED, H5S_UNLIMITED, H5S_UNLIMITED};
     hsize_t chunk_dims[FILESPACE_NDIMS] = {FILESPACE_CHUNK0, FILESPACE_CHUNK1, FILESPACE_CHUNK2};
     char filename[1024];
-    hbool_t contig_addr_vfd;    /* Whether VFD used has a contigous address space */
 
     TESTING("unlinking chunked dataset");
 
@@ -2450,15 +2449,6 @@ main(void)
     size_t rdcc_nelmts;
     size_t rdcc_nbytes;
     double rdcc_w0;
-    const char  *env_h5_drvr;      /* File Driver value from environment */
-    hbool_t contig_addr_vfd;    /* Whether VFD used has a contigous address space */
-
-    env_h5_drvr = HDgetenv("HDF5_DRIVER");
-    if(env_h5_drvr == NULL)
-        env_h5_drvr = "nomatch";
-
-    /* Current VFD that does not support contigous address space */
-    contig_addr_vfd = (hbool_t)(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi"));
 
     /* Set the random # seed */
     HDsrandom((unsigned)HDtime(NULL));
@@ -2502,7 +2492,6 @@ main(void)
 
         /* Test creating & unlinking lots of objects with default FAPL */
         nerrors += test_create_unlink("create and unlink large number of objects", my_fapl);
-
 
         {
             hid_t fapl_small_mdc;

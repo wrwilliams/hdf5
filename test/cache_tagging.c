@@ -1506,7 +1506,6 @@ check_attribute_rename_tags(hid_t fcpl, int type)
     if ( H5Pget_file_space_strategy(fcpl, NULL, &persistant_fsms, NULL) < 0 )
         TEST_ERROR;
 
-
     /* Allocate array */
     if ( (NULL == (data = (int *)HDcalloc(DIMS * DIMS, sizeof(int)))) ) TEST_ERROR;
 

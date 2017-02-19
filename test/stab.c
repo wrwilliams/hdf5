@@ -636,9 +636,7 @@ long_compact(hid_t fcpl, hid_t fapl2)
     if(file_size != empty_size) TEST_ERROR
 
     PASSED();
-
     return 0;
-
 
 error:
     H5E_BEGIN_TRY {
@@ -1221,7 +1219,6 @@ main(void)
     } /* end for */
 
     /* New format group specific tests (require new format features) */
-
     if(contig_addr_vfd) {
         nerrors += lifecycle(fcpl2, fapl2);
         nerrors += long_compact(fcpl2, fapl2);

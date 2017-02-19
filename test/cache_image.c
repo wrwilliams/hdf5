@@ -31,25 +31,17 @@ const char *FILENAMES[] = {
 };
 
 /* local utility function declarations */
-
-static void create_data_sets(hid_t file_id, int min_dset, int max_dset);
-static void delete_data_sets(hid_t file_id, int min_dset, int max_dset);
-
-static void open_hdf5_file(const hbool_t create_file,
-    const hbool_t mdci_sbem_expected, const hbool_t read_only, 
-    const hbool_t set_mdci_fapl, const hbool_t config_fsm,
-    const char * hdf_file_name, const unsigned cache_image_flags, 
-    hid_t * file_id_ptr, H5F_t ** file_ptr_ptr, H5C_t ** cache_ptr_ptr);
-
-#if 0 /* uncomment once we have SWMR */ /* JRM */
-static void attempt_swmr_open_hdf5_file(const hbool_t create_file,
-    const hbool_t set_mdci_fapl, const char * hdf_file_name);
-#endif /* uncomment once we have SWMR */ /* JRM */
-
-static void verify_data_sets(hid_t file_id, int min_dset, int max_dset);
+static void create_datasets(hid_t file_id, int min_dset, int max_dset);
+static void delete_datasets(hid_t file_id, int min_dset, int max_dset);
+static void open_hdf5_file(hbool_t create_file, hbool_t mdci_sbem_expected,
+    hbool_t read_only, hbool_t set_mdci_fapl, hbool_t config_fsm,
+    const char *hdf_file_name, unsigned cache_image_flags, 
+    hid_t *file_id_ptr, H5F_t **file_ptr_ptr, H5C_t **cache_ptr_ptr);
+static void attempt_swmr_open_hdf5_file(hbool_t create_file,
+    hbool_t set_mdci_fapl, const char *hdf_file_name);
+static void verify_datasets(hid_t file_id, int min_dset, int max_dset);
 
 /* local test function declarations */
-
 static unsigned check_cache_image_ctl_flow_1(void);
 static unsigned check_cache_image_ctl_flow_2(void);
 static unsigned check_cache_image_ctl_flow_3(void);
@@ -66,10 +58,7 @@ static unsigned cache_image_smoke_check_6(void);
 
 static unsigned cache_image_api_error_check_1(void);
 static unsigned cache_image_api_error_check_2(void);
-#if 0 /* uncomment once we have SWMR */ /* JRM */
 static unsigned cache_image_api_error_check_3(void);
-#endif /* uncomment once we have SWMR */ /* JRM */
-
 static unsigned get_free_sections_test(void);
 
 
@@ -78,12 +67,12 @@ static unsigned get_free_sections_test(void);
 /****************************************************************************/
 
 /*-------------------------------------------------------------------------
- * Function:    create_data_sets()
+ * Function:    create_datasets()
  *
- * Purpose:     If pass is TRUE on entry, create the specified data sets
+ * Purpose:     If pass is TRUE on entry, create the specified datasets
  *		in the indicated file.
  *
- *		Data sets and their contents must be well know, as we 
+ *		Datasets and their contents must be well known, as we 
  *		will verify that they contain the expected data later.
  *
  *              On failure, set pass to FALSE, and set failure_mssg
@@ -96,13 +85,6 @@ static unsigned get_free_sections_test(void);
  * Programmer:  John Mainzer
  *              7/15/15
  *
- * Modifications:
- *
- *              Added min_dset and max_dset parameters and supporting 
- *		code.  This allows the caller to specify a range of 
- *		datasets to create.
- *						JRM -- 8/20/15
- *
  *-------------------------------------------------------------------------
  */
 
@@ -111,9 +93,9 @@ static unsigned get_free_sections_test(void);
 #define MAX_NUM_DSETS           256
 
 static void 
-create_data_sets(hid_t file_id, int min_dset, int max_dset)
+create_datasets(hid_t file_id, int min_dset, int max_dset)
 {
-    const char * fcn_name = "create_data_sets()";
+    const char * fcn_name = "create_datasets()";
     char dset_name[64];
     hbool_t show_progress = FALSE;
     hbool_t valid_chunk;
@@ -304,7 +286,7 @@ create_data_sets(hid_t file_id, int min_dset, int max_dset)
 
     if ( show_progress ) HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
-    /* read data from data sets and validate it */
+    /* read data from datasets and validate it */
     i = 0;
     while ( ( pass ) && ( i < DSET_SIZE ) )
     {
@@ -432,17 +414,17 @@ create_data_sets(hid_t file_id, int min_dset, int max_dset)
 
     return;
 
-} /* create_data_sets() */
+} /* create_datasets() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    delete_data_sets()
+ * Function:    delete_datasets()
  *
  * Purpose:     If pass is TRUE on entry, verify and then delete the 
  *		dataset(s) indicated by min_dset and max_dset in the 
  *		indicated file.
  *
- *		Data sets and their contents must be well know, as we 
+ *		Datasets and their contents must be well know, as we 
  *		will verify that they contain the expected data later.
  *
  *              On failure, set pass to FALSE, and set failure_mssg
@@ -455,18 +437,13 @@ create_data_sets(hid_t file_id, int min_dset, int max_dset)
  * Programmer:  John Mainzer
  *              10/31/16
  *
- * Modifications:
- *
- *              None.
- *						JRM -- 8/20/15
- *
  *-------------------------------------------------------------------------
  */
 
 static void 
-delete_data_sets(hid_t file_id, int min_dset, int max_dset)
+delete_datasets(hid_t file_id, int min_dset, int max_dset)
 {
-    const char * fcn_name = "delete_data_sets()";
+    const char * fcn_name = "delete_datasets()";
     char dset_name[64];
     hbool_t show_progress = FALSE;
     int cp = 0;
@@ -481,7 +458,7 @@ delete_data_sets(hid_t file_id, int min_dset, int max_dset)
     if ( show_progress ) HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
     /* first, verify the contents of the target dataset(s) */
-    verify_data_sets(file_id, min_dset, max_dset);
+    verify_datasets(file_id, min_dset, max_dset);
 
     if ( show_progress ) HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
@@ -508,7 +485,7 @@ delete_data_sets(hid_t file_id, int min_dset, int max_dset)
 
     return;
 
-} /* delete_data_sets() */
+} /* delete_datasets() */
 
 
 /*-------------------------------------------------------------------------
@@ -550,24 +527,14 @@ delete_data_sets(hid_t file_id, int min_dset, int max_dset)
  * Programmer:  John Mainzer
  *              7/14/15
  *
- * Modifications:
- *
- *              None.
- *
  *-------------------------------------------------------------------------
  */
 
 static void
-open_hdf5_file(const hbool_t create_file,
-               const hbool_t mdci_sbem_expected,
-	       const hbool_t read_only,
-	       const hbool_t set_mdci_fapl,
-	       const hbool_t config_fsm,
-	       const char * hdf_file_name,
-               const unsigned cache_image_flags,
-               hid_t * file_id_ptr,
-               H5F_t ** file_ptr_ptr,
-               H5C_t ** cache_ptr_ptr)
+open_hdf5_file(hbool_t create_file, hbool_t mdci_sbem_expected,
+    hbool_t read_only, hbool_t set_mdci_fapl, hbool_t config_fsm,
+    const char *hdf_file_name, unsigned cache_image_flags,
+    hid_t *file_id_ptr, H5F_t ** file_ptr_ptr, H5C_t ** cache_ptr_ptr)
 {
     const char * fcn_name = "open_hdf5_file()";
     hbool_t show_progress = FALSE;
@@ -632,8 +599,7 @@ open_hdf5_file(const hbool_t create_file,
     /* call H5Pset_libver_bounds() on the fapl_id */
     if ( pass ) {
 
-        if ( H5Pset_libver_bounds(fapl_id, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) 
-                < 0 ) {
+        if ( H5Pset_libver_bounds(fapl_id, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0 ) {
 
             pass = FALSE;
             failure_mssg = "H5Pset_libver_bounds() failed.\n";
@@ -699,21 +665,10 @@ open_hdf5_file(const hbool_t create_file,
     }
 
     if ( ( pass ) && ( config_fsm ) ) {
-
-#if 0 /* original code */ /* JRM */
-        if ( H5Pset_file_space(fcpl_id, H5F_FILE_SPACE_ALL_PERSIST, 1) < 0 ) {
-
-	    pass = FALSE;
-	    failure_mssg = "H5Pset_file_space() failed.";
-	}
-#else /* modified code */
-        if ( H5Pset_file_space_strategy(fcpl_id, H5F_FSPACE_STRATEGY_PAGE, 
-                                        TRUE, (hsize_t)1) == FAIL ) {
+        if(H5Pset_file_space_strategy(fcpl_id, H5F_FSPACE_STRATEGY_PAGE, TRUE, (hsize_t)1) < 0) {
             pass = FALSE;
-            failure_mssg = "H5Pset_file_space_strategy() failed.\n";
+            failure_mssg = "H5Pset_file_space_strategy() failed.";
         }
-
-#endif /* modified code */
     }
 
     if ( show_progress ) HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
@@ -725,12 +680,10 @@ open_hdf5_file(const hbool_t create_file,
 
 	    if ( fcpl_id != -1 )
 
-                file_id = H5Fcreate(hdf_file_name, H5F_ACC_TRUNC, 
-				    fcpl_id, fapl_id);
+                file_id = H5Fcreate(hdf_file_name, H5F_ACC_TRUNC, fcpl_id, fapl_id);
 	    else
 
-		file_id = H5Fcreate(hdf_file_name, H5F_ACC_TRUNC, 
-                                    H5P_DEFAULT, fapl_id);
+		file_id = H5Fcreate(hdf_file_name, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
 
         } else {
 
@@ -935,13 +888,9 @@ open_hdf5_file(const hbool_t create_file,
  * Programmer:  John Mainzer
  *              7/14/15
  *
- * Modifications:
- *
- *              None.
- *
  *-------------------------------------------------------------------------
  */
-#if 0 /* uncomment this function when we have SWMR */ /* JRM */
+
 static void
 attempt_swmr_open_hdf5_file(const hbool_t create_file,
 	                    const hbool_t set_mdci_fapl,
@@ -949,14 +898,10 @@ attempt_swmr_open_hdf5_file(const hbool_t create_file,
 {
     const char * fcn_name = "attempt_swmr_open_hdf5_file()";
     hbool_t show_progress = FALSE;
-    hbool_t verbose = FALSE;
     int cp = 0;
     hid_t fapl_id = -1;
     hid_t file_id = -1;
     herr_t result;
-    H5F_t * file_ptr = NULL;
-    H5C_t * cache_ptr = NULL;
-    H5C_cache_image_ctl_t image_ctl;
     H5AC_cache_image_config_t cache_image_config = {
         H5AC__CURR_CACHE_IMAGE_CONFIG_VERSION,
         TRUE,
@@ -1015,15 +960,13 @@ attempt_swmr_open_hdf5_file(const hbool_t create_file,
         if ( create_file ) {
 
             H5E_BEGIN_TRY {
-                file_id = H5Fcreate(hdf_file_name, 
-                                    H5F_ACC_TRUNC | H5F_ACC_SWMR_WRITE, 
+                file_id = H5Fcreate(hdf_file_name, H5F_ACC_TRUNC | H5F_ACC_SWMR_WRITE, 
 			            H5P_DEFAULT, fapl_id);
             } H5E_END_TRY;
         } else {
 
             H5E_BEGIN_TRY {
-                file_id = H5Fopen(hdf_file_name, 
-                                  H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE, fapl_id);
+                file_id = H5Fopen(hdf_file_name, H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE, fapl_id);
             } H5E_END_TRY;
         }
 
@@ -1040,17 +983,16 @@ attempt_swmr_open_hdf5_file(const hbool_t create_file,
     return;
 
 } /* attempt_swmr_open_hdf5_file() */
-#endif /* uncomment this function when we have SWMR */ /* JRM */
 
 
 /*-------------------------------------------------------------------------
- * Function:    verify_data_sets()
+ * Function:    verify_datasets()
  *
- * Purpose:     If pass is TRUE on entry, verify that the data sets in the 
+ * Purpose:     If pass is TRUE on entry, verify that the datasets in the 
  *		file exist and contain the expected data.  
  *
- *		Note that these data sets were created by 
- *		create_data_sets() above.  Thus any changes in that 
+ *		Note that these datasets were created by 
+ *		create_datasets() above.  Thus any changes in that 
  *		function must be reflected in this function, and 
  *		vise-versa.
  *
@@ -1064,20 +1006,13 @@ attempt_swmr_open_hdf5_file(const hbool_t create_file,
  * Programmer:  John Mainzer
  *              7/15/15
  *
- * Modifications:
- *
- *              Added min_dset and max_dset parameters and supporting 
- *		code.  This allows the caller to specify a range of 
- *		datasets to verify.
- *						JRM -- 8/20/15
- *
  *-------------------------------------------------------------------------
  */
 
 static void 
-verify_data_sets(hid_t file_id, int min_dset, int max_dset)
+verify_datasets(hid_t file_id, int min_dset, int max_dset)
 {
-    const char * fcn_name = "verify_data_sets()";
+    const char * fcn_name = "verify_datasets()";
     char dset_name[64];
     hbool_t show_progress = FALSE;
     hbool_t valid_chunk;
@@ -1174,7 +1109,7 @@ verify_data_sets(hid_t file_id, int min_dset, int max_dset)
     if ( show_progress ) HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
 
-    /* read data from data sets and validate it */
+    /* read data from datasets and validate it */
     i = 0;
     while ( ( pass ) && ( i < DSET_SIZE ) )
     {
@@ -1302,7 +1237,7 @@ verify_data_sets(hid_t file_id, int min_dset, int max_dset)
 
     return;
 
-} /* verify_data_sets() */
+} /* verify_datasets() */
 
 
 /****************************************************************************/
@@ -1340,7 +1275,7 @@ verify_data_sets(hid_t file_id, int min_dset, int max_dset)
  *		   Set flags forcing creation of metadata cache image 
  *		   super block extension message only.
  *
- *		2) Create some data sets in the file. 
+ *		2) Create some datasets in the file. 
  *
  *		3) Close the file.
  *
@@ -1352,7 +1287,7 @@ verify_data_sets(hid_t file_id, int min_dset, int max_dset)
  *		   zero respectively.  Note that these values indicate
  *		   that the metadata image block doesn't exist.
  *
- *		5) Open a data set.
+ *		5) Open a dataset.
  *
  *		   Verify that the metadata cache image superblock 
  *		   extension message has been deleted.
@@ -1372,10 +1307,6 @@ verify_data_sets(hid_t file_id, int min_dset, int max_dset)
  *
  * Programmer:  John Mainzer
  *              7/15/15
- *
- * Modifications:
- *
- *		None.
  *
  *-------------------------------------------------------------------------
  */
@@ -1440,11 +1371,11 @@ check_cache_image_ctl_flow_1(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
  
-    /* 2) Create some data sets in the file. */
+    /* 2) Create some datasets in the file. */
 
     if ( pass ) {
 
-        create_data_sets(file_id, 0, 5);
+        create_datasets(file_id, 0, 5);
     }
 
     if ( show_progress ) 
@@ -1493,7 +1424,7 @@ check_cache_image_ctl_flow_1(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 5) Open and close a data set.
+    /* 5) Open and close a dataset.
      *
      *    Verify that the metadata cache image superblock 
      *    extension message has been deleted.
@@ -1501,7 +1432,7 @@ check_cache_image_ctl_flow_1(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
     if ( pass ) {
@@ -1652,10 +1583,6 @@ check_cache_image_ctl_flow_1(void)
  *
  * Programmer:  John Mainzer
  *              7/15/15
- *
- * Modifications:
- *
- *		None.
  *
  *-------------------------------------------------------------------------
  */
@@ -1875,7 +1802,7 @@ check_cache_image_ctl_flow_2(void)
  *		   Set flags forcing creation of metadata cache image 
  *		   super block extension message only.
  *
- *		4) Create some data sets.
+ *		4) Create some datasets.
  *
  *		5) Close the file.
  *
@@ -1887,7 +1814,7 @@ check_cache_image_ctl_flow_2(void)
  *		   zero respectively.  Note that these values indicate
  *		   that the metadata image block doesn't exist.
  *
- *		7) Verify the contents of the data sets.
+ *		7) Verify the contents of the datasets.
  *
  *		8) Close the file.
  *
@@ -1899,7 +1826,7 @@ check_cache_image_ctl_flow_2(void)
  *		   zero respectively.  Note that these values indicate
  *		   that the metadata image block doesn't exist.
  *
- *	       10) Verify the contents of the data sets.
+ *	       10) Verify the contents of the datasets.
  *
  *	       11) Close the file.
  *
@@ -1916,10 +1843,6 @@ check_cache_image_ctl_flow_2(void)
  *
  * Programmer:  John Mainzer
  *              7/16/15
- *
- * Modifications:
- *
- *		None.
  *
  *-------------------------------------------------------------------------
  */
@@ -2021,11 +1944,11 @@ check_cache_image_ctl_flow_3(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
 
-    /* 4) Create some data sets. */
+    /* 4) Create some datasets. */
 
     if ( pass ) {
 
-        create_data_sets(file_id, 0, 5);
+        create_datasets(file_id, 0, 5);
     }
 
     if ( show_progress ) /* 5 */
@@ -2074,11 +1997,11 @@ check_cache_image_ctl_flow_3(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
 
-    /* 7) Verify the contents of the data sets. */
+    /* 7) Verify the contents of the datasets. */
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
     if ( show_progress ) /* 8 */
@@ -2127,11 +2050,11 @@ check_cache_image_ctl_flow_3(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
 
-    /* 10) Verify the contents of the data sets. */
+    /* 10) Verify the contents of the datasets. */
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
     if ( show_progress ) /* 11 */
@@ -2286,10 +2209,6 @@ check_cache_image_ctl_flow_3(void)
  *
  * Programmer:  John Mainzer
  *              7/16/15
- *
- * Modifications:
- *
- *		None.
  *
  *-------------------------------------------------------------------------
  */
@@ -2576,7 +2495,7 @@ check_cache_image_ctl_flow_4(void)
  *		   Set flags forcing creation of metadata cache image 
  *		   super block extension message only.
  *
- *		2) Create some data sets.
+ *		2) Create some datasets.
  *
  *		3) Close the file.
  *
@@ -2594,7 +2513,7 @@ check_cache_image_ctl_flow_4(void)
  *		   Set flags forcing creation of metadata cache image 
  *		   super block extension message only.
  *
- *		5) Verify the contents of the data sets.
+ *		5) Verify the contents of the datasets.
  *
  *		6) Close the file.
  *
@@ -2606,7 +2525,7 @@ check_cache_image_ctl_flow_4(void)
  *		   zero respectively.  Note that these values indicate
  *		   that the metadata image block doesn't exist.
  *
- *	        8) Verify the contents of the data sets.
+ *	        8) Verify the contents of the datasets.
  *
  *	        9) Close the file.
  *
@@ -2616,10 +2535,6 @@ check_cache_image_ctl_flow_4(void)
  *
  * Programmer:  John Mainzer
  *              7/17/15
- *
- * Modifications:
- *
- *		None.
  *
  *-------------------------------------------------------------------------
  */
@@ -2683,11 +2598,11 @@ check_cache_image_ctl_flow_5(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
 
-    /* 2) Create some data sets. */
+    /* 2) Create some datasets. */
 
     if ( pass ) {
 
-        create_data_sets(file_id, 0, 5);
+        create_datasets(file_id, 0, 5);
     }
 
     if ( show_progress ) /* 3 */
@@ -2741,11 +2656,11 @@ check_cache_image_ctl_flow_5(void)
     if ( show_progress ) /* 5 */
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
-    /* 5) Verify the contents of the data sets. */
+    /* 5) Verify the contents of the datasets. */
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
     if ( show_progress ) /* 6 */
@@ -2793,11 +2708,11 @@ check_cache_image_ctl_flow_5(void)
     if ( show_progress ) /* 8 */
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
-    /* 8) Verify the contents of the data sets. */
+    /* 8) Verify the contents of the datasets. */
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
     if ( show_progress ) /* 9 */
@@ -2898,10 +2813,6 @@ check_cache_image_ctl_flow_5(void)
  *
  * Programmer:  John Mainzer
  *              7/17/15
- *
- * Modifications:
- *
- *		None.
  *
  *-------------------------------------------------------------------------
  */
@@ -3130,7 +3041,7 @@ check_cache_image_ctl_flow_6(void)
  *
  *		   Set all cache image flags, forcing full functionality.
  *
- *		2) Create some data sets in the file. 
+ *		2) Create some datasets in the file. 
  *
  *		3) Close the file.
  *
@@ -3139,7 +3050,7 @@ check_cache_image_ctl_flow_6(void)
  *		   Verify that the metadata cache is instructed
  *		   to load the metadata cache image.
  *
- *		5) Open a data set.
+ *		5) Open a dataset.
  *
  *		   Verify that it contains the expected data
  *
@@ -3150,7 +3061,7 @@ check_cache_image_ctl_flow_6(void)
  *		   Verify that the file doesn't contain a metadata cache
  *		   image superblock extension message.
  *
- *		8) Open a data set.
+ *		8) Open a dataset.
  *
  *		   Verify that it contains the expected data.
  *
@@ -3172,7 +3083,7 @@ check_cache_image_ctl_flow_6(void)
  *		   Verify that the file doesn't contain a metadata cache
  *		   image superblock extension message.
  *
- *	       13) Open a data set.
+ *	       13) Open a dataset.
  *
  *		   Verify that it contains the expected data.
  *
@@ -3184,15 +3095,6 @@ check_cache_image_ctl_flow_6(void)
  *
  * Programmer:  John Mainzer
  *              8/17/15
- *
- * Modifications:
- *
- *		Modified this test to NOT request persistant free space
- *		managers.  This is necessary, as since we are now including
- *		the free space managers in the cache image, and since the
- *		raw data FSM in not empty at 11), we will otherwise fail
- *		at 12).
- *							JRM -- 10/22/16
  *
  *-------------------------------------------------------------------------
  */
@@ -3256,11 +3158,11 @@ cache_image_smoke_check_1(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
  
-    /* 2) Create some data sets in the file. */
+    /* 2) Create some datasets in the file. */
 
     if ( pass ) {
 
-        create_data_sets(file_id, 0, 5);
+        create_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -3322,7 +3224,7 @@ cache_image_smoke_check_1(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 5) Open and close a data set.
+    /* 5) Open and close a dataset.
      *
      *    Verify that the metadata cache image superblock 
      *    extension message has been deleted.
@@ -3330,7 +3232,7 @@ cache_image_smoke_check_1(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -3387,7 +3289,7 @@ cache_image_smoke_check_1(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 8) Open and close a data set.
+    /* 8) Open and close a dataset.
      *
      *    Verify that the metadata cache image superblock 
      *    extension message has been deleted.
@@ -3395,7 +3297,7 @@ cache_image_smoke_check_1(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -3495,14 +3397,14 @@ cache_image_smoke_check_1(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
 
-    /* 13) Open a data set.
+    /* 13) Open a dataset.
      *
      *	   Verify that it contains the expected data.
      */
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -3586,7 +3488,7 @@ cache_image_smoke_check_1(void)
  *
  *		   Set all cache image flags, forcing full functionality.
  *
- *		2) Create some data sets in the file. 
+ *		2) Create some datasets in the file. 
  *
  *		3) Close the file.
  *
@@ -3599,7 +3501,7 @@ cache_image_smoke_check_1(void)
  *		   Verify that the file doesn't contain a metadata cache
  *		   image superblock extension message.
  *
- *		7) Open a data set.
+ *		7) Open a dataset.
  *
  *		   Verify that it contains the expected data.
  *
@@ -3611,10 +3513,6 @@ cache_image_smoke_check_1(void)
  *
  * Programmer:  John Mainzer
  *              8/18/15
- *
- * Modifications:
- *
- *		None.
  *
  *-------------------------------------------------------------------------
  */
@@ -3678,11 +3576,11 @@ cache_image_smoke_check_2(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
  
-    /* 2) Create some data sets in the file. */
+    /* 2) Create some datasets in the file. */
 
     if ( pass ) {
 
-        create_data_sets(file_id, 0, 5);
+        create_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -3786,7 +3684,7 @@ cache_image_smoke_check_2(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 7) Open and close a data set.
+    /* 7) Open and close a dataset.
      *
      *    Verify that the metadata cache image superblock 
      *    extension message has been deleted.
@@ -3794,7 +3692,7 @@ cache_image_smoke_check_2(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
     if ( show_progress ) 
@@ -3870,7 +3768,7 @@ cache_image_smoke_check_2(void)
  *
  *		   Set all cache image flags, forcing full functionality.
  *
- *		2) Create some data sets in the file. 
+ *		2) Create some datasets in the file. 
  *
  *		3) Close the file.
  *
@@ -3879,7 +3777,7 @@ cache_image_smoke_check_2(void)
  *		   Verify that the file contains a metadata cache
  *		   image superblock extension message.
  *
- *		5 Open a data set.
+ *		5 Open a dataset.
  *
  *		  Verify that it contains the expected data.
  *
@@ -3890,7 +3788,7 @@ cache_image_smoke_check_2(void)
  *		   Verify that the file contains a metadata cache
  *		   image superblock extension message.
  *
- *		8 Open a data set.
+ *		8 Open a dataset.
  *
  *		  Verify that it contains the expected data.
  *
@@ -3901,7 +3799,7 @@ cache_image_smoke_check_2(void)
  *		   Verify that the file doesn't contain a metadata cache
  *		   image superblock extension message.
  *
- *	       11) Open a data set.
+ *	       11) Open a dataset.
  *
  *		   Verify that it contains the expected data.
  *
@@ -3913,10 +3811,6 @@ cache_image_smoke_check_2(void)
  *
  * Programmer:  John Mainzer
  *              8/18/15
- *
- * Modifications:
- *
- *		None.
  *
  *-------------------------------------------------------------------------
  */
@@ -3980,11 +3874,11 @@ cache_image_smoke_check_3(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
  
-    /* 2) Create some data sets in the file. */
+    /* 2) Create some datasets in the file. */
 
     if ( pass ) {
 
-        create_data_sets(file_id, 0, 5);
+        create_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -4042,7 +3936,7 @@ cache_image_smoke_check_3(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 5) Open and close a data set.
+    /* 5) Open and close a dataset.
      *
      *    Verify that the metadata cache image superblock 
      *    extension message has been deleted.
@@ -4050,7 +3944,7 @@ cache_image_smoke_check_3(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -4107,7 +4001,7 @@ cache_image_smoke_check_3(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 8) Open and close a data set.
+    /* 8) Open and close a dataset.
      *
      *    Verify that the metadata cache image superblock 
      *    extension message has been deleted.
@@ -4115,7 +4009,7 @@ cache_image_smoke_check_3(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -4170,7 +4064,7 @@ cache_image_smoke_check_3(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 11) Open and close a data set.
+    /* 11) Open and close a dataset.
      *
      *    Verify that the metadata cache image superblock 
      *    extension message has been deleted.
@@ -4178,7 +4072,7 @@ cache_image_smoke_check_3(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -4243,7 +4137,7 @@ cache_image_smoke_check_3(void)
  *		close the file, and then pass control on to the next 
  *		process.
  *
- *		In this case, we only write one data set per process.
+ *		In this case, we only write one dataset per process.
  *
  *		Cycle of operation
  *
@@ -4254,7 +4148,7 @@ cache_image_smoke_check_3(void)
  *
  *		   Set all cache image flags, forcing full functionality.
  *
- *		2) Create and write a data set in the file. 
+ *		2) Create and write a dataset in the file. 
  *
  *		3) Close the file.
  *
@@ -4263,11 +4157,11 @@ cache_image_smoke_check_3(void)
  *		   Verify that the file contains a metadata cache
  *		   image superblock extension message.
  *
- *		5 Create and write a new data set
+ *		5 Create and write a new dataset
  *
  *		6) Close the file.
  *
- *		   If sufficient data sets have been created, continue to 
+ *		   If sufficient datasets have been created, continue to 
  *                 7).  Otherwise goto 4)
  *
  *		7) Open the file.  
@@ -4275,7 +4169,7 @@ cache_image_smoke_check_3(void)
  *		   Verify that the file contains a metadata cache
  *		   image superblock extension message.
  *
- *	        8) Open all data sets that have been created, and 
+ *	        8) Open all datasets that have been created, and 
  *		   verify that they contain the expected data.
  *
  *	        9) Close the file.
@@ -4285,7 +4179,7 @@ cache_image_smoke_check_3(void)
  *		   Verify that the file doesn't contain a metadata cache
  *		   image superblock extension message.
  *
- *	       11) Open all data sets that have been created, and
+ *	       11) Open all datasets that have been created, and
  *                 verify that they contain the expected data.
  *
  *		   Verify that it contains the expected data.
@@ -4298,10 +4192,6 @@ cache_image_smoke_check_3(void)
  *
  * Programmer:  John Mainzer
  *              8/18/15
- *
- * Modifications:
- *
- *		None.
  *
  *-------------------------------------------------------------------------
  */
@@ -4367,11 +4257,11 @@ cache_image_smoke_check_4(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
  
-    /* 2) Create a data set in the file. */
+    /* 2) Create a dataset in the file. */
 
     if ( pass ) {
 
-        create_data_sets(file_id, min_dset++, max_dset++);
+        create_datasets(file_id, min_dset++, max_dset++);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -4432,11 +4322,11 @@ cache_image_smoke_check_4(void)
                       fcn_name, cp, max_dset, pass);
 
  
-        /* 5) Create a data set in the file. */
+        /* 5) Create a dataset in the file. */
 
         if ( pass ) {
 
-            create_data_sets(file_id, min_dset++, max_dset++);
+            create_datasets(file_id, min_dset++, max_dset++);
         }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -4474,7 +4364,6 @@ cache_image_smoke_check_4(void)
     cp += 3;
  
  
- 
     /* 7) Open the file. 
      *
      *    Verify that the file contains a metadata cache image 
@@ -4499,7 +4388,7 @@ cache_image_smoke_check_4(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 8) Open and close all data sets.
+    /* 8) Open and close all datasets.
      *
      *    Verify that the metadata cache image superblock 
      *    extension message has been deleted.
@@ -4507,7 +4396,7 @@ cache_image_smoke_check_4(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, max_dset - 1);
+       verify_datasets(file_id, 0, max_dset - 1);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -4562,7 +4451,7 @@ cache_image_smoke_check_4(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 11) Open and close all data sets.
+    /* 11) Open and close all datasets.
      *
      *    Verify that the metadata cache image superblock 
      *    extension message has been deleted.
@@ -4570,7 +4459,7 @@ cache_image_smoke_check_4(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, max_dset - 1);
+       verify_datasets(file_id, 0, max_dset - 1);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -4679,7 +4568,7 @@ cache_image_smoke_check_4(void)
  *
  *	       12) Close the file.
  *
- *	       13) Open the file.  
+ *	       13) Open the file.
  *
  *		   Verify that the file contains a metadata cache
  *		   image superblock extension message.
@@ -4703,14 +4592,6 @@ cache_image_smoke_check_4(void)
  *
  * Programmer:  John Mainzer
  *              9/15/15
- *
- * Modifications:
- *
- *		Modified the test to open the file and verify it R/O, 
- *              before repeating the process R/W.  This modification
- *              verifies correct handling of dirty metadata cache image
- *              entries in the R/O case.
- *                                                JRM -- 1/29/17
  *
  *-------------------------------------------------------------------------
  */
@@ -4948,15 +4829,12 @@ cache_image_smoke_check_5(void)
     } /* end while */
     cp += 5;
  
-
     /* 10) Open the file read only. 
      *
      *    Verify that the file contains a metadata cache image 
      *    superblock extension message.
      */
-
-    if ( pass ) {
-
+    if(pass) {
         open_hdf5_file(/* create_file        */ FALSE,
 		       /* mdci_sbem_expected */ TRUE,
                        /* read_only          */ TRUE,
@@ -4969,46 +4847,37 @@ cache_image_smoke_check_5(void)
                        /* cache_ptr_ptr      */ &cache_ptr);
     }
 
-    if ( show_progress ) 
+    if(show_progress)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
 
     /* 11) Validate all the zoos. */
     i = min_group;
-    while ( ( pass ) && ( i <= max_group ) ) {
-
+    while(pass && i <= max_group) {
 	sprintf(process_group_name, "/process_%d", i);
         validate_zoo(file_id, process_group_name, i++);
     }
  
 #if H5C_COLLECT_CACHE_STATS
-    if ( pass ) {
-
-        if ( cache_ptr->images_loaded == 0 ) {
-
+    if( pass) {
+        if(cache_ptr->images_loaded == 0) {
             pass = FALSE;
             failure_mssg = "metadata cache image block not loaded(2).";
         }
     }
 #endif /* H5C_COLLECT_CACHE_STATS */
 
-
-    if ( show_progress ) 
+    if(show_progress)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
-
     /* 12) Close the file. */
-
-    if ( pass ) {
-
-        if ( H5Fclose(file_id) < 0  ) {
-
+    if(pass) {
+        if(H5Fclose(file_id) < 0) {
             pass = FALSE;
             failure_mssg = "H5Fclose() failed.\n";
         }
     }
 
- 
     /* 13) Open the file R/W. 
      *
      *    Verify that the file contains a metadata cache image 
@@ -5185,7 +5054,7 @@ cache_image_smoke_check_5(void)
  *
  *		   Set all cache image flags, forcing full functionality.
  *
- *		2) Create and write a data set in the file. 
+ *		2) Create and write a dataset in the file. 
  *
  *		3) Close the file.
  *
@@ -5194,13 +5063,13 @@ cache_image_smoke_check_5(void)
  *		   Verify that the file contains a metadata cache
  *		   image superblock extension message.
  *
- *		5) Create and write a new data set.
+ *		5) Create and write a new dataset.
  *
- *		6) Verify and delete the old data set.
+ *		6) Verify and delete the old dataset.
  *
  *		7) Close the file.
  *
- *		   If sufficient data sets have been created, and then 
+ *		   If sufficient datasets have been created, and then 
  *		   deleteded continue to 8).  Otherwise goto 4)
  *
  *		8) Open the file.  
@@ -5208,7 +5077,7 @@ cache_image_smoke_check_5(void)
  *		   Verify that the file contains a metadata cache
  *		   image superblock extension message.
  *
- *	        9) Verify the last data set created.
+ *	        9) Verify the last dataset created.
  *
  *	       10) Close the file.
  *
@@ -5235,10 +5104,6 @@ cache_image_smoke_check_5(void)
  *
  * Programmer:  John Mainzer
  *              10/31/16
- *
- * Modifications:
- *
- *		None.
  *
  *-------------------------------------------------------------------------
  */
@@ -5305,11 +5170,11 @@ cache_image_smoke_check_6(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
  
-    /* 2) Create a data set in the file. */
+    /* 2) Create a dataset in the file. */
 
     if ( pass ) {
 
-        create_data_sets(file_id, min_dset++, max_dset++);
+        create_datasets(file_id, min_dset++, max_dset++);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -5370,11 +5235,11 @@ cache_image_smoke_check_6(void)
                       fcn_name, cp, max_dset, pass);
 
  
-        /* 5) Create a data set in the file. */
+        /* 5) Create a dataset in the file. */
 
         if ( pass ) {
 
-            create_data_sets(file_id, min_dset++, max_dset++);
+            create_datasets(file_id, min_dset++, max_dset++);
         }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -5393,10 +5258,10 @@ cache_image_smoke_check_6(void)
                       fcn_name, cp + 1, max_dset, pass);
 
 
-	/* 6) Verify and delete the old data set. */
+	/* 6) Verify and delete the old dataset. */
 	if ( pass ) {
 
-	    delete_data_sets(file_id, min_dset - 2, max_dset - 2);
+	    delete_datasets(file_id, min_dset - 2, max_dset - 2);
 	}
 
         if ( show_progress ) 
@@ -5447,11 +5312,11 @@ cache_image_smoke_check_6(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 9) Verify the last data set created. */
+    /* 9) Verify the last dataset created. */
 
     if ( pass ) {
 
-       verify_data_sets(file_id, min_dset - 1, max_dset - 1);
+       verify_datasets(file_id, min_dset - 1, max_dset - 1);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -5513,7 +5378,7 @@ cache_image_smoke_check_6(void)
 
     if ( pass ) {
 
-       delete_data_sets(file_id, min_dset - 1, max_dset - 1);
+       delete_datasets(file_id, min_dset - 1, max_dset - 1);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -5555,15 +5420,11 @@ cache_image_smoke_check_6(void)
      *     with and without paged allocation, we must leave some
      *     extra space for the paged allocation case.
      */
-    if ( pass ) {
-
+    if(pass) {
         if((file_size = h5_get_file_size(filename, H5P_DEFAULT)) < 0) {
-
             pass = FALSE;
             failure_mssg = "h5_get_file_size() failed.\n";
-
-        } else if ( file_size > 20 * 1024 ) {
-
+        } else if(file_size > 20 * 1024) {
             pass = FALSE;
             failure_mssg = "unexpectedly large file size.\n";
         }
@@ -5574,7 +5435,6 @@ cache_image_smoke_check_6(void)
  
 
     /* 15) Delete the file */
-
     if ( pass ) {
 
         if ( HDremove(filename) < 0 ) {
@@ -5611,14 +5471,14 @@ cache_image_smoke_check_6(void)
  *
  *		1) Create a HDF5 file.  
  *
- *		2) Create some data sets in the file. 
+ *		2) Create some datasets in the file. 
  *
  *		3) Close the file.
  *
  *		4) Open the file read only with a cache image FAPL entry
  *		   requested.  
  *
- *		5) Open a data set.
+ *		5) Open a dataset.
  *
  *		   Verify that it contains the expected data
  *
@@ -5628,7 +5488,7 @@ cache_image_smoke_check_6(void)
  *
  *		7) Open the file read only.
  *
- *		8) Open a data set.
+ *		8) Open a dataset.
  *
  *		   Verify that it contains the expected data.
  *
@@ -5638,7 +5498,7 @@ cache_image_smoke_check_6(void)
  *
  * 	       10) Open the file read write.
  *
- *	       11) Open a data set.
+ *	       11) Open a dataset.
  *
  *		   Verify that it contains the expected data.
  *
@@ -5650,10 +5510,6 @@ cache_image_smoke_check_6(void)
  *
  * Programmer:  John Mainzer
  *              9/25/15
- *
- * Modifications:
- *
- *		None.
  *
  *-------------------------------------------------------------------------
  */
@@ -5712,11 +5568,11 @@ cache_image_api_error_check_1(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
  
-    /* 2) Create some data sets in the file. */
+    /* 2) Create some datasets in the file. */
 
     if ( pass ) {
 
-        create_data_sets(file_id, 0, 5);
+        create_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -5772,7 +5628,7 @@ cache_image_api_error_check_1(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 5) Open and close a data set.
+    /* 5) Open and close a dataset.
      *
      *    Verify that it contains the expected data.
      *
@@ -5781,7 +5637,7 @@ cache_image_api_error_check_1(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -5834,7 +5690,7 @@ cache_image_api_error_check_1(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 8) Open and close a data set.
+    /* 8) Open and close a dataset.
      *
      *    Verify that it contains the expected data.
      *
@@ -5843,7 +5699,7 @@ cache_image_api_error_check_1(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -5896,7 +5752,7 @@ cache_image_api_error_check_1(void)
     if ( show_progress ) 
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
-    /* 11) Open and close a data set.
+    /* 11) Open and close a dataset.
      *
      *     Verify that it contains the expected data.
      *
@@ -5905,7 +5761,7 @@ cache_image_api_error_check_1(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -5975,14 +5831,14 @@ cache_image_api_error_check_1(void)
  *
  *		1) Create a HDF5 file with a cache image requested..  
  *
- *		2) Create some data sets in the file. 
+ *		2) Create some datasets in the file. 
  *
  *		3) Close the file.
  *
  *		4) Open the file read only with a cache image FAPL entry
  *		   requested.  
  *
- *		5) Open a data set.
+ *		5) Open a dataset.
  *
  *		   Verify that it contains the expected data
  *
@@ -5992,7 +5848,7 @@ cache_image_api_error_check_1(void)
  *
  *		7) Open the file read only.
  *
- *		8) Open a data set.
+ *		8) Open a dataset.
  *
  *		   Verify that it contains the expected data.
  *
@@ -6002,7 +5858,7 @@ cache_image_api_error_check_1(void)
  *
  * 	       10) Open the file read write.
  *
- *	       11) Open a data set.
+ *	       11) Open a dataset.
  *
  *		   Verify that it contains the expected data.
  *
@@ -6012,7 +5868,7 @@ cache_image_api_error_check_1(void)
  *
  * 	       13) Open the file read write.
  *
- *	       14) Open a data set.
+ *	       14) Open a dataset.
  *
  *		   Verify that it contains the expected data.
  *
@@ -6026,10 +5882,6 @@ cache_image_api_error_check_1(void)
  *
  * Programmer:  John Mainzer
  *              9/25/15
- *
- * Modifications:
- *
- *		None.
  *
  *-------------------------------------------------------------------------
  */
@@ -6088,11 +5940,11 @@ cache_image_api_error_check_2(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
  
-    /* 2) Create some data sets in the file. */
+    /* 2) Create some datasets in the file. */
 
     if ( pass ) {
 
-        create_data_sets(file_id, 0, 5);
+        create_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -6148,7 +6000,7 @@ cache_image_api_error_check_2(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 5) Open and close a data set.
+    /* 5) Open and close a dataset.
      *
      *    Verify that it contains the expected data.
      *
@@ -6157,7 +6009,7 @@ cache_image_api_error_check_2(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -6210,7 +6062,7 @@ cache_image_api_error_check_2(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
  
-    /* 8) Open and close a data set.
+    /* 8) Open and close a dataset.
      *
      *    Verify that it contains the expected data.
      *
@@ -6219,7 +6071,7 @@ cache_image_api_error_check_2(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -6272,7 +6124,7 @@ cache_image_api_error_check_2(void)
     if ( show_progress ) 
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
-    /* 11) Open and close a data set.
+    /* 11) Open and close a dataset.
      *
      *     Verify that it contains the expected data.
      *
@@ -6281,7 +6133,7 @@ cache_image_api_error_check_2(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -6333,7 +6185,7 @@ cache_image_api_error_check_2(void)
     if ( show_progress ) 
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
-    /* 14) Open and close a data set.
+    /* 14) Open and close a dataset.
      *
      *     Verify that it contains the expected data.
      *
@@ -6342,7 +6194,7 @@ cache_image_api_error_check_2(void)
 
     if ( pass ) {
 
-       verify_data_sets(file_id, 0, 5);
+       verify_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -6423,7 +6275,7 @@ cache_image_api_error_check_2(void)
  *
  *              6) Create a HDF5 file with a cache image requested.
  *
- *		7) Create some data sets in the file. 
+ *		7) Create some datasets in the file. 
  *
  *		8) Close the file.
  *
@@ -6437,13 +6289,9 @@ cache_image_api_error_check_2(void)
  * Programmer:  John Mainzer
  *              12/29/16
  *
- * Modifications:
- *
- *		None.
- *
  *-------------------------------------------------------------------------
  */
-#if 0 /* uncomment once we have SWMR */ /* JRM */
+
 static unsigned
 cache_image_api_error_check_3(void)
 {
@@ -6495,7 +6343,7 @@ cache_image_api_error_check_3(void)
     }
 
     if ( show_progress ) 
-        HDfprintf(stdout, "%s: cp = %d, pass = %d*.\n", fcn_name, cp++, pass);
+        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
  
 
     /* 2) Try to start SWMR write -- should fail. */
@@ -6518,6 +6366,13 @@ cache_image_api_error_check_3(void)
     /* 3) Discard the file if necessary */
 
     if ( pass ) {
+
+        if ( H5Fclose(file_id) < 0  ) {
+
+            pass = FALSE;
+            failure_mssg = "H5Fclose() failed.\n";
+
+        }
 
         if ( HDremove(filename) < 0 ) {
 
@@ -6576,11 +6431,11 @@ cache_image_api_error_check_3(void)
         HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
  
-    /* 7) Create some data sets in the file. */
+    /* 7) Create some datasets in the file. */
 
     if ( pass ) {
 
-        create_data_sets(file_id, 0, 5);
+        create_datasets(file_id, 0, 5);
     }
 
 #if H5C_COLLECT_CACHE_STATS
@@ -6648,7 +6503,6 @@ cache_image_api_error_check_3(void)
     return !pass;
 
 } /* cache_image_api_error_check_3() */
-#endif /* uncomment once we have SWMR */ /* JRM */
 
 
 /*-------------------------------------------------------------------------
@@ -6733,10 +6587,6 @@ cache_image_api_error_check_3(void)
  * Programmer:  John Mainzer
  *              1/10/17
  *
- * Modifications:
- *
- *		None.
- *
  *-------------------------------------------------------------------------
  */
 static unsigned
@@ -6802,7 +6652,7 @@ get_free_sections_test(void)
 
     if ( pass ) {
 
-        create_data_sets(file_id, 1, 10);
+        create_datasets(file_id, 1, 10);
     }
 
     if ( show_progress ) 
@@ -6810,7 +6660,7 @@ get_free_sections_test(void)
 
     if ( pass ) {
 
-        verify_data_sets(file_id, 1, 10);
+        verify_datasets(file_id, 1, 10);
     }
 
     if ( show_progress ) 
@@ -6818,7 +6668,7 @@ get_free_sections_test(void)
 
     if ( pass ) {
 
-        delete_data_sets(file_id, 1, 5);
+        delete_datasets(file_id, 1, 5);
     }
 
     if ( show_progress ) 
@@ -6943,7 +6793,7 @@ get_free_sections_test(void)
 
     if ( pass ) {
 
-        verify_data_sets(file_id, 6, 10);
+        verify_datasets(file_id, 6, 10);
     }
 
     if ( show_progress ) 
@@ -7063,7 +6913,7 @@ get_free_sections_test(void)
 
     if ( pass ) {
 
-        verify_data_sets(file_id, 6, 10);
+        verify_datasets(file_id, 6, 10);
     }
 
     if ( show_progress ) 
@@ -7074,7 +6924,7 @@ get_free_sections_test(void)
 
     if ( pass ) {
 
-        delete_data_sets(file_id, 6, 10);
+        delete_datasets(file_id, 6, 10);
     }
 
     if ( show_progress ) 
@@ -7153,11 +7003,8 @@ get_free_sections_test(void)
  * Programmer:  John Mainzer
  *              6/24/04
  *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
-
 int
 main(void)
 {
@@ -7189,9 +7036,7 @@ main(void)
 
     nerrs += cache_image_api_error_check_1();
     nerrs += cache_image_api_error_check_2();
-#if 0 /* uncomment once we have SWMR */ /* JRM */
     nerrs += cache_image_api_error_check_3();
-#endif /* uncomment once we have SWMR */ /* JRM */
     nerrs += get_free_sections_test();
 
     return(nerrs > 0);

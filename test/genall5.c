@@ -19,16 +19,8 @@
  *		This file contains a heavily edited and functionaly reduce 
  *		version of the test code first written by Quincey in a file
  *		of the same name.
- *
- *		The original version of the file is appended, as we will 
- *		probably want to mine it from time to time.
  */
 
-#include <assert.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-#include "hdf5.h"
 #include "cache_common.h"
 #include "genall5.h"
 
