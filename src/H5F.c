@@ -445,6 +445,8 @@ done:
 hid_t
 H5Fcreate(const char *filename, unsigned flags, hid_t fcpl_id, hid_t fapl_id)
 {
+    hbool_t      ci_load = FALSE;       /* whether MDC ci load requested */
+    hbool_t      ci_write = FALSE;      /* whether MDC CI write requested */
     H5F_t	*new_file = NULL;	/*file struct for new file	*/
     hid_t        dxpl_id = H5AC_ind_read_dxpl_id; /*dxpl used by library        */
     hid_t	 ret_value;	        /*return value			*/
@@ -489,6 +491,12 @@ H5Fcreate(const char *filename, unsigned flags, hid_t fcpl_id, hid_t fapl_id)
      */
     if(NULL == (new_file = H5F_open(filename, flags, fcpl_id, fapl_id, dxpl_id)))
         HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "unable to create file")
+
+   /* Check to see if both SWMR and cache image are requested.  Fail if so */
+   if(H5C_cache_image_status(new_file, &ci_load, &ci_write) < 0)
+       HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get MDC cache image status")
+   if((ci_load || ci_write) && (flags & (H5F_ACC_SWMR_READ | H5F_ACC_SWMR_WRITE)))
+       HGOTO_ERROR(H5E_FILE, H5E_UNSUPPORTED, FAIL, "can't have both SWMR and cache image")
 
     /* Get an atom for the file */
     if((ret_value = H5I_register(H5I_FILE, new_file, TRUE)) < 0)
@@ -549,6 +557,8 @@ done:
 hid_t
 H5Fopen(const char *filename, unsigned flags, hid_t fapl_id)
 {
+    hbool_t      ci_load = FALSE;       /* whether MDC ci load requested */
+    hbool_t      ci_write = FALSE;      /* whether MDC CI write requested */
     H5F_t	*new_file = NULL;	/*file struct for new file	*/
     hid_t        dxpl_id = H5AC_ind_read_dxpl_id; /*dxpl used by library        */
     hid_t	 ret_value;	        /*return value			*/
@@ -577,6 +587,12 @@ H5Fopen(const char *filename, unsigned flags, hid_t fapl_id)
     /* Open the file */
     if(NULL == (new_file = H5F_open(filename, flags, H5P_FILE_CREATE_DEFAULT, fapl_id, dxpl_id)))
         HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "unable to open file")
+
+    /* Check to see if both SWMR and cache image are requested.  Fail if so */
+    if(H5C_cache_image_status(new_file, &ci_load, &ci_write) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get MDC cache image status")
+    if((ci_load || ci_write) && (flags & (H5F_ACC_SWMR_READ | H5F_ACC_SWMR_WRITE)))
+        HGOTO_ERROR(H5E_FILE, H5E_UNSUPPORTED, FAIL, "can't have both SWMR and cache image")
 
     /* Get an atom for the file */
     if((ret_value = H5I_register(H5I_FILE, new_file, TRUE)) < 0)
@@ -1593,6 +1609,8 @@ done:
 herr_t
 H5Fstart_swmr_write(hid_t file_id)
 {
+    hbool_t ci_load = FALSE;    /* whether MDC ci load requested */
+    hbool_t ci_write = FALSE;   /* whether MDC CI write requested */
     H5F_t *file = NULL;         /* File info */
     size_t grp_dset_count=0; 	/* # of open objects: groups & datasets */
     size_t nt_attr_count=0; 	/* # of opened named datatypes  + opened attributes */
@@ -1625,6 +1643,12 @@ H5Fstart_swmr_write(hid_t file_id)
         HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "file already in SWMR writing mode")
 
     HDassert(file->shared->sblock->status_flags & H5F_SUPER_WRITE_ACCESS);
+
+    /* Check to see if cache image is enabled.  Fail if so */
+    if(H5C_cache_image_status(file, &ci_load, &ci_write) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get MDC cache image status")
+    if(ci_load || ci_write )
+        HGOTO_ERROR(H5E_FILE, H5E_UNSUPPORTED, FAIL, "can't have both SWMR and MDC cache image")
 
     /* Flush data buffers */
     if(H5F_flush(file, H5AC_ind_read_dxpl_id, FALSE) < 0)
