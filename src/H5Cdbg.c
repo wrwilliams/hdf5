@@ -178,6 +178,89 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5C_dump_cache_LRU
+ *
+ * Purpose:     Print a summary of the contents of the metadata cache 
+ *              LRU for debugging purposes.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              10/10/10
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C_dump_cache_LRU(H5C_t * cache_ptr, const char *  cache_name)
+{
+    H5C_cache_entry_t * entry_ptr = NULL;
+    int                 i = 0;
+    herr_t              ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity check */
+    HDassert(cache_ptr != NULL);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+    HDassert(cache_name != NULL );
+
+    HDfprintf(stdout, "\n\nDump of metadata cache LRU \"%s\"\n", cache_name);
+    HDfprintf(stdout, "LRU len = %d, LRU size = %d\n", 
+              cache_ptr->LRU_list_len, (int)(cache_ptr->LRU_list_size));
+    HDfprintf(stdout, "index_size = %d, max_cache_size = %d, delta = %d\n\n", 
+              (int)(cache_ptr->index_size), (int)(cache_ptr->max_cache_size),
+              (int)(cache_ptr->max_cache_size) - (int)(cache_ptr->index_size));
+
+    /* Print header */
+    HDfprintf(stdout, "Entry ");
+    HDfprintf(stdout, "|       Address      ");
+    HDfprintf(stdout, "|         Tag        ");
+    HDfprintf(stdout, "|  Size ");
+    HDfprintf(stdout, "| Ring ");
+    HDfprintf(stdout, "|              Type              ");
+    HDfprintf(stdout, "| Dirty");
+    HDfprintf(stdout, "\n");
+
+    HDfprintf(stdout, "----------------------------------------------------------------------------------------------------------------\n");
+
+    entry_ptr = cache_ptr->LRU_head_ptr;
+
+    while ( entry_ptr != NULL ) {
+
+        HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+
+        /* Print entry */
+        HDfprintf(stdout, "%s%5d ", cache_ptr->prefix, i);
+        HDfprintf(stdout, "  0x%16llx ", (long long)(entry_ptr->addr));
+
+        if(NULL == entry_ptr->tag_info)
+            HDfprintf(stdout, "    %16s ", "N/A");
+        else
+            HDfprintf(stdout, "  0x%16llx ", 
+                      (long long)(entry_ptr->tag_info->tag));
+
+        HDfprintf(stdout, "  %5lld ", (long long)(entry_ptr->size));
+        HDfprintf(stdout, "    %d  ", (int)(entry_ptr->ring));
+        HDfprintf(stdout, "  %2d %-32s ", (int)(entry_ptr->type->id), 
+                  (entry_ptr->type->name));
+        HDfprintf(stdout, " %d", (int)(entry_ptr->is_dirty));
+        HDfprintf(stdout, "\n");
+
+        i++;
+
+        entry_ptr = entry_ptr->next;
+    }
+
+    HDfprintf(stdout, "----------------------------------------------------------------------------------------------------------------\n");
+
+done:
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5C_dump_cache_LRU() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5C_dump_cache_skip_list
  *
  * Purpose:     Debugging routine that prints a summary of the contents of 

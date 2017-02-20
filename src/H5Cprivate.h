@@ -2337,6 +2337,7 @@ H5_DLL herr_t H5C_stats(H5C_t *cache_ptr, const char *cache_name,
     hbool_t display_detailed_stats);
 H5_DLL void H5C_stats__reset(H5C_t *cache_ptr);
 H5_DLL herr_t H5C_dump_cache(H5C_t *cache_ptr, const char *cache_name);
+H5_DLL herr_t H5C_dump_cache_LRU(H5C_t *cache_ptr, const char *cache_name);
 H5_DLL herr_t H5C_unpin_entry(void *thing);
 H5_DLL herr_t H5C_destroy_flush_dependency(void *parent_thing, void *child_thing);
 H5_DLL herr_t H5C_unprotect(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *thing,

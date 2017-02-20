@@ -41,10 +41,8 @@ static void open_hdf5_file(const hbool_t create_file,
     const char * hdf_file_name, const unsigned cache_image_flags, 
     hid_t * file_id_ptr, H5F_t ** file_ptr_ptr, H5C_t ** cache_ptr_ptr);
 
-#if 0 /* uncomment once we have SWMR */ /* JRM */
 static void attempt_swmr_open_hdf5_file(const hbool_t create_file,
     const hbool_t set_mdci_fapl, const char * hdf_file_name);
-#endif /* uncomment once we have SWMR */ /* JRM */
 
 static void verify_data_sets(hid_t file_id, int min_dset, int max_dset);
 
@@ -66,9 +64,7 @@ static unsigned cache_image_smoke_check_6(void);
 
 static unsigned cache_image_api_error_check_1(void);
 static unsigned cache_image_api_error_check_2(void);
-#if 0 /* uncomment once we have SWMR */ /* JRM */
 static unsigned cache_image_api_error_check_3(void);
-#endif /* uncomment once we have SWMR */ /* JRM */
 
 static unsigned get_free_sections_test(void);
 
@@ -941,7 +937,7 @@ open_hdf5_file(const hbool_t create_file,
  *
  *-------------------------------------------------------------------------
  */
-#if 0 /* uncomment this function when we have SWMR */ /* JRM */
+
 static void
 attempt_swmr_open_hdf5_file(const hbool_t create_file,
 	                    const hbool_t set_mdci_fapl,
@@ -949,14 +945,10 @@ attempt_swmr_open_hdf5_file(const hbool_t create_file,
 {
     const char * fcn_name = "attempt_swmr_open_hdf5_file()";
     hbool_t show_progress = FALSE;
-    hbool_t verbose = FALSE;
     int cp = 0;
     hid_t fapl_id = -1;
     hid_t file_id = -1;
     herr_t result;
-    H5F_t * file_ptr = NULL;
-    H5C_t * cache_ptr = NULL;
-    H5C_cache_image_ctl_t image_ctl;
     H5AC_cache_image_config_t cache_image_config = {
         H5AC__CURR_CACHE_IMAGE_CONFIG_VERSION,
         TRUE,
@@ -1040,7 +1032,6 @@ attempt_swmr_open_hdf5_file(const hbool_t create_file,
     return;
 
 } /* attempt_swmr_open_hdf5_file() */
-#endif /* uncomment this function when we have SWMR */ /* JRM */
 
 
 /*-------------------------------------------------------------------------
@@ -6443,7 +6434,7 @@ cache_image_api_error_check_2(void)
  *
  *-------------------------------------------------------------------------
  */
-#if 0 /* uncomment once we have SWMR */ /* JRM */
+
 static unsigned
 cache_image_api_error_check_3(void)
 {
@@ -6456,6 +6447,10 @@ cache_image_api_error_check_3(void)
     int cp = 0;
 
     TESTING("metadata cache image api error check 3");
+
+    /* skip this test until the supporting code makes it in from develop */
+    SKIPPED();
+    return(0);
 
     pass = TRUE;
 
@@ -6648,7 +6643,6 @@ cache_image_api_error_check_3(void)
     return !pass;
 
 } /* cache_image_api_error_check_3() */
-#endif /* uncomment once we have SWMR */ /* JRM */
 
 
 /*-------------------------------------------------------------------------
@@ -7189,9 +7183,8 @@ main(void)
 
     nerrs += cache_image_api_error_check_1();
     nerrs += cache_image_api_error_check_2();
-#if 0 /* uncomment once we have SWMR */ /* JRM */
     nerrs += cache_image_api_error_check_3();
-#endif /* uncomment once we have SWMR */ /* JRM */
+
     nerrs += get_free_sections_test();
 
     return(nerrs > 0);
