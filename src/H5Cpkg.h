@@ -4916,6 +4916,7 @@ H5_DLL herr_t H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_en
     hid_t dxpl_id);
 H5_DLL herr_t H5C_free_image_entries_array(H5C_t * cache_ptr);
 H5_DLL herr_t H5C_load_cache_image(H5F_t *f, hid_t dxpl_id);
+H5_DLL herr_t H5C__write_cache_image(H5F_t *f, hid_t dxpl_id, const H5C_t *cache_ptr);
 H5_DLL herr_t H5C__mark_flush_dep_serialized(H5C_cache_entry_t * entry_ptr);
 H5_DLL herr_t H5C__mark_flush_dep_unserialized(H5C_cache_entry_t * entry_ptr);
 H5_DLL herr_t H5C_make_space_in_cache(H5F_t * f, hid_t   dxpl_id,

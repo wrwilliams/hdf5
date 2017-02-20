@@ -452,10 +452,6 @@ H5_DLL herr_t H5AC_validate_config(H5AC_cache_config_t *config_ptr);
 H5_DLL herr_t H5AC_load_cache_image_on_next_protect(H5F_t *f, haddr_t addr, 
     size_t len, hbool_t rw);
 H5_DLL herr_t H5AC_validate_cache_image_config(H5AC_cache_image_config_t *config_ptr);
-H5_DLL herr_t H5AC_read_cache_image(H5F_t * f, hid_t dxpl_id, 
-    haddr_t image_addr, size_t image_len, void * image_buffer);
-H5_DLL herr_t H5AC_write_cache_image(H5F_t * f, hid_t dxpl_id, 
-    haddr_t image_addr, size_t image_len, void * image_buffer);
 H5_DLL hbool_t H5AC_cache_image_pending(const H5F_t *f);
 H5_DLL herr_t H5AC_force_cache_image_load(H5F_t * f, hid_t dxpl_id);
 

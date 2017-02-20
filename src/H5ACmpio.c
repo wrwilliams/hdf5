@@ -351,55 +351,6 @@ done:
 
 /*-------------------------------------------------------------------------
  *
- * Function:    H5AC__broadcast_cache_image()
- *
- * Purpose:     Broadcast the contents of the cache image buffer read
- *		by process 0.
- *
- *		This function must only be called by the process with
- *		MPI_rank 0.
- *
- *		Return SUCCEED on success, and FAIL on failure.
- *
- * Return:      Non-negative on success/Negative on failure.
- *
- * Programmer:  John Mainzer, 8/16/15
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5AC__broadcast_cache_image(H5AC_t *cache_ptr, size_t image_len,
-    void *image_buffer)
-{
-    H5AC_aux_t         * aux_ptr = NULL;
-    int                  mpi_result;
-    herr_t               ret_value = SUCCEED;    /* Return value */
-
-    FUNC_ENTER_STATIC
-
-    /* Sanity checks */
-    HDassert(cache_ptr != NULL);
-    aux_ptr = (H5AC_aux_t *)H5C_get_aux_ptr(cache_ptr);
-    HDassert(aux_ptr != NULL);
-    HDassert(aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC);
-    HDassert(aux_ptr->mpi_rank == 0);
-    HDassert(image_len > 0);
-    HDassert(image_buffer);
-
-    if(MPI_SUCCESS != (mpi_result = MPI_Bcast(image_buffer, (int)image_len, 
-            MPI_BYTE, 0, aux_ptr->mpi_comm)))
-
-        HMPI_GOTO_ERROR(FAIL, "MPI_Bcast failed", mpi_result)
-
-done:
-
-    FUNC_LEAVE_NOAPI(ret_value)
-
-} /* H5AC__broadcast_cache_image() */
-
-
-/*-------------------------------------------------------------------------
- *
  * Function:    H5AC__broadcast_clean_list_cb()
  *
  * Purpose:     Skip list callback for building array of addresses for
@@ -1661,54 +1612,6 @@ done:
 
 
 /*-------------------------------------------------------------------------
- *
- * Function:    H5AC__receive_cache_image()
- *
- * Purpose:     Receive the contents of the cache image block from process 0,
- *		and return it in a buffer pointed to by *image_buffer.
- *
- *		This function must only be called by the process with
- *		MPI_rank greater than 0.
- *
- *		Return SUCCEED on success, and FAIL on failure.
- *
- * Return:      Non-negative on success/Negative on failure.
- *
- * Programmer:  John Mainzer, 8/16/15
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5AC__receive_cache_image(const H5AC_t *cache_ptr, size_t image_len,
-    void *image_buffer)
-{
-    H5AC_aux_t         * aux_ptr;
-    int                  mpi_result;
-    herr_t               ret_value = SUCCEED;    /* Return value */
-
-    FUNC_ENTER_STATIC
-
-    /* Sanity checks */
-    HDassert(cache_ptr != NULL);
-    aux_ptr = (H5AC_aux_t *)H5C_get_aux_ptr(cache_ptr);
-    HDassert(aux_ptr != NULL);
-    HDassert(aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC);
-    HDassert(aux_ptr->mpi_rank != 0);
-    HDassert(image_len > 0);
-    HDassert(image_buffer);
-
-    /* Retrieve the contents of the metadata cache image from process 0 */
-    if(MPI_SUCCESS != (mpi_result = MPI_Bcast(image_buffer, (int)image_len, 
-            MPI_BYTE, 0, aux_ptr->mpi_comm)))
-
-        HMPI_GOTO_ERROR(FAIL, "can't receive cache image MPI_Bcast", mpi_result)
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5AC__receive_cache_image() */
-
-
-/*-------------------------------------------------------------------------
  * Function:    H5AC__rsp__dist_md_write__flush
  *
  * Purpose:     Routine for handling the details of running a sync point
@@ -2002,7 +1905,6 @@ H5AC__rsp__p0_only__flush(H5F_t *f, hid_t dxpl_id)
 
     /* Flush data to disk, from rank 0 process */
     if(aux_ptr->mpi_rank == 0) {
-
         herr_t        result;
 
         /* Enable writes during this operation */
@@ -2024,7 +1926,7 @@ H5AC__rsp__p0_only__flush(H5F_t *f, hid_t dxpl_id)
          */
         if(aux_ptr->write_done)
             (aux_ptr->write_done)();
-    }
+    } /* end if */
 
     /* Propagate cleaned entries to other ranks. */
     if(H5AC__propagate_flushed_and_still_clean_entries_list(f, dxpl_id) < 0)
@@ -2282,7 +2184,6 @@ HDfprintf(stdout, "%d:H5AC_propagate...:%u: (u/uu/i/iu/r/ru) = %zu/%u/%zu/%u/%zu
 #endif /* H5AC_DEBUG_DIRTY_BYTES_CREATION */
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC__run_sync_point() */
 

@@ -765,7 +765,7 @@ H5C_dest(H5F_t * f, hid_t dxpl_id)
 
 	/* write cache image block if so configured */
 	if(cache_ptr->image_ctl.flags & H5C_CI__GEN_MDC_IMAGE_BLK) {
-	    if(H5AC_write_cache_image(f, dxpl_id, cache_ptr->image_addr, cache_ptr->image_len, cache_ptr->image_buffer) < 0)
+	    if(H5C__write_cache_image(f, dxpl_id, cache_ptr) < 0)
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't write metadata cache image block to file")
 
 	    H5C__UPDATE_STATS_FOR_CACHE_IMAGE_CREATE(cache_ptr);

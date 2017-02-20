@@ -131,6 +131,7 @@ static herr_t H5C_serialize_single_entry(const H5F_t *f, hid_t dxpl_id,
     hbool_t *restart_list_scan_ptr);
 static herr_t H5C__write_cache_image_superblock_msg(H5F_t *f, hid_t dxpl_id, 
     hbool_t create);
+static herr_t H5C__read_cache_image(H5F_t * f, hid_t dxpl_id, const H5C_t *cache_ptr);
 
 
 /*********************/
@@ -1020,6 +1021,66 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5C__read_cache_image
+ *
+ * Purpose:	Load the metadata cache image from the specified location
+ *		in the file, and return it in the supplied buffer.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              8/16/15
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C__read_cache_image(H5F_t *f, hid_t dxpl_id, const H5C_t *cache_ptr)
+{
+    herr_t              ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_STATIC
+
+    /* Sanity checks */
+    HDassert(f);
+    HDassert(cache_ptr);
+    HDassert(H5F_addr_defined(cache_ptr->image_addr));
+    HDassert(cache_ptr->image_len > 0);
+    HDassert(cache_ptr->image_buffer);
+
+#ifdef H5_HAVE_PARALLEL
+{
+    H5AC_aux_t *aux_ptr = (H5AC_aux_t *)cache_ptr->aux_ptr;
+    int mpi_result;
+
+    if((NULL == aux_ptr) || (aux_ptr->mpi_rank == 0)) {
+	HDassert((NULL == aux_ptr) || (aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC));
+#endif /* H5_HAVE_PARALLEL */
+
+	/* Read the buffer (if serial access, or rank 0 of parallel access) */
+        if(H5F_block_read(f, H5FD_MEM_SUPER, cache_ptr->image_addr, cache_ptr->image_len, dxpl_id, cache_ptr->image_buffer) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read metadata cache image block")
+
+#ifdef H5_HAVE_PARALLEL
+	if(aux_ptr) {
+	    /* Broadcast cache image */
+            if(MPI_SUCCESS != (mpi_result = MPI_Bcast(cache_ptr->image_buffer, (int)cache_ptr->image_len, MPI_BYTE, 0, aux_ptr->mpi_comm)))
+                HMPI_GOTO_ERROR(FAIL, "MPI_Bcast failed", mpi_result)
+        } /* end if */
+    } /* end if */
+    else if(aux_ptr) {
+        /* Retrieve the contents of the metadata cache image from process 0 */
+        if(MPI_SUCCESS != (mpi_result = MPI_Bcast(cache_ptr->image_buffer, (int)cache_ptr->image_len, MPI_BYTE, 0, aux_ptr->mpi_comm)))
+            HMPI_GOTO_ERROR(FAIL, "can't receive cache image MPI_Bcast", mpi_result)
+    } /* end else-if */
+} /* end block */
+#endif /* H5_HAVE_PARALLEL */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C__read_cache_image() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5C_load_cache_image
  *
  * Purpose:     Read the cache image superblock extension message and
@@ -1094,7 +1155,7 @@ H5C_load_cache_image(H5F_t *f, hid_t dxpl_id)
             HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for cache image buffer")
 
 	/* Load the image from file */
-	if(H5AC_read_cache_image(f, dxpl_id, cache_ptr->image_addr, cache_ptr->image_len,  cache_ptr->image_buffer) < 0 )
+	if(H5C__read_cache_image(f, dxpl_id, cache_ptr) < 0)
             HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read metadata cache image block")
 
 	/* decode metadata cache image */
@@ -4542,4 +4603,52 @@ H5C__write_cache_image_superblock_msg(H5F_t *f, hid_t dxpl_id, hbool_t create)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5C__write_cache_image_superblock_msg() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5C__write_cache_image
+ *
+ * Purpose:	Write the supplied metadata cache image to the specified
+ *		location in file.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  John Mainzer
+ *              8/26/15
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C__write_cache_image(H5F_t *f, hid_t dxpl_id, const H5C_t *cache_ptr)
+{
+    herr_t              ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_PACKAGE
+
+    /* Sanity checks */
+    HDassert(f);
+    HDassert(cache_ptr);
+    HDassert(H5F_addr_defined(cache_ptr->image_addr));
+    HDassert(cache_ptr->image_len > 0);
+    HDassert(cache_ptr->image_buffer);
+
+#ifdef H5_HAVE_PARALLEL
+{
+    H5AC_aux_t *aux_ptr = (H5AC_aux_t *)cache_ptr->aux_ptr;
+
+    if((NULL == aux_ptr) || (aux_ptr->mpi_rank == 0)) {
+	HDassert((NULL == aux_ptr) || (aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC));
+#endif /* H5_HAVE_PARALLEL */
+
+	/* Write the buffer (if serial access, or rank 0 for parallel access) */
+	if(H5F_block_write(f, H5FD_MEM_SUPER, cache_ptr->image_addr, cache_ptr->image_len, dxpl_id, cache_ptr->image_buffer) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't write metadata cache image block to file")
+#ifdef H5_HAVE_PARALLEL
+    } /* end if */
+} /* end block */
+#endif /* H5_HAVE_PARALLEL */
+	
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C__write_cache_image() */
 
