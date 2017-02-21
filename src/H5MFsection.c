@@ -209,8 +209,6 @@ H5FL_DEFINE(H5MF_free_section_t);
  *		koziol@hdfgroup.org
  *		January  8 2008
  *
- * Modifications:
- *	Modified to create a new section of "simple/small/large"
  *-------------------------------------------------------------------------
  */
 H5MF_free_section_t *
@@ -250,14 +248,11 @@ done:
  * Purpose:	Free a 'simple/small/large' section node
  *
  * Return:	Success:	non-negative
- *          Failure:	negative
+ *		Failure:	negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
  *
- * Modifications:
- *	Vailin Choi; Dec 2012
- *	Change the routine name to "H5MF_sect_free".
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -283,14 +278,11 @@ H5MF_sect_free(H5FS_section_info_t *_sect)
  * Purpose:	Deserialize a buffer into a "live" section
  *
  * Return:	Success:	non-negative
- *          Failure:	negative
+ *		Failure:	negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
  *
- * Modifications:
- *	Vailin Choi; Dec 2012
- *	Change the routine name to "H5MF_sect_deserialize".
  *-------------------------------------------------------------------------
  */
 static H5FS_section_info_t *
@@ -319,7 +311,6 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5MF_sect_deserialize() */
 
-
 
 /*-------------------------------------------------------------------------
  * Function:	H5MF_sect_valid
@@ -332,9 +323,6 @@ done:
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
  *
- * Modifications:
- *	Vailin Choi; Dec 2012
- *	Change the routine name to "H5MF_sect_valid".
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -369,9 +357,6 @@ H5MF_sect_valid(const H5FS_section_class_t H5_ATTR_UNUSED *cls,
  *
  * Programmer:	Vailin Choi, July 29, 2008
  *
- * Modifications:
- *	Vailin Choi; Dec 2012
- *	Change the routine name to "H5MF_sect_split".
  *-------------------------------------------------------------------------
  */
 static H5FS_section_info_t *
@@ -402,10 +387,10 @@ done:
  *
  * Purpose:	Can two sections of this type merge?
  *
- * Note: Second section must be "after" first section
+ * Note:        Second section must be "after" first section
  *
  * Return:	Success:	non-negative (TRUE/FALSE)
- *          Failure:	negative
+ *		Failure:	negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -436,14 +421,14 @@ H5MF_sect_simple_can_merge(const H5FS_section_info_t *_sect1,
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5MF_sect_simple_merge
+ * Function:	H5MF_sect_simple_merge
  *
- * Purpose:     Merge two sections of this type
+ * Purpose:	Merge two sections of this type
  *
  * Note:        Second section always merges into first node
  *
- * Return:      Success:    non-negative
- *              Failure:    negative
+ * Return:	Success:	non-negative
+ *		Failure:	negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -480,12 +465,12 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5MF_sect_simple_can_shrink
+ * Function:	H5MF_sect_simple_can_shrink
  *
- * Purpose:     Can this section shrink the container?
+ * Purpose:	Can this section shrink the container?
  *
- * Return:      Success:    non-negative (TRUE/FALSE)
- *              Failure:    negative
+ * Return:	Success:	non-negative (TRUE/FALSE)
+ *		Failure:	negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -510,7 +495,7 @@ H5MF_sect_simple_can_shrink(const H5FS_section_info_t *_sect, void *_udata)
 
     /* Retrieve the end of the file's address space */
     if(HADDR_UNDEF == (eoa = H5F_get_eoa(udata->f, udata->alloc_type)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "driver get_eoa request failed")
+	HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "driver get_eoa request failed")
 
     /* Compute address of end of section to check */
     end = sect->sect_info.addr + sect->sect_info.size;
@@ -579,12 +564,12 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5MF_sect_simple_shrink
+ * Function:	H5MF_sect_simple_shrink
  *
- * Purpose:     Shrink container with section
+ * Purpose:	Shrink container with section
  *
- * Return:      Success:    non-negative
- *              Failure:    negative
+ * Return:	Success:	non-negative
+ *		Failure:	negative
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, January  8, 2008
@@ -864,7 +849,7 @@ HDfprintf(stderr, "%s: Leaving: ret_value = %t\n", FUNC, ret_value);
  *       free the section.
  *
  * Return:	Success:	non-negative
- *          Failure:	negative
+ *		Failure:	negative
  *
  * Programmer:	Vailin Choi; Dec 2012
  *

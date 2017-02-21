@@ -261,60 +261,61 @@ struct H5F_file_t {
                                      * a driver info message.  Under all other
                                      * circumstances, it must be set to FALSE.
                                      */
-    unsigned    nrefs;              /* Ref count for times file is opened	*/
-    unsigned    flags;              /* Access Permissions for file          */
-    H5F_mtab_t  mtab;               /* File mount table                     */
-    H5F_efc_t   *efc;               /* External file cache                  */
+    unsigned	nrefs;		/* Ref count for times file is opened	*/
+    unsigned	flags;		/* Access Permissions for file          */
+    H5F_mtab_t	mtab;		/* File mount table                     */
+    H5F_efc_t   *efc;           /* External file cache                  */
 
     /* Cached values from FCPL/superblock */
-    uint8_t sizeof_addr;                    /* Size of addresses in file            */
-    uint8_t sizeof_size;                    /* Size of offsets in file              */
-    haddr_t sohm_addr;                      /* Relative address of shared object header message table */
-    unsigned    sohm_vers;                  /* Version of shared message table on disk */
-    unsigned    sohm_nindexes;              /* Number of shared messages indexes in the table */
-    unsigned long feature_flags;            /* VFL Driver feature Flags             */
-    haddr_t maxaddr;                        /* Maximum address for file             */
+    uint8_t	sizeof_addr;	/* Size of addresses in file            */
+    uint8_t	sizeof_size;	/* Size of offsets in file              */
+    haddr_t	sohm_addr;	/* Relative address of shared object header message table */
+    unsigned	sohm_vers;	/* Version of shared message table on disk */
+    unsigned	sohm_nindexes;	/* Number of shared messages indexes in the table */
+    unsigned long feature_flags; /* VFL Driver feature Flags            */
+    haddr_t	maxaddr;	/* Maximum address for file             */
 
     H5PB_t      *page_buf;                  /* The page buffer cache                */
-    H5AC_t      *cache;                     /* The object cache                     */
-    H5AC_cache_config_t mdc_initCacheCfg;   /* initial configuration for the        */
-                                            /* metadata cache.  This structure is   */
-                                            /* fixed at creation time and should    */
-                                            /* not change thereafter.               */
+    H5AC_t      *cache;		/* The object cache	 		*/
+    H5AC_cache_config_t
+		mdc_initCacheCfg; /* initial configuration for the      */
+                                /* metadata cache.  This structure is   */
+                                /* fixed at creation time and should    */
+                                /* not change thereafter.               */
     H5AC_cache_image_config_t 
 		mdc_initCacheImageCfg;  /* initial configuration for the */
                                         /* generate metadata cache image on     */
                                         /* close option.  This structure is     */
                                         /* fixed at creation time and should    */
                                         /* not change thereafter.               */
-    hbool_t     use_mdc_logging;            /* Set when metadata logging is desired */
-    hbool_t     start_mdc_log_on_access;    /* set when mdc logging should          */
-                                            /* begin on file access/create          */
-    char        *mdc_log_location;          /* location of mdc log                  */
-    hid_t fcpl_id;                          /* File creation property list ID       */
-    H5F_close_degree_t fc_degree;           /* File close behavior degree           */
-    hbool_t evict_on_close;                 /* If the file's objects should be evicted from the metadata cache on close */
-    size_t rdcc_nslots;                     /* Size of raw data chunk cache (slots)	*/
-    size_t rdcc_nbytes;                     /* Size of raw data chunk cache	(bytes)	*/
-    double rdcc_w0;                         /* Preempt read chunks first? [0.0..1.0]*/
-    size_t sieve_buf_size;                  /* Size of the data sieve buffer allocated (in bytes) */
-    hsize_t threshold;                      /* Threshold for alignment              */
-    hsize_t alignment;                      /* Alignment                            */
-    unsigned    gc_ref;                     /* Garbage-collect references?          */
-    unsigned    latest_flags;               /* The latest version support           */
-    hbool_t store_msg_crt_idx;              /* Store creation index for object header messages?	*/
-    unsigned    ncwfs;                      /* Num entries on cwfs list             */
-    struct H5HG_heap_t **cwfs;              /* Global heap cache                    */
-    struct H5G_t *root_grp;                 /* Open root group                      */
-    H5FO_t *open_objs;                      /* Open objects in file                 */
-    H5UC_t *grp_btree_shared;               /* Ref-counted group B-tree node info   */
+    hbool_t     use_mdc_logging; /* Set when metadata logging is desired */
+    hbool_t     start_mdc_log_on_access; /* set when mdc logging should  */
+                                /* begin on file access/create          */
+    char        *mdc_log_location; /* location of mdc log               */
+    hid_t       fcpl_id;	/* File creation property list ID 	*/
+    H5F_close_degree_t fc_degree;   /* File close behavior degree	*/
+    hbool_t evict_on_close; /* If the file's objects should be evicted from the metadata cache on close */
+    size_t	rdcc_nslots;	/* Size of raw data chunk cache (slots)	*/
+    size_t	rdcc_nbytes;	/* Size of raw data chunk cache	(bytes)	*/
+    double	rdcc_w0;	/* Preempt read chunks first? [0.0..1.0]*/
+    size_t      sieve_buf_size; /* Size of the data sieve buffer allocated (in bytes) */
+    hsize_t	threshold;	/* Threshold for alignment		*/
+    hsize_t	alignment;	/* Alignment				*/
+    unsigned	gc_ref;		/* Garbage-collect references?		*/
+    unsigned	latest_flags;	/* The latest version support */
+    hbool_t	store_msg_crt_idx;  /* Store creation index for object header messages?	*/
+    unsigned	ncwfs;		/* Num entries on cwfs list		*/
+    struct H5HG_heap_t **cwfs;	/* Global heap cache			*/
+    struct H5G_t *root_grp;	/* Open root group			*/
+    H5FO_t *open_objs;          /* Open objects in file                 */
+    H5UC_t *grp_btree_shared;   /* Ref-counted group B-tree node info   */
 
     /* File space allocation information */
     H5F_fspace_strategy_t fs_strategy;      /* File space handling strategy	*/
-    hsize_t fs_threshold;                   /* Free-space section threshold */
+    hsize_t     fs_threshold;	/* Free space section threshold 	*/
     hbool_t fs_persist;                     /* Free-space persist or not */
-    hbool_t use_tmp_space;                  /* Whether temp. file space allocation is allowed */
-    haddr_t	tmp_addr;                       /* Next address to use for temp. space in the file */
+    hbool_t     use_tmp_space;  /* Whether temp. file space allocation is allowed */
+    haddr_t	tmp_addr;       /* Next address to use for temp. space in the file */
     hbool_t point_of_no_return;             /* flag to indicate that we can't go back and delete a freespace header when it's used up */
 
     H5F_fs_state_t fs_state[H5F_MEM_PAGE_NTYPES];   /* State of free space manager for each type */
@@ -332,28 +333,27 @@ struct H5F_file_t {
     haddr_t eoa_post_mdci_fsalloc;          /* eoa past file space allocation */
                                             /* for metadata cache image, or   */
                                             /* HADDR_UNDEF if no cache image. */
- 
 
     /* Free-space aggregation info */
-    unsigned fs_aggr_merge[H5FD_MEM_NTYPES];        /* Flags for whether free space can merge with aggregator(s) */
-    H5FD_mem_t fs_type_map[H5FD_MEM_NTYPES];        /* Mapping of "real" file space type into tracked type */
-    H5F_blk_aggr_t meta_aggr;   	                /* Metadata aggregation info (if aggregating metadata allocations) */
-    H5F_blk_aggr_t sdata_aggr;                      /* "Small data" aggregation info */
+    unsigned fs_aggr_merge[H5FD_MEM_NTYPES];    /* Flags for whether free space can merge with aggregator(s) */
+    H5FD_mem_t fs_type_map[H5FD_MEM_NTYPES];    /* Mapping of "real" file space type into tracked type */
+    H5F_blk_aggr_t meta_aggr;   	        /* Metadata aggregation info (if aggregating metadata allocations) */
+    H5F_blk_aggr_t sdata_aggr;                  /* "Small data" aggregation info (if aggregating "small data" allocations) */
 
     /* Paged aggregation info */
     hsize_t fs_page_size;                           /* File space page size */
     size_t pgend_meta_thres;                        /* Do not track page end meta section <= this threshold */
 
     /* Metadata accumulator information */
-    H5F_meta_accum_t accum;                         /* Metadata accumulator info           	*/
+    H5F_meta_accum_t accum;     /* Metadata accumulator info           	*/
 
     /* Metadata retry info */
-    unsigned 		read_attempts;                  /* The # of reads to try when reading metadata with checksum */
-    unsigned		retries_nbins;                  /* # of bins for each retries[] */
-    uint32_t		*retries[H5AC_NTYPES];          /* Track # of read retries for metdata items with checksum */
+    unsigned 		read_attempts;	/* The # of reads to try when reading metadata with checksum */
+    unsigned		retries_nbins;		/* # of bins for each retries[] */
+    uint32_t		*retries[H5AC_NTYPES];  /* Track # of read retries for metdata items with checksum */
 
     /* Object flush info */
-    H5F_object_flush_t 	object_flush;               /* Information for object flush callback */
+    H5F_object_flush_t 	object_flush;		/* Information for object flush callback */
 };
 
 /*
@@ -388,9 +388,6 @@ H5FL_EXTERN(H5F_t);
 
 /* Declare a free list to manage the H5F_file_t struct */
 H5FL_EXTERN(H5F_file_t);
-
-H5_DLLVAR const H5AC_class_t H5AC_SUPERBLOCK[1];
-H5_DLLVAR const H5AC_class_t H5AC_DRVRINFO[1];
 
 
 /******************************/

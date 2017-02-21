@@ -24,7 +24,6 @@
 #include "H5FDpublic.h"
 
 /* Private headers needed by this file */
-#include "H5Fprivate.h"         /* File access                          */
 #include "H5Pprivate.h"		/* Property lists			*/
 
 /*
@@ -128,6 +127,7 @@ typedef enum {
 
 /* Forward declarations for prototype arguments */
 struct H5P_genplist_t;
+struct H5F_t;
 
 H5_DLL int H5FD_term_interface(void);
 H5_DLL herr_t H5FD_locate_signature(H5FD_t *file,
@@ -147,11 +147,11 @@ H5_DLL H5FD_t *H5FD_open(const char *name, unsigned flags, hid_t fapl_id,
 H5_DLL herr_t H5FD_close(H5FD_t *file);
 H5_DLL int H5FD_cmp(const H5FD_t *f1, const H5FD_t *f2);
 H5_DLL haddr_t H5FD_alloc(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type, 
-    H5F_t *f, hsize_t size, haddr_t *frag_addr, hsize_t *frag_size);
+    struct H5F_t *f, hsize_t size, haddr_t *frag_addr, hsize_t *frag_size);
 H5_DLL herr_t H5FD_free(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type, struct H5F_t *f,
     haddr_t addr, hsize_t size);
-H5_DLL htri_t H5FD_try_extend(H5FD_t *file, H5FD_mem_t type, haddr_t blk_end,
-    H5F_t *f, hid_t dxpl_id, hsize_t extra_requested);
+H5_DLL htri_t H5FD_try_extend(H5FD_t *file, H5FD_mem_t type, struct H5F_t *f,
+    hid_t dxpl_id, haddr_t blk_end, hsize_t extra_requested);
 H5_DLL haddr_t H5FD_get_eoa(const H5FD_t *file, H5FD_mem_t type);
 H5_DLL herr_t H5FD_set_eoa(H5FD_t *file, H5FD_mem_t type, haddr_t addr);
 H5_DLL haddr_t H5FD_get_eof(const H5FD_t *file, H5FD_mem_t type);

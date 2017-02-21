@@ -220,6 +220,8 @@ set (CTEST_CUSTOM_MEMCHECK_IGNORE
     ######### tools/misc #########
     H5REPART-clearall-objects
     H5MKGRP-clearall-objects
+    ######### hl/tools/h5watch #########
+    H5WATCH-clearall-objects
     ######### examples #########
     EXAMPLES-clear-objects
     CPP_ex-clear-objects

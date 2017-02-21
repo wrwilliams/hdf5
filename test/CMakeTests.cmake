@@ -1001,6 +1001,8 @@ set_tests_properties (H5PLUGIN-plugin PROPERTIES
 ##############################################################################
 #       testflushrefresh.sh: flushrefresh
 #       test_usecases.sh: use_append_chunk, use_append_mchunks, use_disable_mdc_flushes
+#       testswmr.sh: swmr*
+#       testvdsswmr.sh: vds_swmr*
 
 ##############################################################################
 ##############################################################################

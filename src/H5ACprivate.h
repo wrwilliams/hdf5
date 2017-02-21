@@ -86,10 +86,9 @@ typedef enum {
     H5AC_FARRAY_DBLK_PAGE_ID,   /* (24) fixed array data block page                 */
     H5AC_SUPERBLOCK_ID,         /* (25) file superblock                             */
     H5AC_DRVRINFO_ID,           /* (26) driver info block (supplements superblock)  */
-    H5AC_PROXY_ENTRY_ID,        /* (27) cache entry proxy                           */
-    H5AC_PREFETCHED_ENTRY_ID, 	/* (28) prefetched entry - always internal to cache */
-    H5AC_EPOCH_MARKER_ID,       /* (29) epoch marker - always internal to cache     */
-    H5AC_TEST_ID,               /* (30) test entry -- not used for actual files     */
+    H5AC_EPOCH_MARKER_ID,       /* (27) epoch marker - always internal to cache     */
+    H5AC_PROXY_ENTRY_ID,        /* (28) cache entry proxy                           */
+    H5AC_PREFETCHED_ENTRY_ID, 	/* (29) prefetched entry - always internal to cache */
     H5AC_NTYPES                 /* Number of types, must be last                    */
 } H5AC_type_t;
 
@@ -188,7 +187,6 @@ typedef H5C_notify_action_t     H5AC_notify_action_t;
 /* The following flags should only appear in test code */
 #define H5AC__CLASS_SKIP_READS              H5C__CLASS_SKIP_READS
 #define H5AC__CLASS_SKIP_WRITES             H5C__CLASS_SKIP_WRITES
-#define H5AC__CLASS_SKIP_MEM_TYPE_CHECKS    H5C__CLASS_SKIP_MEM_TYPE_CHECKS
 
 typedef H5C_get_initial_load_size_func_t	H5AC_get_initial_load_size_func_t;
 typedef H5C_get_final_load_size_func_t	H5AC_get_final_load_size_func_t;
@@ -376,6 +374,38 @@ H5_DLLVAR hid_t H5AC_rawdata_dxpl_id;
 #define H5AC_ES__IS_CORKED              0x0040
 #define H5AC_ES__IMAGE_IS_UP_TO_DATE    0x0080
 
+/* Metadata entry class declarations */
+H5_DLLVAR const H5AC_class_t H5AC_BT[1];
+H5_DLLVAR const H5AC_class_t H5AC_SNODE[1];
+H5_DLLVAR const H5AC_class_t H5AC_LHEAP_PRFX[1];
+H5_DLLVAR const H5AC_class_t H5AC_LHEAP_DBLK[1];
+H5_DLLVAR const H5AC_class_t H5AC_GHEAP[1];
+H5_DLLVAR const H5AC_class_t H5AC_OHDR[1];
+H5_DLLVAR const H5AC_class_t H5AC_OHDR_CHK[1];
+H5_DLLVAR const H5AC_class_t H5AC_BT2_HDR[1];
+H5_DLLVAR const H5AC_class_t H5AC_BT2_INT[1];
+H5_DLLVAR const H5AC_class_t H5AC_BT2_LEAF[1];
+H5_DLLVAR const H5AC_class_t H5AC_FHEAP_HDR[1];
+H5_DLLVAR const H5AC_class_t H5AC_FHEAP_DBLOCK[1];
+H5_DLLVAR const H5AC_class_t H5AC_FHEAP_IBLOCK[1];
+H5_DLLVAR const H5AC_class_t H5AC_FSPACE_HDR[1];
+H5_DLLVAR const H5AC_class_t H5AC_FSPACE_SINFO[1];
+H5_DLLVAR const H5AC_class_t H5AC_SOHM_TABLE[1];
+H5_DLLVAR const H5AC_class_t H5AC_SOHM_LIST[1];
+H5_DLLVAR const H5AC_class_t H5AC_EARRAY_HDR[1];
+H5_DLLVAR const H5AC_class_t H5AC_EARRAY_IBLOCK[1];
+H5_DLLVAR const H5AC_class_t H5AC_EARRAY_SBLOCK[1];
+H5_DLLVAR const H5AC_class_t H5AC_EARRAY_DBLOCK[1];
+H5_DLLVAR const H5AC_class_t H5AC_EARRAY_DBLK_PAGE[1];
+H5_DLLVAR const H5AC_class_t H5AC_FARRAY_HDR[1];
+H5_DLLVAR const H5AC_class_t H5AC_FARRAY_DBLOCK[1];
+H5_DLLVAR const H5AC_class_t H5AC_FARRAY_DBLK_PAGE[1];
+H5_DLLVAR const H5AC_class_t H5AC_SUPERBLOCK[1];
+H5_DLLVAR const H5AC_class_t H5AC_DRVRINFO[1];
+H5_DLLVAR const H5AC_class_t H5AC_EPOCH_MARKER[1];
+H5_DLLVAR const H5AC_class_t H5AC_PROXY_ENTRY[1];
+H5_DLLVAR const H5AC_class_t H5AC_PREFETCHED_ENTRY[1];
+
 
 /* external function declarations: */
 
@@ -384,7 +414,6 @@ H5_DLL herr_t H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr,
     H5AC_cache_image_config_t * image_config_ptr);
 H5_DLL herr_t H5AC_get_entry_status(const H5F_t *f, haddr_t addr,
     unsigned *status_ptr);
-H5_DLL hbool_t H5AC_get_serialization_in_progress(H5F_t * f);
 H5_DLL herr_t H5AC_insert_entry(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
     haddr_t addr, void *thing, unsigned int flags);
 H5_DLL herr_t H5AC_pin_protected_entry(void *thing);
@@ -420,16 +449,15 @@ H5_DLL herr_t H5AC_set_cache_auto_resize_config(H5AC_t *cache_ptr,
 H5_DLL herr_t H5AC_validate_config(H5AC_cache_config_t *config_ptr);
 
 /* Cache image routines */
-H5_DLL hbool_t H5AC_cache_image_pending(const H5F_t *f);
-H5_DLL herr_t H5AC_force_cache_image_load(H5F_t * f, hid_t dxpl_id);
 H5_DLL herr_t H5AC_load_cache_image_on_next_protect(H5F_t *f, haddr_t addr, 
     size_t len, hbool_t rw);
-H5_DLL herr_t H5AC_validate_cache_image_config(
-    H5AC_cache_image_config_t *config_ptr);
+H5_DLL herr_t H5AC_validate_cache_image_config(H5AC_cache_image_config_t *config_ptr);
 H5_DLL herr_t H5AC_read_cache_image(H5F_t * f, hid_t dxpl_id, 
     haddr_t image_addr, size_t image_len, void * image_buffer);
 H5_DLL herr_t H5AC_write_cache_image(H5F_t * f, hid_t dxpl_id, 
     haddr_t image_addr, size_t image_len, void * image_buffer);
+H5_DLL hbool_t H5AC_cache_image_pending(const H5F_t *f);
+H5_DLL herr_t H5AC_force_cache_image_load(H5F_t * f, hid_t dxpl_id);
 
 /* Tag & Ring routines */
 H5_DLL herr_t H5AC_tag(hid_t dxpl_id, haddr_t metadata_tag, haddr_t *prev_tag);
@@ -442,6 +470,7 @@ H5_DLL herr_t H5AC_get_entry_ring(const H5F_t *f, haddr_t addr, H5AC_ring_t *rin
 H5_DLL herr_t H5AC_set_ring(hid_t dxpl_id, H5AC_ring_t ring, H5P_genplist_t **dxpl,
     H5AC_ring_t *orig_ring);
 H5_DLL herr_t H5AC_reset_ring(H5P_genplist_t *dxpl, H5AC_ring_t orig_ring);
+H5_DLL herr_t H5AC_unsettle_entry_ring(void *entry);
 H5_DLL herr_t H5AC_unsettle_ring(H5F_t * f, H5AC_ring_t ring);
 H5_DLL herr_t H5AC_expunge_tag_type_metadata(H5F_t *f, hid_t dxpl_id, haddr_t tag, int type_id, unsigned flags);
 H5_DLL herr_t H5AC_get_tag(const void *thing, /*OUT*/ haddr_t *tag);
@@ -460,16 +489,19 @@ H5_DLL herr_t H5AC_add_candidate(H5AC_t * cache_ptr, haddr_t addr);
 #endif /* H5_HAVE_PARALLEL */
 
 /* Debugging functions */
-H5_DLL herr_t H5AC_get_entry_ptr_from_addr(const H5F_t *f, haddr_t addr,
-    void ** entry_ptr_ptr);
-H5_DLL herr_t H5AC_flush_dependency_exists(H5F_t *f, haddr_t parent_addr,
-    haddr_t child_addr, hbool_t *fd_exists_ptr);
-H5_DLL herr_t H5AC_verify_entry_type(const H5F_t * f, haddr_t addr,
-    const H5AC_class_t * expected_type, hbool_t * in_cache_ptr,
-    hbool_t * type_ok_ptr);
 H5_DLL herr_t H5AC_stats(const H5F_t *f);
 H5_DLL herr_t H5AC_dump_cache(const H5F_t *f);
-H5_DLL hbool_t H5AC_cache_is_clean(const H5F_t *f, H5C_ring_t inner_ring);
+#ifndef NDEBUG
+H5_DLL herr_t H5AC_get_entry_ptr_from_addr(const H5F_t *f, haddr_t addr,
+    void **entry_ptr_ptr);
+H5_DLL herr_t H5AC_flush_dependency_exists(H5F_t *f, haddr_t parent_addr,
+    haddr_t child_addr, hbool_t *fd_exists_ptr);
+H5_DLL herr_t H5AC_verify_entry_type(const H5F_t *f, haddr_t addr,
+    const H5AC_class_t *expected_type, hbool_t *in_cache_ptr,
+    hbool_t *type_ok_ptr);
+H5_DLL hbool_t H5AC_get_serialization_in_progress(H5F_t *f);
+H5_DLL hbool_t H5AC_cache_is_clean(const H5F_t *f, H5AC_ring_t inner_ring);
+#endif /* NDEBUG */ /* end debugging functions */
 
 #endif /* !_H5ACprivate_H */
 

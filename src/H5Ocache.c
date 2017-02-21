@@ -46,12 +46,6 @@
 /* Local Macros */
 /****************/
 
-/* Set the object header size to speculatively read in */
-/* (needs to be more than the object header prefix size to work at all and
- *      should be larger than the largest object type's default object header
- *      size to save the extra I/O operations) */
-#define H5O_SPEC_READ_SIZE 512
-
 
 /******************/
 /* Local Typedefs */
@@ -208,12 +202,11 @@ H5O__cache_get_initial_load_size(void H5_ATTR_UNUSED *_udata, size_t *image_len)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__cache_get_final_load_size(const void *_image, size_t image_len,
+H5O__cache_get_final_load_size(const void *image, size_t image_len,
     void *_udata, size_t *actual_len)
 {
-    const uint8_t *image = (const uint8_t *)_image;   	/* Pointer into raw data buffer */
     H5O_cache_ud_t *udata = (H5O_cache_ud_t *)_udata;   /* User data for callback */
-    htri_t ret_value = SUCCEED;         /* Return value */
+    herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_STATIC
 
@@ -234,7 +227,6 @@ H5O__cache_get_final_load_size(const void *_image, size_t image_len,
     *actual_len = udata->chunk0_size + (size_t)H5O_SIZEOF_HDR(udata->oh);
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__cache_get_final_load_size() */
 
@@ -304,12 +296,11 @@ H5O__cache_verify_chksum(const void *_image, size_t len, void *_udata)
  *-------------------------------------------------------------------------
  */
 static void *
-H5O__cache_deserialize(const void *_image, size_t len, void *_udata,
+H5O__cache_deserialize(const void *image, size_t len, void *_udata,
     hbool_t *dirty)
 {
-    H5O_t          *oh;                 /* Object header read in */
+    H5O_t          *oh = NULL;          /* Object header read in */
     H5O_cache_ud_t *udata = (H5O_cache_ud_t *)_udata;   /* User data for callback */
-    const uint8_t  *image = (const uint8_t *)_image;    /* Pointer into buffer to decode */
     void *          ret_value = NULL;   /* Return value */
 
     FUNC_ENTER_STATIC
@@ -352,7 +343,7 @@ H5O__cache_deserialize(const void *_image, size_t len, void *_udata,
         oh->proxy = NULL;
 
     /* Parse the first chunk */
-    if(H5O__chunk_deserialize(oh, udata->common.addr, udata->chunk0_size, (const uint8_t *)_image, &(udata->common), dirty) < 0)
+    if(H5O__chunk_deserialize(oh, udata->common.addr, udata->chunk0_size, (const uint8_t *)image, &(udata->common), dirty) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "can't deserialize first object header chunk")
 
     /* Note that we've loaded the object header from the file */
@@ -627,7 +618,6 @@ H5O__cache_notify(H5AC_notify_action_t action, void *_thing)
     } /* end switch */
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__cache_notify() */
 

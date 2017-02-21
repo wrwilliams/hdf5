@@ -4343,31 +4343,31 @@ test_filespace_compatible(void)
         const char *filename = H5_get_srcdir_filename(OLD_FILENAME[j]); /* Corrected test file name */
 
         /* Open and copy the test file into a temporary file */
-        fd_old = HDopen(filename, O_RDONLY, 0666);
-        CHECK(fd_old, FAIL, "HDopen");
-        fd_new = HDopen(FILE5, O_RDWR|O_CREAT|O_TRUNC, 0666);
-        CHECK(fd_new, FAIL, "HDopen");
+	fd_old = HDopen(filename, O_RDONLY, 0666);
+	CHECK(fd_old, FAIL, "HDopen");
+	fd_new = HDopen(FILE5, O_RDWR|O_CREAT|O_TRUNC, 0666);
+	CHECK(fd_new, FAIL, "HDopen");
 
-	    /* Copy data */
+	/* Copy data */
         while((nread = HDread(fd_old, buf, (size_t)READ_OLD_BUFSIZE)) > 0) {
             ssize_t write_err = HDwrite(fd_new, buf, (size_t)nread);
             CHECK(write_err, -1, "HDwrite");
         } /* end while */
 
-        /* Close the files */
-        ret = HDclose(fd_old);
-        CHECK(ret, FAIL, "HDclose");
-        ret = HDclose(fd_new);
-        CHECK(ret, FAIL, "HDclose");
+	/* Close the files */
+	ret = HDclose(fd_old);
+	CHECK(ret, FAIL, "HDclose");
+	ret = HDclose(fd_new);
+	CHECK(ret, FAIL, "HDclose");
 
         /* Open the temporary test file */
-        fid = H5Fopen(FILE5, H5F_ACC_RDWR, H5P_DEFAULT);
-        CHECK(fid, FAIL, "H5Fopen");
+	fid = H5Fopen(FILE5, H5F_ACC_RDWR, H5P_DEFAULT);
+	CHECK(fid, FAIL, "H5Fopen");
 
-        /* There should not be any free space in the file */
-        free_space = H5Fget_freespace(fid);
-        CHECK(free_space, FAIL, "H5Fget_freespace");
-        VERIFY(free_space, (hssize_t)0, "H5Fget_freespace");
+	/* There should not be any free space in the file */
+	free_space = H5Fget_freespace(fid);
+	CHECK(free_space, FAIL, "H5Fget_freespace");
+	VERIFY(free_space, (hssize_t)0, "H5Fget_freespace");
 
         /* Get the file's file creation property list */
         fcpl = H5Fget_create_plist(fid);
@@ -4384,27 +4384,27 @@ test_filespace_compatible(void)
         VERIFY(persist, FALSE, "H5Pget_file_space_strategy");
         VERIFY(threshold, 1, "H5Pget_file_space_strategy");
 
-        /* Generate raw data */
-        for(i = 0; i < 100; i++)
-            check[i] = (int)i;
+	/* Generate raw data */
+	for(i = 0; i < 100; i++)
+	    check[i] = (int)i;
 
-        /* Open and read the dataset */
-        did = H5Dopen2(fid, DSETNAME, H5P_DEFAULT);
-        CHECK(did, FAIL, "H5Dopen");
-        ret = H5Dread(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdbuf);
-        CHECK(ret, FAIL, "H5Dread");
+	/* Open and read the dataset */
+	did = H5Dopen2(fid, DSETNAME, H5P_DEFAULT);
+	CHECK(did, FAIL, "H5Dopen");
+	ret = H5Dread(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdbuf);
+	CHECK(ret, FAIL, "H5Dread");
 
-        /* Verify the data read is correct */
-        for(i = 0; i < 100; i++)
-            VERIFY(rdbuf[i], check[i], "test_compatible");
+	/* Verify the data read is correct */
+	for(i = 0; i < 100; i++)
+	    VERIFY(rdbuf[i], check[i], "test_compatible");
 
-        /* Close the dataset */
-        ret = H5Dclose(did);
-        CHECK(ret, FAIL, "H5Dclose");
+	/* Close the dataset */
+	ret = H5Dclose(did);
+	CHECK(ret, FAIL, "H5Dclose");
 
-        /* Remove the dataset */
-        ret = H5Ldelete(fid, DSETNAME, H5P_DEFAULT);
-        CHECK(ret, FAIL, "H5Ldelete");
+	/* Remove the dataset */
+	ret = H5Ldelete(fid, DSETNAME, H5P_DEFAULT);
+	CHECK(ret, FAIL, "H5Ldelete");
 
         /* Close the plist */
         ret = H5Pclose(fcpl);
@@ -4414,21 +4414,22 @@ test_filespace_compatible(void)
         ret = H5Fclose(fid);
         CHECK(ret, FAIL, "H5Fclose");
 
-        /* Re-Open the file */
-        fid = H5Fopen(FILE5, H5F_ACC_RDONLY, H5P_DEFAULT);
-        CHECK(fid, FAIL, "H5Fopen");
+	/* Re-Open the file */
+	fid = H5Fopen(FILE5, H5F_ACC_RDONLY, H5P_DEFAULT);
+	CHECK(fid, FAIL, "H5Fopen");
 
-        /* The dataset should not be there */
-        did = H5Dopen2(fid, DSETNAME, H5P_DEFAULT);
-        VERIFY(did, FAIL, "H5Dopen");
-        /* There should not be any free space in the file */
-        free_space = H5Fget_freespace(fid);
-        CHECK(free_space, FAIL, "H5Fget_freespace");
-        VERIFY(free_space, (hssize_t)0, "H5Fget_freespace");
+	/* The dataset should not be there */
+	did = H5Dopen2(fid, DSETNAME, H5P_DEFAULT);
+	VERIFY(did, FAIL, "H5Dopen");
 
-        /* Close the file */
-        ret = H5Fclose(fid);
-        CHECK(ret, FAIL, "H5Fclose");
+	/* There should not be any free space in the file */
+	free_space = H5Fget_freespace(fid);
+	CHECK(free_space, FAIL, "H5Fget_freespace");
+	VERIFY(free_space, (hssize_t)0, "H5Fget_freespace");
+
+	/* Close the file */
+	ret = H5Fclose(fid);
+	CHECK(ret, FAIL, "H5Fclose");
     } /* end for */
 } /* test_filespace_compatible */
 
@@ -5333,10 +5334,7 @@ test_file(void)
     test_userblock_file_size();                 /* Tests that files created with a userblock have the correct size */
     test_cached_stab_info();                    /* Tests that files are created with cached stab info in the superblock */
     test_rw_noupdate();                         /* Test to ensure that RW permissions don't write the file unless dirtied */
-
     test_userblock_alignment();                 /* Tests that files created with a userblock and alignment interact properly */
-
-
     test_userblock_alignment_paged();           /* Tests files created with a userblock and alignment (via paged aggregation) interact properly */
 
     test_filespace_info(env_h5_drvr);           /* Test file creation public routines: */
@@ -5356,7 +5354,6 @@ test_file(void)
     test_filespace_compatible();                /* Test compatibility for file space management */
     test_filespace_round_compatible();          /* Testing file space compatibility for files from trunk to 1_8 to trunk */
     test_filespace_1_10_0_compatible();          /* Testing file space compatibility for files from release 1.10.0 */
-
     test_libver_bounds();                       /* Test compatibility for file space management */
     test_libver_macros();                       /* Test the macros for library version comparison */
     test_libver_macros2();                      /* Test the macros for library version comparison */
@@ -5392,3 +5389,4 @@ cleanup_file(void)
     HDremove(FILE6);
     HDremove(FILE7);
 }
+

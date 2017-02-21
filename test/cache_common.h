@@ -361,8 +361,8 @@ typedef struct test_entry_t
     unsigned              notify_after_insert_count;    /* Count of times that entry was inserted in cache */
     unsigned              notify_before_evict_count;    /* Count of times that entry was removed in cache */
     unsigned		actual_len;	/* Simulate the entry's actual size for a speculative load */
-    unsigned		max_verify_ct;  /* Maximum # of times to verify an entry's checksum */
-    unsigned		verify_ct;	/* Count the # of checksum verification for an entry */
+    unsigned		  max_verify_ct;  /* Maximum # of times to verify an entry's checksum */
+    unsigned		  verify_ct;	  /* Count the # of checksum verification for an entry */
 } test_entry_t;
 
 /* The following are cut down test versions of the hash table manipulation
@@ -557,11 +557,10 @@ H5TEST_DLLVAR const int32_t max_indices[NUMBER_OF_ENTRY_TYPES];
 H5TEST_DLLVAR const size_t entry_sizes[NUMBER_OF_ENTRY_TYPES];
 H5TEST_DLLVAR const haddr_t base_addrs[NUMBER_OF_ENTRY_TYPES];
 H5TEST_DLLVAR const haddr_t alt_base_addrs[NUMBER_OF_ENTRY_TYPES];
-H5TEST_DLLVAR const char * entry_type_names[NUMBER_OF_ENTRY_TYPES];
 
 /* callback table extern */
 
-H5TEST_DLLVAR const H5C_class_t types[NUMBER_OF_ENTRY_TYPES];
+H5TEST_DLLVAR const H5C_class_t *types[NUMBER_OF_ENTRY_TYPES];
 
 
 #ifdef __cplusplus

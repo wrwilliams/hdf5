@@ -236,7 +236,7 @@ HDfprintf(stderr, "%s: fspace->alloc_sect_size = %Hu, fspace->sect_size = %Hu\n"
 
         if(fspace->sinfo_protected && accmode != fspace->sinfo_accmode) {
             /* Check if we need to switch from read-only access to read-write */
-            if(0 == (accmode & (unsigned)(~H5AC__READ_ONLY_FLAG))) {
+	    if(0 == (accmode & (unsigned)(~H5AC__READ_ONLY_FLAG))) {
                 /* Unprotect the read-only section info */
                 if(H5AC_unprotect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, fspace->sinfo, H5AC__NO_FLAGS_SET) < 0)
                     HGOTO_ERROR(H5E_FSPACE, H5E_CANTUNPROTECT, FAIL, "unable to release free space section info")
@@ -1514,7 +1514,7 @@ if(_section_)
              *  possible neighboring nodes and is not at the end of the file
              *  (or it would have been eliminated), etc)
              */
-            if((addr + size) == sect->addr && sect->size >= extra_requested) {
+            if(sect->size >= extra_requested && (addr + size) == sect->addr) {
                 H5FS_section_class_t *cls;          /* Section's class */
 
                 /* Remove section from data structures */
@@ -2390,25 +2390,25 @@ H5FS_sect_try_shrink_eoa(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, void *op_data)
             /* Get the pointer to the last section, from the last node */
             tmp_sect = (H5FS_section_info_t *)H5SL_item(last_node);
             HDassert(tmp_sect);
-            tmp_sect_cls = &fspace->sect_cls[tmp_sect->type];
-            if(tmp_sect_cls->can_shrink) {
+	    tmp_sect_cls = &fspace->sect_cls[tmp_sect->type];
+	    if(tmp_sect_cls->can_shrink) {
                 /* Check if the section can be shrunk away */
-                if((ret_value = (*tmp_sect_cls->can_shrink)(tmp_sect, op_data)) < 0)
-                    HGOTO_ERROR(H5E_FSPACE, H5E_CANTSHRINK, FAIL, "can't check for shrinking container")
-                else if(ret_value > 0) {
-                    HDassert(tmp_sect_cls->shrink);
+		if((ret_value = (*tmp_sect_cls->can_shrink)(tmp_sect, op_data)) < 0)
+		    HGOTO_ERROR(H5E_FSPACE, H5E_CANTSHRINK, FAIL, "can't check for shrinking container")
+		if(ret_value > 0) {
+		    HDassert(tmp_sect_cls->shrink);
 
                     /* Remove section from free space manager */
-                    if(H5FS_sect_remove_real(fspace, tmp_sect) < 0)
-                        HGOTO_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't remove section from internal data structures")
+		    if(H5FS_sect_remove_real(fspace, tmp_sect) < 0)
+			HGOTO_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't remove section from internal data structures")
                     section_removed = TRUE;
 
                     /* Shrink away section */
-                    if((*tmp_sect_cls->shrink)(&tmp_sect, op_data) < 0)
-                        HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't shrink free space container")
-                } /* end if */
-            } /* end if */
-        } /* end if */
+		    if((*tmp_sect_cls->shrink)(&tmp_sect, op_data) < 0)
+			HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't shrink free space container")
+		} /* end if */
+	    } /* end if */
+	} /* end if */
     } /* end if */
 
 done:
@@ -2418,7 +2418,6 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS_sect_try_shrink_eoa() */
-
 
 
 /*-------------------------------------------------------------------------
@@ -2513,10 +2512,9 @@ done:
  */
 herr_t
 H5FS_vfd_alloc_hdr_and_section_info_if_needed(H5F_t *f, hid_t dxpl_id,
-                                              H5FS_t *fspace,
-                                              haddr_t *fs_addr_ptr)
+    H5FS_t *fspace, haddr_t *fs_addr_ptr)
 {
-    hsize_t	hdr_alloc_size;			
+    hsize_t	hdr_alloc_size;
     hsize_t	sinfo_alloc_size;
     haddr_t     sect_addr = HADDR_UNDEF;        /* address of sinfo */
     haddr_t     eoa_frag_addr = HADDR_UNDEF;    /* Address of fragment at EOA */
@@ -2553,8 +2551,7 @@ H5FS_vfd_alloc_hdr_and_section_info_if_needed(H5F_t *f, hid_t dxpl_id,
     HDassert((f->shared->fs_strategy == H5F_FSPACE_STRATEGY_FSM_AGGR) ||
              (f->shared->fs_strategy == H5F_FSPACE_STRATEGY_PAGE));
 
-    if ( fspace->serial_sect_count > 0 ) {
-
+    if(fspace->serial_sect_count > 0) {
         /* the section info is floating, so space->sinfo should be defined */
         HDassert(fspace->sinfo);
 
@@ -2566,24 +2563,21 @@ H5FS_vfd_alloc_hdr_and_section_info_if_needed(H5F_t *f, hid_t dxpl_id,
 
         /* check for overlap into temporary allocation space */
         if(H5F_IS_TMP_ADDR(f, (eoa + fspace->sect_size)))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_BADRANGE, FAIL, \
-                "hdr file space alloc will overlap into 'temporary' file space")
+            HGOTO_ERROR(H5E_RESOURCE, H5E_BADRANGE, FAIL, "hdr file space alloc will overlap into 'temporary' file space")
 
 	hdr_alloc_size = H5FS_HEADER_SIZE(f);
 
 	/* if page allocation is enabled, extend the hdr_alloc_size to the 
 	 * next page boundary.
          */
-        if ( H5F_PAGED_AGGR(f) ) {
-
+        if(H5F_PAGED_AGGR(f)) {
             HDassert(0 == (eoa % f->shared->fs_page_size));
 
-	    hdr_alloc_size = ((hdr_alloc_size / f->shared->fs_page_size) + 1) *
-                             f->shared->fs_page_size;
+	    hdr_alloc_size = ((hdr_alloc_size / f->shared->fs_page_size) + 1) * f->shared->fs_page_size;
 
             HDassert(hdr_alloc_size >= H5FS_HEADER_SIZE(f));
             HDassert((hdr_alloc_size % f->shared->fs_page_size) == 0);
-        }
+        } /* end if */
 
         /* allocate space for the hdr */
         if(HADDR_UNDEF == (fspace->addr = H5FD_alloc(f->shared->lf, dxpl_id,
@@ -2591,8 +2585,7 @@ H5FS_vfd_alloc_hdr_and_section_info_if_needed(H5F_t *f, hid_t dxpl_id,
                                                    hdr_alloc_size,
                                                    &eoa_frag_addr,
                                                    &eoa_frag_size)))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, \
-                        "can't allocate file space for hdr")
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTALLOC, FAIL, "can't allocate file space for hdr")
 
         /* if the file alignement is 1, there should be no
          * eoa fragment.  Otherwise, drop any fragment on the floor.
@@ -2600,40 +2593,34 @@ H5FS_vfd_alloc_hdr_and_section_info_if_needed(H5F_t *f, hid_t dxpl_id,
         HDassert((eoa_frag_size == 0) || (f->shared->alignment != 1));
 
         /* Cache the new free space header (pinned) */
-        if ( H5AC_insert_entry(f, dxpl_id, H5AC_FSPACE_HDR, fspace->addr,
-                               fspace, H5AC__PIN_ENTRY_FLAG) < 0)
-            HGOTO_ERROR(H5E_FSPACE, H5E_CANTINIT, FAIL, \
-                        "can't add free space header to cache")
+        if(H5AC_insert_entry(f, dxpl_id, H5AC_FSPACE_HDR, fspace->addr, fspace, H5AC__PIN_ENTRY_FLAG) < 0)
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTINIT, FAIL, "can't add free space header to cache")
 
         *fs_addr_ptr = fspace->addr;
-
 
         /* now allocate file space for the section info */
 
         /* Get the EOA for the file -- need for sanity check below */
         if(HADDR_UNDEF == (eoa = H5F_get_eoa(f, H5FD_MEM_FSPACE_SINFO)))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "Unable to get eoa")
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTGET, FAIL, "Unable to get eoa")
 
         /* check for overlap into temporary allocation space */
         if(H5F_IS_TMP_ADDR(f, (eoa + fspace->sect_size)))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_BADRANGE, FAIL, \
-              "sinfo file space alloc will overlap into 'temporary' file space")
+            HGOTO_ERROR(H5E_FSPACE, H5E_BADRANGE, FAIL, "sinfo file space alloc will overlap into 'temporary' file space")
 
         sinfo_alloc_size = fspace->sect_size;
 
 	/* if paged allocation is enabled, extend the sinfo_alloc_size to the 
 	 * next page boundary.
          */
-        if ( H5F_PAGED_AGGR(f) ) {
-
+        if(H5F_PAGED_AGGR(f)) {
             HDassert(0 == (eoa % f->shared->fs_page_size));
 
-	    sinfo_alloc_size = ((sinfo_alloc_size / f->shared->fs_page_size)+1)*
-                               f->shared->fs_page_size;
+	    sinfo_alloc_size = ((sinfo_alloc_size / f->shared->fs_page_size) + 1) * f->shared->fs_page_size;
 
             HDassert(sinfo_alloc_size >= fspace->sect_size);
             HDassert((sinfo_alloc_size % f->shared->fs_page_size) == 0);
-        }
+        } /* end if */
 
         /* allocate space for the section info */
         if(HADDR_UNDEF == (sect_addr = H5FD_alloc(f->shared->lf, dxpl_id,
@@ -2641,8 +2628,7 @@ H5FS_vfd_alloc_hdr_and_section_info_if_needed(H5F_t *f, hid_t dxpl_id,
                                                   sinfo_alloc_size,
                                                   &eoa_frag_addr,
                                                   &eoa_frag_size)))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, \
-                        "can't allocate file space")
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTALLOC, FAIL, "can't allocate file space")
 
         /* if the file alignement is 1, there should be no
          * eoa fragment.  Otherwise, drop the fragment on the floor.
@@ -2678,28 +2664,21 @@ H5FS_vfd_alloc_hdr_and_section_info_if_needed(H5F_t *f, hid_t dxpl_id,
          *
          *                                        JRM -- 11/4/16
          */
-
-        if(H5AC_insert_entry(f, dxpl_id, H5AC_FSPACE_SINFO, sect_addr,
-                             fspace->sinfo, H5AC__NO_FLAGS_SET) < 0)
-
-            HGOTO_ERROR(H5E_FSPACE, H5E_CANTINIT, FAIL, \
-                        "can't add free space sinfo to cache")
+        if(H5AC_insert_entry(f, dxpl_id, H5AC_FSPACE_SINFO, sect_addr, fspace->sinfo, H5AC__NO_FLAGS_SET) < 0)
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTINIT, FAIL, "can't add free space sinfo to cache")
 
         /* We have changed the sinfo address -- Mark free space header dirty */
         if(H5AC_mark_entry_dirty(fspace) < 0)
-            HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, \
-                        "unable to mark free space header as dirty")
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
 
         /* since space has been allocated for the section info and the sinfo
          * has been inserted into the cache, relinquish owership (i.e. float)
          * the section info.
          */
         fspace->sinfo = NULL;
-    }
+    } /* end if */
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5FS_vfd_alloc_hdr_and_section_info_if_needed() */
 

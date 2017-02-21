@@ -440,26 +440,6 @@ done:
  * Programmer:  Mike McGreevy
  *              August 19, 2010
  *
- * Changes:     Modified function to ignore entries marked as being 
- *              prefetched dirty.
- *
- *              If a file with a cache image is opened R/O, and the 
- *              image contains dirty entries, those entries must be 
- *              loaded into the metadata cache marked as clean, as 
- *              otherwise it will attempt to write the entries to file
- *              on file close.
- *
- *              However, this allows the metadata cache to evict such
- *              entries.  Should this entry be accessed at later date
- *              date, the cache will attempt to load the entry from file.
- *              This will result in loading either invalid or out dated
- *              date as the current version will be in the cache image.
- *
- *              Solve this by marking such entries as prefetched dirty,
- *              and refuse to evict them.
- *
- *                                              JRM -- 1/29/17
- *
  *-------------------------------------------------------------------------
  */
 static int
@@ -485,7 +465,7 @@ H5C__evict_tagged_entries_cb(H5C_cache_entry_t *entry, void *_ctx)
             entry and we'll loop back around again (as evicting other
             entries will hopefully unpin this entry) */
         ctx->pinned_entries_need_evicted = TRUE;
-    else if ( ! entry->prefetched_dirty ) {
+    else if(!entry->prefetched_dirty) {
         /* Evict the Entry */
         if(H5C__flush_single_entry(ctx->f, ctx->dxpl_id, entry, H5C__FLUSH_INVALIDATE_FLAG | H5C__FLUSH_CLEAR_ONLY_FLAG | H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG) < 0)
             HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, H5_ITER_ERROR, "Entry eviction failed.")

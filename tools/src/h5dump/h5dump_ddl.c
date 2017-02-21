@@ -1186,6 +1186,11 @@ dump_fcpl(hid_t fid)
     hsize_t  userblock; /* userblock size retrieved from FCPL */
     size_t   off_size;  /* size of offsets in the file */
     size_t   len_size;  /* size of lengths in the file */
+    H5F_fspace_strategy_t  fs_strategy;  /* file space strategy */
+    hbool_t fs_persist; 	/* Persisting free-space or not */
+    hsize_t fs_threshold;   	/* free-space section threshold */
+    hsize_t fsp_size;    	/* file space page size */
+    H5F_info2_t finfo;  	/* file information */
 #ifdef SHOW_FILE_DRIVER
     hid_t    fapl;      /* file access property list ID */
     hid_t    fdriver;   /* file driver */
@@ -1194,11 +1199,6 @@ dump_fcpl(hid_t fid)
     unsigned sym_lk;    /* symbol table B-tree leaf 'K' value */
     unsigned sym_ik;    /* symbol table B-tree internal 'K' value */
     unsigned istore_ik; /* indexed storage B-tree internal 'K' value */
-    H5F_fspace_strategy_t  fs_strategy;  /* file space strategy */
-    hbool_t fs_persist; 	/* Persisting free-space or not */
-    hsize_t fs_threshold;   	/* free-space section threshold */
-    hsize_t fsp_size;    	/* file space page size */
-    H5F_info2_t finfo;  	/* file information */
 
     fcpl=H5Fget_create_plist(fid);
     H5Fget_info2(fid, &finfo);
@@ -1276,9 +1276,8 @@ dump_fcpl(hid_t fid)
         PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FSPACE_STRATEGY_AGGR");
     } else if(fs_strategy == H5F_FSPACE_STRATEGY_NONE) {
         PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FSPACE_STRATEGY_NONE");
-    } else {
+    } else
         PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "Unknown strategy");
-    }
     indentation(dump_indent + COL);
     HDfprintf(rawoutstream, "%s %s\n","FREE_SPACE_PERSIST", fs_persist ? "TRUE" : "FALSE");
     indentation(dump_indent + COL);

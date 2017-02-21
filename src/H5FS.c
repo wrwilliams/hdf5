@@ -832,6 +832,7 @@ H5FS_alloc_hdr(H5F_t *f, H5FS_t *fspace, haddr_t *fs_addr, hid_t dxpl_id)
     HDassert(fspace);
 
     if(!H5F_addr_defined(fspace->addr)) {
+        /* Allocate space for the free space header */
         if(HADDR_UNDEF == (fspace->addr = H5MF_alloc(f, H5FD_MEM_FSPACE_HDR, dxpl_id, (hsize_t)H5FS_HEADER_SIZE(f))))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "file allocation failed for free space header")
 
@@ -884,6 +885,10 @@ H5FS_alloc_sect(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id)
         if(H5AC_insert_entry(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, fspace->sinfo, H5AC__NO_FLAGS_SET) < 0)
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTINIT, FAIL, "can't add free space sections to cache")
 
+        /* Since space has been allocated for the section info and the sinfo
+         * has been inserted into the cache, relinquish owership (i.e. float)
+         * the section info.
+         */
         fspace->sinfo = NULL;
     } /* end if */
 
@@ -919,6 +924,7 @@ H5FS_free(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id, hbool_t free_file_space)
 
     cache_flags = H5AC__DELETED_FLAG | H5AC__TAKE_OWNERSHIP_FLAG;;
 
+    /* Free space for section info */
     if(H5F_addr_defined(fspace->sect_addr)) {
         hsize_t	saved_size;     /* Size of previous section info */
         unsigned sinfo_status = 0;      /* Section info cache status */
@@ -935,8 +941,8 @@ H5FS_free(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id, hbool_t free_file_space)
             cache_udata.f = f;
             cache_udata.dxpl_id = dxpl_id;
             cache_udata.fspace = fspace;
-            if(NULL == (fspace->sinfo = (H5FS_sinfo_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, &cache_udata, H5AC__READ_ONLY_FLAG)))
-                HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, FAIL, "unable to protect free space section info")
+	    if(NULL == (fspace->sinfo = (H5FS_sinfo_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, &cache_udata, H5AC__READ_ONLY_FLAG)))
+		HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, FAIL, "unable to protect free space section info")
 
             /* Unload and release ownership of the free-space manager section info */
             if(H5AC_unprotect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, fspace->sinfo, cache_flags) < 0)
@@ -961,6 +967,7 @@ H5FS_free(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id, hbool_t free_file_space)
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
     } /* end if */
 
+    /* Free space for header */
     if(H5F_addr_defined(fspace->addr)) {
         unsigned hdr_status = 0;        /* Header entry status */
 
@@ -977,8 +984,8 @@ H5FS_free(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id, hbool_t free_file_space)
             cache_udata.nclasses = 0;
             cache_udata.classes = NULL;
             cache_udata.cls_init_udata = NULL;
-            if(NULL == (fspace = (H5FS_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_HDR, fspace->addr, &cache_udata, H5AC__READ_ONLY_FLAG)))
-                HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, FAIL, "unable to protect free space section info")
+	    if(NULL == (fspace = (H5FS_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_HDR, fspace->addr, &cache_udata, H5AC__READ_ONLY_FLAG)))
+		HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, FAIL, "unable to protect free space section info")
 
             /* Unpin the free-space manager header */
             if(H5AC_unpin_entry(fspace) < 0)
@@ -1228,3 +1235,4 @@ HDfprintf(stderr, "%s: fspace->tot_sect_count = %Hu\n", "H5FS_assert", fspace->t
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5FS_assert() */
 #endif /* H5FS_DEBUG_ASSERT */
+

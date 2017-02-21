@@ -103,7 +103,7 @@ H5FD_extend(H5FD_t *file, H5FD_mem_t type, hsize_t size)
 {
     hsize_t orig_size = size;   /* Original allocation size */
     haddr_t eoa;                /* Address of end-of-allocated space */
-    hsize_t extra;              /* Extra space to allocate, to align request */
+    hsize_t extra;        	/* Extra space to allocate, to align request */
     haddr_t ret_value = HADDR_UNDEF;    /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -217,7 +217,7 @@ HDfprintf(stderr, "%s: type = %u, size = %Hu\n", FUNC, (unsigned)type, size);
     /* Post-condition sanity check */
     if(!file->paged_aggr && file->alignment > 1 && orig_size >= file->threshold)
         HDassert(!(ret_value % file->alignment));
-    
+
     /* Convert absolute file offset to relative address */
     ret_value -= file->base_addr;
 
@@ -266,7 +266,7 @@ H5FD_alloc(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type, H5F_t *f, hsize_t size,
     if(!H5F_addr_defined(ret_value))
         HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, HADDR_UNDEF, "real 'alloc' request failed")
 
-    /* update the driver information message in the superblock extension
+    /* Update the driver information message in the superblock extension
      * if it exists.  If it doesn't exist, this call is a no-op.
      */
     if(H5F_update_super_ext_driver_msg(f, dxpl_id) < 0)
@@ -379,8 +379,8 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5FD_free(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type, H5F_t *f, haddr_t addr,
-    hsize_t size)
+H5FD_free(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type, H5F_t *f,
+    haddr_t addr, hsize_t size)
 {
     herr_t      ret_value = SUCCEED;       /* Return value */
 
@@ -430,8 +430,8 @@ done:
  *-------------------------------------------------------------------------
  */
 htri_t
-H5FD_try_extend(H5FD_t *file, H5FD_mem_t type, haddr_t blk_end, 
-    H5F_t *f, hid_t dxpl_id, hsize_t extra_requested)
+H5FD_try_extend(H5FD_t *file, H5FD_mem_t type, H5F_t *f, hid_t dxpl_id,
+    haddr_t blk_end, hsize_t extra_requested)
 {
     haddr_t eoa;                /* End of allocated space in file */
     htri_t ret_value = FALSE;   /* Return value */

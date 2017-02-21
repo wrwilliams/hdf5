@@ -36,13 +36,8 @@
 /* File for external link test.  Created with gen_udlinks.c */
 #define LINKED_FILE  "be_extlink2.h5"
 
-#ifdef H5_VMS
-#define TMPDIR          "[.tmp]"
-#define TMPDIR2         "[.tmp2]"
-#else /* H5_VMS */
 #define TMPDIR          "tmp/"
 #define TMPDIR2         "tmp2/"
-#endif /* H5_VMS */
 
 /* Symlinks for external link symlink test */
 #define SYMLINK1  TMPDIR "sym1.h5"
@@ -320,7 +315,7 @@ typedef struct {
  * Function:    fix_ext_filename
  *
  * Purpose:     Internal function to append path to file name.  It handles
- *              path name of Unix, Windows, and OpenVMS.
+ *              path name of Unix and Windows.
  *
  * Return:      void
  *
@@ -333,17 +328,8 @@ fix_ext_filename(char *path_name, char *cwd, const char *file_name)
 {
     HDstrcpy(path_name, cwd);
 
-#ifdef H5_VMS
-    if(file_name[0] == '[') {
-        char *tmp = file_name;
-        path_name[strlen(cwd)-1] = '\0';
-        HDstrcat(path_name, ++tmp);
-    } else
-        HDstrcat(path_name, file_name);
-#else
     HDstrcat(path_name, "/");
     HDstrcat(path_name, file_name);
-#endif
 }
 
 
@@ -364,7 +350,7 @@ fix_ext_filename(char *path_name, char *cwd, const char *file_name)
  *-------------------------------------------------------------------------
  */
 static int
-mklinks(hid_t fcpl, hid_t fapl, hbool_t new_format)
+mklinks(hid_t fapl, hbool_t new_format)
 {
     hid_t		file, scalar, grp, d1;
     hsize_t	        size[1] = {1};
@@ -377,7 +363,7 @@ mklinks(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
     /* Create a file */
     h5_fixname(FILENAME[1], fapl, filename, sizeof filename);
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if((scalar = H5Screate_simple(1, size, size)) < 0) TEST_ERROR
 
     /* Create a group */
@@ -429,7 +415,7 @@ mklinks(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-new_links(hid_t fcpl, hid_t fapl, hbool_t new_format)
+new_links(hid_t fapl, hbool_t new_format)
 {
     hid_t		file_a, file_b=(-1);
     hid_t		grp1_a=(-1), grp1_b=(-1), grp2_a=(-1), grp2_b=(-1);
@@ -445,10 +431,10 @@ new_links(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
     /* Create two files */
     h5_fixname(FILENAME[1], fapl, filename, sizeof filename);
-    if((file_a = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((file_a = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     h5_fixname(FILENAME[2], fapl, filename, sizeof filename);
-    if((file_b = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((file_b = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     if((scalar = H5Screate_simple (1, size, size)) < 0) TEST_ERROR
 
@@ -752,7 +738,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-long_links(hid_t fcpl, hid_t fapl, hbool_t new_format)
+long_links(hid_t fapl, hbool_t new_format)
 {
     hid_t		fid = (-1);     /* File ID */
     hid_t		gid = (-1);     /* Group ID */
@@ -760,7 +746,7 @@ long_links(hid_t fcpl, hid_t fapl, hbool_t new_format)
     char               *objname = NULL; /* Name of object [Long] */
     size_t              u;              /* Local index variable */
     char		filename[NAME_BUF_SIZE];
- 
+
     if(new_format)
         TESTING("long names for objects & links (w/new group format)")
     else
@@ -768,7 +754,7 @@ long_links(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
     /* Create files */
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-    if((fid=H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create group with short name in file (used as target for hard links) */
     if((gid = H5Gcreate2(fid, "grp1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -828,7 +814,7 @@ long_links(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-toomany(hid_t fcpl, hid_t fapl, hbool_t new_format)
+toomany(hid_t fapl, hbool_t new_format)
 {
     hid_t		fid = (-1);     	/* File ID */
     hid_t	gid = (-1), gid2 = (-1);	/* Group IDs */
@@ -848,7 +834,7 @@ toomany(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
     /* Create file */
     h5_fixname(FILENAME[1], fapl, filename, sizeof filename);
-    if((fid=H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create group with short name in file (used as target for hard links) */
     if((gid = H5Gcreate2(fid, "final", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -1466,7 +1452,7 @@ test_copy(hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-test_move_preserves(hid_t fcpl, hid_t fapl_id, hbool_t new_format)
+test_move_preserves(hid_t fapl_id, hbool_t new_format)
 {
     hid_t file_id=-1;
     hid_t group_id=-1;
@@ -1490,7 +1476,7 @@ test_move_preserves(hid_t fcpl, hid_t fapl_id, hbool_t new_format)
     /* Create a file creation property list with creation order stored for links
      * in the root group
      */
-    if((fcpl_id = H5Pcopy(fcpl)) < 0) TEST_ERROR
+    if((fcpl_id = H5Pcreate(H5P_FILE_CREATE)) < 0) TEST_ERROR
     if(H5Pget_link_creation_order(fcpl_id, &crt_order_flags) < 0) TEST_ERROR
     if(crt_order_flags != 0) TEST_ERROR
     if(H5Pset_link_creation_order(fcpl_id, H5P_CRT_ORDER_TRACKED) < 0) TEST_ERROR
@@ -1792,7 +1778,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-external_link_root(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_root(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1), gid2 = (-1);	/* Group IDs */
@@ -1813,7 +1799,7 @@ external_link_root(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[4], fapl, filename2, sizeof filename2);
 
     /* Create file to point to */
-    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Close file */
     if(H5Fclose(fid) < 0) TEST_ERROR
@@ -1822,7 +1808,7 @@ external_link_root(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Lis_registered(H5L_TYPE_EXTERNAL) != TRUE) TEST_ERROR
 
     /* Create file with link to first file */
-    if((fid = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link to object in first file */
     if(H5Lcreate_external(filename1, "/", fid, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -1977,7 +1963,7 @@ external_link_root(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_path(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_path(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1), gid2 = (-1);	/* Group IDs */
@@ -1995,7 +1981,7 @@ external_link_path(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[4], fapl, filename2, sizeof filename2);
 
     /* Create file to point to */
-    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create object down a path */
     if((gid = H5Gcreate2(fid, "A", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -2012,7 +1998,7 @@ external_link_path(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
 
     /* Create file with link to first file */
-    if((fid=H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link to object in first file */
     if(H5Lcreate_external(filename1, "/A/B/C", fid, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -2085,7 +2071,7 @@ external_link_path(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_mult(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_mult(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1), fid2 = (-1); 	/* File IDs */
     hid_t	gid = (-1), gid2 = (-1);	/* Group IDs */
@@ -2107,7 +2093,7 @@ external_link_mult(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[6], fapl, filename4, sizeof filename4);
 
     /* Create first file to point to */
-    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create object down a path */
     if((gid = H5Gcreate2(fid, "A", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -2123,7 +2109,7 @@ external_link_mult(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Create second file to point to */
-    if((fid=H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link down a path */
     if((gid = H5Gcreate2(fid, "D", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -2140,7 +2126,7 @@ external_link_mult(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Create third file to point to */
-    if((fid=H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link down a path */
     if((gid = H5Gcreate2(fid, "G", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -2158,7 +2144,7 @@ external_link_mult(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
 
     /* Create file with link to third file */
-    if((fid=H5Fcreate(filename4, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename4, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link to object in first file */
     if(H5Lcreate_external(filename3, "/G/H/I", fid, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -2205,7 +2191,7 @@ external_link_mult(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if((gid = H5Gopen2(fid, "ext_link", H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
 
     /* The intermediate files should not stay open. Replace one of them with a new file. */
-    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if(H5Fclose(fid2) < 0) TEST_ERROR
 
     /* Open the other with write access and delete the external link in it */
@@ -2248,7 +2234,7 @@ external_link_mult(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_self(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_self(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1), gid2 = (-1);	/* Group IDs */
@@ -2269,7 +2255,7 @@ external_link_self(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[3], fapl, filename3, sizeof filename1);
 
     /* Create file */
-    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create an lcpl with intermediate group creation set */
     if((lcpl_id = H5Pcreate(H5P_LINK_CREATE)) < 0) TEST_ERROR
@@ -2321,7 +2307,7 @@ external_link_self(hid_t fcpl, hid_t fapl, hbool_t new_format)
         */
 
     /* Create file2 with an external link to file1  */
-    if((fid=H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     if(H5Lcreate_external(filename1, "/A", fid, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
 
@@ -2329,7 +2315,7 @@ external_link_self(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Create file3 as a target */
-    if((fid=H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if((gid = H5Gcreate2(fid, "end", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
     if(H5Gclose(gid) < 0) TEST_ERROR
     if(H5Fclose(fid) < 0) TEST_ERROR
@@ -2405,7 +2391,7 @@ external_link_self(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_pingpong(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_pingpong(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1), gid2 = (-1);	/* Group IDs */
@@ -2423,7 +2409,7 @@ external_link_pingpong(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[4], fapl, filename2, sizeof filename2);
 
     /* Create first file */
-    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external links for chain */
     if(H5Lcreate_external(filename2, "/link2", fid, "link1", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -2438,7 +2424,7 @@ external_link_pingpong(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Create second file */
-    if((fid=H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external links for chain */
     if(H5Lcreate_external(filename1, "/link3", fid, "link2", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -2487,7 +2473,6 @@ external_link_pingpong(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
     /* Close first file */
     if(H5Fclose(fid) < 0) TEST_ERROR
-
 
     PASSED();
 
@@ -2541,14 +2526,13 @@ external_link_pingpong(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_toomany(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_toomany(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1), gid2 = (-1);	/* Group IDs */
     char        objname[NAME_BUF_SIZE];         /* Object name */
     char	filename1[NAME_BUF_SIZE],
     		filename2[NAME_BUF_SIZE];       /* Names of files to externally link across */
-
 
     if(new_format)
         TESTING("too many external links (w/new group format)")
@@ -2566,7 +2550,7 @@ external_link_toomany(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[4], fapl, filename2, sizeof filename2);
 
     /* Create first file */
-    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external links for chain */
     if(H5Lcreate_external(filename2, "/link2", fid, "link1", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -2583,7 +2567,7 @@ external_link_toomany(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Create second file */
-    if((fid=H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external links for chain */
     if(H5Lcreate_external(filename1, "/link3", fid, "link2", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -2666,7 +2650,7 @@ external_link_toomany(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_dangling(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_dangling(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1);	                /* Group IDs */
@@ -2685,7 +2669,7 @@ external_link_dangling(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[4], fapl, filename2, sizeof filename2);
 
     /* Create first file */
-    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create dangling external links */
     if(H5Lcreate_external("missing", "/missing", fid, "no_file", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -2695,7 +2679,7 @@ external_link_dangling(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Create second file (for dangling object test) */
-    if((fid=H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Close file */
     if(H5Fclose(fid) < 0) TEST_ERROR
@@ -2777,7 +2761,7 @@ external_link_dangling(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_prefix(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_prefix(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1);	                /* Group IDs */
@@ -2804,7 +2788,7 @@ external_link_prefix(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[17], fapl, filename3, sizeof filename3);
 
     /* Create the target file */
-    if((fid=H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if((gid=H5Gcreate2(fid, "A", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
 
     /* closing for target file */
@@ -2813,7 +2797,7 @@ external_link_prefix(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
 
     /* Create the main file */
-    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link to target file (without the absolute path) */
     if(H5Lcreate_external(filename2, "/A", fid, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -2869,7 +2853,7 @@ external_link_prefix(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_abs_mainpath(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_abs_mainpath(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1);	                /* Group IDs */
@@ -2897,13 +2881,12 @@ external_link_abs_mainpath(hid_t fcpl, hid_t fapl, hbool_t new_format)
      * set up name for main file:
      *	Linux: "/CWD/tmp/extlinks0"
      *  Window: "<cur drive>:/CWD/tmp/extlinks0"
-     *  OpenVMS: "<cur disk>$<partition>:[CWD.tmp]extlinks0"
      */
     fix_ext_filename(tmpname, cwdpath, FILENAME[13]);
     h5_fixname(tmpname, fapl, filename1, sizeof filename1);
 
     /* Create the target file */
-    if((fid = H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if((gid = H5Gcreate2(fid, "A", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
 
     /* closing for target file */
@@ -2912,7 +2895,7 @@ external_link_abs_mainpath(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
 
     /* Create the main file */
-    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link to target file */
     if(H5Lcreate_external(filename2, "/A", fid, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -2964,7 +2947,7 @@ external_link_abs_mainpath(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_rel_mainpath(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_rel_mainpath(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1);	                /* Group IDs */
@@ -2989,7 +2972,7 @@ external_link_rel_mainpath(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[21], fapl, filename3, sizeof filename3);
 
     /* Create the target file */
-    if((fid=H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if((gid=H5Gcreate2(fid, "A", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
 
     /* closing for target file */
@@ -2998,7 +2981,7 @@ external_link_rel_mainpath(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
 
     /* Create the main file */
-    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link to target file */
     if(H5Lcreate_external(filename2, "/A", fid, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -3050,7 +3033,7 @@ external_link_rel_mainpath(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_cwd(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_cwd(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1);	                /* Group IDs */
@@ -3081,7 +3064,7 @@ external_link_cwd(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(tmpname, fapl, filename1, sizeof filename1);
 
     /* Create the target file */
-    if((fid = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if((gid = H5Gcreate2(fid, "A", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
 
     /* closing for target file */
@@ -3090,7 +3073,7 @@ external_link_cwd(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
 
     /* Create the main file */
-    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link to target file */
     if(H5Lcreate_external(filename2, "/A", fid, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -3143,7 +3126,7 @@ external_link_cwd(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_abstar(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_abstar(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1);	                /* Group IDs */
@@ -3177,7 +3160,7 @@ external_link_abstar(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[23], fapl, filename3, sizeof filename3);
 
     /* Create the target file */
-    if((fid = H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if((gid = H5Gcreate2(fid, "A", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
 
     /* closing for target file */
@@ -3186,7 +3169,7 @@ external_link_abstar(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
 
     /* Create the main file */
-    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link to target file */
     if(H5Lcreate_external(filename2, "/A", fid, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -3237,7 +3220,7 @@ external_link_abstar(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_abstar_cur(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_abstar_cur(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1);	                /* Group IDs */
@@ -3271,7 +3254,7 @@ external_link_abstar_cur(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(tmpname, fapl, filename2, sizeof filename2);
 
     /* Create the target file */
-    if((fid = H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if((gid = H5Gcreate2(fid, "A", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
 
     /* closing for target file */
@@ -3280,7 +3263,7 @@ external_link_abstar_cur(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
 
     /* Create the main file */
-    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link to target file */
     if(H5Lcreate_external(filename2, "/A", fid, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -3332,7 +3315,7 @@ external_link_abstar_cur(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_reltar(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_reltar(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1);	                /* Group IDs */
@@ -3356,7 +3339,7 @@ external_link_reltar(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[26], fapl, filename2, sizeof filename2);
 
     /* Create the target file */
-    if((fid = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if((gid = H5Gcreate2(fid, "A", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
 
     /* closing for target file */
@@ -3365,7 +3348,7 @@ external_link_reltar(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
 
     /* Create the main file */
-    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link to target file */
     if(H5Lcreate_external(filename2, "///A", fid, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -3414,7 +3397,7 @@ external_link_reltar(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_chdir(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_chdir(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1);	                /* Group IDs */
@@ -3440,7 +3423,7 @@ external_link_chdir(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[28], fapl, filename3, sizeof filename3);
 
     /* Create the target file */
-    if((fid=H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if((gid=H5Gcreate2(fid, "A", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
 
     /* closing for target file */
@@ -3449,7 +3432,7 @@ external_link_chdir(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
 
     /* Create the main file */
-    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link to target file */
     if(H5Lcreate_external(filename2, "/A", fid, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -3967,7 +3950,7 @@ external_set_elink_fapl3(hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_set_elink_acc_flags(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_set_elink_acc_flags(const char *env_h5_drvr, hid_t fapl, hbool_t new_format)
 {
     hid_t       file1 = -1, file2 = -1, group = -1, subgroup = -1, gapl = -1;
     char        filename1[NAME_BUF_SIZE],
@@ -3983,8 +3966,8 @@ external_set_elink_acc_flags(hid_t fcpl, hid_t fapl, hbool_t new_format)
     /* Create parent and target files, and external link */
     h5_fixname(FILENAME[40], fapl, filename1, sizeof filename1);
     h5_fixname(FILENAME[41], fapl, filename2, sizeof filename2);
-    if((file1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
-    if((file2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((file1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
+    if((file2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if(H5Lcreate_external(filename2, "/", file1, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
 
     /* Close file2, leave file1 open (should be read-write) */
@@ -4026,6 +4009,15 @@ external_set_elink_acc_flags(hid_t fcpl, hid_t fapl, hbool_t new_format)
     } H5E_END_TRY;
     if(subgroup != FAIL) TEST_ERROR
 
+    /* Attempt to set SWMR flags on gapl.
+     * This is just a smoke check of the flags. The actual external link
+     * functionality is tested in the SWMR tests.
+     */
+    /* Set SWMR reader flags on gapl */
+    if(H5Pset_elink_acc_flags(gapl, H5F_ACC_RDONLY | H5F_ACC_SWMR_READ) < 0) TEST_ERROR
+    /* Set SWMR writer flags on gapl */
+    if(H5Pset_elink_acc_flags(gapl, H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE) < 0) TEST_ERROR
+
     /* Attempt to set invalid flags on gapl */
     H5E_BEGIN_TRY {
         ret = H5Pset_elink_acc_flags(gapl, H5F_ACC_TRUNC);
@@ -4039,17 +4031,101 @@ external_set_elink_acc_flags(hid_t fcpl, hid_t fapl, hbool_t new_format)
         ret = H5Pset_elink_acc_flags(gapl, H5F_ACC_CREAT);
     } H5E_END_TRY;
     if(ret != FAIL) TEST_ERROR
+    /* SWMR reader with write access */
+    H5E_BEGIN_TRY {
+        ret = H5Pset_elink_acc_flags(gapl, H5F_ACC_RDWR | H5F_ACC_SWMR_READ);
+    } H5E_END_TRY;
+    if(ret != FAIL) TEST_ERROR
+    /* SWMR writer with read-only access */
+    H5E_BEGIN_TRY {
+        ret = H5Pset_elink_acc_flags(gapl, H5F_ACC_RDONLY | H5F_ACC_SWMR_WRITE);
+    } H5E_END_TRY;
+    if(ret != FAIL) TEST_ERROR
 
     /* Close file1 */
     if(H5Fclose(file1) < 0) TEST_ERROR
 
+    /* Only run this part with VFDs that support SWMR */
+    if(H5FD_supports_swmr_test(env_h5_drvr)) {
+
+        /* Reopen file1, with read-write and SWMR-write access */
+        /* Only supported under the latest file format */
+        if(new_format) {
+            if((file1 = H5Fopen(filename1, H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE, fapl)) < 0) FAIL_STACK_ERROR
+
+            /* Open a group through the external link using default gapl */
+            if((group = H5Gopen2(file1, "/ext_link/group", H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
+
+            /* Verify that the correct parameters have been set on file2 */
+            if((file2 = H5Iget_file_id(group)) < 0) FAIL_STACK_ERROR
+            if(H5Fget_intent(file2, &flags) < 0) FAIL_STACK_ERROR
+            if(flags != (H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE)) TEST_ERROR
+
+            /* Close file2 and group */
+            if(H5Gclose(group) < 0) FAIL_STACK_ERROR
+            if(H5Fclose(file2) < 0) FAIL_STACK_ERROR
+
+            /* Set elink access flags on gapl to be H5F_ACC_RDWR (dropping SWMR_WRITE) */
+            if(H5Pset_elink_acc_flags(gapl, H5F_ACC_RDWR) < 0) FAIL_STACK_ERROR
+
+            /* Open a group through the external link using gapl */
+            if((group = H5Gopen2(file1, "/ext_link/group", gapl)) < 0) FAIL_STACK_ERROR
+
+            /* Verify that the correct parameters have been set on file2 */
+            if((file2 = H5Iget_file_id(group)) < 0) FAIL_STACK_ERROR
+            if(H5Fget_intent(file2, &flags) < 0) FAIL_STACK_ERROR
+            if(flags != H5F_ACC_RDWR) TEST_ERROR
+
+            /* Close file2 and group */
+            if(H5Gclose(group) < 0) FAIL_STACK_ERROR
+            if(H5Fclose(file2) < 0) FAIL_STACK_ERROR
+
+            /* Close file1 */
+            if(H5Fclose(file1) < 0) TEST_ERROR
+        }
+
+        /* Reopen file1, with read-only and SWMR-read access */
+        if((file1 = H5Fopen(filename1, H5F_ACC_RDONLY | H5F_ACC_SWMR_READ, fapl)) < 0) FAIL_STACK_ERROR
+
+        /* Open a group through the external link using default gapl */
+        if((group = H5Gopen2(file1, "/ext_link/group", H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
+
+        /* Verify that the correct parameters have been set on file2 */
+        if((file2 = H5Iget_file_id(group)) < 0) FAIL_STACK_ERROR
+        if(H5Fget_intent(file2, &flags) < 0) FAIL_STACK_ERROR
+        if(flags != (H5F_ACC_RDONLY | H5F_ACC_SWMR_READ)) TEST_ERROR
+
+        /* Close file2 and group */
+        if(H5Gclose(group) < 0) FAIL_STACK_ERROR
+        if(H5Fclose(file2) < 0) FAIL_STACK_ERROR
+
+        /* Set elink access flags on gapl to be H5F_ACC_RDWR (dropping SWMR_WRITE) */
+        if(H5Pset_elink_acc_flags(gapl, H5F_ACC_RDONLY) < 0) FAIL_STACK_ERROR
+
+        /* Open a group through the external link using gapl */
+        if((group = H5Gopen2(file1, "/ext_link/group", gapl)) < 0) FAIL_STACK_ERROR
+
+        /* Verify that the correct parameters have been set on file2 */
+        if((file2 = H5Iget_file_id(group)) < 0) FAIL_STACK_ERROR
+        if(H5Fget_intent(file2, &flags) < 0) FAIL_STACK_ERROR
+        if(flags != H5F_ACC_RDONLY) TEST_ERROR
+
+        /* Close file2 and group */
+        if(H5Gclose(group) < 0) FAIL_STACK_ERROR
+        if(H5Fclose(file2) < 0) FAIL_STACK_ERROR
+
+        /* Close file1 */
+        if(H5Fclose(file1) < 0) TEST_ERROR
+    } /* end if */
+
+
     /* Verify that H5Fcreate and H5Fopen reject H5F_ACC_DEFAULT */
     H5E_BEGIN_TRY {
-        file1 = H5Fcreate(filename1, H5F_ACC_DEFAULT, fcpl, fapl);
+        file1 = H5Fcreate(filename1, H5F_ACC_DEFAULT, H5P_DEFAULT, fapl);
     } H5E_END_TRY;
     if(file1 != FAIL) TEST_ERROR
     H5E_BEGIN_TRY {
-        file1 = H5Fcreate(filename1, H5F_ACC_TRUNC | H5F_ACC_DEFAULT, fcpl, fapl);
+        file1 = H5Fcreate(filename1, H5F_ACC_TRUNC | H5F_ACC_DEFAULT, H5P_DEFAULT, fapl);
     } H5E_END_TRY;
     if(file1 != FAIL) TEST_ERROR
     H5E_BEGIN_TRY {
@@ -4134,7 +4210,7 @@ external_set_elink_cb_cb(const char *parent_file, const char *parent_group,
 
 /* Main test function */
 static int
-external_set_elink_cb(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_set_elink_cb(hid_t fapl, hbool_t new_format)
 {
     hid_t       file1 = -1, file2 = -1, group = -1, gapl = -1, fam_fapl = -1, ret_fapl = -1, base_driver;
     set_elink_cb_t op_data,
@@ -4169,8 +4245,8 @@ external_set_elink_cb(hid_t fcpl, hid_t fapl, hbool_t new_format)
     /* Create parent and target files, group, and external link */
     h5_fixname(FILENAME[42], fapl, filename1, sizeof filename1);
     h5_fixname(FILENAME[43], fam_fapl, filename2, sizeof filename2);
-    if((file1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
-    if((file2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fam_fapl)) < 0) TEST_ERROR
+    if((file1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
+    if((file2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fam_fapl)) < 0) TEST_ERROR
     if((group = H5Gcreate2(file1, "group1",H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
     if(H5Lcreate_external(filename2, "/", group, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
 
@@ -5151,7 +5227,7 @@ external_link_win9(hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_recursive(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_recursive(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1);	                /* Group IDs */
@@ -5166,7 +5242,7 @@ external_link_recursive(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[3], fapl, filename1, sizeof filename1);
 
     /* Create first file */
-    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create recursive external links */
     if(H5Lcreate_external(filename1, "/recursive", fid, "recursive", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -5221,7 +5297,7 @@ external_link_recursive(hid_t fcpl, hid_t fapl, hbool_t new_format)
  *-------------------------------------------------------------------------
  */
 static int
-external_link_query(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_query(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1);	                /* Group IDs */
@@ -5243,7 +5319,7 @@ external_link_query(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[4], fapl, filename2, sizeof filename2);
 
     /* Create first file, with external link to object in second file */
-    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link */
     /* (add a few extra '/'s to make certain library normalizes external link object names) */
@@ -5262,7 +5338,7 @@ external_link_query(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Create second file to point to */
-    if((fid=H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create object to link to */
     if((gid = H5Gcreate2(fid, "dst", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -5348,7 +5424,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-external_link_unlink_compact(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_unlink_compact(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1), gid2 = (-1);	/* Group IDs */
@@ -5365,7 +5441,7 @@ external_link_unlink_compact(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[4], fapl, filename2, sizeof filename2);
 
     /* Create first file, with external link to object in second file */
-    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link */
     if(H5Lcreate_external(filename2, "/dst", fid, "src", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -5374,7 +5450,7 @@ external_link_unlink_compact(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Create second file to point to */
-    if((fid = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create object to link to */
     if((gid = H5Gcreate2(fid, "dst", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -5434,7 +5510,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-external_link_unlink_dense(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_unlink_dense(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t       gcpl = (-1);                    /* Group creation property list ID */
@@ -5457,7 +5533,7 @@ external_link_unlink_dense(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[4], fapl, filename2, sizeof filename2);
 
     /* Create first file, with external link to object in second file */
-    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Open root group */
     if((gid = H5Gopen2(fid, "/", H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
@@ -5501,7 +5577,7 @@ external_link_unlink_dense(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Create second file to point to */
-    if((fid = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create object to link to */
     if((gid = H5Gcreate2(fid, "dst", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -5580,7 +5656,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-external_link_move(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_move(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1), gid2 = (-1);	/* Group IDs */
@@ -5598,7 +5674,7 @@ external_link_move(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[4], fapl, filename2, sizeof filename2);
 
     /* Create first file, with external link to object in second file */
-    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create external link */
     if(H5Lcreate_external(filename2, "/dst", fid, "src", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
@@ -5607,7 +5683,7 @@ external_link_move(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Create second file to point to */
-    if((fid = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create object to link to */
     if((gid = H5Gcreate2(fid, "dst", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -5772,7 +5848,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-external_link_ride(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_ride(hid_t fapl, hbool_t new_format)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t       gcpl = (-1);                    /* Group creation property list ID */
@@ -5795,7 +5871,7 @@ external_link_ride(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[4], fapl, filename2, sizeof filename2);
 
     /* Create first file, with external link to object in second file */
-    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Open root group */
     if((gid = H5Gopen2(fid, "/", H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
@@ -5843,7 +5919,7 @@ external_link_ride(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Create second file to point to */
-    if((fid = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create object to link to */
     if((gid = H5Gcreate2(fid, "dst", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -5958,7 +6034,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-external_link_closing(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_closing(hid_t fapl, hbool_t new_format)
 {
     hid_t       fid1 = (-1), fid2 = (-1), fid3 = (-1), fid4=(-1);
     hid_t       gid=(-1), tid=(-1), tid2=(-1), sid=(-1), did=(-1);
@@ -5993,10 +6069,10 @@ external_link_closing(hid_t fcpl, hid_t fapl, hbool_t new_format)
     h5_fixname(FILENAME[6], fapl, filename4, sizeof filename4);
 
     /* Create four files */
-    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
-    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
-    if((fid3 = H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
-    if((fid4 = H5Fcreate(filename4, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
+    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
+    if((fid3 = H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
+    if((fid4 = H5Fcreate(filename4, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create a dataspace and a datatype so we can create/commit a dataset/datatype in the files */
     dims[0] = 2;
@@ -6143,10 +6219,10 @@ external_link_closing(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Fclose(fid1) < 0) TEST_ERROR
 
     /* Re-create each file. If they are hanging open, these creates will fail */
-    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
-    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
-    if((fid3 = H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
-    if((fid4 = H5Fcreate(filename4, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
+    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
+    if((fid3 = H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
+    if((fid4 = H5Fcreate(filename4, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Cleanup */
     if(H5Sclose(sid) < 0) TEST_ERROR
@@ -6266,7 +6342,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-external_link_strong(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_link_strong(hid_t fapl, hbool_t new_format)
 {
     hid_t       my_fapl = (-1);                 /* File access property list */
     hid_t       fid1 = (-1), fid2 = (-1);       /* File ID */
@@ -6291,7 +6367,7 @@ external_link_strong(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Pset_fclose_degree(my_fapl, H5F_CLOSE_STRONG) < 0) TEST_ERROR
 
     /* Create a group at /A/B/C in first file */
-    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0) TEST_ERROR
+    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0) TEST_ERROR
     if((gid1 = H5Gcreate2(fid1, "A", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
     if(H5Gclose(gid1) < 0) TEST_ERROR
     if((gid1 = H5Gcreate2(fid1, "A/B", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -6301,7 +6377,7 @@ external_link_strong(hid_t fcpl, hid_t fapl, hbool_t new_format)
     if(H5Fclose(fid1) < 0) TEST_ERROR
 
     /* Create an external link /W/X/DLINK in second file to <filename1>:/A/B/C */
-    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if((gid2 = H5Gcreate2(fid2, "/W", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
     if(H5Gclose(gid2) < 0) TEST_ERROR
     if((gid2 = H5Gcreate2(fid2, "/W/X", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -6705,7 +6781,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-external_file_cache(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_file_cache(hid_t fapl, hbool_t new_format)
 {
     hid_t       my_fapl = (-1);                 /* Temporary FAPL */
     hid_t       fid1 = (-1);                    /* File ID */
@@ -6753,9 +6829,9 @@ external_file_cache(hid_t fcpl, hid_t fapl, hbool_t new_format)
      * Test 1: One file caches another
      */
     /* Create files */
-    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
-    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
 
     /* Create link */
@@ -6791,9 +6867,9 @@ external_file_cache(hid_t fcpl, hid_t fapl, hbool_t new_format)
      * Test 2: One file caches another, release parent's EFC
      */
     /* Create files */
-    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
-    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
 
     /* Create link */
@@ -6836,13 +6912,13 @@ external_file_cache(hid_t fcpl, hid_t fapl, hbool_t new_format)
      * Test 3: "Y" shaped tree
      */
     /* Create files */
-    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
-    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
-    if((fid3 = H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid3 = H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
-    if((fid4 = H5Fcreate(filename4, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid4 = H5Fcreate(filename4, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
 
     /* Create links */
@@ -6897,13 +6973,13 @@ external_file_cache(hid_t fcpl, hid_t fapl, hbool_t new_format)
      * Test 4: "Y" shaped tree, release parent's EFC
      */
     /* Create files */
-    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
-    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
-    if((fid3 = H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid3 = H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
-    if((fid4 = H5Fcreate(filename4, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid4 = H5Fcreate(filename4, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
 
     /* Create links */
@@ -6960,16 +7036,15 @@ external_file_cache(hid_t fcpl, hid_t fapl, hbool_t new_format)
     /* Verify that all files are now closed */
     H5F_sfile_assert_num(0);
 
-#ifndef H5_CANNOT_OPEN_TWICE
     /*
      * Test 5: 3 file cycle
      */
     /* Create files */
-    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
-    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
-    if((fid3 = H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid3 = H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
 
     /* Create links */
@@ -7013,11 +7088,11 @@ external_file_cache(hid_t fcpl, hid_t fapl, hbool_t new_format)
      * Test 6: 3 file cycle, release parent's EFC
      */
     /* Create files */
-    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
-    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
-    if((fid3 = H5Fcreate(filename3, H5F_ACC_TRUNC, fcpl, my_fapl)) < 0)
+    if((fid3 = H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, my_fapl)) < 0)
         TEST_ERROR
 
     /* Create links */
@@ -7062,7 +7137,6 @@ external_file_cache(hid_t fcpl, hid_t fapl, hbool_t new_format)
 
     /* Verify that all files are now closed */
     H5F_sfile_assert_num(0);
-#endif /* H5_CANNOT_OPEN_TWICE */
 
     /* Close fapl */
     H5Pclose(my_fapl);
@@ -7099,7 +7173,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-external_open_twice(hid_t fcpl, hid_t fapl, hbool_t new_format)
+external_open_twice(hid_t fapl, hbool_t new_format)
 {
     hid_t       fid1 = (-1);                    /* File ID */
     hid_t       fid2 = (-1);                    /* File ID */
@@ -7124,9 +7198,9 @@ external_open_twice(hid_t fcpl, hid_t fapl, hbool_t new_format)
      * Test 1: Open root group twice
      */
     /* Create files */
-    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
+    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         TEST_ERROR
-    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
+    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         TEST_ERROR
 
     /* Create link */
@@ -7163,9 +7237,9 @@ external_open_twice(hid_t fcpl, hid_t fapl, hbool_t new_format)
      * Test 2: Open group twice
      */
     /* Create files */
-    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
+    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         TEST_ERROR
-    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
+    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         TEST_ERROR
 
     /* Create target group */
@@ -7209,9 +7283,9 @@ external_open_twice(hid_t fcpl, hid_t fapl, hbool_t new_format)
      * Test 3: Open dataset twice
      */
     /* Create files */
-    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
+    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         TEST_ERROR
-    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
+    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         TEST_ERROR
 
     /* Create target dataset */
@@ -7259,9 +7333,9 @@ external_open_twice(hid_t fcpl, hid_t fapl, hbool_t new_format)
      * Test 4: Open datatype twice
      */
     /* Create files */
-    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
+    if((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         TEST_ERROR
-    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
+    if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         TEST_ERROR
 
     /* Create target datatype */
@@ -7779,7 +7853,7 @@ const H5L_class_t UD_hard_class[1] = {{
 }};
 
 static int
-ud_hard_links(hid_t fcpl, hid_t fapl)
+ud_hard_links(hid_t fapl)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1), gid2 = (-1);	/* Group IDs */
@@ -7793,13 +7867,13 @@ ud_hard_links(hid_t fcpl, hid_t fapl)
     /* Set up filename and create file*/
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
 
-    if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Get the size of the empty file for reference */
     if(H5Fclose(fid) < 0) TEST_ERROR
     if((empty_size = h5_get_file_size(filename, fapl))<0) TEST_ERROR
 
-    if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Check that external links are registered and UD hard links are not */
     if(H5Lis_registered(H5L_TYPE_EXTERNAL) != TRUE) TEST_ERROR
@@ -7945,7 +8019,7 @@ const H5L_class_t UD_rereg_class[1] = {{
 }};
 
 static int
-ud_link_reregister(hid_t fcpl, hid_t fapl)
+ud_link_reregister(hid_t fapl)
 {
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1), gid2 = (-1);	/* Group IDs */
@@ -7959,13 +8033,13 @@ ud_link_reregister(hid_t fcpl, hid_t fapl)
     /* Set up filename and create file*/
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
 
-    if((fid=H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Get the size of the empty file for reference */
     if(H5Fclose(fid) < 0) TEST_ERROR
     if((empty_size=h5_get_file_size(filename, fapl))<0) TEST_ERROR
 
-    if((fid=H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((fid=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Check that UD hard links are not registered */
     if(H5Lis_registered((H5L_type_t)UD_HARD_TYPE) != FALSE) TEST_ERROR
@@ -9804,11 +9878,10 @@ static size_t link_filter_filter(unsigned int flags, size_t cd_nelmts,
 } /* end link_filter_filter */
 
 static int
-link_filters(hid_t fcpl, hid_t fapl, hbool_t new_format)
+link_filters(hid_t fapl, hbool_t new_format)
 {
-    hid_t       fid = -1;
+    hid_t       fid = -1, fcpl = -1;
     hid_t       gid1 = -1, gid2 = -1, gcpl1 = -1, gcpl2 = -1;
-    hid_t       fcpl2 = -1;
     hid_t       lcpl = -1;
     size_t      cd_nelmts = 1;
     unsigned    cd_value = 2112;
@@ -9836,7 +9909,7 @@ link_filters(hid_t fcpl, hid_t fapl, hbool_t new_format)
     /* Set up filename and create file*/
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
 
-    if((fid=H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
+    if((fid=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         TEST_ERROR
 
     /* Create gcpl, force use of dense storage */
@@ -10044,12 +10117,12 @@ link_filters(hid_t fcpl, hid_t fapl, hbool_t new_format)
         h5_stat_size_t filesize_filtered;
         h5_stat_size_t filesize_unfiltered;
 
-	if((fcpl2 = H5Pcopy(fcpl)) < 0) TEST_ERROR
         /* Create gcpl, force use of dense storage */
-        if(H5Pset_link_phase_change(fcpl2, 2, 2) < 0) TEST_ERROR
+        if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0) TEST_ERROR
+        if(H5Pset_link_phase_change(fcpl, 2, 2) < 0) TEST_ERROR
 
         /* Create file */
-        if((fid=H5Fcreate(filename, H5F_ACC_TRUNC, fcpl2, fapl)) < 0)
+        if((fid=H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
             TEST_ERROR
 
         /* Create links in file */
@@ -10065,10 +10138,10 @@ link_filters(hid_t fcpl, hid_t fapl, hbool_t new_format)
         filesize_unfiltered = h5_get_file_size(filename, fapl);
 
         /* Set deflate fitler */
-        if(H5Pset_deflate(fcpl2, 6) < 0) TEST_ERROR
+        if(H5Pset_deflate(fcpl, 6) < 0) TEST_ERROR
 
         /* Recreate the same file with the deflate filter */
-        if((fid=H5Fcreate(filename, H5F_ACC_TRUNC, fcpl2, fapl)) < 0)
+        if((fid=H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
             TEST_ERROR
         if(H5Lcreate_soft("/", fid, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", H5P_DEFAULT, H5P_DEFAULT) < 0)
             TEST_ERROR
@@ -10086,8 +10159,8 @@ link_filters(hid_t fcpl, hid_t fapl, hbool_t new_format)
                 > ((double)filesize_unfiltered * FILTER_FILESIZE_MAX_FRACTION))
             TEST_ERROR
 
-	/* Close */
-	if(H5Pclose(fcpl2) < 0) TEST_ERROR
+        /* Close */
+        if(H5Pclose(fcpl) < 0) TEST_ERROR
     } /* end if */
 
     PASSED();
@@ -10101,7 +10174,7 @@ error:
         H5Pclose(lcpl);
         H5Pclose(gcpl1);
         H5Pclose(gcpl2);
-        H5Pclose(fcpl2);
+        H5Pclose(fcpl);
     } H5E_END_TRY;
     return -1;
 } /* end link_filters() */
@@ -10409,7 +10482,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-corder_create_empty(hid_t fcpl, hid_t fapl)
+corder_create_empty(hid_t fapl)
 {
     hid_t	file_id = (-1); 	/* File ID */
     hid_t	group_id = (-1);	/* Group ID */
@@ -10422,7 +10495,7 @@ corder_create_empty(hid_t fcpl, hid_t fapl)
 
     /* Create file */
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-    if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create group creation property list */
     if((gcpl_id = H5Pcreate(H5P_GROUP_CREATE)) < 0) TEST_ERROR
@@ -10635,7 +10708,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-corder_create_dense(hid_t fcpl, hid_t fapl)
+corder_create_dense(hid_t fapl)
 {
     hid_t	file_id = (-1); 	/* File ID */
     hid_t	group_id = (-1), group_id2 = (-1);	/* Group IDs */
@@ -10653,7 +10726,7 @@ corder_create_dense(hid_t fcpl, hid_t fapl)
 
     /* Create file */
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-    if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create group creation property list */
     if((gcpl_id = H5Pcreate(H5P_GROUP_CREATE)) < 0) TEST_ERROR
@@ -10768,7 +10841,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-corder_transition(hid_t fcpl, hid_t fapl)
+corder_transition(hid_t fapl)
 {
     hid_t	file_id = (-1); 	/* File ID */
     hid_t	group_id = (-1), group_id2 = (-1);	/* Group IDs */
@@ -10788,7 +10861,7 @@ corder_transition(hid_t fcpl, hid_t fapl)
 
     /* Create file */
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-    if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create group creation property list */
     if((gcpl_id = H5Pcreate(H5P_GROUP_CREATE)) < 0) FAIL_STACK_ERROR
@@ -10998,7 +11071,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-corder_delete(hid_t fcpl, hid_t fapl)
+corder_delete(hid_t fapl)
 {
     hid_t	file_id = (-1); 	/* File ID */
     hid_t	group_id = (-1), group_id2 = (-1);	/* Group IDs */
@@ -11013,8 +11086,6 @@ corder_delete(hid_t fcpl, hid_t fapl)
     char        objname[NAME_BUF_SIZE]; /* Object name */
     char        filename[NAME_BUF_SIZE];/* File name */
     unsigned    u;                      /* Local index variable */
-    H5F_t    	*f = NULL;              /* Internal file object pointer */
-
 
     TESTING("deleting group with creation order indexing in dense form")
 
@@ -11025,7 +11096,7 @@ corder_delete(hid_t fcpl, hid_t fapl)
         h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
 
 	/* Creating file with latest format will enable paged aggregation with persistent fs */
-        if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) FAIL_STACK_ERROR
+        if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) FAIL_STACK_ERROR
 
         /* Close file */
         if(H5Fclose(file_id) < 0) FAIL_STACK_ERROR
@@ -11035,10 +11106,6 @@ corder_delete(hid_t fcpl, hid_t fapl)
 
         /* Re-open the file */
         if((file_id = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0) FAIL_STACK_ERROR
-
-        /* Get a pointer to the internal file object */
-        if(NULL == (f = (H5F_t *)H5I_object(file_id)))
-            FAIL_STACK_ERROR
 
         /* Create group creation property list */
         if((gcpl_id = H5Pcreate(H5P_GROUP_CREATE)) < 0) FAIL_STACK_ERROR
@@ -11091,10 +11158,6 @@ corder_delete(hid_t fcpl, hid_t fapl)
         if(reopen_file) {
             /* Re-open the file */
             if((file_id = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0) FAIL_STACK_ERROR
-
-        /* Get a pointer to the internal file object */
-        if(NULL == (f = (H5F_t *)H5I_object(file_id)))
-            FAIL_STACK_ERROR
 
             /* Delete the group with the creation order index */
             if(H5Ldelete(file_id, CORDER_GROUP_NAME, H5P_DEFAULT) < 0) FAIL_STACK_ERROR
@@ -11295,7 +11358,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-link_info_by_idx(hid_t fcpl, hid_t fapl)
+link_info_by_idx(hid_t fapl)
 {
     hid_t	file_id = (-1); 	/* File ID */
     hid_t	group_id = (-1);	/* Group ID */
@@ -11332,7 +11395,7 @@ link_info_by_idx(hid_t fcpl, hid_t fapl)
 
             /* Create file */
             h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-            if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+            if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
             /* Create group creation property list */
             if((gcpl_id = H5Pcreate(H5P_GROUP_CREATE)) < 0) TEST_ERROR
@@ -11647,7 +11710,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-delete_by_idx(hid_t fcpl, hid_t fapl)
+delete_by_idx(hid_t fapl)
 {
     hid_t	file_id = (-1); 	/* File ID */
     hid_t	group_id = (-1);	/* Group ID */
@@ -11702,7 +11765,7 @@ delete_by_idx(hid_t fcpl, hid_t fapl)
 
                 /* Create file */
                 h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-                if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+                if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
                 /* Create group creation property list */
                 if((gcpl_id = H5Pcreate(H5P_GROUP_CREATE)) < 0) TEST_ERROR
@@ -12480,7 +12543,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-link_iterate(hid_t fcpl, hid_t fapl)
+link_iterate(hid_t fapl)
 {
     hid_t	file_id = (-1); 	/* File ID */
     hid_t	group_id = (-1);	/* Group ID */
@@ -12561,7 +12624,7 @@ link_iterate(hid_t fcpl, hid_t fapl)
 
                 /* Create file */
                 h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-                if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+                if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
                 /* Set creation order tracking & indexing on group */
                 if(H5Pset_link_creation_order(gcpl_id, (H5P_CRT_ORDER_TRACKED | (use_index ? H5P_CRT_ORDER_INDEXED : (unsigned)0))) < 0) TEST_ERROR
@@ -13164,7 +13227,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-open_by_idx(hid_t fcpl, hid_t fapl)
+open_by_idx(hid_t fapl)
 {
     hid_t	file_id = (-1); 	/* File ID */
     hid_t	mount_file_id = (-1); 	/* File ID for file to mount */
@@ -13195,7 +13258,7 @@ open_by_idx(hid_t fcpl, hid_t fapl)
 
     /* Create file to mount */
     h5_fixname(FILENAME[1], fapl, filename, sizeof filename);
-    if((mount_file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((mount_file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Loop over operating on different indices on link fields */
     for(idx_type = H5_INDEX_NAME; idx_type <= H5_INDEX_CRT_ORDER; H5_INC_ENUM(H5_index_t, idx_type)) {
@@ -13249,7 +13312,7 @@ open_by_idx(hid_t fcpl, hid_t fapl)
 
                 /* Create file */
                 h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-                if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+                if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
                 /* Set creation order tracking & indexing on group */
                 if(H5Pset_link_creation_order(gcpl_id, (H5P_CRT_ORDER_TRACKED | (use_index ? H5P_CRT_ORDER_INDEXED : (unsigned)0))) < 0) TEST_ERROR
@@ -13600,7 +13663,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-object_info(hid_t fcpl, hid_t fapl)
+object_info(hid_t fapl)
 {
     hid_t	file_id = (-1); 	/* File ID */
     hid_t	group_id = (-1);	/* Group ID */
@@ -13685,7 +13748,7 @@ object_info(hid_t fcpl, hid_t fapl)
 
                 /* Create file */
                 h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-                if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+                if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
                 /* Set creation order tracking & indexing on group */
                 if(H5Pset_link_creation_order(gcpl_id, (H5P_CRT_ORDER_TRACKED | (use_index ? H5P_CRT_ORDER_INDEXED : (unsigned)0))) < 0) TEST_ERROR
@@ -13997,7 +14060,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-group_info(hid_t fcpl, hid_t fapl)
+group_info(hid_t fapl)
 {
     hid_t	file_id = (-1); 	/* File ID */
     hid_t	group_id = (-1);	/* Group ID */
@@ -14074,7 +14137,7 @@ group_info(hid_t fcpl, hid_t fapl)
 
                 /* Create file */
                 h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-                if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+                if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
                 /* Set creation order tracking & indexing on group */
                 if(H5Pset_link_creation_order(gcpl_id, (H5P_CRT_ORDER_TRACKED | (use_index ? H5P_CRT_ORDER_INDEXED : (unsigned)0))) < 0) TEST_ERROR
@@ -14649,7 +14712,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-timestamps(hid_t fcpl, hid_t fapl)
+timestamps(hid_t fapl)
 {
     hid_t	file_id = (-1); 	/* File ID */
     hid_t	group_id = (-1);	/* Group ID */
@@ -14684,7 +14747,7 @@ timestamps(hid_t fcpl, hid_t fapl)
 
     /* Create file */
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-    if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) TEST_ERROR
+    if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
 
     /* Create group with non-default object timestamp setting */
     if((group_id = H5Gcreate2(file_id, TIMESTAMP_GROUP_1, H5P_DEFAULT, gcpl_id, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -14815,19 +14878,14 @@ int
 main(void)
 {
     hid_t	fapl, fapl2;    /* File access property lists */
-    hid_t	fcpl;           /* File creation property lists */
     int	nerrors = 0;
     unsigned new_format;    /* Whether to use the new format or not */
     unsigned efc;           /* Whether to use the external file cache */
     const char  *env_h5_drvr;      /* File Driver value from environment */
-    hbool_t contig_addr_vfd;
 
     env_h5_drvr = HDgetenv("HDF5_DRIVER");
     if(env_h5_drvr == NULL)
         env_h5_drvr = "nomatch";
-
-    /* Current VFD that does not support contigous address space */
-    contig_addr_vfd = (hbool_t)(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi"));
 
     h5_reset();
     fapl = h5_fileaccess();
@@ -14838,14 +14896,9 @@ main(void)
     /* Set the "use the latest version of the format" bounds for creating objects in the file */
     if(H5Pset_libver_bounds(fapl2, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0) TEST_ERROR
 
-    /* Create file-creation template */
-    if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
-        TEST_ERROR
-
     /* Loop over using new group format */
     for(new_format = FALSE; new_format <= TRUE; new_format++) {
         hid_t my_fapl;
-        hid_t my_fcpl = fcpl;
 
         /* Check for FAPL to use */
         if(new_format)
@@ -14854,20 +14907,18 @@ main(void)
             my_fapl = fapl;
 
         /* General tests... (on both old & new format groups */
-        nerrors += mklinks(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
+        nerrors += mklinks(my_fapl, new_format) < 0 ? 1 : 0;
         nerrors += cklinks(my_fapl, new_format) < 0 ? 1 : 0;
-
-        nerrors += new_links(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
+        nerrors += new_links(my_fapl, new_format) < 0 ? 1 : 0;
         nerrors += ck_new_links(my_fapl, new_format) < 0 ? 1 : 0;
-
-        nerrors += long_links(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-        nerrors += toomany(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
+        nerrors += long_links(my_fapl, new_format) < 0 ? 1 : 0;
+        nerrors += toomany(my_fapl, new_format) < 0 ? 1 : 0;
 
         /* Test new H5L link creation routine */
         nerrors += test_lcpl(my_fapl, new_format);
         nerrors += test_move(my_fapl, new_format);
         nerrors += test_copy(my_fapl, new_format);
-        nerrors += test_move_preserves(my_fcpl, my_fapl, new_format);
+        nerrors += test_move_preserves(my_fapl, new_format);
 #ifndef H5_NO_DEPRECATED_SYMBOLS
         nerrors += test_deprec(my_fapl, new_format);
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
@@ -14875,16 +14926,15 @@ main(void)
         /* tests for external link */
         /* Test external file cache first, so it sees the default efc setting on
          * the fapl */
-        nerrors += external_file_cache(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
+        nerrors += external_file_cache(my_fapl, new_format) < 0 ? 1 : 0;
 
         /* This test cannot run with the EFC because it assumes that an
          * intermediate file is not held open */
-        nerrors += external_link_mult(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-
+        nerrors += external_link_mult(my_fapl, new_format) < 0 ? 1 : 0;
 
         /* This test cannot run with the EFC because the EFC cannot currently
          * reopen a cached file with a different intent */
-        nerrors += external_set_elink_acc_flags(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
+        nerrors += external_set_elink_acc_flags(env_h5_drvr, my_fapl, new_format) < 0 ? 1 : 0;
 
         /* Try external link tests both with and without the external file cache
          */
@@ -14900,40 +14950,34 @@ main(void)
                 printf("\n---Testing without external file cache---\n");
             } /* end else */
 
-#ifndef H5_CANNOT_OPEN_TWICE
-            nerrors += external_link_root(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-#endif /* H5_CANNOT_OPEN_TWICE */
-            nerrors += external_link_path(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-#ifndef H5_CANNOT_OPEN_TWICE
-            nerrors += external_link_self(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_pingpong(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_toomany(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-#endif /* H5_CANNOT_OPEN_TWICE */
-            nerrors += external_link_dangling(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_recursive(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_query(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_unlink_compact(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_unlink_dense(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_move(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_ride(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-#ifndef H5_CANNOT_OPEN_TWICE
-            nerrors += external_link_closing(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-#endif /* H5_CANNOT_OPEN_TWICE */
+            nerrors += external_link_root(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_path(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_self(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_pingpong(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_toomany(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_dangling(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_recursive(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_query(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_unlink_compact(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_unlink_dense(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_move(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_ride(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_closing(my_fapl, new_format) < 0 ? 1 : 0;
             nerrors += external_link_endian(new_format) < 0 ? 1 : 0;
-            nerrors += external_link_strong(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_strong(my_fapl, new_format) < 0 ? 1 : 0;
 
-            nerrors += external_link_prefix(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_abs_mainpath(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_rel_mainpath(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_cwd(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_abstar(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_abstar_cur(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_reltar(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-            nerrors += external_link_chdir(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_prefix(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_abs_mainpath(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_rel_mainpath(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_cwd(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_abstar(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_abstar_cur(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_reltar(my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_link_chdir(my_fapl, new_format) < 0 ? 1 : 0;
             nerrors += external_set_elink_fapl1(my_fapl, new_format) < 0 ? 1 : 0;
             nerrors += external_set_elink_fapl2(my_fapl, new_format) < 0 ? 1 : 0;
             nerrors += external_set_elink_fapl3(new_format) < 0 ? 1 : 0;
-            nerrors += external_set_elink_cb(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
+            nerrors += external_set_elink_cb(my_fapl, new_format) < 0 ? 1 : 0;
 #ifdef H5_HAVE_WINDOW_PATH
             nerrors += external_link_win1(my_fapl, new_format) < 0 ? 1 : 0;
             nerrors += external_link_win2(my_fapl, new_format) < 0 ? 1 : 0;
@@ -14948,9 +14992,7 @@ main(void)
             nerrors += external_symlink(env_h5_drvr, my_fapl, new_format) < 0 ? 1 : 0;
             nerrors += external_copy_invalid_object(my_fapl, new_format) < 0 ? 1 : 0;
             nerrors += external_dont_fail_to_source(my_fapl, new_format) < 0 ? 1 : 0;
-#ifndef H5_CANNOT_OPEN_TWICE
-            nerrors += external_open_twice(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-#endif /* H5_CANNOT_OPEN_TWICE */
+            nerrors += external_open_twice(my_fapl, new_format) < 0 ? 1 : 0;
 	    nerrors += external_link_with_committed_datatype(my_fapl, new_format) < 0 ? 1 : 0;
         } /* end for */
 
@@ -14959,8 +15001,8 @@ main(void)
          * above has already been tested for UD links.
          */
         if(new_format == TRUE) {
-            nerrors += ud_hard_links(my_fcpl, fapl2) < 0 ? 1 : 0;     /* requires new format groups */
-            nerrors += ud_link_reregister(my_fcpl, fapl2) < 0 ? 1 : 0;        /* requires new format groups */
+            nerrors += ud_hard_links(fapl2) < 0 ? 1 : 0;     /* requires new format groups */
+            nerrors += ud_link_reregister(fapl2) < 0 ? 1 : 0;        /* requires new format groups */
         } /* end if */
         nerrors += ud_callbacks(my_fapl, new_format) < 0 ? 1 : 0;
         nerrors += ud_link_errors(my_fapl, new_format) < 0 ? 1 : 0;
@@ -14974,10 +15016,8 @@ main(void)
         nerrors += obj_visit(my_fapl, new_format) < 0 ? 1 : 0;
         nerrors += obj_visit_by_name(my_fapl, new_format) < 0 ? 1 : 0;
         nerrors += obj_visit_stop(my_fapl, new_format) < 0 ? 1 : 0;
-        nerrors += link_filters(my_fcpl, my_fapl, new_format) < 0 ? 1 : 0;
-#ifndef H5_CANNOT_OPEN_TWICE
+        nerrors += link_filters(my_fapl, new_format) < 0 ? 1 : 0;
         nerrors += obj_exists(my_fapl, new_format) < 0 ? 1 : 0;
-#endif /* H5_CANNOT_OPEN_TWICE */
 
         /* Keep this test last, it's testing files that are used above */
         /* do not do this for files used by external link tests */
@@ -14985,22 +15025,22 @@ main(void)
     } /* end for */
 
     /* New group revision feature tests */
-    nerrors += corder_create_empty(fcpl, fapl2) < 0 ? 1 : 0;
+    nerrors += corder_create_empty(fapl2) < 0 ? 1 : 0;
 /* XXX: when creation order indexing is fully working, go back and add checks
 *      to these tests to make certain that the creation order values are
 *      correct.
 */
-    nerrors += corder_create_compact(fapl) < 0 ? 1 : 0;
-    nerrors += corder_create_dense(fcpl, fapl2) < 0 ? 1 : 0;
-    nerrors += corder_transition(fcpl, fapl2) < 0 ? 1 : 0;
-    nerrors += corder_delete(fcpl, fapl2) < 0 ? 1 : 0;
-    nerrors += link_info_by_idx(fcpl, fapl2) < 0 ? 1 : 0;
-    nerrors += delete_by_idx(fcpl, fapl2) < 0 ? 1 : 0;
-    nerrors += link_iterate(fcpl, fapl2) < 0 ? 1 : 0;
-    nerrors += open_by_idx(fcpl, fapl2) < 0 ? 1 : 0;
-    nerrors += object_info(fcpl, fapl2) < 0 ? 1 : 0;
-    nerrors += group_info(fcpl, fapl2) < 0 ? 1 : 0;
-    nerrors += timestamps(fcpl, fapl2) < 0 ? 1 : 0;
+    nerrors += corder_create_compact(fapl2) < 0 ? 1 : 0;
+    nerrors += corder_create_dense(fapl2) < 0 ? 1 : 0;
+    nerrors += corder_transition(fapl2) < 0 ? 1 : 0;
+    nerrors += corder_delete(fapl2) < 0 ? 1 : 0;
+    nerrors += link_info_by_idx(fapl2) < 0 ? 1 : 0;
+    nerrors += delete_by_idx(fapl2) < 0 ? 1 : 0;
+    nerrors += link_iterate(fapl2) < 0 ? 1 : 0;
+    nerrors += open_by_idx(fapl2) < 0 ? 1 : 0;
+    nerrors += object_info(fapl2) < 0 ? 1 : 0;
+    nerrors += group_info(fapl2) < 0 ? 1 : 0;
+    nerrors += timestamps(fapl2) < 0 ? 1 : 0;
 
     /* Test new API calls on old-style groups */
     nerrors += link_info_by_idx_old(fapl) < 0 ? 1 : 0;
@@ -15010,10 +15050,8 @@ main(void)
     nerrors += object_info_old(fapl) < 0 ? 1 : 0;
     nerrors += group_info_old(fapl) < 0 ? 1 : 0;
 
-
     /* Close 2nd FAPL */
     H5Pclose(fapl2);
-    if(H5Pclose(fcpl) < 0) TEST_ERROR
 
     /* Verify symbol table messages are cached */
     nerrors += (h5_verify_cached_stabs(FILENAME, fapl) < 0 ? 1 : 0);
@@ -15047,3 +15085,4 @@ error:
     HDputs("*** TESTS FAILED ***");
     return 1;
 }
+

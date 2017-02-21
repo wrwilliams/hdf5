@@ -217,6 +217,12 @@
 #define H5O_SHARE_IS_SHARABLE   0x01
 #define H5O_SHARE_IN_OHDR       0x02
 
+/* Set the object header size to speculatively read in */
+/* (needs to be more than the object header prefix size to work at all and
+ *      should be larger than the largest object type's default object header
+ *      size to save the extra I/O operations) */
+#define H5O_SPEC_READ_SIZE 512
+
 
 /* The "message class" type */
 struct H5O_msg_class_t {
@@ -412,12 +418,6 @@ typedef struct H5O_chk_cache_ud_t {
     H5O_common_cache_ud_t common;       /* Common object header cache callback info */
 } H5O_chk_cache_ud_t;
 
-
-/* H5O object header inherits cache-like properties from H5AC */
-H5_DLLVAR const H5AC_class_t H5AC_OHDR[1];
-
-/* H5O object header chunk inherits cache-like properties from H5AC */
-H5_DLLVAR const H5AC_class_t H5AC_OHDR_CHK[1];
 
 /* Header message ID to class mapping */
 H5_DLLVAR const H5O_msg_class_t *const H5O_msg_class_g[H5O_MSG_TYPES];

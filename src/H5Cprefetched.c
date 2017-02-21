@@ -93,8 +93,7 @@ H5FL_EXTERN(H5C_cache_entry_t);
 /*******************/
 
 
-const H5C_class_t H5C__prefetched_entry_class =
-{
+const H5AC_class_t H5AC_PREFETCHED_ENTRY[1] = {{
     /* id                       = */ H5AC_PREFETCHED_ENTRY_ID,
     /* name                     = */ "prefetched entry",
     /* mem_type                 = */ H5FD_MEM_DEFAULT, /* value doesn't matter */
@@ -109,7 +108,7 @@ const H5C_class_t H5C__prefetched_entry_class =
     /* notify                   = */ H5C__prefetched_entry_notify,
     /* free_icr                 = */ H5C__prefetched_entry_free_icr,
     /* fsf_size                 = */ H5C__prefetched_entry_fsf_size,
-};
+}};
 
 
 
@@ -252,6 +251,8 @@ H5C__prefetched_entry_notify(H5C_notify_action_t action, void *_thing)
         case H5C_NOTIFY_ACTION_ENTRY_CLEANED: 
         case H5C_NOTIFY_ACTION_CHILD_DIRTIED: 
         case H5C_NOTIFY_ACTION_CHILD_CLEANED: 
+        case H5C_NOTIFY_ACTION_CHILD_UNSERIALIZED: 
+        case H5C_NOTIFY_ACTION_CHILD_SERIALIZED: 
             /* do nothing */
             break;
 
@@ -304,10 +305,6 @@ done:
  *
  * Programmer:  John Mainzer
  *              8/13/15
- *
- * Changes:	Updated routine to free the fd parent addrs array if 
- *		appropriate.
- *						JRM -- 9/13/16
  *
  *-------------------------------------------------------------------------
  */

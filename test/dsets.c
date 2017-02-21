@@ -1250,7 +1250,6 @@ test_conv_buffer(hid_t fid)
   HDfree(cf);
   HDfree(cfrR);
   puts(" PASSED");
-
   return 0;
 
 error:
@@ -1279,8 +1278,6 @@ test_tconv(hid_t file)
     hsize_t	dims[1];
     hid_t	space = -1, dataset = -1;
     int		i;
-
-    TESTING("data type conversion");
 
     if ((out = (char *)HDmalloc((size_t)(4 * 1000 * 1000))) == NULL)
         goto error;
@@ -1332,7 +1329,6 @@ test_tconv(hid_t file)
     HDfree(in);
 
     puts(" PASSED");
-
     return 0;
 
 error:
@@ -1769,7 +1765,6 @@ test_filter_internal(hid_t fid, const char *name, hid_t dcpl, int if_fletcher32,
 
     PASSED();
 
-
     /*----------------------------------------------------------------------
      * STEP 3: Try to read the data we just wrote.
      *----------------------------------------------------------------------
@@ -1884,7 +1879,6 @@ test_filter_internal(hid_t fid, const char *name, hid_t dcpl, int if_fletcher32,
      *----------------------------------------------------------------------
      */
     TESTING("    filters (re-open)");
-
 
     if(H5Dclose(dataset) < 0) TEST_ERROR;
     if((dataset = H5Dopen2(fid, name, H5P_DEFAULT)) < 0) TEST_ERROR;
@@ -2251,7 +2245,6 @@ H5_ATTR_UNUSED
     hsize_t     combo_size;     /* Size of dataset with multiple filters */
 #endif /* defined H5_HAVE_FILTER_DEFLATE | defined H5_HAVE_FILTER_SZIP */
 
-    
     /* test the H5Zget_filter_info function */
     if(test_get_filter_info() < 0) goto error;
 
@@ -2260,7 +2253,6 @@ H5_ATTR_UNUSED
      *----------------------------------------------------------
      */
     puts("Testing 'null' filter");
-
     if((dc = H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
     if(H5Pset_chunk (dc, 2, chunk_size) < 0) goto error;
     if(H5Zregister (H5Z_BOGUS) < 0) goto error;
@@ -2275,7 +2267,6 @@ H5_ATTR_UNUSED
      * STEP 1: Test Fletcher32 Checksum by itself.
      *----------------------------------------------------------
      */
-
     puts("Testing Fletcher32 checksum(enabled for read)");
     if((dc = H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
     if(H5Pset_chunk (dc, 2, chunk_size) < 0) goto error;
@@ -2323,7 +2314,6 @@ H5_ATTR_UNUSED
      */
 #ifdef H5_HAVE_FILTER_DEFLATE
     puts("Testing deflate filter");
-
     if((dc = H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
     if(H5Pset_chunk (dc, 2, chunk_size) < 0) goto error;
     if(H5Pset_deflate (dc, 6) < 0) goto error;
@@ -2331,7 +2321,6 @@ H5_ATTR_UNUSED
     if(test_filter_internal(file,DSET_DEFLATE_NAME,dc,DISABLE_FLETCHER32,DATA_NOT_CORRUPTED,&deflate_size) < 0) goto error;
     /* Clean up objects used for this test */
     if(H5Pclose (dc) < 0) goto error;
-
 #else /* H5_HAVE_FILTER_DEFLATE */
     TESTING("deflate filter");
     SKIPPED();
@@ -2343,7 +2332,6 @@ H5_ATTR_UNUSED
      *----------------------------------------------------------
      */
 #ifdef H5_HAVE_FILTER_SZIP
-
     TESTING("szip filter (with encoder)");
     if( h5_szip_can_encode() == 1) {
         if((dc = H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
@@ -2377,7 +2365,6 @@ H5_ATTR_UNUSED
      *----------------------------------------------------------
      */
     puts("Testing shuffle filter");
-
     if((dc = H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
     if(H5Pset_chunk (dc, 2, chunk_size) < 0) goto error;
     if(H5Pset_shuffle (dc) < 0) goto error;
@@ -2397,7 +2384,6 @@ H5_ATTR_UNUSED
      *----------------------------------------------------------
      */
 #ifdef H5_HAVE_FILTER_DEFLATE
-
     puts("Testing shuffle+deflate+checksum filters(checksum first)");
     if((dc = H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
     if(H5Pset_chunk (dc, 2, chunk_size) < 0) goto error;

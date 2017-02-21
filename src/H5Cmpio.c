@@ -169,54 +169,6 @@ static herr_t H5C_flush_candidates_in_ring(H5F_t *f, hid_t dxpl_id,
  * Programmer:  John Mainzer
  *              3/17/10
  *
- * Changes:     Ported code to detect next entry status changes as the 
- *              the result of a flush from the serial code in the scan of 
- *              the LRU.  Also added code to detect and adapt to the 
- *              removal from the cache of the next entry in the scan of 
- *		the LRU.
- *
- *		Note that at present, all of these changes should not 
- *		be required as the operations on entries as they are 
- *		flushed that can cause these condiditions are not premitted
- *		in the parallel case.  However, Quincey indicates that 
- *		this may change, and thus has requested the modification.
- *
- *		Note the assert(FALSE) in the if statement whose body 
- *		restarts the scan of the LRU.  As the body of the if 
- *		statement should be unreachable, it should never be 
- *		triggered until the constraints on the parallel case 
- *		are relaxed.  Please remove the assertion at that time.
- *
- *		Also added warning on the Pinned Entry List scan, as it
- *		is potentially subject to the same issue.  As there is 
- *		no cognate of this scan in the serial code, I don't have
- *		a fix to port to it.
- *
- *						JRM -- 4/10/19
- *		
- *              Modified the scan of the pinned entry list to respect
- *              flush dependencies. (note that this is not an issue
- *              at present with the LRU, as no entry can be on the
- *              LRU unless it has no flush depencency children.)
- *
- *              With the addition of flush dependencies outside of
- *              SWMR, it is now possible that entries with flush
- *              dependency children will appear in the candidates
- *              list.  A call to H5C__flush_single_entry() on such
- *              an entry before all its children have been marked clean
- *              will result in an assertion failure.
- *
- *              At present it is doubtful that this is really an issue,
- *              as in theory, entries should not be able to move, resize,
- *              load, dirty, or remove should be possible as the result
- *              of a flush (but note the exception with the free space
- *              managers).  However, it is easier and (I think) prudent
- *              to modify this routine to respect flush dependencies
- *              in stead of carving a hole in the sanity checking of
- *              H5C__flush_single_entry().
- *
- *                                              JRM -- 2/9/17
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -250,110 +202,73 @@ H5C_apply_candidate_list(H5F_t * f,
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert( cache_ptr != NULL );
-    HDassert( cache_ptr->magic == H5C__H5C_T_MAGIC );
-    HDassert( num_candidates > 0 );
-    HDassert( num_candidates <= cache_ptr->slist_len );
-    HDassert( candidates_list_ptr != NULL );
-    HDassert( 0 <= mpi_rank );
-    HDassert( mpi_rank < mpi_size );
+    /* Sanity checks */
+    HDassert(cache_ptr != NULL);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+    HDassert(num_candidates > 0);
+    HDassert(num_candidates <= cache_ptr->slist_len);
+    HDassert(candidates_list_ptr != NULL);
+    HDassert(0 <= mpi_rank);
+    HDassert(mpi_rank < mpi_size);
 
-
-    /* initialize the entries_to_flush and entries_to_clear arrays */
-    for ( i = 0; i < H5C_RING_NTYPES; i++ ) {
-
-        entries_to_flush[i] = 0;
-        entries_to_clear[i] = 0;
-    }
+    /* Initialize the entries_to_flush and entries_to_clear arrays */
+    HDmemset(entries_to_flush, 0, sizeof(entries_to_flush));
+    HDmemset(entries_to_clear, 0, sizeof(entries_to_clear));
 
 #if H5C_APPLY_CANDIDATE_LIST__DEBUG
+    HDfprintf(stdout, "%s:%d: setting up candidate assignment table.\n", FUNC, mpi_rank);
 
-    HDfprintf(stdout, "%s:%d: setting up candidate assignment table.\n", 
-              FUNC, mpi_rank);
-
-    for ( i = 0; i < 1024; i++ ) tbl_buf[i] = '\0';
+    HDmemset(tbl_buf, 0, sizeof(tbl_buf));
 
     sprintf(&(tbl_buf[0]), "candidate list = ");
-
-    for ( i = 0; i < num_candidates; i++ )
-    {
-        sprintf(&(tbl_buf[HDstrlen(tbl_buf)]), " 0x%llx", 
-                (long long)(*(candidates_list_ptr + i)));
-    }
-
+    for(i = 0; i < num_candidates; i++)
+        sprintf(&(tbl_buf[HDstrlen(tbl_buf)]), " 0x%llx", (long long)(*(candidates_list_ptr + i)));
     sprintf(&(tbl_buf[HDstrlen(tbl_buf)]), "\n");
 
     HDfprintf(stdout, "%s", tbl_buf);
-
 #endif /* H5C_APPLY_CANDIDATE_LIST__DEBUG */
 
-    if ( f->coll_md_write ) {
-
+    if(f->coll_md_write) {
         /* Sanity check */
         HDassert(NULL == cache_ptr->coll_write_list);
 
         /* Create skip list of entries for collective write */
-        if ( NULL == (cache_ptr->coll_write_list = 
-                      H5SL_create(H5SL_TYPE_HADDR, NULL)) )
-
-            HGOTO_ERROR(H5E_DATASET, H5E_CANTCREATE, FAIL, \
-                        "can't create skip list for entries")
+        if(NULL == (cache_ptr->coll_write_list = H5SL_create(H5SL_TYPE_HADDR, NULL)))
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTCREATE, FAIL, "can't create skip list for entries")
     } /* end if */
 
     n = num_candidates / mpi_size;
     m = num_candidates % mpi_size;
     HDassert(n >= 0);
-
-    if ( NULL == (candidate_assignment_table = (int *)
-                  H5MM_malloc(sizeof(int) * (size_t)(mpi_size + 1))) )
-
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, \
-                    "memory allocation failed for candidate assignment table")
+    if(NULL == (candidate_assignment_table = (int *)H5MM_malloc(sizeof(int) * (size_t)(mpi_size + 1))))
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for candidate assignment table")
 
     candidate_assignment_table[0] = 0;
     candidate_assignment_table[mpi_size] = num_candidates;
 
-    if ( m == 0 ) { /* mpi_size is an even divisor of num_candidates */
-
+    if(m == 0) { /* mpi_size is an even divisor of num_candidates */
         HDassert(n > 0);
-
-        for ( i = 1; i < mpi_size; i++ ) {
-
-            candidate_assignment_table[i] = 
-                candidate_assignment_table[i - 1] + n;
-        }
+        for(i = 1; i < mpi_size; i++)
+            candidate_assignment_table[i] = candidate_assignment_table[i - 1] + n;
     } /* end if */
     else { 
+        for(i = 1; i <= m; i++)
+            candidate_assignment_table[i] = candidate_assignment_table[i - 1] + n + 1;
 
-        for ( i = 1; i <= m; i++ ) {
-
-            candidate_assignment_table[i] = 
-                candidate_assignment_table[i - 1] + n + 1;
-        }
-
-        if ( num_candidates < mpi_size ) {
-
-            for ( i = m + 1; i < mpi_size; i++ ) {
-
+        if(num_candidates < mpi_size) {
+            for(i = m + 1; i < mpi_size; i++)
                 candidate_assignment_table[i] = num_candidates;
-            }
         } /* end if */
         else {
-
-            for ( i = m + 1; i < mpi_size; i++ ) {
-
-                candidate_assignment_table[i] = 
-                    candidate_assignment_table[i - 1] + n;
-            }
+            for(i = m + 1; i < mpi_size; i++)
+                candidate_assignment_table[i] = candidate_assignment_table[i - 1] + n;
         } /* end else */
     } /* end else */
-
     HDassert((candidate_assignment_table[mpi_size - 1] + n) == num_candidates);
 
 #if H5C_DO_SANITY_CHECKS
-    /* verify that the candidate assignment table has the expected form */
-    for ( i = 1; i < mpi_size - 1; i++ ) 
-    {
+    /* Verify that the candidate assignment table has the expected form */
+    for(i = 1; i < mpi_size - 1; i++) {
         int a, b;
 
         a = candidate_assignment_table[i] - candidate_assignment_table[i - 1];
@@ -383,123 +298,83 @@ H5C_apply_candidate_list(H5F_t * f,
     HDfprintf(stdout, "%s:%d: marking entries.\n", FUNC, mpi_rank);
 #endif /* H5C_APPLY_CANDIDATE_LIST__DEBUG */
 
-    for ( i = 0; i < num_candidates; i++ ) {
-
+    for(i = 0; i < num_candidates; i++) {
         addr = candidates_list_ptr[i];
-
-        HDassert( H5F_addr_defined(addr) );
+        HDassert(H5F_addr_defined(addr));
 
 #if H5C_DO_SANITY_CHECKS
-        if ( i > 0 ) {
-            if ( last_addr == addr ) {
-
-                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                            "Duplicate entry in cleaned list.\n")
-
-            } else if ( last_addr > addr ) {
-
-                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                            "candidate list not sorted.\n")
-            }
-        }
+        if(i > 0) {
+            if(last_addr == addr)
+                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "duplicate entry in cleaned list")
+            else if(last_addr > addr)
+                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "candidate list not sorted")
+        } /* end if */
 
         last_addr = addr;
 #endif /* H5C_DO_SANITY_CHECKS */
 
         H5C__SEARCH_INDEX(cache_ptr, addr, entry_ptr, FAIL)
-
-        if ( entry_ptr == NULL ) {
-
-            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                        "Listed candidate entry not in cache?!?!?.")
-
-        } else if ( !entry_ptr->is_dirty ) {
-
-            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                        "Listed entry not dirty?!?!?.")
-
-        } else if ( entry_ptr->is_protected ) {
-
+        if(entry_ptr == NULL)
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "listed candidate entry not in cache?!?!?")
+        if(!entry_ptr->is_dirty)
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Listed entry not dirty?!?!?")
+        if(entry_ptr->is_protected)
             /* For now at least, we can't deal with protected entries.
              * If we encounter one, scream and die.  If it becomes an
              * issue, we should be able to work around this. 
              */
-            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                         "Listed entry is protected?!?!?.")
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Listed entry is protected?!?!?")
 
-        } else {
+        /* Sanity checks */
+        HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+        HDassert(entry_ptr->ring >= H5C_RING_USER);
+        HDassert(entry_ptr->ring <= H5C_RING_SB);
 
-            HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
-            HDassert(entry_ptr->ring >= H5C_RING_USER);
-            HDassert(entry_ptr->ring <= H5C_RING_SB);
+        /* Determine whether the entry is to be cleared or flushed,
+         * and mark it accordingly.  We will scan the protected and 
+         * pinned list shortly, and clear or flush according to these
+         * markings.  
+         */
+        if(i >= first_entry_to_flush && i <= last_entry_to_flush) {
+            total_entries_to_flush++;
+            entries_to_flush[entry_ptr->ring]++;
+            entry_ptr->flush_immediately = TRUE;
+        } /* end if */
+        else {
+            total_entries_to_clear++;
+            entries_to_clear[entry_ptr->ring]++;
+            entry_ptr->clear_on_unprotect = TRUE;
 
-            /* determine whether the entry is to be cleared or flushed,
-             * and mark it accordingly.  We will scan the protected and 
-             * pinned list shortly, and clear or flush according to these
-             * markings.  
-             */
-            if ( ( i >= first_entry_to_flush ) && 
-                 ( i <= last_entry_to_flush ) ) {
+            /* We have to update the page buffer with cleared entries so it doesn't go out of date */
+            if(f->shared->page_buf && f->shared->page_buf->page_size >= entry_ptr->size) {
+                if(!entry_ptr->image_up_to_date || entry_ptr->image_ptr == NULL)
+                    if(H5C__generate_image(f, cache_ptr, entry_ptr, dxpl_id) < 0)
+                        HGOTO_ERROR(H5E_CACHE, H5E_CANTGET, FAIL, "can't generate cache entry image")
 
-                total_entries_to_flush++;
-                entries_to_flush[entry_ptr->ring]++;
-                entry_ptr->flush_immediately = TRUE;
-
-            } /* end if */
-            else {
-
-                total_entries_to_clear++;
-                entries_to_clear[entry_ptr->ring]++;
-                entry_ptr->clear_on_unprotect = TRUE;
-
-                /* We have to update the page buffer with cleared entries 
-                 * so it doesn't go out of date 
-                 */
-                if ( ( f->shared->page_buf ) && 
-                     ( f->shared->page_buf->page_size >= entry_ptr->size ) ) {
-
-                    if ( ( !entry_ptr->image_up_to_date ) || 
-                         ( entry_ptr->image_ptr == NULL ) )
-
-                        if ( H5C__generate_image(f, cache_ptr, entry_ptr, 
-                                                 dxpl_id) < 0 )
-
-                            HGOTO_ERROR(H5E_CACHE, H5E_CANTGET, FAIL, \
-                                        "Can't generate cache entry image")
-
-                    if ( H5PB_update_entry(f->shared->page_buf, entry_ptr->addr,
-                                           entry_ptr->size, 
-                                           entry_ptr->image_ptr) > 0 )
-
-                        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                                  "Failed to update PB with metadata cache\n")
-                }
-            } /* end else */
-
-            /* Entries marked as collectively accessed and are in the
-             * candidate list to clear from the cache have to be
-             * removed from the coll list. This is OK since the
-             * candidate list is collective and uniform across all
-             * ranks. 
-             */
-            if ( TRUE == entry_ptr->coll_access ) {
-
-                entry_ptr->coll_access = FALSE;
-                H5C__REMOVE_FROM_COLL_LIST(cache_ptr, entry_ptr, FAIL)
-
+                if(H5PB_update_entry(f->shared->page_buf, entry_ptr->addr, entry_ptr->size, entry_ptr->image_ptr) > 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CACHE, FAIL, "failed to update PB with metadata cache")
             } /* end if */
         } /* end else */
+
+        /* Entries marked as collectively accessed and are in the
+         * candidate list to clear from the cache have to be
+         * removed from the coll list. This is OK since the
+         * candidate list is collective and uniform across all
+         * ranks. 
+         */
+        if(entry_ptr->coll_access) {
+            entry_ptr->coll_access = FALSE;
+            H5C__REMOVE_FROM_COLL_LIST(cache_ptr, entry_ptr, FAIL)
+        } /* end if */
     } /* end for */
 
 #if H5C_DO_SANITY_CHECKS
     m = 0;
     n = 0;
-
-    for ( i = 0; i < H5C_RING_NTYPES; i++ ) {
-
+    for(i = 0; i < H5C_RING_NTYPES; i++) {
         m += (int)entries_to_flush[i];
         n += (int)entries_to_clear[i];
-    }
+    } /* end if */
 
     HDassert((unsigned)m == total_entries_to_flush);
     HDassert((unsigned)n == total_entries_to_clear);
@@ -511,7 +386,6 @@ H5C_apply_candidate_list(H5F_t * f,
               (int)entries_to_flush);
 #endif /* H5C_APPLY_CANDIDATE_LIST__DEBUG */
 
-
     /* We have now marked all the entries on the candidate list for 
      * either flush or clear -- now scan the LRU and the pinned list
      * for these entries and do the deed.  Do this via a call to 
@@ -522,12 +396,8 @@ H5C_apply_candidate_list(H5F_t * f,
      * If we don't do this, my experiments indicate that we will have a
      * noticably poorer hit ratio as a result.
      */
-
-     if ( H5C_flush_candidate_entries(f, dxpl_id, entries_to_flush, 
-                                      entries_to_clear) < 0 )
-         HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "flush candidates failed.")
-
-
+     if(H5C_flush_candidate_entries(f, dxpl_id, entries_to_flush, entries_to_clear) < 0)
+         HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "flush candidates failed")
 
     /* If we've deferred writing to do it collectively, take care of that now */
     if(f->coll_md_write) {
@@ -536,9 +406,7 @@ H5C_apply_candidate_list(H5F_t * f,
 
         /* Write collective list */
         if(H5C__collective_write(f, dxpl_id) < 0)
-
-            HGOTO_ERROR(H5E_CACHE, H5E_WRITEERROR, FAIL, \
-                        "Can't write metadata collectively")
+            HGOTO_ERROR(H5E_CACHE, H5E_WRITEERROR, FAIL, "can't write metadata collectively")
     } /* end if */
 
     /* ====================================================================== *
@@ -546,25 +414,15 @@ H5C_apply_candidate_list(H5F_t * f,
      * ====================================================================== */
 
 done:
-
     if(candidate_assignment_table != NULL)
-
-        candidate_assignment_table = 
-            (int *)H5MM_xfree((void *)candidate_assignment_table);
-
+        candidate_assignment_table = (int *)H5MM_xfree((void *)candidate_assignment_table);
     if(cache_ptr->coll_write_list) {
-
         if(H5SL_close(cache_ptr->coll_write_list) < 0)
-
-            HDONE_ERROR(H5E_CACHE, H5E_CANTFREE, FAIL, \
-                        "failed to destroy skip list")
-
+            HDONE_ERROR(H5E_CACHE, H5E_CANTFREE, FAIL, "failed to destroy skip list")
         cache_ptr->coll_write_list = NULL;
-
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5C_apply_candidate_list() */
 
 
@@ -635,7 +493,7 @@ H5C_construct_candidate_list__clean_cache(H5C_t * cache_ptr)
 
             nominated_addr = entry_ptr->addr;
             if(H5AC_add_candidate((H5AC_t *)cache_ptr, nominated_addr) < 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5AC_add_candidate() failed(1).")
+                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5AC_add_candidate() failed")
 
             nominated_entries_size += entry_ptr->size;
             nominated_entries_count++;
@@ -659,7 +517,7 @@ H5C_construct_candidate_list__clean_cache(H5C_t * cache_ptr)
 
                 nominated_addr = entry_ptr->addr;
                 if(H5AC_add_candidate((H5AC_t *)cache_ptr, nominated_addr) < 0)
-                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5AC_add_candidate() failed(2).")
+                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5AC_add_candidate() failed")
 
                 nominated_entries_size += entry_ptr->size;
                 nominated_entries_count++;
@@ -751,7 +609,7 @@ H5C_construct_candidate_list__min_clean(H5C_t * cache_ptr)
 
             nominated_addr = entry_ptr->addr;
             if(H5AC_add_candidate((H5AC_t *)cache_ptr, nominated_addr) < 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5AC_add_candidate() failed.")
+                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5AC_add_candidate() failed")
 
             nominated_entries_size += entry_ptr->size;
             nominated_entries_count++;
@@ -795,54 +653,6 @@ done:
  * Programmer:  John Mainzer
  *              7/5/05
  *
- * Changes:     Tidied up code, removeing some old commented out 
- *		code that had been left in pending success of the 
- *		new version.
- *
- *		Note that unlike H5C_apply_candidate_list(), 
- *		H5C_mark_entries_as_clean() makes all its calls to 
- *		H5C__flush_single_entry() with the 
- *		H5C__FLUSH_CLEAR_ONLY_FLAG set.  As a result, 
- *		the pre_serialize() and serialize calls are not made.
- *
- *		This then implies that (assuming such actions were 
- *		permitted in the parallel case) no loads, dirties, 
- *		resizes, or removals of other entries can occur as 
- *		a side effect of the flush.  Hence, there is no need
- *		for the checks for entry removal / status change 
- *		that I ported to H5C_apply_candidate_list().
- *
- *		However, if (in addition to allowing such operations
- *		in the parallel case), we allow such operations outside
- *		of the pre_serialize / serialize routines, this may 
- *		cease to be the case -- requiring a review of this 
- *		function.
- *
- *                                               JRM -- ???
- *
- *              Modified the scan of the pinned entry list to respect 
- *              flush dependencies. (note that this is not an issue
- *              at present with the LRU, as no entry can be on the 
- *              LRU unless it has no flush depencency children.)
- *
- *              With the addition of flush dependencies outside of 
- *              SWMR, it is now possible that entries with flush
- *              dependency children will appear in the cleaned entry 
- *              array.  A call to H5C__flush_single_entry() on such 
- *              an entry before all its children have been marked clean
- *              will result in an assertion failure.
- *
- *              At present it is doubtful that this is really an issue,
- *              as in theory, entries should not be able to move, resize,
- *              load, dirty, or remove should be possible as the result 
- *              of a flush (but note the exception with the free space 
- *              managers).  However, it is easier and (I think) prudent
- *              to modify this routine to respect flush dependencies
- *              in stead of carving a hold in the sanity checking of 
- *              H5C__flush_single_entry().
- *
- *                                              JRM -- 2/9/17
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -881,46 +691,30 @@ H5C_mark_entries_as_clean(H5F_t *  f,
     HDassert( ce_array_ptr != NULL );
 
 #if H5C_DO_EXTREME_SANITY_CHECKS
-    if ( ( H5C_validate_protected_entry_list(cache_ptr) < 0 ) ||
-         ( H5C_validate_pinned_entry_list(cache_ptr) < 0 ) ||
-         ( H5C_validate_lru_list(cache_ptr) < 0 ) ) {
-
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                    "an extreme sanity check failed on entry.\n");
-    }
+    if(H5C_validate_protected_entry_list(cache_ptr) < 0 ||
+            H5C_validate_pinned_entry_list(cache_ptr) < 0 ||
+            H5C_validate_lru_list(cache_ptr) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "an extreme sanity check failed on entry")
 #endif /* H5C_DO_EXTREME_SANITY_CHECKS */
 
-    for ( i = 0; i < ce_array_len; i++ )
-    {
+    for(i = 0; i < ce_array_len; i++) {
         addr = ce_array_ptr[i];
 
 #if H5C_DO_SANITY_CHECKS
-        if ( i == 0 ) {
-
+        if(i == 0)
             last_addr = addr;
-
-        } else {
-
-            if ( last_addr == addr ) {
-
-                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                            "Duplicate entry in cleaned list.\n");
-
-            } else if ( last_addr > addr ) {
-
-                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                            "cleaned list not sorted.\n");
-            }
-        }
+        else {
+            if(last_addr == addr)
+                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Duplicate entry in cleaned list")
+            if(last_addr > addr)
+                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "cleaned list not sorted")
+        } /* end else */
 
 #if H5C_DO_EXTREME_SANITY_CHECKS
-        if ( ( H5C_validate_protected_entry_list(cache_ptr) < 0 ) ||
-             ( H5C_validate_pinned_entry_list(cache_ptr) < 0 ) ||
-             ( H5C_validate_lru_list(cache_ptr) < 0 ) ) {
-
-            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                        "an extreme sanity check failed in for loop.\n");
-        }
+        if(H5C_validate_protected_entry_list(cache_ptr) < 0
+                || H5C_validate_pinned_entry_list(cache_ptr) < 0
+                || H5C_validate_lru_list(cache_ptr) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "an extreme sanity check failed in for loop")
 #endif /* H5C_DO_EXTREME_SANITY_CHECKS */
 #endif /* H5C_DO_SANITY_CHECKS */
 
@@ -928,28 +722,24 @@ H5C_mark_entries_as_clean(H5F_t *  f,
 
         H5C__SEARCH_INDEX(cache_ptr, addr, entry_ptr, FAIL)
 
-        if ( entry_ptr == NULL ) {
+        if(entry_ptr == NULL) {
 #if H5C_DO_SANITY_CHECKS
 	    HDfprintf(stdout,
                   "H5C_mark_entries_as_clean: entry[%d] = %ld not in cache.\n",
                       (int)i,
                       (long)addr);
 #endif /* H5C_DO_SANITY_CHECKS */
-            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                        "Listed entry not in cache?!?!?.")
-
-        } else if ( ! entry_ptr->is_dirty ) {
-
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Listed entry not in cache?!?!?")
+        } /* end if */
+        else if(!entry_ptr->is_dirty) {
 #if H5C_DO_SANITY_CHECKS
 	    HDfprintf(stdout,
                       "H5C_mark_entries_as_clean: entry %ld is not dirty!?!\n",
                       (long)addr);
 #endif /* H5C_DO_SANITY_CHECKS */
-            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                        "Listed entry not dirty?!?!?.")
-
-        } else {
-
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Listed entry not dirty?!?!?")
+        } /* end else-if */
+        else {
             /* Mark the entry to be cleared on unprotect.  We will
              * scan the LRU list shortly, and clear all those entries
              * not currently protected.
@@ -1008,57 +798,37 @@ H5C_mark_entries_as_clean(H5F_t *  f,
      * point.
      *					JRM -- 4/7/15
      */
-
     entries_cleared = 0;
     entries_examined = 0;
     initial_list_len = cache_ptr->LRU_list_len;
     entry_ptr = cache_ptr->LRU_tail_ptr;
-
-    while ( ( entry_ptr != NULL ) &&
-            ( entries_examined <= initial_list_len ) &&
-            ( entries_cleared < ce_array_len ) )
-    {
-        if ( entry_ptr->clear_on_unprotect ) {
-
+    while(entry_ptr != NULL && entries_examined <= initial_list_len &&
+            entries_cleared < ce_array_len) {
+        if(entry_ptr->clear_on_unprotect) {
             entry_ptr->clear_on_unprotect = FALSE;
             clear_ptr = entry_ptr;
             entry_ptr = entry_ptr->prev;
             entries_cleared++;
 
-            if ( H5C__flush_single_entry(f, dxpl_id, clear_ptr, 
-                                    H5C__FLUSH_CLEAR_ONLY_FLAG | 
-                                    H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG) < 0 )
-
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                            "Can't clear entry.")
+            if(H5C__flush_single_entry(f, dxpl_id, clear_ptr, H5C__FLUSH_CLEAR_ONLY_FLAG | H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "can't clear entry")
 
             /* We have to update the page buffer with cleared entries 
              * so it doesn't go out of date 
              */
-            if ( f->shared->page_buf && 
-                 ( f->shared->page_buf->page_size >= entry_ptr->size ) ) {
+            if(f->shared->page_buf && f->shared->page_buf->page_size >= entry_ptr->size) {
+                if(!entry_ptr->image_up_to_date || entry_ptr->image_ptr == NULL)
+                    if(H5C__generate_image(f, cache_ptr, entry_ptr, dxpl_id) < 0)
+                        HGOTO_ERROR(H5E_CACHE, H5E_CANTGET, FAIL, "can't generate cache entry image")
 
-                if ( ( !entry_ptr->image_up_to_date ) || 
-                     ( entry_ptr->image_ptr == NULL ) )
-
-                    if ( H5C__generate_image(f, cache_ptr, entry_ptr, 
-                                             dxpl_id) < 0 )
-
-                        HGOTO_ERROR(H5E_CACHE, H5E_CANTGET, FAIL, \
-                                    "Can't generate cache entry image");
-
-                if ( H5PB_update_entry(f->shared->page_buf, entry_ptr->addr, 
-                                    entry_ptr->size, entry_ptr->image_ptr) > 0 )
-
-                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                                "Failed to update PB with metadata cache\n");
-            }
-        } else {
-
+                if(H5PB_update_entry(f->shared->page_buf, entry_ptr->addr, entry_ptr->size, entry_ptr->image_ptr) > 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Failed to update PB with metadata cache")
+            } /* end if */
+        } /* end if */
+        else
             entry_ptr = entry_ptr->prev;
-        }
         entries_examined++;
-    }
+    } /* end while */
 
 #if H5C_DO_SANITY_CHECKS
     HDassert( entries_cleared == other_entries_marked );
@@ -1067,40 +837,27 @@ H5C_mark_entries_as_clean(H5F_t *  f,
     /* It is also possible that some of the cleared entries are on the
      * pinned list.  Must scan that also.
      */
-
     pinned_entries_cleared = 0;
     old_pinned_entries_cleared = -1;
-
-    while ( ( pinned_entries_cleared < pinned_entries_marked ) &&
-            ( pinned_entries_cleared > old_pinned_entries_cleared ) ) {
-
+    while(pinned_entries_cleared < pinned_entries_marked
+            && pinned_entries_cleared > old_pinned_entries_cleared) {
         old_pinned_entries_cleared = pinned_entries_cleared;
-
         entry_ptr = cache_ptr->pel_head_ptr;
-
-        while ( entry_ptr != NULL )
-        {
-            if ( ( entry_ptr->clear_on_unprotect ) &&
-                 ( entry_ptr->flush_dep_ndirty_children == 0 ) ) {
-
+        while(entry_ptr != NULL) {
+            if(entry_ptr->clear_on_unprotect && entry_ptr->flush_dep_ndirty_children == 0) {
                 entry_ptr->clear_on_unprotect = FALSE;
                 clear_ptr = entry_ptr;
                 entry_ptr = entry_ptr->next;
                 entries_cleared++;
                 pinned_entries_cleared++;
 
-                if ( H5C__flush_single_entry(f, dxpl_id, clear_ptr, 
-                                     H5C__FLUSH_CLEAR_ONLY_FLAG | 
-                                     H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG) < 0 )
-
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                                "Can't clear entry.")
-            } else {
-
+                if(H5C__flush_single_entry(f, dxpl_id, clear_ptr, H5C__FLUSH_CLEAR_ONLY_FLAG | H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't clear entry")
+            } /* end if */
+            else
                 entry_ptr = entry_ptr->next;
-            }
-        } 
-    } 
+        }  /* end while */
+    } /* end while */
 
 #if H5C_DO_SANITY_CHECKS
     HDassert( entries_cleared == pinned_entries_marked + other_entries_marked );
@@ -1125,19 +882,14 @@ H5C_mark_entries_as_clean(H5F_t *  f,
 #endif /* H5C_DO_SANITY_CHECKS */
 
 done:
-
 #if H5C_DO_EXTREME_SANITY_CHECKS
-    if ( ( H5C_validate_protected_entry_list(cache_ptr) < 0 ) ||
-         ( H5C_validate_pinned_entry_list(cache_ptr) < 0 ) ||
-         ( H5C_validate_lru_list(cache_ptr) < 0 ) ) {
-
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                    "an extreme sanity check failed on exit.\n");
-    }
+    if(H5C_validate_protected_entry_list(cache_ptr) < 0
+            || H5C_validate_pinned_entry_list(cache_ptr) < 0
+            || H5C_validate_lru_list(cache_ptr) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "an extreme sanity check failed on exit")
 #endif /* H5C_DO_EXTREME_SANITY_CHECKS */
 
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5C_mark_entries_as_clean() */
 
 
@@ -1446,13 +1198,10 @@ H5C_flush_candidate_entries(H5F_t *f, hid_t dxpl_id,
 #endif /* H5C_DO_SANITY_CHECKS */
 
 #if H5C_DO_EXTREME_SANITY_CHECKS
-    if ( ( H5C_validate_protected_entry_list(cache_ptr) < 0 ) ||
-         ( H5C_validate_pinned_entry_list(cache_ptr) < 0 ) ||
-         ( H5C_validate_lru_list(cache_ptr) < 0 ) )
-
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                    "an extreme sanity check failed on entry.\n");
-
+    if(H5C_validate_protected_entry_list(cache_ptr) < 0
+            || H5C_validate_pinned_entry_list(cache_ptr) < 0
+            || H5C_validate_lru_list(cache_ptr) < 0)
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "an extreme sanity check failed on entry")
 #endif /* H5C_DO_EXTREME_SANITY_CHECKS */
 
     cache_ptr->flush_in_progress = TRUE;
@@ -1460,28 +1209,18 @@ H5C_flush_candidate_entries(H5F_t *f, hid_t dxpl_id,
     /* flush each ring, starting from the outermost ring and 
      * working inward.
      */
-
     ring = H5C_RING_USER;
-
     while(ring < H5C_RING_NTYPES) {
-
-        if ( H5C_flush_candidates_in_ring(f, dxpl_id, ring,
-                                          entries_to_flush[ring],
-                                          entries_to_clear[ring]) < 0 ) {
-
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                        "flush candidates in ring failed.")
-        } 
+        if(H5C_flush_candidates_in_ring(f, dxpl_id, ring, entries_to_flush[ring], entries_to_clear[ring]) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "flush candidates in ring failed")
 
         ring++;
-
-    } 
+    }  /* end while */
 
 done:
     cache_ptr->flush_in_progress = FALSE;
 
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5C_flush_candidate_entries() */
 
 
@@ -1562,7 +1301,7 @@ H5C_flush_candidates_in_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
     if((H5C_validate_protected_entry_list(cache_ptr) < 0) ||
             (H5C_validate_pinned_entry_list(cache_ptr) < 0) ||
             (H5C_validate_lru_list(cache_ptr) < 0))
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "an extreme sanity check failed on entry.\n");
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "an extreme sanity check failed on entry")
 #endif /* H5C_DO_EXTREME_SANITY_CHECKS */
 
 #if H5C_DO_SANITY_CHECKS
@@ -1596,9 +1335,7 @@ H5C_flush_candidates_in_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
             prev_is_dirty = entry_ptr->prev->is_dirty;
 
         /* If this process needs to clear this entry. */
-        if ( ( entry_ptr->ring == ring ) &&
-             ( entry_ptr->clear_on_unprotect ) ) {
-
+        if(entry_ptr->ring == ring && entry_ptr->clear_on_unprotect) {
             HDassert(entry_ptr->is_dirty);
 
             next_ptr = entry_ptr->next;
@@ -1625,19 +1362,14 @@ H5C_flush_candidates_in_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
             cache_ptr->entries_removed_counter = 0;
             cache_ptr->last_entry_removed_ptr  = NULL;
 
-            if (H5C__flush_single_entry(f, dxpl_id, clear_ptr, clear_flags) < 0)
+            if(H5C__flush_single_entry(f, dxpl_id, clear_ptr, clear_flags) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "can't clear entry")
 
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                            "Can't clear entry.")
-
-            if ( ( cache_ptr->entries_removed_counter != 0 ) ||
-                 ( cache_ptr->last_entry_removed_ptr != NULL ) )
-
+            if(cache_ptr->entries_removed_counter != 0
+                    || cache_ptr->last_entry_removed_ptr != NULL)
                 restart_scan = TRUE;
-
-        } else if ( ( entry_ptr->ring == ring ) &&
-                    ( entry_ptr->flush_immediately ) ) {
-
+        } /* end if */
+        else if(entry_ptr->ring == ring && entry_ptr->flush_immediately) {
             HDassert(entry_ptr->is_dirty);
 
             next_ptr = entry_ptr->next;
@@ -1671,20 +1403,15 @@ H5C_flush_candidates_in_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
              *
              *                                    JRM -- 2/9/17
              */
-            if(H5C__flush_single_entry(f, dxpl_id, flush_ptr, flush_flags) < 0 )
+            if(H5C__flush_single_entry(f, dxpl_id, flush_ptr, flush_flags) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "can't flush entry")
 
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                            "Can't flush entry.")
-
-            if ( ( cache_ptr->entries_removed_counter != 0 ) ||
-                 ( cache_ptr->last_entry_removed_ptr != NULL ) )
-
+            if(cache_ptr->entries_removed_counter != 0
+                    || cache_ptr->last_entry_removed_ptr != NULL)
                 restart_scan = TRUE;
-
-        } else {
-
+        } /* end else-if */
+        else {
             /* no action needed on this entry */
-
             HDassert( ( ( !entry_ptr->clear_on_unprotect ) 
                         &&
                         ( !entry_ptr->flush_immediately )
@@ -1693,12 +1420,9 @@ H5C_flush_candidates_in_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
                       ( entry_ptr->ring > ring ) );
 
             entry_ptr = entry_ptr->prev;
-
-            if ( entry_ptr != NULL )
-
+            if(entry_ptr != NULL)
                 next_ptr = entry_ptr->next;
-
-        }
+        } /* end else */
 
         if ( ( entry_ptr != NULL )
              &&
@@ -1787,10 +1511,9 @@ H5C_flush_candidates_in_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
             if ( entry_ptr->next != NULL )
                 next_is_dirty = entry_ptr->next->is_dirty;
 
-            if ( ( entry_ptr->ring == ring ) &&
-                 ( entry_ptr->flush_dep_ndirty_children == 0 ) &&
-                 ( entry_ptr->clear_on_unprotect ) ) {
-
+            if(entry_ptr->ring == ring
+                    && entry_ptr->flush_dep_ndirty_children == 0
+                    && entry_ptr->clear_on_unprotect) {
                 HDassert(entry_ptr->is_dirty);
 
                 prev_ptr = entry_ptr;
@@ -1818,21 +1541,16 @@ H5C_flush_candidates_in_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
                 cache_ptr->entries_removed_counter = 0;
                 cache_ptr->last_entry_removed_ptr  = NULL;
 
-                if ( H5C__flush_single_entry(f, dxpl_id, clear_ptr, 
-                                             clear_flags) < 0 )
+                if(H5C__flush_single_entry(f, dxpl_id, clear_ptr, clear_flags) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "can't clear entry")
 
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                                "Can't clear entry.")
-
-                if ( ( cache_ptr->entries_removed_counter != 0 ) ||
-                     ( cache_ptr->last_entry_removed_ptr != NULL ) )
-
+                if(cache_ptr->entries_removed_counter != 0
+                        || cache_ptr->last_entry_removed_ptr != NULL)
                     restart_scan = TRUE;
-
-            } else if ( ( entry_ptr->ring == ring ) &&
-                        ( entry_ptr->flush_dep_ndirty_children == 0 ) &&
-                        ( entry_ptr->flush_immediately ) ) {
-
+            } /* end if */
+            else if(entry_ptr->ring == ring
+                    && entry_ptr->flush_dep_ndirty_children == 0
+                    && entry_ptr->flush_immediately) {
                 HDassert(entry_ptr->is_dirty);
 
                 prev_ptr = entry_ptr;
@@ -1867,21 +1585,15 @@ H5C_flush_candidates_in_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
                  *
                  *                                    JRM -- 2/9/17
                  */
-                if ( H5C__flush_single_entry(f, dxpl_id, 
-                                             flush_ptr, flush_flags) < 0 )
+                if(H5C__flush_single_entry(f, dxpl_id, flush_ptr, flush_flags) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "can't flush entry")
 
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                                "Can't flush entry.")
-
-                if ( ( cache_ptr->entries_removed_counter != 0 ) ||
-                     ( cache_ptr->last_entry_removed_ptr != NULL ) )
-
+                if(cache_ptr->entries_removed_counter != 0
+                        || cache_ptr->last_entry_removed_ptr != NULL)
                     restart_scan = TRUE;
-
-            } else {
-
+            } /* end else-if */
+            else {
                 /* no action needed on this entry */
-
                 HDassert( ( ( ! entry_ptr->clear_on_unprotect ) 
                             &&
                             ( ! entry_ptr->flush_immediately )
@@ -1895,10 +1607,8 @@ H5C_flush_candidates_in_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
                           ( entry_ptr->ring > ring ) );
 
                 prev_ptr = entry_ptr;
-
                 entry_ptr = entry_ptr->next;
-
-            }
+            } /* end else */
 
             if ( ( entry_ptr != NULL )
                  &&
@@ -1957,30 +1667,19 @@ H5C_flush_candidates_in_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,
     HDassert(init_index_len == cache_ptr->index_len);
 #endif /* H5C_DO_SANITY_CHECKS */
 
-    if ( ( entries_flushed != entries_to_flush ) ||
-         ( entries_cleared != entries_to_clear ) ) {
-
+    if(entries_flushed != entries_to_flush || entries_cleared != entries_to_clear) {
         entry_ptr = cache_ptr->il_head;
-        while ( entry_ptr != NULL ) {
-
-            HDassert(!entry_ptr->clear_on_unprotect ||
-                     (entry_ptr->ring > ring));
-            HDassert(!entry_ptr->flush_immediately ||
-                     (entry_ptr->ring > ring));
+        while(entry_ptr != NULL) {
+            HDassert(!entry_ptr->clear_on_unprotect || (entry_ptr->ring > ring));
+            HDassert(!entry_ptr->flush_immediately || (entry_ptr->ring > ring));
             entry_ptr = entry_ptr->il_next;
-        }
+        } /* end while */
         
-
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, \
-                    "Can't flush/clear all entries.")
-    }
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "can't flush/clear all entries")
+    } /* end if */
 
 done:
-
-    HDassert(ret_value == SUCCEED);
-
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5C_flush_candidates_in_ring() */
 
 #endif /* H5_HAVE_PARALLEL */

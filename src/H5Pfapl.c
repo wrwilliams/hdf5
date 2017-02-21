@@ -57,12 +57,6 @@
 /****************/
 
 /* ========= File Access properties ============ */
-/* Definitions for the initial metadata cache image configuration */
-#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_SIZE sizeof(H5AC_cache_image_config_t)
-#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEF  H5AC__DEFAULT_CACHE_IMAGE_CONFIG
-#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_ENC  H5P__facc_cache_image_config_enc
-#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEC  H5P__facc_cache_image_config_dec
-#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_CMP  H5P__facc_cache_image_config_cmp
 /* Definitions for the initial metadata cache resize configuration */
 #define H5F_ACS_META_CACHE_INIT_CONFIG_SIZE	sizeof(H5AC_cache_config_t)
 #define H5F_ACS_META_CACHE_INIT_CONFIG_DEF	H5AC__DEFAULT_CACHE_CONFIG
@@ -184,21 +178,6 @@
 #define H5F_ACS_CORE_WRITE_TRACKING_PAGE_SIZE_DEF       524288
 #define H5F_ACS_CORE_WRITE_TRACKING_PAGE_SIZE_ENC       H5P__encode_size_t
 #define H5F_ACS_CORE_WRITE_TRACKING_PAGE_SIZE_DEC       H5P__decode_size_t
-/* Definition for total size of page buffer(bytes) */
-#define H5F_ACS_PAGE_BUFFER_SIZE_SIZE           sizeof(size_t)
-#define H5F_ACS_PAGE_BUFFER_SIZE_DEF            0
-#define H5F_ACS_PAGE_BUFFER_SIZE_ENC            H5P__encode_size_t
-#define H5F_ACS_PAGE_BUFFER_SIZE_DEC            H5P__decode_size_t
-/* Definition for minimum metadata size of page buffer(bytes) */
-#define H5F_ACS_PAGE_BUFFER_MIN_META_PERC_SIZE           sizeof(unsigned)
-#define H5F_ACS_PAGE_BUFFER_MIN_META_PERC_DEF            0
-#define H5F_ACS_PAGE_BUFFER_MIN_META_PERC_ENC            H5P__encode_unsigned
-#define H5F_ACS_PAGE_BUFFER_MIN_META_PERC_DEC            H5P__decode_unsigned
-/* Definition for minimum raw data size of page buffer(bytes) */
-#define H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_SIZE           sizeof(unsigned)
-#define H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_DEF            0
-#define H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_ENC            H5P__encode_unsigned
-#define H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_DEC            H5P__decode_unsigned
 /* Definition for # of metadata read attempts */
 #define H5F_ACS_METADATA_READ_ATTEMPTS_SIZE	sizeof(unsigned)
 #define H5F_ACS_METADATA_READ_ATTEMPTS_DEF     	0
@@ -246,6 +225,28 @@
 #define H5F_ACS_COLL_MD_WRITE_FLAG_ENC    H5P__encode_hbool_t
 #define H5F_ACS_COLL_MD_WRITE_FLAG_DEC    H5P__decode_hbool_t
 #endif /* H5_HAVE_PARALLEL */
+/* Definitions for the initial metadata cache image configuration */
+#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_SIZE sizeof(H5AC_cache_image_config_t)
+#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEF  H5AC__DEFAULT_CACHE_IMAGE_CONFIG
+#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_ENC  H5P__facc_cache_image_config_enc
+#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEC  H5P__facc_cache_image_config_dec
+#define H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_CMP  H5P__facc_cache_image_config_cmp
+/* Definition for total size of page buffer(bytes) */
+#define H5F_ACS_PAGE_BUFFER_SIZE_SIZE           sizeof(size_t)
+#define H5F_ACS_PAGE_BUFFER_SIZE_DEF            0
+#define H5F_ACS_PAGE_BUFFER_SIZE_ENC            H5P__encode_size_t
+#define H5F_ACS_PAGE_BUFFER_SIZE_DEC            H5P__decode_size_t
+/* Definition for minimum metadata size of page buffer(bytes) */
+#define H5F_ACS_PAGE_BUFFER_MIN_META_PERC_SIZE           sizeof(unsigned)
+#define H5F_ACS_PAGE_BUFFER_MIN_META_PERC_DEF            0
+#define H5F_ACS_PAGE_BUFFER_MIN_META_PERC_ENC            H5P__encode_unsigned
+#define H5F_ACS_PAGE_BUFFER_MIN_META_PERC_DEC            H5P__decode_unsigned
+/* Definition for minimum raw data size of page buffer(bytes) */
+#define H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_SIZE           sizeof(unsigned)
+#define H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_DEF            0
+#define H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_ENC            H5P__encode_unsigned
+#define H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_DEC            H5P__decode_unsigned
+
 
 /******************/
 /* Local Typedefs */
@@ -286,9 +287,6 @@ static herr_t H5P__facc_file_image_info_close(const char *name, size_t size, voi
 /* encode & decode callbacks */
 static herr_t H5P__facc_cache_config_enc(const void *value, void **_pp, size_t *size);
 static herr_t H5P__facc_cache_config_dec(const void **_pp, void *value);
-static int H5P__facc_cache_image_config_cmp(const void *_config1, const void *_config2, size_t H5_ATTR_UNUSED size);
-static herr_t H5P__facc_cache_image_config_enc(const void *value, void **_pp, size_t *size);
-static herr_t H5P__facc_cache_image_config_dec(const void **_pp, void *_value);
 static int H5P__facc_cache_config_cmp(const void *value1, const void *value2, size_t size);
 static herr_t H5P__facc_fclose_degree_enc(const void *value, void **_pp, size_t *size);
 static herr_t H5P__facc_fclose_degree_dec(const void **pp, void *value);
@@ -302,6 +300,11 @@ static herr_t H5P_facc_mdc_log_location_del(hid_t prop_id, const char *name, siz
 static herr_t H5P_facc_mdc_log_location_copy(const char *name, size_t size, void *value);
 static int    H5P_facc_mdc_log_location_cmp(const void *value1, const void *value2, size_t size);
 static herr_t H5P_facc_mdc_log_location_close(const char *name, size_t size, void *value);
+
+/* Metadata cache image property callbacks */
+static int H5P__facc_cache_image_config_cmp(const void *_config1, const void *_config2, size_t H5_ATTR_UNUSED size);
+static herr_t H5P__facc_cache_image_config_enc(const void *value, void **_pp, size_t *size);
+static herr_t H5P__facc_cache_image_config_dec(const void **_pp, void *_value);
 
 
 /*********************/
@@ -338,7 +341,6 @@ const H5P_libclass_t H5P_CLS_FACC[1] = {{
 /*******************/
 
 /* Property value defaults */
-static const H5AC_cache_image_config_t H5F_def_mdc_initCacheImageCfg_g = H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEF;  /* Default metadata cache image settings */
 static const H5AC_cache_config_t H5F_def_mdc_initCacheCfg_g = H5F_ACS_META_CACHE_INIT_CONFIG_DEF;  /* Default metadata cache settings */
 static const size_t H5F_def_rdcc_nslots_g = H5F_ACS_DATA_CACHE_NUM_SLOTS_DEF;      /* Default raw data chunk cache # of slots */
 static const size_t H5F_def_rdcc_nbytes_g = H5F_ACS_DATA_CACHE_BYTE_SIZE_DEF;      /* Default raw data chunk cache # of bytes */
@@ -360,9 +362,6 @@ static const unsigned H5F_def_efc_size_g = H5F_ACS_EFC_SIZE_DEF;                
 static const H5FD_file_image_info_t H5F_def_file_image_info_g = H5F_ACS_FILE_IMAGE_INFO_DEF;                 /* Default file image info and callbacks */
 static const hbool_t H5F_def_core_write_tracking_flag_g = H5F_ACS_CORE_WRITE_TRACKING_FLAG_DEF;              /* Default setting for core VFD write tracking */
 static const size_t H5F_def_core_write_tracking_page_size_g = H5F_ACS_CORE_WRITE_TRACKING_PAGE_SIZE_DEF;     /* Default core VFD write tracking page size */
-static const size_t H5F_def_page_buf_size_g = H5F_ACS_PAGE_BUFFER_SIZE_DEF;      /* Default page buffer size */
-static const unsigned H5F_def_page_buf_min_meta_perc_g = H5F_ACS_PAGE_BUFFER_MIN_META_PERC_DEF;      /* Default page buffer minimum metadata size */
-static const unsigned H5F_def_page_buf_min_raw_perc_g = H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_DEF;      /* Default page buffer minumum raw data size */
 static const unsigned H5F_def_metadata_read_attempts_g = H5F_ACS_METADATA_READ_ATTEMPTS_DEF;  /* Default setting for the # of metadata read attempts */
 static const H5F_object_flush_t H5F_def_object_flush_cb_g = H5F_ACS_OBJECT_FLUSH_CB_DEF;      /* Default setting for object flush callback */
 static const hbool_t H5F_def_clear_status_flags_g = H5F_ACS_CLEAR_STATUS_FLAGS_DEF;           /* Default to clear the superblock status_flags */
@@ -374,6 +373,10 @@ static const hbool_t H5F_def_evict_on_close_flag_g = H5F_ACS_EVICT_ON_CLOSE_FLAG
 static const H5P_coll_md_read_flag_t H5F_def_coll_md_read_flag_g = H5F_ACS_COLL_MD_READ_FLAG_DEF;  /* Default setting for the collective metedata read flag */
 static const hbool_t H5F_def_coll_md_write_flag_g = H5F_ACS_COLL_MD_WRITE_FLAG_DEF;  /* Default setting for the collective metedata write flag */
 #endif /* H5_HAVE_PARALLEL */
+static const H5AC_cache_image_config_t H5F_def_mdc_initCacheImageCfg_g = H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEF;  /* Default metadata cache image settings */
+static const size_t H5F_def_page_buf_size_g = H5F_ACS_PAGE_BUFFER_SIZE_DEF;      /* Default page buffer size */
+static const unsigned H5F_def_page_buf_min_meta_perc_g = H5F_ACS_PAGE_BUFFER_MIN_META_PERC_DEF;      /* Default page buffer minimum metadata size */
+static const unsigned H5F_def_page_buf_min_raw_perc_g = H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_DEF;      /* Default page buffer minumum raw data size */
 
 
 /*-------------------------------------------------------------------------
@@ -394,12 +397,6 @@ H5P__facc_reg_prop(H5P_genclass_t *pclass)
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_STATIC
-
-    /* Register the initial metadata cache image configuration */
-    if(H5P_register_real(pclass, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_SIZE, &H5F_def_mdc_initCacheImageCfg_g, 
-            NULL, NULL, NULL, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_ENC, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEC, 
-            NULL, NULL, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_CMP, NULL) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
     /* Register the initial metadata cache resize configuration */
     if(H5P_register_real(pclass, H5F_ACS_META_CACHE_INIT_CONFIG_NAME, H5F_ACS_META_CACHE_INIT_CONFIG_SIZE, &H5F_def_mdc_initCacheCfg_g, 
@@ -536,22 +533,6 @@ H5P__facc_reg_prop(H5P_genclass_t *pclass)
             NULL, NULL, NULL, NULL) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
-    /* Register the size of the page buffer size */
-    if(H5P_register_real(pclass, H5F_ACS_PAGE_BUFFER_SIZE_NAME, H5F_ACS_PAGE_BUFFER_SIZE_SIZE, &H5F_def_page_buf_size_g, 
-            NULL, NULL, NULL, H5F_ACS_PAGE_BUFFER_SIZE_ENC, H5F_ACS_PAGE_BUFFER_SIZE_DEC, 
-            NULL, NULL, NULL, NULL) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
-    /* Register the size of the page buffer minimum metadata size */
-    if(H5P_register_real(pclass, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_NAME, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_SIZE, &H5F_def_page_buf_min_meta_perc_g, 
-            NULL, NULL, NULL, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_ENC, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_DEC, 
-            NULL, NULL, NULL, NULL) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
-    /* Register the size of the page buffer minimum raw data size */
-    if(H5P_register_real(pclass, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_NAME, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_SIZE, &H5F_def_page_buf_min_raw_perc_g, 
-            NULL, NULL, NULL, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_ENC, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_DEC, 
-            NULL, NULL, NULL, NULL) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
-
     /* Register the # of read attempts */
     if(H5P_register_real(pclass, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, H5F_ACS_METADATA_READ_ATTEMPTS_SIZE, &H5F_def_metadata_read_attempts_g, 
             NULL, NULL, NULL, H5F_ACS_METADATA_READ_ATTEMPTS_ENC, H5F_ACS_METADATA_READ_ATTEMPTS_DEC, 
@@ -604,6 +585,28 @@ H5P__facc_reg_prop(H5P_genclass_t *pclass)
             NULL, NULL, NULL, NULL) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 #endif /* H5_HAVE_PARALLEL */
+
+    /* Register the initial metadata cache image configuration */
+    if(H5P_register_real(pclass, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_NAME, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_SIZE, &H5F_def_mdc_initCacheImageCfg_g, 
+            NULL, NULL, NULL, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_ENC, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_DEC, 
+            NULL, NULL, H5F_ACS_META_CACHE_INIT_IMAGE_CONFIG_CMP, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+
+    /* Register the size of the page buffer size */
+    if(H5P_register_real(pclass, H5F_ACS_PAGE_BUFFER_SIZE_NAME, H5F_ACS_PAGE_BUFFER_SIZE_SIZE, &H5F_def_page_buf_size_g, 
+            NULL, NULL, NULL, H5F_ACS_PAGE_BUFFER_SIZE_ENC, H5F_ACS_PAGE_BUFFER_SIZE_DEC, 
+            NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+    /* Register the size of the page buffer minimum metadata size */
+    if(H5P_register_real(pclass, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_NAME, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_SIZE, &H5F_def_page_buf_min_meta_perc_g, 
+            NULL, NULL, NULL, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_ENC, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_DEC, 
+            NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+    /* Register the size of the page buffer minimum raw data size */
+    if(H5P_register_real(pclass, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_NAME, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_SIZE, &H5F_def_page_buf_min_raw_perc_g, 
+            NULL, NULL, NULL, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_ENC, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_DEC, 
+            NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2907,7 +2910,7 @@ done:
  *		greater than VALUE1 and zero if VALUE1 and VALUE2 are equal.
  *
  * Programmer:     John Mainzer
- *                 June 26, 2015 24, 2012
+ *                 June 26, 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -2952,7 +2955,7 @@ done:
  *		   Failure:	Negative
  *
  * Programmer:     John Mainzer
- *                 June 26, 2015 24, 2012
+ *                 June 26, 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -2971,7 +2974,6 @@ H5P__facc_cache_image_config_enc(const void *value, void **_pp, size_t *size)
         /* Encode type sizes (as a safety check) */
         *(*pp)++ = (uint8_t)sizeof(unsigned);
 
-        /* int */
         INT32ENCODE(*pp, (int32_t)config->version);
 
         H5_ENCODE_UNSIGNED(*pp, config->generate_image);
@@ -2999,7 +3001,7 @@ H5P__facc_cache_image_config_enc(const void *value, void **_pp, size_t *size)
  *		   Failure:	Negative
  *
  * Programmer:     John Mainzer
- *                 June 26, 2015 24, 2012
+ *                 June 26, 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -3027,7 +3029,6 @@ H5P__facc_cache_image_config_dec(const void **_pp, void *_value)
     if(enc_size != sizeof(unsigned))
         HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "unsigned value can't be decoded")
 
-    /* int */
     INT32DECODE(*pp, config->version);
 
     H5_DECODE_UNSIGNED(*pp, config->generate_image);
@@ -3879,96 +3880,6 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Pset_page_buffer_size
- *
- * Purpose:     Set the maximum page buffering size. This has to be a
- *              multiple of the page allocation size which must be enabled;
- *              otherwise file create/open will fail.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Mohamad Chaarawi
- *              June 2015
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Pset_page_buffer_size(hid_t plist_id, size_t buf_size, unsigned min_meta_perc, unsigned min_raw_perc)
-{
-    H5P_genplist_t *plist;      /* Property list pointer */
-    herr_t ret_value = SUCCEED;   /* return value */
-
-    FUNC_ENTER_API(FAIL)
-    H5TRACE4("e", "izIuIu", plist_id, buf_size, min_meta_perc, min_raw_perc);
-
-    /* Get the plist structure */
-    if(NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
-
-    if(min_meta_perc > 100)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Minimum metadata fractions must be between 0 and 100 inclusive")
-    if(min_raw_perc > 100)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Minimum rawdata fractions must be between 0 and 100 inclusive")
-
-    if(min_meta_perc + min_raw_perc > 100)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Sum of minimum metadata and raw data fractions can't be bigger than 100");
-
-    /* Set size */
-    if(H5P_set(plist, H5F_ACS_PAGE_BUFFER_SIZE_NAME, &buf_size) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET,FAIL, "can't set page buffer size")
-    if(H5P_set(plist, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_NAME, &min_meta_perc) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET,FAIL, "can't set percentage of min metadata entries")
-    if(H5P_set(plist, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_NAME, &min_raw_perc) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET,FAIL, "can't set percentage of min rawdata entries")
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Pset_page_buffer_size() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Pget_page_buffer_size
- *
- * Purpose:	Retrieves the maximum page buffer size.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Mohamad Chaarawi
- *              June 2015
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Pget_page_buffer_size(hid_t plist_id, size_t *buf_size, unsigned *min_meta_perc, unsigned *min_raw_perc)
-{
-    H5P_genplist_t *plist;      /* Property list pointer */
-    herr_t ret_value = SUCCEED;   /* return value */
-
-    FUNC_ENTER_API(FAIL)
-    H5TRACE4("e", "i*z*Iu*Iu", plist_id, buf_size, min_meta_perc, min_raw_perc);
-
-    /* Get the plist structure */
-    if(NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
-
-    /* Get size */
-
-    if(buf_size)
-        if(H5P_get(plist, H5F_ACS_PAGE_BUFFER_SIZE_NAME, buf_size) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET,FAIL, "can't get page buffer size")
-    if(min_meta_perc)
-        if(H5P_get(plist, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_NAME, min_meta_perc) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET,FAIL, "can't get page buffer minimum metadata percent")
-    if(min_raw_perc)
-        if(H5P_get(plist, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_NAME, min_raw_perc) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET,FAIL, "can't get page buffer minimum raw data percent")
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Pget_page_buffer_size() */
-
-
-/*-------------------------------------------------------------------------
  * Function:	H5Pset_metadata_read_attempts
  *
  * Purpose:	Sets the # of read attempts in the file access property list
@@ -4010,7 +3921,6 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* H5Pset_metadata_read_attempts() */
 
-
 
 /*-------------------------------------------------------------------------
  * Function:	H5Pget_metadata_read_attempts
@@ -4039,13 +3949,13 @@ H5Pget_metadata_read_attempts(hid_t plist_id, unsigned *attempts/*out*/)
         if(NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
             HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
-        /* Get the # of read attempts set */
+	/* Get the # of read attempts set */
         if(H5P_get(plist, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, attempts) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get the number of metadata read attempts")
 
-        /* If not set, return the default value */
-        if(*attempts == H5F_ACS_METADATA_READ_ATTEMPTS_DEF)	/* 0 */
-            *attempts = H5F_METADATA_READ_ATTEMPTS;
+	/* If not set, return the default value */
+	if(*attempts == H5F_ACS_METADATA_READ_ATTEMPTS_DEF)	/* 0 */
+	    *attempts = H5F_METADATA_READ_ATTEMPTS;
     } /* end if */
 
 done:
@@ -4804,3 +4714,94 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Pget_coll_metadata_write() */
 #endif /* H5_HAVE_PARALLEL */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_page_buffer_size
+ *
+ * Purpose:     Set the maximum page buffering size. This has to be a
+ *              multiple of the page allocation size which must be enabled;
+ *              otherwise file create/open will fail.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Mohamad Chaarawi
+ *              June 2015
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_page_buffer_size(hid_t plist_id, size_t buf_size, unsigned min_meta_perc, unsigned min_raw_perc)
+{
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t ret_value = SUCCEED;   /* return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE4("e", "izIuIu", plist_id, buf_size, min_meta_perc, min_raw_perc);
+
+    /* Get the plist structure */
+    if(NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
+
+    if(min_meta_perc > 100)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Minimum metadata fractions must be between 0 and 100 inclusive")
+    if(min_raw_perc > 100)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Minimum rawdata fractions must be between 0 and 100 inclusive")
+
+    if(min_meta_perc + min_raw_perc > 100)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Sum of minimum metadata and raw data fractions can't be bigger than 100");
+
+    /* Set size */
+    if(H5P_set(plist, H5F_ACS_PAGE_BUFFER_SIZE_NAME, &buf_size) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET,FAIL, "can't set page buffer size")
+    if(H5P_set(plist, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_NAME, &min_meta_perc) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET,FAIL, "can't set percentage of min metadata entries")
+    if(H5P_set(plist, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_NAME, &min_raw_perc) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET,FAIL, "can't set percentage of min rawdata entries")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* end H5Pset_page_buffer_size() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_page_buffer_size
+ *
+ * Purpose:	Retrieves the maximum page buffer size.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Mohamad Chaarawi
+ *              June 2015
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_page_buffer_size(hid_t plist_id, size_t *buf_size, unsigned *min_meta_perc, unsigned *min_raw_perc)
+{
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t ret_value = SUCCEED;   /* return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE4("e", "i*z*Iu*Iu", plist_id, buf_size, min_meta_perc, min_raw_perc);
+
+    /* Get the plist structure */
+    if(NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
+
+    /* Get size */
+
+    if(buf_size)
+        if(H5P_get(plist, H5F_ACS_PAGE_BUFFER_SIZE_NAME, buf_size) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET,FAIL, "can't get page buffer size")
+    if(min_meta_perc)
+        if(H5P_get(plist, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_NAME, min_meta_perc) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET,FAIL, "can't get page buffer minimum metadata percent")
+    if(min_raw_perc)
+        if(H5P_get(plist, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_NAME, min_raw_perc) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET,FAIL, "can't get page buffer minimum raw data percent")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* end H5Pget_page_buffer_size() */
+

@@ -1503,9 +1503,8 @@ check_attribute_rename_tags(hid_t fcpl, int type)
     /* ===== */
 
     /* check to see if the FCPL specified persistant free space managers */
-    if ( H5Pget_file_space_strategy(fcpl, NULL, &persistant_fsms, NULL) < 0 )
+    if(H5Pget_file_space_strategy(fcpl, NULL, &persistant_fsms, NULL) < 0)
         TEST_ERROR;
-
 
     /* Allocate array */
     if ( (NULL == (data = (int *)HDcalloc(DIMS * DIMS, sizeof(int)))) ) TEST_ERROR;
@@ -1597,8 +1596,7 @@ check_attribute_rename_tags(hid_t fcpl, int type)
 	 *   one freespace header tag for H5FD_MEM_SUPER manager 
 	 *   one freespace section info tag for H5FD_MEM_SUPER manager 
          */
-        if ( verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0 ) 
-            TEST_ERROR;
+        if ( verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0 ) TEST_ERROR;
 
         /* If the free space managers are persistant, the
          * H5MF_tidy_self_referential_fsm_hack() must have been run.
@@ -1606,12 +1604,8 @@ check_attribute_rename_tags(hid_t fcpl, int type)
          * managers, the H5FD_MEM_SUPER FSM will not be in the metadata
          * cache.
          */
-        if ( ( ! persistant_fsms ) &&
-             ( verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0 ) )
-            TEST_ERROR;
-        if ( ( ! persistant_fsms ) &&
-             ( verify_tag(fid, H5AC_FSPACE_SINFO_ID, H5AC__FREESPACE_TAG) < 0 ))
-           TEST_ERROR;
+        if(!persistant_fsms && verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0) TEST_ERROR;
+        if(!persistant_fsms && verify_tag(fid, H5AC_FSPACE_SINFO_ID, H5AC__FREESPACE_TAG) < 0) TEST_ERROR;
 
         /* verify btree header and leaf node belonging to group */
         if ( verify_tag(fid, H5AC_BT2_HDR_ID, g_tag) < 0 ) TEST_ERROR;

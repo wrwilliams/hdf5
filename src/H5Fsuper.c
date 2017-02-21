@@ -261,14 +261,14 @@ H5F_update_super_ext_driver_msg(H5F_t *f, hid_t dxpl_id)
      */
     if(sblock->super_vers >= HDF5_SUPERBLOCK_VERSION_2) {
         if(H5F_addr_defined(sblock->ext_addr)) {
-            size_t     driver_size;    /* Size of driver info block (bytes)*/
-
             /* Check for ignoring the driver info for this file */
             if(!H5F_HAS_FEATURE(f, H5FD_FEAT_IGNORE_DRVRINFO)) {
+                size_t     driver_size;    /* Size of driver info block (bytes)*/
+
                 /* Check for driver info */
                 H5_CHECKED_ASSIGN(driver_size, size_t, H5FD_sb_size(f->shared->lf), hsize_t);
 
-		/* nothing to do unless there is both driver info and 
+		/* Nothing to do unless there is both driver info and 
                  * the driver info superblock extension message has 
                  * already been created.
                  */
@@ -587,7 +587,7 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
         H5O_loc_t ext_loc;      /* "Object location" for superblock extension */
         H5O_btreek_t btreek;    /* v1 B-tree 'K' value message from superblock extension */
         H5O_drvinfo_t drvinfo;  /* Driver info message from superblock extension */
-        size_t u;               /* Local index variable */
+	size_t u; 		/* Local index variable */
         htri_t status;          /* Status for message existing */
 
         /* Sanity check - superblock extension should only be defined for
@@ -608,7 +608,7 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
         } /* end if */
 
         /* Open the superblock extension */
-        if(H5F_super_ext_open(f, sblock->ext_addr, &ext_loc) < 0)
+	if(H5F_super_ext_open(f, sblock->ext_addr, &ext_loc) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTOPENOBJ, FAIL, "unable to open file's superblock extension")
 
         /* Check for the extension having a 'driver info' message */
@@ -633,7 +633,6 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
 
 		HDassert(FALSE == f->shared->drvinfo_sb_msg_exists);
 		f->shared->drvinfo_sb_msg_exists = TRUE;
-
             } /* end else */
         } /* end if */
 
@@ -762,37 +761,37 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
             } /* end if not marked "unknown" */
         } /* end if */
 
-        /* Check for the extension having a 'metadata cache image' message */
+	/* Check for the extension having a 'metadata cache image' message */
         if((status = H5O_msg_exists(&ext_loc, H5O_MDCI_MSG_ID, dxpl_id)) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_EXISTS, FAIL, "unable to read object header")
         if(status) {
-            hbool_t 		rw = ((rw_flags & H5AC__READ_ONLY_FLAG) == 0);
+            hbool_t 	rw = ((rw_flags & H5AC__READ_ONLY_FLAG) == 0);
             H5O_mdci_msg_t  mdci_msg;
 
-            /* if the metadata cache image superblock extension message exists,
+	    /* if the metadata cache image superblock extension message exists,
              * read its contents and pass the data on to the metadata cache.
              * Given this data, the cache will load and decode the metadata
-             * cache image block, decoded it and load its contents into the 
-             * the cache on the test protect call.  
+ 	     * cache image block, decoded it and load its contents into the 
+	     * the cache on the test protect call.  
              *
              * Further, if the file is opened R/W, the metadata cache will 
-             * delete the metadata cache image superblock extension and free
-             * the cache image block.  Don't do this now as f->shared 
-             * is not fully setup, which complicates matters.
+	     * delete the metadata cache image superblock extension and free
+	     * the cache image block.  Don't do this now as f->shared 
+	     * is not fully setup, which complicates matters.
              */
 
             /* Retrieve the 'metadata cache image message' structure */
-            if(NULL == H5O_msg_read(&ext_loc, H5O_MDCI_MSG_ID, &mdci_msg, dxpl_id))
+	    if(NULL == H5O_msg_read(&ext_loc, H5O_MDCI_MSG_ID, &mdci_msg, dxpl_id))
                 HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to get metadata cache image message")
 
             /* Indicate to the cache that there's an image to load on first protect call */
             if(H5AC_load_cache_image_on_next_protect(f, mdci_msg.addr, mdci_msg.size, rw) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_CANTLOAD, FAIL, "call to H5AC_load_cache_image_on_next_protect failed");
+		HGOTO_ERROR(H5E_FILE, H5E_CANTLOAD, FAIL, "call to H5AC_load_cache_image_on_next_protect failed");
         } /* end if */
 
         /* Close superblock extension */
         if(H5F_super_ext_close(f, &ext_loc, dxpl_id, FALSE) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEOBJ, FAIL, "unable to close file's superblock extension")
+	    HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEOBJ, FAIL, "unable to close file's superblock extension")
     } /* end if */
 
     /* Update the driver info if VFD indicated to do so */
@@ -826,20 +825,20 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
                 /* Write driver info information to the superblock extension */
 
 #if 1 /* bug fix test code -- tidy this up if all goes well */ /* JRM */
-	            /* KLUGE ALERT!!
-                 *
-                 * H5F_super_ext_write_msg() expects f->shared->sblock to 
-                 * be set -- verify that it is NULL, and then set it.
-                 * Set it back to NULL when we are done.
-                 */
-                 HDassert(f->shared->sblock == NULL);
-                 f->shared->sblock = sblock;
+		/* KLUGE ALERT!!
+		 *
+		 * H5F_super_ext_write_msg() expects f->shared->sblock to 
+		 * be set -- verify that it is NULL, and then set it.
+		 * Set it back to NULL when we are done.
+		 */
+		HDassert(f->shared->sblock == NULL);
+		f->shared->sblock = sblock;
 #endif /* JRM */
                  if(H5F_super_ext_write_msg(f, dxpl_id, H5O_DRVINFO_ID, &drvinfo, FALSE, 0) < 0)
                     HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "error in writing message to superblock extension")
 
 #if 1 /* bug fix test code -- tidy this up if all goes well */ /* JRM */
-                f->shared->sblock = NULL;
+		f->shared->sblock = NULL;
 #endif /* JRM */
 
             } /* end if */
@@ -855,7 +854,6 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
                 sblock_flags |= H5AC__DIRTIED_FLAG;
         } /* end if */
     } /* end if */
-
 
     /* Set the pointer to the pinned superblock */
     f->shared->sblock = sblock;
@@ -1036,7 +1034,7 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
      *  space for userblock.
      */
     if(H5F__set_base_addr(f, sblock->base_addr) < 0)
-	HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "failed to set base address for file driver")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "failed to set base address for file driver")
 
     /* Save a local copy of the superblock version number, size of addresses & offsets */
     sblock->super_vers = super_vers;
@@ -1145,7 +1143,7 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
          * be tuned if more information is added to the superblock
          * extension.
          */
-        if(H5F_super_ext_create(f, dxpl_id, &ext_loc) < 0)
+	if(H5F_super_ext_create(f, dxpl_id, &ext_loc) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTCREATE, FAIL, "unable to create superblock extension")
         ext_created = TRUE;
 
@@ -1220,9 +1218,9 @@ H5F__super_init(H5F_t *f, hid_t dxpl_id)
             for(ptype = H5F_MEM_PAGE_SUPER; ptype < H5F_MEM_PAGE_NTYPES; H5_INC_ENUM(H5F_mem_page_t, ptype))
                 fsinfo.fs_addr[ptype - 1] = HADDR_UNDEF;
 
-            if(H5O_msg_create(&ext_loc, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE|H5O_MSG_FLAG_MARK_IF_UNKNOWN, H5O_UPDATE_TIME, &fsinfo, dxpl_id) < 0)
+            if(H5O_msg_create(&ext_loc, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE | H5O_MSG_FLAG_MARK_IF_UNKNOWN, H5O_UPDATE_TIME, &fsinfo, dxpl_id) < 0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to update free-space info header message")
-        } /* end if */
+	} /* end if */
     } /* end if */
     else {
         /* Check for creating an "old-style" driver info block */

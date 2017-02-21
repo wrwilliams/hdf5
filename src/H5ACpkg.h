@@ -413,35 +413,6 @@ typedef struct H5AC_aux_t
 #endif /* H5_HAVE_PARALLEL */
 
 
-/****************************************************************************
- *
- * structure H5AC_slist_entry_t
- *
- * The dirty entry list maintained via the d_slist_ptr field of H5AC_aux_t
- * and the cleaned entry list maintained via the c_slist_ptr field of
- * H5AC_aux_t are just lists of the file offsets of the dirty/cleaned
- * entries.  Unfortunately, the slist code makes us define a dynamically
- * allocated structure to store these offsets in.  This structure serves
- * that purpose.  Its fields are as follows:
- *
- * addr:        file offset of a metadata entry.  Entries are added to this
- *              list (if they aren't there already) when they are marked
- *              dirty in an unprotect, inserted, or moved.  They are
- *              removed when they appear in a clean entries broadcast.
- *
- ****************************************************************************/
-
-#ifdef H5_HAVE_PARALLEL
-
-typedef struct H5AC_slist_entry_t
-{
-    haddr_t     addr;
-} H5AC_slist_entry_t;
-
-#endif /* H5_HAVE_PARALLEL */
-
-
-
 /******************************/
 /* Package Private Prototypes */
 /******************************/

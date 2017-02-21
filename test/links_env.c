@@ -151,14 +151,10 @@ main(void)
     hid_t fapl; 	/* File access property lists */
     int	nerrors = 0;	/* Error from tests */
     const char  *env_h5_drvr;      /* File Driver value from environment */
-    hbool_t contig_addr_vfd;
 
     env_h5_drvr = HDgetenv("HDF5_DRIVER");
     if(env_h5_drvr == NULL)
         env_h5_drvr = "nomatch";
-
-    /* Current VFD that does not support contigous address space */
-    contig_addr_vfd = (hbool_t)(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi"));
 
     h5_reset();
     fapl = h5_fileaccess();

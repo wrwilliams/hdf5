@@ -97,7 +97,7 @@ static herr_t H5HF__cache_iblock_pre_serialize(const H5F_t *f, hid_t dxpl_id,
     unsigned *flags); 
 static herr_t H5HF__cache_iblock_serialize(const H5F_t *f, void *image,
     size_t len, void *thing); 
-static herr_t H5HF__cache_iblock_notify(H5C_notify_action_t action, void *thing); 
+static herr_t H5HF__cache_iblock_notify(H5AC_notify_action_t action, void *thing); 
 static herr_t H5HF__cache_iblock_free_icr(void *thing);
 
 static herr_t H5HF__cache_dblock_get_initial_load_size(void *udata, size_t *image_len);
@@ -110,7 +110,7 @@ static herr_t H5HF__cache_dblock_pre_serialize(const H5F_t *f, hid_t dxpl_id,
     unsigned *flags); 
 static herr_t H5HF__cache_dblock_serialize(const H5F_t *f, void *image,
     size_t len, void *thing); 
-static herr_t H5HF__cache_dblock_notify(H5C_notify_action_t action, void *thing);
+static herr_t H5HF__cache_dblock_notify(H5AC_notify_action_t action, void *thing);
 static herr_t H5HF__cache_dblock_free_icr(void *thing);
 
 /* Debugging Function Prototypes */
@@ -1255,7 +1255,7 @@ H5HF__cache_iblock_pre_serialize(const H5F_t *f, hid_t dxpl_id, void *_thing,
         } /* end if */
 
 	*new_addr = iblock_addr;
-        *flags = H5C__SERIALIZE_MOVED_FLAG;
+        *flags = H5AC__SERIALIZE_MOVED_FLAG;
     } /* end if */
     else 
 	*flags = 0;
@@ -1402,7 +1402,7 @@ H5HF__cache_iblock_serialize(const H5F_t *f, void *_image, size_t len,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5HF__cache_iblock_notify(H5C_notify_action_t action, void *_thing)
+H5HF__cache_iblock_notify(H5AC_notify_action_t action, void *_thing)
 {
     H5HF_indirect_t     *iblock = (H5HF_indirect_t *)_thing;    /* Indirect block info */
     herr_t      	 ret_value = SUCCEED;    /* Return value */
@@ -2349,12 +2349,12 @@ H5HF__cache_dblock_pre_serialize(const H5F_t *f, hid_t dxpl_id, void *_thing,
 
     /* finally, pass data back to the metadata cache as appropriate */
     if(!H5F_addr_eq(addr, dblock_addr)) {
-        dblock_flags |= H5C__SERIALIZE_MOVED_FLAG;
+        dblock_flags |= H5AC__SERIALIZE_MOVED_FLAG;
         *new_addr = dblock_addr;
     } /* end if */
 
     if((hdr->filter_len > 0) && (len != write_size)) {
-        dblock_flags |= H5C__SERIALIZE_RESIZED_FLAG;
+        dblock_flags |= H5AC__SERIALIZE_RESIZED_FLAG;
         *new_len = write_size;
     } /* end if */
 
@@ -2448,7 +2448,7 @@ H5HF__cache_dblock_serialize(const H5F_t *f, void *image, size_t len,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5HF__cache_dblock_notify(H5C_notify_action_t action, void *_thing)
+H5HF__cache_dblock_notify(H5AC_notify_action_t action, void *_thing)
 {
     H5HF_direct_t 	*dblock = (H5HF_direct_t *)_thing;      /* Fractal heap direct block */
     herr_t 		 ret_value = SUCCEED;         /* Return value */
@@ -2633,21 +2633,21 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, H5HF_hdr_t *hdr,
 
         /* make note of the on disk address of the root iblock */
         if(root_iblock == NULL)
-            /* hdr->man_dtable.table_addr must contain address of root
+	    /* hdr->man_dtable.table_addr must contain address of root
              * iblock.  Check to see if it is in cache.  If it is, 
              * protect it and put its address in root_iblock.
              */
-            root_iblock_addr = hdr->man_dtable.table_addr;
+	    root_iblock_addr = hdr->man_dtable.table_addr;
         else
-            root_iblock_addr = root_iblock->addr;
+	    root_iblock_addr = root_iblock->addr;
 
-        /* get the status of the root iblock */
-        HDassert(root_iblock_addr != HADDR_UNDEF);
+	/* get the status of the root iblock */
+	HDassert(root_iblock_addr != HADDR_UNDEF);
         if(H5AC_get_entry_status(f, root_iblock_addr, &root_iblock_status) < 0)
             HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't get root iblock status")
 
-        root_iblock_in_cache = ( (root_iblock_status & H5AC_ES__IN_CACHE) != 0);
-        HDassert(root_iblock_in_cache || (root_iblock == NULL));
+	root_iblock_in_cache = ( (root_iblock_status & H5AC_ES__IN_CACHE) != 0);
+	HDassert(root_iblock_in_cache || (root_iblock == NULL));
 
         if(!root_iblock_in_cache) /* we are done */
             *clean = TRUE;
@@ -2655,12 +2655,12 @@ H5HF__cache_verify_hdr_descendants_clean(H5F_t *f, H5HF_hdr_t *hdr,
             *clean = FALSE;
     } /* end if */
     else if((hdr->man_dtable.curr_root_rows == 0) &&
-            (HADDR_UNDEF != hdr->man_dtable.table_addr)) {
+		(HADDR_UNDEF != hdr->man_dtable.table_addr)) {
         haddr_t		root_dblock_addr;
         unsigned	root_dblock_status = 0;
 
-        /* this is scenario 2 -- we have a root dblock */
-        root_dblock_addr = hdr->man_dtable.table_addr;
+	/* this is scenario 2 -- we have a root dblock */
+	root_dblock_addr = hdr->man_dtable.table_addr;
         if(H5AC_get_entry_status(f, root_dblock_addr, &root_dblock_status) < 0)
             HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't get root dblock status")
 
@@ -2753,11 +2753,11 @@ H5HF__cache_verify_iblock_descendants_clean(H5F_t *f, H5HF_indirect_t *iblock,
 
     /* verify that flush dependency setup is plausible */
     if(0 == (*iblock_status & H5AC_ES__IS_FLUSH_DEP_CHILD))
-        HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock is not a flush dep child.")
+	HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock is not a flush dep child.")
     if(((has_dblocks || has_iblocks)) && (0 == (*iblock_status & H5AC_ES__IS_FLUSH_DEP_PARENT)))
-        HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock has children and is not a flush dep parent.")
+	HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock has children and is not a flush dep parent.")
     if(((has_dblocks || has_iblocks)) && (0 == (*iblock_status & H5AC_ES__IS_PINNED)))
-        HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock has children and is not pinned.")
+	HGOTO_ERROR(H5E_HEAP, H5E_SYSTEM, FAIL, "iblock has children and is not pinned.")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2766,29 +2766,29 @@ done:
 
 
 /*------------------------------------------------------------------------
- * Function:    H5HF__cache_verify_iblocks_dblocks_clean
+ * Function:	H5HF__cache_verify_iblocks_dblocks_clean
  *
- * Purpose:     Sanity checking routine that attempts to verify that all
- *              direct blocks pointed to by the supplied indirect block
- *              are either clean, or not in the cache.
+ * Purpose:	Sanity checking routine that attempts to verify that all
+ *		direct blocks pointed to by the supplied indirect block
+ *		are either clean, or not in the cache.
  *
- *              In passing, the function also does a cursory check to 
- *              spot any obvious errors in the flush dependency setup.  
- *              If any problems are found, the function returns failure.  
- *              Note that these checks are not exhaustive, thus passing 
- *              them does not mean that the flush dependencies are 
- *              correct -- only that there is nothing obviously wrong
- *              with them.
+ *		In passing, the function also does a cursory check to 
+ *		spot any obvious errors in the flush dependency setup.  
+ *		If any problems are found, the function returns failure.  
+ *		Note that these checks are not exhaustive, thus passing 
+ *		them does not mean that the flush dependencies are 
+ *		correct -- only that there is nothing obviously wrong
+ *		with them.
  *
- *              WARNING:  This function presumes that the supplied 
- *              iblock is in the cache, and will not be removed 
- *              during the call.  Caller must ensure that this is 
- *              the case before the call.
+ *		WARNING:  This function presumes that the supplied 
+ *		iblock is in the cache, and will not be removed 
+ *		during the call.  Caller must ensure that this is 
+ *		the case before the call.
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  John Mainzer
- *              5/25/14
+ * Programmer:	John Mainzer
+ *		5/25/14
  *
  *-------------------------------------------------------------------------
  */

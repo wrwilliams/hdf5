@@ -213,7 +213,7 @@ H5F_try_extend(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type, haddr_t blk_end, hsize_
     HDassert(extra_requested > 0);
 
     /* Extend the object by extending the underlying file */
-    if((ret_value = H5FD_try_extend(f->shared->lf, type, blk_end, f, dxpl_id, extra_requested)) < 0)
+    if((ret_value = H5FD_try_extend(f->shared->lf, type, f, dxpl_id, blk_end, extra_requested)) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTEXTEND, FAIL, "driver try extend request failed")
 
     /* H5FD_try_extend() updates driver message and marks the superblock
