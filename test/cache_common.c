@@ -3965,8 +3965,8 @@ move_entry(H5C_t * cache_ptr,
         HDassert( entry_ptr->type == type );
         HDassert( entry_ptr == entry_ptr->self );
         HDassert( entry_ptr->cache_ptr == cache_ptr );
-        HDassert( !(entry_ptr->is_protected) );
-        HDassert( !(entry_ptr->header.is_protected) );
+        HDassert( !entry_ptr->is_read_only );
+        HDassert( !entry_ptr->header.is_read_only );
 
 
         if ( entry_ptr->at_main_addr && !main_addr ) {
@@ -6179,7 +6179,7 @@ check_and_validate_cache_size(hid_t file_id,
     size_t min_clean_size;
     size_t expected_cur_size;
     size_t cur_size;
-    int32_t expected_cur_num_entries;
+    uint32_t expected_cur_num_entries;
     int cur_num_entries;
     H5F_t * file_ptr = NULL;
     H5C_t * cache_ptr = NULL;
@@ -6485,7 +6485,7 @@ dump_LRU(H5F_t * file_ptr)
     entry_ptr = cache_ptr->LRU_head_ptr;
 
     HDfprintf(stdout, 
-              "\n\nIndex len/size/clean size/dirty size = %d/%lld/%lld/%lld\n",
+              "\n\nIndex len/size/clean size/dirty size = %u/%lld/%lld/%lld\n",
               cache_ptr->index_len, (long long)(cache_ptr->index_size),
               (long long)(cache_ptr->clean_index_size),
               (long long)(cache_ptr->dirty_index_size));

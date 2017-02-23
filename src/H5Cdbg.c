@@ -207,7 +207,7 @@ H5C_dump_cache_skip_list(H5C_t * cache_ptr, char * calling_fcn)
     HDassert(calling_fcn != NULL);
 
     HDfprintf(stdout, "\n\nDumping metadata cache skip list from %s.\n", calling_fcn);
-    HDfprintf(stdout, "	slist len = %d.\n", cache_ptr->slist_len);
+    HDfprintf(stdout, "	slist len = %u.\n", cache_ptr->slist_len);
     HDfprintf(stdout, "	slist size = %lld.\n", (long long)(cache_ptr->slist_size));
 
     if(cache_ptr->slist_len > 0) {
@@ -488,12 +488,12 @@ H5C_stats(H5C_t * cache_ptr,
               average_failed_search_depth);
 
     HDfprintf(stdout,
-             "%s  current (max) index size / length  = %ld (%ld) / %ld (%ld)\n",
+             "%s  current (max) index size / length  = %ld (%ld) / %lu (%lu)\n",
               cache_ptr->prefix,
               (long)(cache_ptr->index_size),
               (long)(cache_ptr->max_index_size),
-              (long)(cache_ptr->index_len),
-              (long)(cache_ptr->max_index_len));
+              (unsigned long)(cache_ptr->index_len),
+              (unsigned long)(cache_ptr->max_index_len));
 
     HDfprintf(stdout,
              "%s  current (max) clean/dirty idx size = %ld (%ld) / %ld (%ld)\n",
@@ -504,46 +504,46 @@ H5C_stats(H5C_t * cache_ptr,
               (long)(cache_ptr->max_dirty_index_size));
 
     HDfprintf(stdout,
-             "%s  current (max) slist size / length  = %ld (%ld) / %ld (%ld)\n",
+             "%s  current (max) slist size / length  = %ld (%ld) / %lu (%lu)\n",
               cache_ptr->prefix,
               (long)(cache_ptr->slist_size),
               (long)(cache_ptr->max_slist_size),
-              (long)(cache_ptr->slist_len),
-              (long)(cache_ptr->max_slist_len));
+              (unsigned long)(cache_ptr->slist_len),
+              (unsigned long)(cache_ptr->max_slist_len));
 
     HDfprintf(stdout,
-             "%s  current (max) PL size / length     = %ld (%ld) / %ld (%ld)\n",
+             "%s  current (max) PL size / length     = %ld (%ld) / %lu (%lu)\n",
               cache_ptr->prefix,
               (long)(cache_ptr->pl_size),
               (long)(cache_ptr->max_pl_size),
-              (long)(cache_ptr->pl_len),
-              (long)(cache_ptr->max_pl_len));
+              (unsigned long)(cache_ptr->pl_len),
+              (unsigned long)(cache_ptr->max_pl_len));
 
     HDfprintf(stdout,
-             "%s  current (max) PEL size / length    = %ld (%ld) / %ld (%ld)\n",
+             "%s  current (max) PEL size / length    = %ld (%ld) / %lu (%lu)\n",
               cache_ptr->prefix,
               (long)(cache_ptr->pel_size),
               (long)(cache_ptr->max_pel_size),
-              (long)(cache_ptr->pel_len),
-              (long)(cache_ptr->max_pel_len));
+              (unsigned long)(cache_ptr->pel_len),
+              (unsigned long)(cache_ptr->max_pel_len));
 
     HDfprintf(stdout,
-              "%s  current LRU list size / length     = %ld / %ld\n",
+              "%s  current LRU list size / length     = %ld / %lu\n",
               cache_ptr->prefix,
               (long)(cache_ptr->LRU_list_size),
-              (long)(cache_ptr->LRU_list_len));
+              (unsigned long)(cache_ptr->LRU_list_len));
 
     HDfprintf(stdout,
-              "%s  current clean LRU size / length    = %ld / %ld\n",
+              "%s  current clean LRU size / length    = %ld / %lu\n",
               cache_ptr->prefix,
               (long)(cache_ptr->cLRU_list_size),
-              (long)(cache_ptr->cLRU_list_len));
+              (unsigned long)(cache_ptr->cLRU_list_len));
 
     HDfprintf(stdout,
-              "%s  current dirty LRU size / length    = %ld / %ld\n",
+              "%s  current dirty LRU size / length    = %ld / %lu\n",
               cache_ptr->prefix,
               (long)(cache_ptr->dLRU_list_size),
-              (long)(cache_ptr->dLRU_list_len));
+              (unsigned long)(cache_ptr->dLRU_list_len));
 
     HDfprintf(stdout,
               "%s  Total hits / misses / hit_rate     = %ld / %ld / %f\n",
@@ -658,7 +658,7 @@ H5C_stats(H5C_t * cache_ptr,
               (long long)(cache_ptr->index_scan_restarts));
 
     HDfprintf(stdout,
-	      "%s  cache image creations/loads/size   = %d / %d / %lld\n",
+	      "%s  cache image creations/loads/size   = %d / %d / %Hu\n",
               cache_ptr->prefix,
               cache_ptr->images_created,
               cache_ptr->images_loaded,
@@ -1101,7 +1101,7 @@ herr_t
 H5C_validate_index_list(H5C_t *cache_ptr)
 {
     H5C_cache_entry_t *	entry_ptr = NULL;
-    int32_t             len = 0;
+    uint32_t            len = 0;
     int32_t		index_ring_len[H5C_RING_NTYPES];
     size_t              size = 0;
     size_t              clean_size = 0;

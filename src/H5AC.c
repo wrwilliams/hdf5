@@ -1129,7 +1129,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5AC_load_cache_image_on_next_protect(H5F_t * f, haddr_t addr, size_t len,
+H5AC_load_cache_image_on_next_protect(H5F_t * f, haddr_t addr, hsize_t len,
     hbool_t rw)
 {
     herr_t              ret_value = SUCCEED;    /* Return value */
@@ -2266,7 +2266,7 @@ done:
  */
 herr_t
 H5AC_get_cache_size(H5AC_t *cache_ptr, size_t *max_size_ptr, size_t *min_clean_size_ptr,
-    size_t *cur_size_ptr, int32_t *cur_num_entries_ptr)
+    size_t *cur_size_ptr, uint32_t *cur_num_entries_ptr)
 {
     herr_t ret_value = SUCCEED;      /* Return value */
 
