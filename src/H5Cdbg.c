@@ -1212,9 +1212,6 @@ H5C_validate_index_list(H5C_t *cache_ptr)
             && (cache_ptr->il_head != cache_ptr->il_tail))
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Index list pointer validation failed")
 
-    if(cache_ptr->index_len < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Index list length validation failed")
-
     if((cache_ptr->index_len == 1) && ((cache_ptr->il_head != cache_ptr->il_tail)
             || (cache_ptr->il_head == NULL) || (cache_ptr->il_head->size != cache_ptr->index_size)))
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Index list pointer sanity checks failed")
