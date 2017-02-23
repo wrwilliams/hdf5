@@ -1641,9 +1641,12 @@ free_icr(test_entry_t *entry, int32_t entry_type)
     HDassert(entry->cache_ptr->magic == H5C__H5C_T_MAGIC);
     HDassert((entry->header.destroy_in_progress) ||
               (entry->header.addr == entry->addr));
+    HDassert(entry->header.magic == H5C__H5C_CACHE_ENTRY_T_BAD_MAGIC);
     HDassert(entry->header.size == entry->size);
     HDassert((entry->type == VARIABLE_ENTRY_TYPE) ||
 	      (entry->size == entry_sizes[entry->type]));
+    HDassert(entry->header.tl_next == NULL);
+    HDassert(entry->header.tl_prev == NULL);
 
     if(entry->num_pins > 0) {
         int i;

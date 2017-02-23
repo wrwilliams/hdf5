@@ -382,6 +382,7 @@ H5C_create(size_t		      max_cache_size,
     cache_ptr->cache_full			= FALSE;
     cache_ptr->size_decreased			= FALSE;
     cache_ptr->resize_in_progress		= FALSE;
+    cache_ptr->msic_in_progress			= FALSE;
 
     (cache_ptr->resize_ctl).version		= H5C__CURR_AUTO_SIZE_CTL_VER;
     (cache_ptr->resize_ctl).rpt_fcn		= NULL;
@@ -1435,6 +1436,11 @@ H5C_insert_entry(H5F_t *             f,
     entry_ptr->aux_next = NULL;
     entry_ptr->aux_prev = NULL;
 
+#ifdef H5_HAVE_PARALLEL
+    entry_ptr->coll_next = NULL;
+    entry_ptr->coll_prev = NULL;
+#endif /* H5_HAVE_PARALLEL */
+
     /* initialize cache image related fields */
     entry_ptr->include_in_image 		= FALSE;
     entry_ptr->lru_rank         		= 0;
@@ -1453,10 +1459,9 @@ H5C_insert_entry(H5F_t *             f,
     entry_ptr->serialization_count		= 0;
 #endif /* NDEBUG */
 
-#ifdef H5_HAVE_PARALLEL
-    entry_ptr->coll_next = NULL;
-    entry_ptr->coll_prev = NULL;
-#endif /* H5_HAVE_PARALLEL */
+    entry_ptr->tl_next  = NULL;
+    entry_ptr->tl_prev  = NULL;
+    entry_ptr->tag_info = NULL;
 
     /* Apply tag to newly inserted entry */
     if(H5C__tag_entry(cache_ptr, entry_ptr, dxpl_id) < 0)
@@ -6923,6 +6928,11 @@ H5C_load_entry(H5F_t *              f,
     entry->serialization_count          = 0;
 #endif /* NDEBUG */
 
+    entry->tl_next  = NULL;
+    entry->tl_prev  = NULL;
+    entry->tag_info = NULL;
+
+
     H5C__RESET_CACHE_ENTRY_STATS(entry);
 
     ret_value = thing;
@@ -6974,6 +6984,69 @@ done:
  *
  * Programmer:  John Mainzer, 5/14/04
  *
+ * Changes:     Modified function to skip over entries with the 
+ *		flush_in_progress flag set.  If this is not done,
+ *		an infinite recursion is possible if the cache is 
+ *		full, and the pre-serialize or serialize routine 
+ *		attempts to load another entry.
+ *
+ *		This error was exposed by a re-factor of the 
+ *		H5C__flush_single_entry() routine.  However, it was 
+ *		a potential bug from the moment that entries were 
+ *		allowed to load other entries on flush.
+ *
+ *		In passing, note that the primary and secondary dxpls 
+ *		mentioned in the comment above have been replaced by 
+ *		a single dxpl at some point, and thus the discussion 
+ *		above is somewhat obsolete.  Date of this change is 
+ *		unkown.
+ *
+ *						JRM -- 12/26/14
+ *
+ *		Modified function to detect deletions of entries 
+ *		during a scan of the LRU, and where appropriate, 
+ *		restart the scan to avoid proceeding with a next 
+ *		entry that is no longer in the cache.
+ *
+ *		Note the absence of checks after flushes of clean 
+ *		entries.  As a second entry can only be removed by 
+ *		by a call to the pre_serialize or serialize callback
+ *		of the first, and as these callbacks will not be called
+ *		on clean entries, no checks are needed.
+ *
+ *						JRM -- 4/6/15
+ *
+ *              Modified function to skip over entries with the 
+ *              prefetched_dirty flag set.
+ *
+ *              This is a fix for an issue with files with cache images
+ *              which are loaded R/O.  In this case, dirty entries in the
+ *              cache image must be marked as clean, as otherwise the 
+ *              metadata cache will attempt to write them on file close --
+ *              in which we would no longer be R/O.  However, this allows
+ *              the cache to evict them to make space if needed.  Should 
+ *              the entry be needed again later in the session, the 
+ *              metadata cache will attempt to read it from file, which 
+ *              will yield obsolete or invalid data.
+ *
+ *              Solve this by setting the prefetched_dirty flag on such 
+ *              entries, and ignoring entries so marked in the candidate 
+ *              selection code.  This solution isn't particularly efficient,
+ *              so we should try to do better in the future.
+ *
+ *              Note that Evict on Close can also cause this issue.  For 
+ *              now, we deal with it by disabling EOC in the R/O case.
+ *
+ *              SWMR is also a possible problem, but it is irrelevant in 
+ *              the R/O case.
+ *
+ *                                              JRM -- 1/27/17
+ *
+ *              Added code to detect re-entrant calls to this function,
+ *              and avoid the infinite recursion that might otherwise 
+ *              occur.
+ *                                              JRM -- 2/16/17
+ *             
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -6989,6 +7062,7 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     uint32_t		entries_examined = 0;
     uint32_t		initial_list_len;
     size_t		empty_space;
+    hbool_t             reentrant_call = FALSE;
     hbool_t		prev_is_dirty = FALSE;
     hbool_t             didnt_flush_entry = FALSE;
     hbool_t		restart_scan;
@@ -7005,6 +7079,18 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     HDassert(cache_ptr);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
     HDassert(cache_ptr->index_size == (cache_ptr->clean_index_size + cache_ptr->dirty_index_size));
+
+    /* check to see if cache_ptr->msic_in_progress is TRUE.  If it, this
+     * is a re-entrant call via a client callback called in the make 
+     * space in cache process.  To avoid an infinite recursion, set 
+     * reentrant_call to TRUE, and goto done.
+     */
+    if(cache_ptr->msic_in_progress) {
+        reentrant_call = TRUE;
+        HGOTO_DONE(SUCCEED);
+    } /* end if */
+
+    cache_ptr->msic_in_progress = TRUE;
 
     if ( write_permitted ) {
 
@@ -7279,7 +7365,18 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     }
 
 done:
+
+    /* Sanity checks */
+    HDassert(cache_ptr->msic_in_progress);
+
+    if(!reentrant_call)
+
+        cache_ptr->msic_in_progress = FALSE;
+
+    HDassert((!reentrant_call) || (cache_ptr->msic_in_progress));
+
     FUNC_LEAVE_NOAPI(ret_value)
+
 } /* H5C_make_space_in_cache() */
 
 
