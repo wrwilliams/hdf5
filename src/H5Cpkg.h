@@ -4910,8 +4910,6 @@ H5_DLL herr_t H5C_deserialize_prefetched_entry(H5F_t * f, hid_t dxpl_id,
 /* General routines */
 H5_DLL herr_t H5C__flush_single_entry(H5F_t *f, hid_t dxpl_id,
     H5C_cache_entry_t *entry_ptr, unsigned flags);
-H5_DLL herr_t H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, 
-    hid_t dxpl_id);
 H5_DLL herr_t H5C_free_image_entries_array(H5C_t * cache_ptr);
 H5_DLL herr_t H5C_load_cache_image(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5C__write_cache_image(H5F_t *f, hid_t dxpl_id, const H5C_t *cache_ptr);
@@ -4920,6 +4918,8 @@ H5_DLL herr_t H5C__mark_flush_dep_unserialized(H5C_cache_entry_t * entry_ptr);
 H5_DLL herr_t H5C_make_space_in_cache(H5F_t * f, hid_t   dxpl_id,
     size_t  space_needed, hbool_t write_permitted);
 H5_DLL herr_t H5C__flush_marked_entries(H5F_t * f, hid_t dxpl_id);
+H5_DLL herr_t H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, 
+    hid_t dxpl_id);
 H5_DLL herr_t H5C__iter_tagged_entries(H5C_t *cache, haddr_t tag, hbool_t match_global,
     H5C_tag_iter_cb_t cb, void *cb_ctx);
 

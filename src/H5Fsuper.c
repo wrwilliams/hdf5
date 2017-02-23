@@ -676,7 +676,7 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
 
                 /* Retrieve the 'file space info' structure */
                 if(NULL == H5O_msg_read(&ext_loc, H5O_FSINFO_ID, &fsinfo, dxpl_id))
-                    HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to get free-space manager info message")
+                    HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to get free-space manager info message")
 
                 /* Update changed values */
                 if(f->shared->fs_strategy != fsinfo.strategy) {
