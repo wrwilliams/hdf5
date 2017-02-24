@@ -264,6 +264,11 @@ H5_DLL herr_t H5Fget_mdc_logging_status(hid_t file_id,
                                         /*OUT*/ hbool_t *is_enabled,
                                         /*OUT*/ hbool_t *is_currently_logging);
 H5_DLL herr_t H5Fformat_convert(hid_t fid);
+
+H5_DLL herr_t H5Freset_page_buffering_stats(hid_t file_id);
+H5_DLL herr_t H5Fget_page_buffering_stats(hid_t file_id, int accesses[2], int hits[2], 
+                                          int misses[2], int evictions[2], int bypasses[2]);
+
 #ifdef H5_HAVE_PARALLEL
 H5_DLL herr_t H5Fset_mpi_atomicity(hid_t file_id, hbool_t flag);
 H5_DLL herr_t H5Fget_mpi_atomicity(hid_t file_id, hbool_t *flag);

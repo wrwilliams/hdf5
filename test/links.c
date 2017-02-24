@@ -31,15 +31,17 @@
  * This file needs to access private information from the H5G package.
  * This file also needs to access the group testing code.
  */
-#define H5G_FRIEND		/*suppress error about including H5Gpkg	  */
+#define H5G_FRIEND		/*suppress error about including H5Gpkg     */
 #define H5G_TESTING
+#define H5FD_FRIEND		/*suppress error about including H5FDpkg    */
+#define H5FD_TESTING
 
 #include "h5test.h"
 #include "H5srcdir.h"
-#include "H5FDpkg.h"            /* File drivers                         */
-#include "H5Gpkg.h"		/* Groups 				*/
-#include "H5Iprivate.h"		/* IDs			  		*/
-#include "H5Lprivate.h"         /* Links                                */
+#include "H5Gpkg.h"         /* Groups       */
+#include "H5FDpkg.h"        /* File Drivers */
+#include "H5Iprivate.h"     /* IDs          */
+#include "H5Lprivate.h"     /* Links        */
 
 /* File for external link test.  Created with gen_udlinks.c */
 #define LINKED_FILE  "be_extlink2.h5"
