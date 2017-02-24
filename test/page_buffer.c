@@ -1796,7 +1796,8 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
         TEST_ERROR;
 
     /* reset statistics before we begin the tests */
-    if(H5PBreset_stats(file_id) < 0)
+
+    if(H5PB_reset_stats(file_id) < 0)
         FAIL_STACK_ERROR;
 
     if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
