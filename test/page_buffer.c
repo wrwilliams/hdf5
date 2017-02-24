@@ -1443,7 +1443,7 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
         int evictions[2];
         int bypasses[2];
 
-        if(H5PBget_stats(file_id, accesses, hits, misses, evictions, bypasses) < 0)
+        if(H5Fget_page_buffering_stats(file_id, accesses, hits, misses, evictions, bypasses) < 0)
             FAIL_STACK_ERROR;
 
         if(accesses[0] != 11)
@@ -1467,9 +1467,9 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
         if(evictions[1] != 9)
             TEST_ERROR;
 
-        if(H5PBreset_stats(file_id) < 0)
+        if(H5Freset_page_buffering_stats(file_id) < 0)
             FAIL_STACK_ERROR;
-        if(H5PBget_stats(file_id, accesses, hits, misses, evictions, bypasses) < 0)
+        if(H5Fget_page_buffering_stats(file_id, accesses, hits, misses, evictions, bypasses) < 0)
             FAIL_STACK_ERROR;
 
         if(accesses[0] != 0)

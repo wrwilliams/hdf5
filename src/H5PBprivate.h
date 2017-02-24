@@ -55,13 +55,11 @@ typedef struct H5PB_t {
     H5PB_entry_t            *LRU_head_ptr;     /* Head pointer of the LRU */
     H5PB_entry_t            *LRU_tail_ptr;     /* Tail pointer of the LRU */
 
-#if H5PB_COLLECT_STATS
     int                      accesses[2];
     int                      hits[2];
     int                      misses[2];
     int                      evictions[2];
     int                      bypasses[2];
-#endif
 } H5PB_t;
 
 H5_DLL herr_t H5PB_create(H5F_t *file, size_t page_buffer_size, unsigned page_buf_min_meta_perc, unsigned page_buf_min_raw_perc);
@@ -71,13 +69,15 @@ H5_DLL herr_t H5PB_add_new_page(H5F_t *f, H5FD_mem_t type, haddr_t page_addr);
 #ifdef H5_HAVE_PARALLEL
 H5_DLL herr_t H5PB_update_entry(H5PB_t *page_buf, haddr_t addr, size_t size, const void *buf);
 #endif /* H5_HAVE_PARALLEL */
+H5_DLL herr_t H5PB_remove_entry(const H5F_t *f, H5FD_mem_t typ, haddr_t addr, hsize_t size);
 H5_DLL herr_t H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
                         hid_t dxpl_id, void *buf/*out*/);
 H5_DLL herr_t H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
                          hid_t dxpl_id, const void *buf);
-#if H5PB_COLLECT_STATS
-H5_DLL herr_t H5PB_print_stats(const H5PB_t *page_buf);
+
 H5_DLL herr_t H5PB_reset_stats(H5PB_t *page_buf);
-#endif
+H5_DLL herr_t H5PB_get_stats(const H5PB_t *page_buf, int accesses[2], int hits[2], 
+                             int misses[2], int evictions[2], int bypasses[2]);
+H5_DLL herr_t H5PB_print_stats(const H5PB_t *page_buf);
 
 #endif /* !_H5PBprivate_H */

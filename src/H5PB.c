@@ -154,57 +154,137 @@ H5FL_DEFINE_STATIC(H5PB_entry_t);
 /*******************/
 
 
+
+/*-------------------------------------------------------------------------
+ * Function:	H5PB_reset_stats
+ *
+ * Purpose:     This function was created without documentation.
+ *              What follows is my best understanding of Mohamad's intent.
+ *
+ *              Reset statistics collected for the page buffer layer.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:	Mohamad Chaarawi
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t 
-H5PBreset_stats(hid_t file_id)
+H5PB_reset_stats(H5PB_t *page_buf)
 {
-    H5F_t	*f = NULL;              /* File to reset stats on */
     herr_t ret_value = SUCCEED;
 
-    FUNC_ENTER_API(FAIL)
-    H5TRACE1("e", "i", file_id);
+    FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == (f = (H5F_t *)H5I_object(file_id)))
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_BADTYPE, FAIL, "invalid file identifier")
+    HDassert(page_buf);
 
-    if(NULL == f->shared->page_buf)
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_BADTYPE, FAIL, "page buffering not enabled on file")
-
-    H5PB_reset_stats(f->shared->page_buf);
+    page_buf->accesses[0] = 0;
+    page_buf->accesses[1] = 0;
+    page_buf->hits[0] = 0;
+    page_buf->hits[1] = 0;
+    page_buf->misses[0] = 0;
+    page_buf->misses[1] = 0;
+    page_buf->evictions[0] = 0;
+    page_buf->evictions[1] = 0;
+    page_buf->bypasses[0] = 0;
+    page_buf->bypasses[1] = 0;
 
 done:
-    FUNC_LEAVE_API(ret_value)
-}/* H5PBreset_stats */
+    FUNC_LEAVE_NOAPI(ret_value)
 
+}  /* H5PB_reset_stats() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5PB_get_stats
+ *
+ * Purpose:     This function was created without documentation.
+ *              What follows is my best understanding of Mohamad's intent.
+ *
+ *              Retrieve statistics collected about page accesses for the page buffer layer.
+ *              --accesses: the number of metadata and raw data accesses to the page buffer layer
+ *              --hits: the number of metadata and raw data hits in the page buffer layer
+ *              --misses: the number of metadata and raw data misses in the page buffer layer
+ *              --evictions: the number of metadata and raw data evictions from the page buffer layer
+ *              --bypasses: the number of metadata and raw data accesses that bypass the page buffer layer
+ *
+ * Return:	    Non-negative on success/Negative on failure
+ *
+ * Programmer:	Mohamad Chaarawi
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t 
-H5PBget_stats(hid_t file_id, int accesses[2], int hits[2], int misses[2], int evictions[2], int bypasses[2])
+H5PB_get_stats(const H5PB_t *page_buf, int accesses[2], int hits[2], int misses[2], int evictions[2], int bypasses[2])
 {
-    H5F_t	*f = NULL;              /* File to reset stats on */
     herr_t ret_value = SUCCEED;
 
-    FUNC_ENTER_API(FAIL)
-    H5TRACE6("e", "i*Is*Is*Is*Is*Is", file_id, accesses, hits, misses, evictions,
-             bypasses);
+    FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == (f = (H5F_t *)H5I_object(file_id)))
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_BADTYPE, FAIL, "invalid file identifier")
+    HDassert(page_buf);
 
-    if(NULL == f->shared->page_buf)
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_BADTYPE, FAIL, "page buffering not enabled on file")
-
-    accesses[0] = f->shared->page_buf->accesses[0];
-    accesses[1] = f->shared->page_buf->accesses[1];
-    hits[0] = f->shared->page_buf->hits[0];
-    hits[1] = f->shared->page_buf->hits[1];
-    misses[0] = f->shared->page_buf->misses[0];
-    misses[1] = f->shared->page_buf->misses[1];
-    evictions[0] = f->shared->page_buf->evictions[0];
-    evictions[1] = f->shared->page_buf->evictions[1];
-    bypasses[0] = f->shared->page_buf->bypasses[0];
-    bypasses[1] = f->shared->page_buf->bypasses[1];
+    accesses[0] = page_buf->accesses[0];
+    accesses[1] = page_buf->accesses[1];
+    hits[0] = page_buf->hits[0];
+    hits[1] = page_buf->hits[1];
+    misses[0] = page_buf->misses[0];
+    misses[1] = page_buf->misses[1];
+    evictions[0] = page_buf->evictions[0];
+    evictions[1] = page_buf->evictions[1];
+    bypasses[0] = page_buf->bypasses[0];
+    bypasses[1] = page_buf->bypasses[1];
 
 done:
-    FUNC_LEAVE_API(ret_value)
-}/* H5PBget_stats */
+    FUNC_LEAVE_NOAPI(ret_value)
+
+}  /* H5PB_get_stats */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5PB_print_stats()
+ *
+ * Purpose:     This function was created without documentation.
+ *              What follows is my best understanding of Mohamad's intent.
+ *
+ *              Print out statistics collected for the page buffer layer.
+ *
+ * Return:	    Non-negative on success/Negative on failure
+ *
+ * Programmer:	Mohamad Chaarawi
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5PB_print_stats(const H5PB_t *page_buf)
+{
+    herr_t ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    HDassert(page_buf);
+
+    printf("PAGE BUFFER STATISTICS:\n");
+
+    printf("******* METADATA\n");
+    printf("\t Total Accesses: %d\n", page_buf->accesses[0]);
+    printf("\t Hits: %d\n", page_buf->hits[0]);
+    printf("\t Misses: %d\n", page_buf->misses[0]);
+    printf("\t Evictions: %d\n", page_buf->evictions[0]);
+    printf("\t Bypasses: %d\n", page_buf->bypasses[0]);
+    printf("\t Hit Rate = %f%%\n", ((double)page_buf->hits[0]/(page_buf->accesses[0] - page_buf->bypasses[0]))*100);
+    printf("*****************\n\n");
+
+    printf("******* RAWDATA\n");
+    printf("\t Total Accesses: %d\n", page_buf->accesses[1]);
+    printf("\t Hits: %d\n", page_buf->hits[1]);
+    printf("\t Misses: %d\n", page_buf->misses[1]);
+    printf("\t Evictions: %d\n", page_buf->evictions[1]);
+    printf("\t Bypasses: %d\n", page_buf->bypasses[1]);
+    printf("\t Hit Rate = %f%%\n", ((double)page_buf->hits[1]/(page_buf->accesses[1]-page_buf->bypasses[0]))*100);
+    printf("*****************\n\n");
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5PB_print_stats */
 
 
 /*-------------------------------------------------------------------------
@@ -231,8 +311,8 @@ H5PB_create(H5F_t *f, size_t size, unsigned page_buf_min_meta_perc, unsigned pag
     HDassert(f->shared);
 
     /* check args */
-    if(f->shared->fs_page_size == 0)
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTINIT, FAIL, "Enabling Page Buffering requires paged metadata aggregation")
+    if(f->shared->fs_strategy != H5F_FSPACE_STRATEGY_PAGE)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "Enabling Page Buffering requires PAGE file space strategy")
     /* round down the size if it is larger than the page size */
     else if(size > f->shared->fs_page_size) {
         hsize_t temp_size;
@@ -552,6 +632,59 @@ H5PB_update_entry(H5PB_t *page_buf, haddr_t addr, size_t size, const void *buf)
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5PB_update_entry */
 #endif /* H5_HAVE_PARALLEL */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PB_remove_entry
+ *
+ * Purpose:     Remove possible metadata entry with ADDR from the PB cache.
+ *              This is in response to the data corruption bug from fheap.c 
+ *              with page buffering + page strategy.
+ *              Note: Large metadata page bypasses the PB cache.
+ *              Note: Update of raw data page (large or small sized) is handled by the PB cache.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Vailin Choi; Feb 2017
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5PB_remove_entry(const H5F_t *f, H5FD_mem_t type, haddr_t addr, hsize_t size)
+{
+    H5PB_t *page_buf = f->shared->page_buf;
+    H5PB_entry_t *page_entry = NULL;        /* pointer to the page entry being searched */
+    herr_t ret_value = SUCCEED;             /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    HDassert(page_buf);
+    HDassert(size == page_buf->page_size);
+    HDassert(type != H5FD_MEM_DRAW);
+
+    /* Search for address in the skip list */
+    page_entry = (H5PB_entry_t *)H5SL_search(page_buf->slist_ptr, (void *)(&addr));
+
+    /* If found, remove the entry from the PB cache */
+    if(page_entry) {
+        HDassert(page_entry->type != H5FD_MEM_DRAW);
+        if(NULL == H5SL_remove(page_buf->slist_ptr, &(page_entry->addr)))
+            HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Page Entry is not in skip list")
+
+        /* remove from LRU list */
+        H5PB__REMOVE_LRU(page_buf, page_entry)
+        HDassert(H5SL_count(page_buf->slist_ptr) == page_buf->LRU_list_len);
+
+        page_buf->meta_count--;
+
+        H5MM_free(page_entry->page_buf_ptr);
+        page_entry->page_buf_ptr = NULL;
+        page_entry = H5FL_FREE(H5PB_entry_t, page_entry);
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5PB_remove_entry */
 
 
 /*-------------------------------------------------------------------------
@@ -1420,93 +1553,3 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5PB__write_entry */
 
-
-/*-------------------------------------------------------------------------
- * Function:	H5PB_print_stats()
- *
- * Purpose: ??? 
- *
- *          This function was created without documentation.
- *          What follows is my best understanding of Mohamad's intent.
- *
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Mohamad Chaarawi
- *
- *-------------------------------------------------------------------------
- */
-#if H5PB_COLLECT_STATS
-herr_t
-H5PB_print_stats(const H5PB_t *page_buf)
-{
-    herr_t ret_value = SUCCEED;    /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
-
-    HDassert(page_buf);
-
-    printf("PAGE BUFFER STATISTICS:\n");
-
-    printf("******* METADATA\n");
-    printf("\t Total Accesses: %d\n", page_buf->accesses[0]);
-    printf("\t Hits: %d\n", page_buf->hits[0]);
-    printf("\t Misses: %d\n", page_buf->misses[0]);
-    printf("\t Evictions: %d\n", page_buf->evictions[0]);
-    printf("\t Bypasses: %d\n", page_buf->bypasses[0]);
-    printf("\t Hit Rate = %f%%\n", ((double)page_buf->hits[0]/(page_buf->accesses[0] - page_buf->bypasses[0]))*100);
-    printf("*****************\n\n");
-
-    printf("******* RAWDATA\n");
-    printf("\t Total Accesses: %d\n", page_buf->accesses[1]);
-    printf("\t Hits: %d\n", page_buf->hits[1]);
-    printf("\t Misses: %d\n", page_buf->misses[1]);
-    printf("\t Evictions: %d\n", page_buf->evictions[1]);
-    printf("\t Bypasses: %d\n", page_buf->bypasses[1]);
-    printf("\t Hit Rate = %f%%\n", ((double)page_buf->hits[1]/(page_buf->accesses[1]-page_buf->bypasses[0]))*100);
-    printf("*****************\n\n");
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5PB_print_stats */
-#endif /* H5PB_COLLECT_STATS */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5PB_reset_stats()
- *
- * Purpose: ??? 
- *
- *          This function was created without documentation.
- *          What follows is my best understanding of Mohamad's intent.
- *
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Mohamad Chaarawi
- *
- *-------------------------------------------------------------------------
- */
-#if H5PB_COLLECT_STATS
-herr_t
-H5PB_reset_stats(H5PB_t *page_buf)
-{
-    herr_t ret_value = SUCCEED;    /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
-
-    HDassert(page_buf);
-
-    page_buf->accesses[0] = 0;
-    page_buf->accesses[1] = 0;
-    page_buf->hits[0] = 0;
-    page_buf->hits[1] = 0;
-    page_buf->misses[0] = 0;
-    page_buf->misses[1] = 0;
-    page_buf->evictions[0] = 0;
-    page_buf->evictions[1] = 0;
-    page_buf->bypasses[0] = 0;
-    page_buf->bypasses[1] = 0;
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5PB_print_stats */
-#endif /* H5PB_COLLECT_STATS */
