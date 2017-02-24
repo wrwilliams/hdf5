@@ -51,12 +51,11 @@ check_SCRIPTS = $(TEST_SCRIPT)
 # executed, generally most specific tests to least specific tests.
 # As an exception, long-running tests should occur earlier in the list.
 # This gives them more time to run when tests are executing in parallel.
-#
-# NOTE: Re-add the page_buffer test after dt_arith!
+
 TEST_PROG= testhdf5 \
            cache cache_api cache_image cache_tagging lheap ohdr stab gheap \
            evict_on_close farray earray btree2 fheap \
-           pool accum hyperslab istore bittests dt_arith \
+           pool accum hyperslab istore bittests dt_arith page_buffer \
            dtypes dsets cmpd_dset filter_fail extend external efc objcopy links unlink \
            twriteorder big mtime fillval mount flush1 flush2 app_ref enum \
            set_extent ttsafe enc_dec_plist enc_dec_plist_cross_platform\

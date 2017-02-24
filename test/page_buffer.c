@@ -58,6 +58,29 @@ const char *FILENAME[] = {
     NULL
 };
 
+
+/*-------------------------------------------------------------------------
+ * Function:    create_file()
+ *
+ * Purpose:     The purpose of this function appears to be a smoke check
+ *              intended to exercise the page buffer.
+ *
+ *              Specifically, the function creates a file, and then goes 
+ *              through a loop in which it creates four data sets, write 
+ *              data to one of them, verifies the data written, and then 
+ *              deletes the three that it didn't write to.
+ *
+ *              Any data mis-matches or failures reported by the HDF5
+ *              library result in test failure.
+ *
+ * Return:      0 if test is sucessful
+ *              1 if test fails
+ *
+ * Programmer:  unknown
+ *              ??/??/??
+ *
+ *-------------------------------------------------------------------------
+ */
 static unsigned
 create_file(char *filename, hid_t fcpl, hid_t fapl)
 {
@@ -176,8 +199,30 @@ error:
     return(1);
 } /* create_file */
 
+
+/*-------------------------------------------------------------------------
+ * Function:    open_file()
+ *
+ * Purpose:     The purpose of this function appears to be a smoke check
+ *              intended to exercise the page buffer.
+ *
+ *              Specifically, the function opens a file (created by 
+ *              create_file()?), and verify the contents of its datasets.
+ *
+ *              Any data mis-matches or failures reported by the HDF5
+ *              library result in test failure.
+ *
+ * Return:      0 if test is sucessful
+ *              1 if test fails
+ *
+ * Programmer:  unknown
+ *              ??/??/??
+ *
+ *-------------------------------------------------------------------------
+ */
 static unsigned
-open_file(char *filename, hid_t fapl, hsize_t page_size, size_t page_buffer_size)
+open_file(char *filename, hid_t fapl, hsize_t page_size, 
+    size_t page_buffer_size)
 {
     hid_t       file_id = -1;
     hid_t       dset_id = -1;
@@ -308,7 +353,28 @@ error:
 
 } /* set_multi_split() */
 
-/* Changes due to file space page size has a minimum size of 512 */
+
+/*-------------------------------------------------------------------------
+ * Function:    test_args()
+ *
+ * Purpose:     This test appears to be a quick smoke check directed at:
+ *
+ *              1) verifying that API errors are caught.
+ *
+ *              2) verifying that the page buffer behaves more or less 
+ *                 as advertized.
+ *
+ *              Any data mis-matches or unexpected failures or successes
+ *              reported by the HDF5 library result in test failure.
+ *
+ * Return:      0 if test is sucessful
+ *              1 if test fails
+ *
+ * Programmer:  unknown
+ *              ??/??/??
+ *
+ *-------------------------------------------------------------------------
+ */
 static unsigned
 test_args(hid_t orig_fapl, const char *env_h5_drvr)
 {
@@ -327,32 +393,48 @@ test_args(hid_t orig_fapl, const char *env_h5_drvr)
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         TEST_ERROR;
 
-    /* Test setting a page buffer without Paged Aggregation enabled - should fail */
+
+    /* Test setting a page buffer without Paged Aggregation enabled - 
+     * should fail 
+     */
     if(H5Pset_page_buffer_size(fapl, 512, 0, 0) < 0)
         TEST_ERROR;
+
     H5E_BEGIN_TRY {
         file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl);
     } H5E_END_TRY;
+
     if(file_id >= 0)
         TEST_ERROR;
 
-    /* Test setting a page buffer with a size smaller than a single page size - should fail */
+
+    /* Test setting a page buffer with a size smaller than a single 
+     * page size - should fail 
+     */
     if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
         TEST_ERROR;
+
     if(H5Pset_file_space_page_size(fcpl, 512) < 0)
         TEST_ERROR;
+
     if(H5Pset_page_buffer_size(fapl, 511, 0, 0) < 0)
         TEST_ERROR;
+
     H5E_BEGIN_TRY {
         file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl);
     } H5E_END_TRY;
+
     if(file_id >= 0)
         TEST_ERROR;
 
-    /* Test setting a page buffer with sum of min meta and raw data percentage > 100 - should fail */
+
+    /* Test setting a page buffer with sum of min meta and raw 
+     * data percentage > 100 - should fail 
+     */
     H5E_BEGIN_TRY {
         ret = H5Pset_page_buffer_size(fapl, 512, 50, 51);
     } H5E_END_TRY;
+
     if(ret >= 0)
         TEST_ERROR;
 
@@ -362,6 +444,66 @@ test_args(hid_t orig_fapl, const char *env_h5_drvr)
     /* Test setting a page buffer with a size equal to a single page size */
     if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
         TEST_ERROR;
+
+    if(H5Pset_file_space_page_size(fcpl, 512) < 0)
+        TEST_ERROR;
+
+    if(H5Pset_page_buffer_size(fapl, 512, 0, 0) < 0)
+        TEST_ERROR;
+
+    if(create_file(filename, fcpl, fapl) != 0)
+        TEST_ERROR;
+
+    if(open_file(filename, fapl, 512, 512) != 0)
+        TEST_ERROR;
+
+
+    /* Test setting a page buffer with a size slightly larger than a 
+     * single page size 
+     */
+    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
+        TEST_ERROR;
+
+    if(H5Pset_file_space_page_size(fcpl, 512) < 0)
+        TEST_ERROR;
+
+    if(H5Pset_page_buffer_size(fapl, 513, 0, 0) < 0)
+        TEST_ERROR;
+
+    if(create_file(filename, fcpl, fapl) != 0)
+        TEST_ERROR;
+
+    if(open_file(filename, fapl, 512, 512) != 0)
+        TEST_ERROR;
+
+    if(set_multi_split(env_h5_drvr, fapl, 4194304)  != 0)
+        TEST_ERROR;
+
+
+    /* Test setting a large page buffer size and page size */
+    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
+        TEST_ERROR;
+
+    if(H5Pset_file_space_page_size(fcpl, 4194304) < 0)
+        TEST_ERROR;
+
+    if(H5Pset_page_buffer_size(fapl, 16777216, 0, 0) < 0)
+        TEST_ERROR;
+
+    if(create_file(filename, fcpl, fapl) != 0)
+        TEST_ERROR;
+
+    if(open_file(filename, fapl, 4194304, 16777216) != 0)
+        TEST_ERROR;
+
+    if(set_multi_split(env_h5_drvr, fapl, 1)  != 0)
+        TEST_ERROR;
+
+
+    /* Test setting a 512 byte page buffer size and page size */
+    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
+        TEST_ERROR;
+
     if(H5Pset_file_space_page_size(fcpl, 512) < 0)
         TEST_ERROR;
     if(H5Pset_page_buffer_size(fapl, 512, 0, 0) < 0)
@@ -371,49 +513,6 @@ test_args(hid_t orig_fapl, const char *env_h5_drvr)
     if(open_file(filename, fapl, 512, 512) != 0)
         TEST_ERROR;
 
-    /* Test setting a page buffer with a size slightly larger than a single page size */
-    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
-        TEST_ERROR;
-    if(H5Pset_file_space_page_size(fcpl, 512) < 0)
-        TEST_ERROR;
-    if(H5Pset_page_buffer_size(fapl, 513, 0, 0) < 0)
-        TEST_ERROR;
-    if(create_file(filename, fcpl, fapl) != 0)
-        TEST_ERROR;
-    if(open_file(filename, fapl, 512, 512) != 0)
-        TEST_ERROR;
-
-    if(set_multi_split(env_h5_drvr, fapl, 4194304)  != 0)
-        TEST_ERROR;
-
-    /* Test setting a large page buffer size and page size */
-    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
-        TEST_ERROR;
-    if(H5Pset_file_space_page_size(fcpl, 4194304) < 0)
-        TEST_ERROR;
-    if(H5Pset_page_buffer_size(fapl, 16777216, 0, 0) < 0)
-        TEST_ERROR;
-    if(create_file(filename, fcpl, fapl) != 0)
-        TEST_ERROR;
-    if(open_file(filename, fapl, 4194304, 16777216) != 0)
-        TEST_ERROR;
-
-    if(set_multi_split(env_h5_drvr, fapl, 1)  != 0)
-        TEST_ERROR;
-
-#if 0
-    /* Test setting a 1 byte page buffer size and page size */
-    if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
-        TEST_ERROR;
-    if(H5Pset_file_space_page_size(fcpl, 1) < 0)
-        TEST_ERROR;
-    if(H5Pset_page_buffer_size(fapl, 1, 0, 0) < 0)
-        TEST_ERROR;
-    if(create_file(filename, fcpl, fapl) != 0)
-        TEST_ERROR;
-    if(open_file(filename, fapl, 1, 1) != 0)
-        TEST_ERROR;
-#endif
 
     if(H5Pclose(fcpl) < 0)
         FAIL_STACK_ERROR;
@@ -431,6 +530,36 @@ error:
     return 1;
 } /* test_args */
 
+
+/*-------------------------------------------------------------------------
+ * Function:    test_raw_data_handling()
+ *
+ * Purpose:     The purpose of this function appears to be a smoke check
+ *              of raw data reads and writes via the page buffer.
+ *
+ *              Any data mis-matches or failures reported by the HDF5
+ *              library result in test failure.
+ *
+ * Return:      0 if test is sucessful
+ *              1 if test fails
+ *
+ * Programmer:  unknown
+ *              ??/??/??
+ *              
+ * Changes:     Added base_page_cnt field as supporting code.  This allows
+ *              the test to adjust to the number of page buffer pages
+ *              accessed during file open / create.
+ *
+ *              The test for the value of base_page_cnt just after file 
+ *              open exists detect changes in library behavior.  Assuming
+ *              any such change is not indicative of other issues, these 
+ *              tests can be modified to reflect the change.
+ *
+ *                                                    JRM -- 2/23/17
+ *
+ *-------------------------------------------------------------------------
+ */
+
 /* Changes due to file space page size has a minimum size of 512 */
 static unsigned
 test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
@@ -440,6 +569,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
     hid_t fcpl = -1;
     hid_t fapl = -1;
     H5P_genplist_t *plist = (H5P_genplist_t *)H5I_object(H5AC_rawdata_dxpl_id);
+    size_t base_page_cnt;
     size_t page_count = 0;
     int i, num_elements = 2000;
     haddr_t addr = HADDR_UNDEF;
@@ -475,7 +605,15 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
     if(NULL == (f = (H5F_t *)H5I_object(file_id)))
         FAIL_STACK_ERROR;
 
-    /* allocate space for a 1000 elements */
+    /* opening the file inserts one or more pages into the page buffer.
+     * Get the number of pages inserted, and verify that it is the 
+     * the expected value.
+     */
+    base_page_cnt = H5SL_count(f->shared->page_buf->slist_ptr);
+    if(base_page_cnt != 1)
+        TEST_ERROR;
+
+    /* allocate space for a 2000 elements */
     if(HADDR_UNDEF == (addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
@@ -491,31 +629,32 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
     /* Changes: 100 */
     for(i=0 ; i<100 ; i++)
         data[i] = i;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, addr, sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     page_count ++;
-    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+
+    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
         FAIL_STACK_ERROR;
 
-    /* update elements 150 - 225, with values 150 - 224 - this will
+    /* update elements 300 - 450, with values 300 -  - this will
        bring two more pages into the page buffer. */
-    /* Changes: 300 - 450 ; 150 */
     for(i=0 ; i<150 ; i++)
         data[i] = i+300;
     if(H5F_block_write(f, H5FD_MEM_DRAW, addr+(sizeof(int)*300), sizeof(int)*150, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     page_count += 2;
-    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
         FAIL_STACK_ERROR;
 
-    /* update elements 50 - 150, this will go to disk but also update
+    /* update elements 100 - 300, this will go to disk but also update
        existing pages in the page buffer. */
-    /* Changes: 100 - 300; 200 */
     for(i=0 ; i<200 ; i++)
         data[i] = i+100;
     if(H5F_block_write(f, H5FD_MEM_DRAW, addr+(sizeof(int)*100), sizeof(int)*200, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
         FAIL_STACK_ERROR;
 
     /* Update elements 225-300 - this will update an existing page in the PB */
@@ -524,20 +663,18 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
         data[i] = i+450;
     if(H5F_block_write(f, H5FD_MEM_DRAW, addr+(sizeof(int)*450), sizeof(int)*150, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
         FAIL_STACK_ERROR;
 
-    /* Do a full page write to block 300-400 - should bypass the PB */
-    /* Changes: 600 - 800; 200 */
+    /* Do a full page write to block 600-800 - should bypass the PB */
     for(i=0 ; i<200 ; i++)
         data[i] = i+600;
     if(H5F_block_write(f, H5FD_MEM_DRAW, addr+(sizeof(int)*600), sizeof(int)*200, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
         FAIL_STACK_ERROR;
 
-    /* read elements 400 - 600, this should not affect the PB, and should read -1s */
-    /* Changes: 800 - 1200 */
+    /* read elements 800 - 1200, this should not affect the PB, and should read -1s */
     if(H5F_block_read(f, H5FD_MEM_DRAW, addr+(sizeof(int)*800), sizeof(int)*400, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     for (i=0; i < 400; i++) {
@@ -546,11 +683,12 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
             FAIL_STACK_ERROR;
         }
     }
-    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
         FAIL_STACK_ERROR;
 
-    /* read elements 600 - 601, this should read -1 and bring in an entire page of addr 600 */
-    /* Changes: 1200 - 1201; */
+    /* read elements 1200 - 1201, this should read -1 and bring in an 
+     * entire page of addr 1200 
+     */
     if(H5F_block_read(f, H5FD_MEM_DRAW, addr+(sizeof(int)*1200), sizeof(int)*1, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     for (i=0; i < 1; i++) {
@@ -560,7 +698,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
         }
     }
     page_count ++;
-    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
         TEST_ERROR;
 
     /* read elements 175 - 225, this should use the PB existing pages */
@@ -574,12 +712,11 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
             TEST_ERROR;
         }
     }
-    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
         TEST_ERROR;
 
-    /* read elements 0 - 400 using the VFD.. this should result in -1s
-       except for the writes that went through the PB (50-150 & 300-400) */
-    /* Changes: 0 - 800; 100 - 300; 600 - 800 */
+    /* read elements 0 - 800 using the VFD.. this should result in -1s
+       except for the writes that went through the PB (100-300 & 600-800) */
     if(H5FD_read(f->shared->lf, plist, H5FD_MEM_DRAW, addr, sizeof(int)*800, data) < 0)
         FAIL_STACK_ERROR;
     i = 0;
@@ -599,12 +736,12 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
         i++;
     }
 
-    /* read elements 0 - 400 using the PB.. this should result in all
-       what we have written so far and should get the updates from the PB */
-    /* Changes: 0 - 800 */
+    /* read elements 0 - 800 using the PB.. this should result in all
+     * what we have written so far and should get the updates from the PB 
+     */
     if(H5F_block_read(f, H5FD_MEM_DRAW, addr, sizeof(int)*800, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
-    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
         TEST_ERROR;
     for (i=0; i < 800; i++) {
         if(data[i] != i) {
@@ -613,21 +750,21 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
         }
     }
 
-    /* update elements 200 - 700 to value 0, this will go to disk but
-       also evict existing pages from the PB (page 200 & 600 that are
-       existing). */
-    /* Changes: 400 - 1400 */
+    /* update elements 400 - 1400 to value 0, this will go to disk but
+     * also evict existing pages from the PB (page 400 & 1200 that are
+     * existing). 
+     */
     for(i=0 ; i<1000 ; i++)
         data[i] = 0;
     if(H5F_block_write(f, H5FD_MEM_DRAW, addr+(sizeof(int)*400), sizeof(int)*1000, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     page_count -= 2;
-    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
         TEST_ERROR;
 
-    /* read elements 0 - 500.. this should go to disk then update the
-       buffer result 100-200 with existing pages */
-    /* Changes: 0 - 1000 */
+    /* read elements 0 - 1000.. this should go to disk then update the
+     * buffer result 200-400 with existing pages
+     */
     if(H5F_block_read(f, H5FD_MEM_DRAW, addr, sizeof(int)*1000, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
     i=0;
@@ -646,7 +783,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
         }
         i++;
     }
-    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
         TEST_ERROR;
 
     if(H5Fclose(file_id) < 0)
@@ -671,7 +808,37 @@ error:
     return 1;
 } /* test_raw_data_handling */
 
-/* Changes due to file space page size has a minimum size of 512 */
+
+/*-------------------------------------------------------------------------
+ * Function:    test_lru_processing()
+ *
+ * Purpose:     Basic set of tests verifying expected page buffer LRU
+ *              management.
+ *
+ *              Any data mis-matches or failures reported by the HDF5
+ *              library result in test failure.
+ *
+ * Return:      0 if test is sucessful
+ *              1 if test fails
+ *
+ * Programmer:  unknown
+ *              ??/??/??
+ *              
+ * Changes:     Added base_page_cnt field as supporting code.  This allows
+ *              the test to adjust to the number of page buffer pages
+ *              accessed during file open / create.
+ *
+ *              The test for the value of base_page_cnt just after file 
+ *              open exists detect changes in library behavior.  Assuming
+ *              any such change is not indicative of other issues, these 
+ *              tests can be modified to reflect the change.
+ *
+ *                                                    JRM -- 2/23/17
+ *
+ *
+ *-------------------------------------------------------------------------
+ */
+
 static unsigned
 test_lru_processing(hid_t orig_fapl, const char *env_h5_drvr)
 {
@@ -679,6 +846,7 @@ test_lru_processing(hid_t orig_fapl, const char *env_h5_drvr)
     hid_t file_id = -1;          /* File ID */
     hid_t fcpl = -1;
     hid_t fapl = -1;
+    size_t base_page_cnt;
     size_t page_count = 0;
     int i;
     int num_elements = 2000;
@@ -702,10 +870,13 @@ test_lru_processing(hid_t orig_fapl, const char *env_h5_drvr)
 
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         FAIL_STACK_ERROR;
+
     if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
         FAIL_STACK_ERROR;
+
     if(H5Pset_file_space_page_size(fcpl, sizeof(int)*200) < 0)
         FAIL_STACK_ERROR;
+
     /* keep 2 pages at max in the page buffer */
     if(H5Pset_page_buffer_size(fapl, sizeof(int)*400, 20, 0) < 0)
         FAIL_STACK_ERROR;
@@ -717,37 +888,54 @@ test_lru_processing(hid_t orig_fapl, const char *env_h5_drvr)
     if(NULL == (f = (H5F_t *)H5I_object(file_id)))
         FAIL_STACK_ERROR;
 
-    /* allocate space for a 1000 elements */
-    /* Changes: 2000 */
+    /* opening the file inserts one or more pages into the page buffer.
+     * Get the number of pages inserted, and verify that it is the 
+     * the expected value.
+     */
+    base_page_cnt = H5SL_count(f->shared->page_buf->slist_ptr);
+    if(base_page_cnt != 1)
+        TEST_ERROR;
+
+    /* allocate space for a 2000 elements */
     if(HADDR_UNDEF == (addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
     /* intialize all the elements to have a value of -1 */
     for(i=0 ; i<num_elements ; i++)
         data[i] = -1;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, addr, sizeof(int)*(size_t)num_elements, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
-    /* update the first 50 elements to have values 0-49 - this will be
-       a page buffer update with 1 page resulting in the page
-       buffer. */
-    /* Changes: 100 */
+    /* update the first 100 elements to have values 0-99 - this will be
+     * a page buffer update with 1 page resulting in the page
+     * buffer. 
+     */
     for(i=0 ; i<100 ; i++)
         data[i] = i;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, addr, sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     page_count ++;
-    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+
+    if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
         TEST_ERROR;
 
-    /* update elements 150 - 225, with values 150 - 224 - this will
-       bring two pages into the page buffer and evict 0. */
-    /* Changes: 300 - 450 ; 150 */
+    /* update elements 300 - 450, with values 300 - 449 - this will
+     * bring two pages into the page buffer and evict 0. 
+     */
     for(i=0 ; i<150 ; i++)
         data[i] = i+300;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, addr+(sizeof(int)*300), sizeof(int)*150, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     page_count = 2;
+
+    /* at this point, the page buffer entry created at file open should
+     * have been evicted -- thus no further need to consider base_page_cnt.
+     */
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
 
@@ -873,7 +1061,38 @@ error:
     return 1;
 } /* test_lru_processing */
 
-/* Changes due to file space page size has a minimum size of 512 */
+
+/*-------------------------------------------------------------------------
+ * Function:    test_min_threshold()
+ *
+ * Purpose:     Tests verifying observation of minimum and maximum 
+ *              raw and metadata page counts in the page buffer.
+ *
+ *              Any data mis-matches or failures reported by the HDF5
+ *              library result in test failure.
+ *
+ * Return:      0 if test is sucessful
+ *              1 if test fails
+ *
+ * Programmer:  unknown
+ *              ??/??/??
+ *              
+ * Changes:     Added the base_raw_cnt and base_meta_cnt fields and
+ *              supporting code.  This allows the test to adjust to the 
+ *              number of page buffer pages accessed during file open / 
+ *              create.
+ *
+ *              The tests for the values of base_raw_cnt and base_meta_cnt
+ *              just after file open exist detect changes in library 
+ *              behavior.  Assuming any such change is not indicative of 
+ *              other issues, these tests can be modified to reflect the 
+ *              change.
+ *
+ *                                                    JRM -- 2/23/17
+ *
+ *-------------------------------------------------------------------------
+ */
+
 static unsigned
 test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
 {
@@ -881,6 +1100,8 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
     hid_t file_id = -1;          /* File ID */
     hid_t fcpl = -1;
     hid_t fapl = -1;
+    size_t base_raw_cnt = 0;
+    size_t base_meta_cnt = 0;
     size_t page_count = 0;
     int i;
     int num_elements = 1000;
@@ -905,87 +1126,138 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
 
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         FAIL_STACK_ERROR;
+
     if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
         FAIL_STACK_ERROR;
+
     if(H5Pset_file_space_page_size(fcpl, sizeof(int)*200) < 0)
         FAIL_STACK_ERROR;
 
     HDprintf("\tMinimum metadata threshold = 100%%\n");
+
     /* keep 5 pages at max in the page buffer and 5 meta page minimum */
     if(H5Pset_page_buffer_size(fapl, sizeof(int)*1000, 100, 0) < 0)
         FAIL_STACK_ERROR;
+
     /* create the file */
     if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
         FAIL_STACK_ERROR;
+
     /* Get a pointer to the internal file object */
     if(NULL == (f = (H5F_t *)H5I_object(file_id)))
         FAIL_STACK_ERROR;
+
+    /* opening the file inserts one or more pages into the page buffer.
+     * Get the raw and meta counts now, so we can adjust tests accordingly.
+     */
+    HDassert(f);
+    HDassert(f->shared);
+    HDassert(f->shared->page_buf);
+
+    base_raw_cnt = f->shared->page_buf->raw_count;
+    base_meta_cnt = f->shared->page_buf->meta_count;
+
+    if(base_raw_cnt != 0)
+        TEST_ERROR;
+
+    if(base_meta_cnt != 1)
+        TEST_ERROR;
+
     page_buf = f->shared->page_buf;
 
     if(page_buf->min_meta_count != 5)
         TEST_ERROR;
+
     if(page_buf->min_raw_count != 0)
         TEST_ERROR;
 
     if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
+
     if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
-    /* write all raw data, this would end up in page buffer since there is no metadata yet*/
+    /* write all raw data, this would end up in page buffer since there 
+     * is no metadata yet
+     *
+     * Not necessarily -- opening the file may may load a metadata page.
+     */
     for(i=0 ; i<100 ; i++)
         data[i] = i;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr, sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*200), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*400), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*600), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*800), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     page_count += 5;
+
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
-    if(page_buf->raw_count != 5)
+
+    if(page_buf->raw_count != 5 - base_meta_cnt)
         TEST_ERROR;
 
     /* write all meta data, this would end up in page buffer */
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*600), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*800), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
+
     if(page_buf->meta_count != 5)
         TEST_ERROR;
+
     if(page_buf->raw_count != 0)
         TEST_ERROR;
 
     /* write and read more raw data and make sure that they don't end up in
-       page buffer since the minimum metadata is actually the entire
-       page buffer */
+     * page buffer since the minimum metadata is actually the entire
+     * page buffer 
+     */
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*200), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*350), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*500), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*750), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*900), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
+
     if(page_buf->meta_count != 5)
         TEST_ERROR;
+
     if(page_buf->raw_count != 0)
         TEST_ERROR;
 
@@ -994,17 +1266,38 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
 
 
     HDprintf("\tMinimum raw data threshold = 100%%\n");
+
     page_count = 0;
+
     /* keep 5 pages at max in the page buffer and 5 raw page minimum */
     /* Changes: 1000 */
     if(H5Pset_page_buffer_size(fapl, sizeof(int)*1000, 0, 100) < 0)
         TEST_ERROR;
+
     /* create the file */
     if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
         FAIL_STACK_ERROR;
+
     /* Get a pointer to the internal file object */
     if(NULL == (f = (H5F_t *)H5I_object(file_id)))
         FAIL_STACK_ERROR;
+
+    /* opening the file inserts one or more pages into the page buffer.
+     * Get the raw and meta counts now, so we can adjust tests accordingly.
+     */
+    HDassert(f);
+    HDassert(f->shared);
+    HDassert(f->shared->page_buf);
+
+    base_raw_cnt = f->shared->page_buf->raw_count;
+    base_meta_cnt = f->shared->page_buf->meta_count;
+
+    if(base_raw_cnt != 0)
+        TEST_ERROR;
+
+    if(base_meta_cnt != 1)
+        TEST_ERROR;
+
     page_buf = f->shared->page_buf;
 
     if(page_buf->min_meta_count != 0)
@@ -1014,63 +1307,88 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
 
     if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
+
     if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         TEST_ERROR;
 
-    /* write all meta data, this would end up in page buffer since there is no raw data yet*/
+    /* write all meta data, this would end up in page buffer since there 
+     * is no raw data yet
+     */
     for(i=0 ; i<100 ; i++)
         data[i] = i;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*600), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*800), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     page_count += 5;
+
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
-    if(page_buf->meta_count != 5)
+    if(page_buf->meta_count != 5 - base_raw_cnt)
         TEST_ERROR;
 
     /* write/read all raw data, this would end up in page buffer */
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr, sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*200), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*400), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*600), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*800), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
+
     if(page_buf->raw_count != 5)
         TEST_ERROR;
+
     if(page_buf->meta_count != 0)
         TEST_ERROR;
 
     /* write and read more meta data and make sure that they don't end up in
-       page buffer since the minimum metadata is actually the entire
-       page buffer */
+     * page buffer since the minimum metadata is actually the entire
+     * page buffer 
+     */
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*100), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*350), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*500), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*750), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*900), sizeof(int)*50, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
+
     if(page_buf->raw_count != 5)
         TEST_ERROR;
+
     if(page_buf->meta_count != 0)
         TEST_ERROR;
 
@@ -1078,77 +1396,116 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
         FAIL_STACK_ERROR;
 
 
-    HDprintf("\tMinimum metadata threshold = 20%%, Minimum rawdata threshold = 40%%\n");
+    HDprintf("\tMinimum metadata threshold = 40%%, Minimum rawdata threshold = 40%%\n");
     page_count = 0;
-    /* keep 5 pages at max in the page buffer 2 meta pages, 2 raw pages  minimum */
+    /* keep 5 pages at max in the page buffer 2 meta pages, 2 raw pages  
+     * minimum 
+     */
     if(H5Pset_page_buffer_size(fapl, sizeof(int)*1000, 40, 40) < 0)
         TEST_ERROR;
+
     /* create the file */
     if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
         FAIL_STACK_ERROR;
+
     /* Get a pointer to the internal file object */
     if(NULL == (f = (H5F_t *)H5I_object(file_id)))
         FAIL_STACK_ERROR;
+
+    /* opening the file inserts one or more pages into the page buffer.
+     *
+     * However, with the current 1 metadata page inserted into the 
+     * the page buffer, it is not necessary to track the base raw and 
+     * metadata entry counts.
+     */
+
+    if(base_raw_cnt != 0)
+        TEST_ERROR;
+
+    if(base_meta_cnt != 1)
+        TEST_ERROR;
     page_buf = f->shared->page_buf;
 
     if(page_buf->min_meta_count != 2)
         TEST_ERROR;
+
     if(page_buf->min_raw_count != 2)
         TEST_ERROR;
 
     if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
+
     if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
     /* intialize all the elements to have a value of -1 */
     for(i=0 ; i<num_elements ; i++)
         data[i] = -1;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr, sizeof(int)*(size_t)num_elements, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*(size_t)num_elements, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
     /* fill the page buffer with raw data */
     for(i=0 ; i<100 ; i++)
         data[i] = i;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr, sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*200), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*400), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*600), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*800), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     page_count += 5;
+
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         TEST_ERROR;
-    if(f->shared->page_buf->raw_count != 5)
+
+    if(f->shared->page_buf->raw_count != 5 - base_meta_cnt)
         TEST_ERROR;
 
     /* add 3 meta entries evicting 3 raw entries */
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
+
     if(f->shared->page_buf->meta_count != 3)
         TEST_ERROR;
+
     if(f->shared->page_buf->raw_count != 2)
         TEST_ERROR;
 
-    /* adding more meta entires should replace meta entries since raw data is at its minimum */
+    /* adding more meta entires should replace meta entries since raw data 
+     * is at its minimum 
+     */
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*600), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*800), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(f->shared->page_buf->meta_count != 3)
         TEST_ERROR;
+
     if(f->shared->page_buf->raw_count != 2)
         TEST_ERROR;
 
@@ -1156,21 +1513,28 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*750), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
-    /* adding 2 raw entries (even with 1 call) should only evict 1 meta entry and another raw entry */
+    /* adding 2 raw entries (even with 1 call) should only evict 1 meta 
+     * entry and another raw entry 
+     */
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*350), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(f->shared->page_buf->meta_count != 2)
         TEST_ERROR;
+
     if(f->shared->page_buf->raw_count != 3)
         TEST_ERROR;
 
     /* adding 2 meta entries should replace 2 entires at the bottom of the LRU */
     if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*98), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*242), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(f->shared->page_buf->meta_count != 2)
         TEST_ERROR;
+
     if(f->shared->page_buf->raw_count != 3)
         TEST_ERROR;
 
@@ -1197,96 +1561,130 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
 
     if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
+
     if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
     /* intialize all the elements to have a value of -1 */
     for(i=0 ; i<num_elements ; i++)
         data[i] = -1;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr, sizeof(int)*(size_t)num_elements, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*(size_t)num_elements, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
     /* fill the page buffer with raw data */
     for(i=0 ; i<100 ; i++)
         data[i] = i;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr, sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*200), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*400), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*600), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*800), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     page_count += 5;
+
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
 
     /* add 2 meta entries evicting 2 raw entries */
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
+
     if(f->shared->page_buf->meta_count != 2)
         TEST_ERROR;
+
     if(f->shared->page_buf->raw_count != 3)
         TEST_ERROR;
 
     /* bring the rest of the raw entries up the LRU */
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*500), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*700), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*900), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
     /* write one more raw entry which replace one meta entry */
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*100), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
+
     if(f->shared->page_buf->meta_count != 1)
         TEST_ERROR;
+
     if(f->shared->page_buf->raw_count != 4)
         TEST_ERROR;
 
-    /* write one more raw entry which should replace another raw entry keeping min threshold of meta entries */
+    /* write one more raw entry which should replace another raw entry 
+     * keeping min threshold of meta entries 
+     */
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*300), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
+
     if(f->shared->page_buf->meta_count != 1)
         TEST_ERROR;
+
     if(f->shared->page_buf->raw_count != 4)
         TEST_ERROR;
 
-    /* write a metadata entry that should replace the metadata entry at the bottom of the LRU */
+    /* write a metadata entry that should replace the metadata entry 
+     * at the bottom of the LRU 
+     */
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*500), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
         FAIL_STACK_ERROR;
+
     if(f->shared->page_buf->meta_count != 1)
         TEST_ERROR;
+
     if(f->shared->page_buf->raw_count != 4)
         TEST_ERROR;
 
     if(H5Fclose(file_id) < 0)
         FAIL_STACK_ERROR;
+
     if(H5Pclose(fcpl) < 0)
         FAIL_STACK_ERROR;
+
     if(H5Pclose(fapl) < 0)
         FAIL_STACK_ERROR;
+
     HDfree(data);
 
     PASSED()
+
     return 0;
 
 error:
+
     H5E_BEGIN_TRY {
         H5Pclose(fapl);
         H5Pclose(fcpl);
@@ -1294,10 +1692,43 @@ error:
         if(data)
             HDfree(data);
     } H5E_END_TRY;
+
     return 1;
+
 } /* test_min_threshold */
 
-/* Changes due to file space page size has a minimum size of 512 */
+
+/*-------------------------------------------------------------------------
+ * Function:    test_stats_collection()
+ *
+ * Purpose:     Tests verifying correct collection of statistics
+ *              by the page buffer.
+ *
+ *              Any data mis-matches or failures reported by the HDF5
+ *              library result in test failure.
+ *
+ * Return:      0 if test is sucessful
+ *              1 if test fails
+ *
+ * Programmer:  unknown
+ *              ??/??/??
+ *              
+ * Changes:     Added the base_raw_cnt and base_meta_cnt fields and
+ *              supporting code.  This allows the test to adjust to the 
+ *              number of page buffer pages accessed during file open / 
+ *              create.
+ *
+ *              The tests for the values of base_raw_cnt and base_meta_cnt
+ *              just after file open exist detect changes in library 
+ *              behavior.  Assuming any such change is not indicative of 
+ *              other issues, these tests can be modified to reflect the 
+ *              change.
+ *
+ *                                                    JRM -- 2/23/17
+ *
+ *-------------------------------------------------------------------------
+ */
+
 static unsigned
 test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
 {
@@ -1307,6 +1738,8 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
     hid_t fapl = -1;
     int i;
     int num_elements = 1000;
+    size_t base_raw_cnt = 0;
+    size_t base_meta_cnt = 0;
     haddr_t meta_addr = HADDR_UNDEF;
     haddr_t raw_addr = HADDR_UNDEF;
     int *data = NULL;
@@ -1327,8 +1760,10 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
 
     if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         TEST_ERROR;
+
     if(H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
         TEST_ERROR;
+
     if(H5Pset_file_space_page_size(fcpl, sizeof(int)*200) < 0)
         TEST_ERROR;
 
@@ -1343,71 +1778,119 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
     if(NULL == (f = (H5F_t *)H5I_object(file_id)))
         FAIL_STACK_ERROR;
 
+    /* opening the file inserts one or more pages into the page buffer.
+     * Get the raw and meta counts now, so we can adjust the expected 
+     * statistics accordingly.
+     */
+    HDassert(f);
+    HDassert(f->shared);
+    HDassert(f->shared->page_buf);
+
+    base_raw_cnt = f->shared->page_buf->raw_count;
+    base_meta_cnt = f->shared->page_buf->meta_count;
+
+    if(base_raw_cnt != 0)
+        TEST_ERROR;
+
+    if(base_meta_cnt != 1)
+        TEST_ERROR;
+
+    /* reset statistics before we begin the tests */
+    if(H5PBreset_stats(file_id) < 0)
+        FAIL_STACK_ERROR;
+
     if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
+
     if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
+
 
     /* intialize all the elements to have a value of -1 */
     for(i=0 ; i<num_elements ; i++)
         data[i] = -1;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr, sizeof(int)*(size_t)num_elements, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*(size_t)num_elements, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
     for(i=0 ; i<200 ; i++)
         data[i] = i;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr, sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*200), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*400), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*600), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*800), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*600), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*500), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*700), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*900), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*200, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*100), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*300), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_write(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*800), sizeof(int)*182, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr, sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*200), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*400), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr, sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*200), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*600), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_DRAW, raw_addr+(sizeof(int)*800), sizeof(int)*100, H5AC_rawdata_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*400), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*600), sizeof(int)*200, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
+
     if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*800), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
@@ -1431,9 +1914,9 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
     if(f->shared->page_buf->misses[1] != 11)
         TEST_ERROR;
 
-    if(f->shared->page_buf->evictions[0] != 5)
+    if(f->shared->page_buf->evictions[0] != 5 + (int)base_meta_cnt)
         TEST_ERROR;
-    if(f->shared->page_buf->evictions[1] != 9)
+    if(f->shared->page_buf->evictions[1] != 9 + (int)base_raw_cnt)
         TEST_ERROR;
 
     {
@@ -1462,9 +1945,9 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
             TEST_ERROR;
         if(misses[1] != 11)
             TEST_ERROR;
-        if(evictions[0] != 5)
+        if(evictions[0] != 5 + (int)base_meta_cnt)
             TEST_ERROR;
-        if(evictions[1] != 9)
+        if(evictions[1] != 9 + (int)base_raw_cnt)
             TEST_ERROR;
 
         if(H5PBreset_stats(file_id) < 0)
@@ -1516,6 +1999,20 @@ error:
     return 1;
 } /* test_stats_collection */
 
+
+/*-------------------------------------------------------------------------
+ * Function:    main()
+ *
+ * Purpose:     Main function for the page buffer tests.
+ *
+ * Return:      0 if test is sucessful
+ *              1 if test fails
+ *
+ * Programmer:  unknown
+ *              ??/??/??
+ *
+ *-------------------------------------------------------------------------
+ */
 int
 main(void)
 {
@@ -1536,7 +2033,9 @@ main(void)
      * Page buffering depends on paged aggregation which is
      * currently disabled for multi/split drivers.
      */
-    if(0 == HDstrcmp(env_h5_drvr, "multi") || 0 == HDstrcmp(env_h5_drvr, "split")) {
+    if((0 == HDstrcmp(env_h5_drvr, "multi")) || 
+       (0 == HDstrcmp(env_h5_drvr, "split"))) {
+
         SKIPPED()
         HDputs("Skip page buffering test because paged aggregation is disabled for multi/split drivers");
         HDexit(EXIT_SUCCESS);
@@ -1568,11 +2067,15 @@ main(void)
     HDexit(EXIT_SUCCESS);
 
 error:
+
     HDprintf("***** %d Page Buffering TEST%s FAILED! *****\n",
         nerrors, nerrors > 1 ? "S" : "");
+
     H5E_BEGIN_TRY {
         H5Pclose(fapl);
     } H5E_END_TRY;
+
     HDexit(EXIT_FAILURE);
+
 } /* main() */
 
