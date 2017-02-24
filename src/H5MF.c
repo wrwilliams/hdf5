@@ -1857,16 +1857,10 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
          *
          * In passing, verify that all the free space managers are closed.
          */
-
-        for(ptype = H5F_MEM_PAGE_META; ptype < H5F_MEM_PAGE_NTYPES; 
-            H5_INC_ENUM(H5F_mem_page_t, ptype))
+        for(ptype = H5F_MEM_PAGE_META; ptype < H5F_MEM_PAGE_NTYPES; H5_INC_ENUM(H5F_mem_page_t, ptype))
             fsinfo.fs_addr[ptype - 1] = HADDR_UNDEF;
-
-        for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES;
-            H5_INC_ENUM(H5FD_mem_t, type)) {
-
+        for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type))
             fsinfo.fs_addr[type-1] = f->shared->fs_addr[type];
-        }
         fsinfo.strategy = f->shared->fs_strategy;
         fsinfo.persist = f->shared->fs_persist;
         fsinfo.threshold = f->shared->fs_threshold;
@@ -1874,20 +1868,13 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
         fsinfo.pgend_meta_thres = f->shared->pgend_meta_thres;
         fsinfo.eoa_pre_fsm_fsalloc = f->shared->eoa_pre_fsm_fsalloc;
 
-        /* write the free space manager message -- message must already exist */
+        /* Write the free space manager message -- message must already exist */
         if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, FALSE, H5O_MSG_FLAG_MARK_IF_UNKNOWN) < 0)
             HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, "error in writing message to superblock extension")
 
-        /* this shouldn't be necessary, but must mark the superblock dirty */
-        if(H5F_super_dirty(f) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "can't mark superblock dirty")
-
-        /* close the free space managers */
-        for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES;
-            H5_INC_ENUM(H5FD_mem_t, type)) {
-
+        /* Close the free space managers */
+        for(type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, type)) {
             if(f->shared->fs_man[type]) {
-
                 /* test to see if we need to switch rings -- do 
                  * so if required 
                  */
@@ -1900,7 +1887,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
                     if(H5AC_set_ring(dxpl_id, needed_ring, &dxpl, &curr_ring) < 0)
                         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, FAIL, "unable to set ring value (1)")
                     curr_ring = needed_ring;
-                }
+                } /* end if */
 
                 HDassert(f->shared->fs_state[type] == H5F_FS_STATE_OPEN);
 
@@ -1910,7 +1897,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
                 f->shared->fs_state[type] = H5F_FS_STATE_CLOSED;
             } /* end if */
             f->shared->fs_addr[type] = HADDR_UNDEF;
-        }
+        } /* end for */
 
         /* verify that we haven't dirtied any metadata cache entries
          * from the metadata free space manager ring out.
@@ -2054,27 +2041,17 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
          * file space for the self referential free space managers.  Other 
          * data was gathered above.
          */
-
-        for(ptype = H5F_MEM_PAGE_META; ptype < H5F_MEM_PAGE_NTYPES;
-            H5_INC_ENUM(H5F_mem_page_t, ptype)) {
-
+        for(ptype = H5F_MEM_PAGE_META; ptype < H5F_MEM_PAGE_NTYPES; H5_INC_ENUM(H5F_mem_page_t, ptype))
             fsinfo.fs_addr[ptype-1] = f->shared->fs_addr[ptype];
-        }
         fsinfo.eoa_pre_fsm_fsalloc = f->shared->eoa_pre_fsm_fsalloc;
 
-        /* write the free space manager message -- message must already exist */
+        /* Write the free space manager message -- message must already exist */
         if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, FALSE, H5O_MSG_FLAG_MARK_IF_UNKNOWN) < 0)
             HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, "error in writing message to superblock extension")
 
-        /* this shouldn't be necessary, but must mark the superblock dirty */
-        if(H5F_super_dirty(f) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "can't mark superblock dirty")
-
-        /* close the free space managers */
+        /* Close the free space managers */
         /* use H5MF__close_fstype() for this? */
-        for(ptype = H5F_MEM_PAGE_META; ptype < H5F_MEM_PAGE_NTYPES;
-            H5_INC_ENUM(H5F_mem_page_t, ptype)) {
-
+        for(ptype = H5F_MEM_PAGE_META; ptype < H5F_MEM_PAGE_NTYPES; H5_INC_ENUM(H5F_mem_page_t, ptype)) {
             if(f->shared->fs_man[ptype]) {
                 /* test to see if we need to switch rings -- do
                  * so if required
@@ -2088,7 +2065,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
                     if(H5AC_set_ring(dxpl_id, needed_ring, &dxpl, &curr_ring) < 0)
                         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, FAIL, "unable to set ring value (1)")
                     curr_ring = needed_ring;
-                }
+                } /* end if */
 
                 HDassert(f->shared->fs_state[ptype] == H5F_FS_STATE_OPEN);
 
@@ -2098,7 +2075,7 @@ HDfprintf(stderr, "%s: Entering\n", FUNC);
                 f->shared->fs_state[ptype] = H5F_FS_STATE_CLOSED;
             } /* end if */
             f->shared->fs_addr[ptype] = HADDR_UNDEF;
-        }
+        } /* end for */
 
         /* verify that we haven't dirtied any metadata cache entries
          * from the metadata free space manager ring out.

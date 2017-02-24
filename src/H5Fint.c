@@ -946,8 +946,8 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                     f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_WRITE_ACCESS);
                     f->shared->sblock->status_flags &= (uint8_t)(~H5F_SUPER_SWMR_WRITE_ACCESS);
 
-                    /* Mark superblock dirty in cache, so change will get encoded */
-                    if(H5F_super_dirty(f) < 0)
+                    /* Mark EOA info dirty in cache, so change will get encoded */
+                    if(H5F_eoa_dirty(f, dxpl_id) < 0)
                         /* Push error, but keep going*/
                         HDONE_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
 
@@ -1592,15 +1592,15 @@ H5F__flush_phase2(H5F_t *f, hid_t dxpl_id, hbool_t closing)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_IO, H5E_CANTFLUSH, FAIL, "unable to flush metadata accumulator")
 
-    /* Flush file buffers to disk. */
-    if(H5FD_flush(f->shared->lf, dxpl_id, closing) < 0)
-        /* Push error, but keep going*/
-        HDONE_ERROR(H5E_IO, H5E_CANTFLUSH, FAIL, "low level flush failed")
-
     /* Flush the page buffer */
     if(H5PB_flush(f, dxpl_id) < 0)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_IO, H5E_CANTFLUSH, FAIL, "page buffer flush failed")
+
+    /* Flush file buffers to disk. */
+    if(H5FD_flush(f->shared->lf, dxpl_id, closing) < 0)
+        /* Push error, but keep going*/
+        HDONE_ERROR(H5E_IO, H5E_CANTFLUSH, FAIL, "low level flush failed")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F__flush_phase2() */
