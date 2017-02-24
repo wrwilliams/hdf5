@@ -766,7 +766,7 @@ H5C_dest(H5F_t * f, hid_t dxpl_id)
 
 	/* write cache image block if so configured */
 	if(cache_ptr->image_ctl.flags & H5C_CI__GEN_MDC_IMAGE_BLK) {
-	    if(H5AC_write_cache_image(f, dxpl_id, cache_ptr->image_addr, cache_ptr->image_len, cache_ptr->image_buffer) < 0)
+	    if(H5C__write_cache_image(f, dxpl_id, cache_ptr) < 0)
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't write metadata cache image block to file")
 
 	    H5C__UPDATE_STATS_FOR_CACHE_IMAGE_CREATE(cache_ptr);
@@ -970,12 +970,12 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 {
 #if H5C_DO_SANITY_CHECKS
     int			i;
-    int32_t		index_len = 0;
+    uint32_t		index_len = 0;
     size_t		index_size = (size_t)0;
     size_t		clean_index_size = (size_t)0;
     size_t		dirty_index_size = (size_t)0;
     size_t		slist_size = (size_t)0;
-    int32_t		slist_len = 0;
+    uint32_t		slist_len = 0;
 #endif /* H5C_DO_SANITY_CHECKS */
     H5C_ring_t		ring;
     H5C_t             * cache_ptr;
@@ -5387,7 +5387,7 @@ H5C_flush_invalidate_ring(H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
     H5C_cache_entry_t  *entry_ptr = NULL;
     H5C_cache_entry_t  *next_entry_ptr = NULL;
 #if H5C_DO_SANITY_CHECKS
-    int64_t             initial_slist_len = 0;
+    uint32_t            initial_slist_len = 0;
     size_t              initial_slist_size = 0;
 #endif /* H5C_DO_SANITY_CHECKS */
     herr_t              ret_value = SUCCEED;
@@ -5622,7 +5622,7 @@ H5C_flush_invalidate_ring(H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
 
         if(node_ptr == NULL) {
             HDassert(cache_ptr->slist_len == (initial_slist_len + cache_ptr->slist_len_increase));
-            HDassert((int64_t)cache_ptr->slist_size == ((int64_t)initial_slist_size + cache_ptr->slist_size_increase));
+            HDassert(cache_ptr->slist_size == (initial_slist_size + cache_ptr->slist_size_increase));
         } /* end if */
 #endif /* H5C_DO_SANITY_CHECKS */
 
@@ -5824,7 +5824,7 @@ H5C_flush_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,  unsigned flags)
     H5C_cache_entry_t *	entry_ptr = NULL;
     H5C_cache_entry_t *	next_entry_ptr = NULL;
 #if H5C_DO_SANITY_CHECKS
-    int64_t		initial_slist_len = 0;
+    uint32_t		initial_slist_len = 0;
     size_t              initial_slist_size = 0;
 #endif /* H5C_DO_SANITY_CHECKS */
     int                 i;
@@ -6030,7 +6030,7 @@ H5C_flush_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,  unsigned flags)
 #if H5C_DO_SANITY_CHECKS
         /* Verify that the slist size and length are as expected. */
         HDassert((initial_slist_len + cache_ptr->slist_len_increase) == cache_ptr->slist_len);
-        HDassert((size_t)((int64_t)initial_slist_size + cache_ptr->slist_size_increase) == cache_ptr->slist_size);
+        HDassert((initial_slist_size + cache_ptr->slist_size_increase) == cache_ptr->slist_size);
 #endif /* H5C_DO_SANITY_CHECKS */
     } /* while */
 
@@ -7059,8 +7059,8 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     int32_t             dirty_pf_entries_skipped = 0;
     int32_t             total_entries_scanned = 0;
 #endif /* H5C_COLLECT_CACHE_STATS */
-    int32_t		entries_examined = 0;
-    int32_t		initial_list_len;
+    uint32_t		entries_examined = 0;
+    uint32_t		initial_list_len;
     size_t		empty_space;
     hbool_t             reentrant_call = FALSE;
     hbool_t		prev_is_dirty = FALSE;
@@ -7069,7 +7069,7 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     H5C_cache_entry_t *	entry_ptr;
     H5C_cache_entry_t *	prev_ptr;
     H5C_cache_entry_t *	next_ptr;
-    int32_t 		num_corked_entries = 0;
+    uint32_t 		num_corked_entries = 0;
     herr_t		ret_value = SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT

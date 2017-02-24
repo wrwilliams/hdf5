@@ -560,7 +560,7 @@ typedef struct H5C_t H5C_t;
  *
  *	The typedef for the pre-serialize callback is as follows:
  *
- *	typedef herr_t (*H5C_pre_serialize_func_t)(const H5F_t *f,
+ *	typedef herr_t (*H5C_pre_serialize_func_t)(H5F_t *f,
  *                                             hid_t dxpl_id,
  *                                             void * thing,
  *                                             haddr_t addr,
@@ -881,7 +881,7 @@ typedef htri_t (*H5C_verify_chksum_func_t)(const void *image_ptr, size_t len, vo
 typedef void *(*H5C_deserialize_func_t)(const void *image_ptr,
     size_t len, void *udata_ptr, hbool_t *dirty_ptr);
 typedef herr_t (*H5C_image_len_func_t)(const void *thing, size_t *image_len_ptr);
-typedef herr_t (*H5C_pre_serialize_func_t)(const H5F_t *f, hid_t dxpl_id,
+typedef herr_t (*H5C_pre_serialize_func_t)(H5F_t *f, hid_t dxpl_id,
     void *thing, haddr_t addr, size_t len, haddr_t *new_addr_ptr,
     size_t *new_len_ptr, unsigned *flags_ptr);
 typedef herr_t (*H5C_serialize_func_t)(const H5F_t *f, void *image_ptr,
@@ -2278,7 +2278,7 @@ H5_DLL herr_t H5C_get_cache_image_config(const H5C_t * cache_ptr,
     H5C_cache_image_ctl_t *config_ptr);
 H5_DLL herr_t H5C_get_cache_size(H5C_t *cache_ptr, size_t *max_size_ptr,
     size_t *min_clean_size_ptr, size_t *cur_size_ptr,
-    int32_t *cur_num_entries_ptr);
+    uint32_t *cur_num_entries_ptr);
 H5_DLL herr_t H5C_get_cache_hit_rate(H5C_t *cache_ptr, double *hit_rate_ptr);
 H5_DLL herr_t H5C_get_entry_status(const H5F_t *f, haddr_t addr,
     size_t *size_ptr, hbool_t *in_cache_ptr, hbool_t *is_dirty_ptr,
@@ -2293,7 +2293,7 @@ H5_DLL herr_t H5C_image_stats(H5C_t * cache_ptr, hbool_t print_header);
 H5_DLL herr_t H5C_insert_entry(H5F_t *f, hid_t dxpl_id, const H5C_class_t *type,
     haddr_t addr, void *thing, unsigned int flags);
 H5_DLL herr_t H5C_load_cache_image_on_next_protect(H5F_t *f, haddr_t addr, 
-   size_t len, hbool_t rw);
+   hsize_t len, hbool_t rw);
 H5_DLL herr_t H5C_mark_entry_dirty(void *thing);
 H5_DLL herr_t H5C_mark_entry_clean(void *thing);
 H5_DLL herr_t H5C_mark_entry_unserialized(void *thing);
@@ -2340,7 +2340,7 @@ H5_DLL hbool_t H5C_cache_image_pending(const H5C_t *cache_ptr);
 
 #ifdef H5_HAVE_PARALLEL
 H5_DLL herr_t H5C_apply_candidate_list(H5F_t *f, hid_t dxpl_id,
-    H5C_t *cache_ptr, int num_candidates, haddr_t *candidates_list_ptr,
+    H5C_t *cache_ptr, unsigned num_candidates, haddr_t *candidates_list_ptr,
     int mpi_rank, int mpi_size);
 H5_DLL herr_t H5C_construct_candidate_list__clean_cache(H5C_t *cache_ptr);
 H5_DLL herr_t H5C_construct_candidate_list__min_clean(H5C_t *cache_ptr);

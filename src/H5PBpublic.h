@@ -22,9 +22,6 @@
 extern "C" {
 #endif
 
-H5_DLL herr_t H5PBreset_stats(hid_t file_id);
-H5_DLL herr_t H5PBget_stats(hid_t file_id, int accesses[2], int hits[2], int misses[2], int evictions[2], int bypasses[2]);
-
 #ifdef __cplusplus
 }
 #endif

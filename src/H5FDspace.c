@@ -266,15 +266,9 @@ H5FD_alloc(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type, H5F_t *f, hsize_t size,
     if(!H5F_addr_defined(ret_value))
         HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, HADDR_UNDEF, "real 'alloc' request failed")
 
-    /* Update the driver information message in the superblock extension
-     * if it exists.  If it doesn't exist, this call is a no-op.
-     */
-    if(H5F_update_super_ext_driver_msg(f, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTUPDATE, HADDR_UNDEF, "error updating driver info superblock extension message")
-
-    /* Mark superblock dirty in cache, so change to EOA will get encoded */
-    if(H5F_super_dirty(f) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTMARKDIRTY, HADDR_UNDEF, "unable to mark superblock as dirty")
+    /* Mark EOA info dirty in cache, so change will get encoded */
+    if(H5F_eoa_dirty(f, dxpl_id) < 0)
+        HGOTO_ERROR(H5E_VFL, H5E_CANTMARKDIRTY, HADDR_UNDEF, "unable to mark EOA info as dirty")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -396,15 +390,9 @@ H5FD_free(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type, H5F_t *f,
     if(H5FD_free_real(file, dxpl_id, type, addr, size) < 0)
         HGOTO_ERROR(H5E_VFL, H5E_CANTFREE, FAIL, "real 'free' request failed")
 
-    /* update the driver information message in the superblock extension
-     * if it exists.  If it doesn't exist, this call is a no-op.
-     */
-    if(H5F_update_super_ext_driver_msg(f, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTUPDATE, FAIL, "error updating driver info superblock extension message")
-
-    /* Mark superblock dirty in cache, so change to EOA will get encoded */
-    if(H5F_super_dirty(f) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
+    /* Mark EOA info dirty in cache, so change will get encoded */
+    if(H5F_eoa_dirty(f, dxpl_id) < 0)
+        HGOTO_ERROR(H5E_VFL, H5E_CANTMARKDIRTY, FAIL, "unable to mark EOA info as dirty")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -458,15 +446,9 @@ H5FD_try_extend(H5FD_t *file, H5FD_mem_t type, H5F_t *f, hid_t dxpl_id,
         if(HADDR_UNDEF == H5FD_extend(file, type, extra_requested))
             HGOTO_ERROR(H5E_VFL, H5E_CANTEXTEND, FAIL, "driver extend request failed")
 
-        /* update the driver information message in the superblock extension
-         * if it exists.  If it doesn't exist, this call is a no-op.
-         */
-        if(H5F_update_super_ext_driver_msg(f, dxpl_id) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_CANTUPDATE, FAIL, "error updating driver info superblock extension message")
-
-        /* Mark superblock dirty in cache, so change to EOA will get encoded */
-        if(H5F_super_dirty(f) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
+        /* Mark EOA info dirty in cache, so change will get encoded */
+        if(H5F_eoa_dirty(f, dxpl_id) < 0)
+            HGOTO_ERROR(H5E_VFL, H5E_CANTMARKDIRTY, FAIL, "unable to mark EOA info as dirty")
 
         /* Indicate success */
         HGOTO_DONE(TRUE)

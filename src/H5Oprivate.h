@@ -69,6 +69,7 @@ typedef struct H5O_t H5O_t;
 #define H5O_FIRST	(-2)		/* Operate on first message of type  */
 
 /* Flags needed when encoding messages */
+#define H5O_MSG_NO_FLAGS_SET	0x00u
 #define H5O_MSG_FLAG_CONSTANT	0x01u
 #define H5O_MSG_FLAG_SHARED	0x02u
 #define H5O_MSG_FLAG_DONTSHARE	0x04u
@@ -809,7 +810,7 @@ typedef struct H5O_fsinfo_t {
  */
 typedef struct H5O_mdci_msg_t {
     haddr_t	addr;			/* address of MDC image block */
-    size_t	size;			/* size of MDC image block    */
+    hsize_t	size;			/* size of MDC image block    */
 } H5O_mdci_msg_t;
 
 /* only one version of the metadata cache image message at present */

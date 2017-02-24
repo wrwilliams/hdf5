@@ -1129,7 +1129,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5AC_load_cache_image_on_next_protect(H5F_t * f, haddr_t addr, size_t len,
+H5AC_load_cache_image_on_next_protect(H5F_t * f, haddr_t addr, hsize_t len,
     hbool_t rw)
 {
     herr_t              ret_value = SUCCEED;    /* Return value */
@@ -1811,70 +1811,6 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5AC_read_cache_image
- *
- * Purpose:	Load the metadata cache image from the specified location
- *		in the file, and return it in the supplied buffer.
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  John Mainzer
- *              8/16/15
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5AC_read_cache_image(H5F_t *f, hid_t dxpl_id, haddr_t image_addr, 
-    size_t image_len, void *image_buffer)
-{
-#ifdef H5_HAVE_PARALLEL
-    H5AC_t *cache_ptr = NULL;
-    H5AC_aux_t *aux_ptr = NULL;
-#endif /* H5_HAVE_PARALLEL */
-    herr_t              ret_value = SUCCEED;    /* Return value */
-
-    FUNC_ENTER_NOAPI(FAIL)
-
-    /* Sanity checks */
-    HDassert(f);
-    HDassert(H5F_addr_defined(image_addr));
-    HDassert(image_len > 0);
-    HDassert(image_buffer);
-
-#ifdef H5_HAVE_PARALLEL
-    HDassert(f->shared);
-    cache_ptr = f->shared->cache;
-    HDassert(cache_ptr);
-    aux_ptr = (H5AC_aux_t *)H5C_get_aux_ptr(cache_ptr);
-
-    if((NULL == aux_ptr) || (aux_ptr->mpi_rank == 0)) {
-	HDassert((NULL == aux_ptr) || (aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC));
-#endif /* H5_HAVE_PARALLEL */
-
-	/* Read the buffer (if serial access, or rank 0 of parallel access) */
-        if(H5F_block_read(f, H5FD_MEM_SUPER, image_addr, image_len, dxpl_id, image_buffer) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read metadata cache image block")
-
-#ifdef H5_HAVE_PARALLEL
-	if(aux_ptr) {
-	    /* Broadcast cache image */
-	    if(H5AC__broadcast_cache_image(cache_ptr, image_len, image_buffer) < 0)
-		HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Can't broadcast cache image contents")
-        } /* end if */
-    } /* end if */
-    else if(aux_ptr) {
-	/* Receive metadata cache image */
-	if(H5AC__receive_cache_image(cache_ptr, image_len, image_buffer) < 0)
-	    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Can't receive cache image contents")
-    } /* end else-if */
-#endif /* H5_HAVE_PARALLEL */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5AC_read_cache_image() */
-
-
-/*-------------------------------------------------------------------------
  * Function:    H5AC_resize_entry
  *
  * Purpose:	Resize a pinned or protected entry.
@@ -2018,59 +1954,6 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC_unpin_entry() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5AC_write_cache_image
- *
- * Purpose:	Write the supplied metadata cache image to the specified
- *		location in file.
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  John Mainzer
- *              8/26/15
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5AC_write_cache_image(H5F_t *f, hid_t dxpl_id, haddr_t image_addr, 
-    size_t image_len, void *image_buffer)
-{
-#ifdef H5_HAVE_PARALLEL
-    H5AC_t *cache_ptr = NULL;
-    H5AC_aux_t *aux_ptr = NULL;
-#endif /* H5_HAVE_PARALLEL */
-    herr_t              ret_value = SUCCEED;    /* Return value */
-
-    FUNC_ENTER_NOAPI(FAIL)
-
-    /* Sanity checks */
-    HDassert(f);
-    HDassert(H5F_addr_defined(image_addr));
-    HDassert(image_len > 0);
-    HDassert(image_buffer);
-
-#ifdef H5_HAVE_PARALLEL
-    HDassert(f->shared);
-    cache_ptr = f->shared->cache;
-    HDassert(cache_ptr);
-    aux_ptr = (H5AC_aux_t *)H5C_get_aux_ptr(cache_ptr);
-
-    if((NULL == aux_ptr) || (aux_ptr->mpi_rank == 0)) {
-	HDassert((NULL == aux_ptr) || (aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC));
-#endif /* H5_HAVE_PARALLEL */
-
-	/* Write the buffer (if serial access, or rank 0 for parallel access) */
-	if(H5F_block_write(f, H5FD_MEM_SUPER, image_addr, image_len, dxpl_id, image_buffer) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't write metadata cache image block to file")
-#ifdef H5_HAVE_PARALLEL
-    } /* end if */
-#endif /* H5_HAVE_PARALLEL */
-	
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5AC_write_cache_image() */
 
 
 /*-------------------------------------------------------------------------
@@ -2383,7 +2266,7 @@ done:
  */
 herr_t
 H5AC_get_cache_size(H5AC_t *cache_ptr, size_t *max_size_ptr, size_t *min_clean_size_ptr,
-    size_t *cur_size_ptr, int32_t *cur_num_entries_ptr)
+    size_t *cur_size_ptr, uint32_t *cur_num_entries_ptr)
 {
     herr_t ret_value = SUCCEED;      /* Return value */
 

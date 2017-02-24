@@ -410,7 +410,9 @@ static void test_file_size()
     }
 
     // use C test utility routine to close property list.
-    H5Pclose(fapl_id);
+    herr_t ret = H5Pclose(fapl_id);
+    if (ret < 0)
+        issue_fail_msg("test_file_size()", __LINE__, __FILE__, "H5Pclose failed");
 
 }   // test_file_size()
 
@@ -734,9 +736,7 @@ static void test_libver_bounds()
 /*-------------------------------------------------------------------------
  * Function:	test_commonfg
  *
- * Purpose:	Verify that a file created and modified with the
- *		specified libver bounds has the specified object header
- *		versions for the right objects.
+ * Purpose:	Verify that H5File works as a root group.
  *
  * Return:	None
  *

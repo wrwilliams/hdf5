@@ -24,7 +24,11 @@
  */
 #define H5HF_FRIEND		/*suppress error about including H5HFpkg	  */
 #define H5HF_TESTING
-#include "H5HFpkg.h"		/* Fractal heaps			*/
+#include "H5HFpkg.h"    /* Fractal heaps			*/
+
+#define H5F_FRIEND      /*suppress error about including H5Fpkg   */
+#define H5F_TESTING
+#include "H5Fpkg.h"
 
 /* Other private headers that this test requires */
 #include "H5Iprivate.h"		/* IDs			  		*/
@@ -1957,6 +1961,7 @@ test_reopen(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tparam)
     h5_stat_size_t       file_size;              /* File size, after deleting heap */
     size_t      id_len;                 /* Size of fractal heap IDs */
     fheap_heap_state_t state;           /* State of fractal heap */
+    hbool_t page = FALSE;               /* Paged aggregation strategy or not */
 
     /* Set the filename to use for this test (dependent on fapl) */
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
@@ -1980,6 +1985,9 @@ test_reopen(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tparam)
     /* Get a pointer to the internal file object */
     if(NULL == (f = (H5F_t *)H5I_object(file)))
         STACK_ERROR
+
+    if(f->shared->fs_strategy == H5F_FSPACE_STRATEGY_PAGE)
+        page = TRUE;
 
     /* Ignore metadata tags in the file's cache */
     if (H5AC_ignore_tags(f) < 0)
@@ -2058,9 +2066,11 @@ test_reopen(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tparam)
     if((file_size = h5_get_file_size(filename, fapl)) < 0)
         TEST_ERROR
 
-    /* Verify the file is correct size */
-    if(file_size != empty_size)
-        TEST_ERROR
+    if(!page || (page && !tparam->reopen_heap)) {
+        /* Verify the file is correct size */
+        if(file_size != empty_size)
+            TEST_ERROR
+    }
 
     /* All tests passed */
     PASSED()
@@ -2106,6 +2116,7 @@ test_open_twice(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tparam)
     h5_stat_size_t       file_size;              /* File size, after deleting heap */
     size_t      id_len;                 /* Size of fractal heap IDs */
     fheap_heap_state_t state;           /* State of fractal heap */
+    hbool_t page = FALSE;               /* Paged aggregation strategy or not */
 
     /* Set the filename to use for this test (dependent on fapl) */
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
@@ -2129,6 +2140,9 @@ test_open_twice(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tparam)
     /* Get a pointer to the internal file object */
     if(NULL == (f = (H5F_t *)H5I_object(file)))
         STACK_ERROR
+
+    if(f->shared->fs_strategy == H5F_FSPACE_STRATEGY_PAGE)
+        page = TRUE;
 
     /* Ignore metadata tags in the file's cache */
     if (H5AC_ignore_tags(f) < 0)
@@ -2226,9 +2240,11 @@ test_open_twice(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tparam)
     if((file_size = h5_get_file_size(filename, fapl)) < 0)
         TEST_ERROR
 
-    /* Verify the file is correct size */
-    if(file_size != empty_size)
-        TEST_ERROR
+    if(!page || (page && !tparam->reopen_heap)) {
+        /* Verify the file is correct size */
+        if(file_size != empty_size)
+            TEST_ERROR
+    }
 
     /* All tests passed */
     PASSED()
@@ -2434,7 +2450,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static unsigned
-test_id_limits(hid_t fapl, H5HF_create_t *cparam)
+test_id_limits(hid_t fapl, H5HF_create_t *cparam, hid_t fcpl)
 {
     hid_t	file = -1;              /* File ID */
     hid_t       dxpl = H5AC_ind_read_dxpl_id;     /* DXPL to use */
@@ -2452,7 +2468,7 @@ test_id_limits(hid_t fapl, H5HF_create_t *cparam)
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Get a pointer to the internal file object */
@@ -2779,7 +2795,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static unsigned
-test_filtered_create(hid_t fapl, H5HF_create_t *cparam)
+test_filtered_create(hid_t fapl, H5HF_create_t *cparam, hid_t fcpl)
 {
     hid_t	file = -1;              /* File ID */
     hid_t       dxpl = H5AC_ind_read_dxpl_id;     /* DXPL to use */
@@ -2795,7 +2811,7 @@ test_filtered_create(hid_t fapl, H5HF_create_t *cparam)
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Get a pointer to the internal file object */
@@ -2902,7 +2918,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static unsigned
-test_size(hid_t fapl, H5HF_create_t *cparam)
+test_size(hid_t fapl, H5HF_create_t *cparam, hid_t fcpl)
 {
     hid_t	file = -1;              /* File ID */
     hid_t       dxpl = H5AC_ind_read_dxpl_id;     /* DXPL to use */
@@ -2918,7 +2934,7 @@ test_size(hid_t fapl, H5HF_create_t *cparam)
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Get a pointer to the internal file object */
@@ -3046,7 +3062,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static unsigned
-test_reopen_hdr(hid_t fapl, H5HF_create_t *cparam)
+test_reopen_hdr(hid_t fapl, H5HF_create_t *cparam, hid_t fcpl)
 {
     hid_t       file1 = -1;             /* File ID */
     hid_t       file2 = -2;             /* File ID */
@@ -3061,7 +3077,7 @@ test_reopen_hdr(hid_t fapl, H5HF_create_t *cparam)
     h5_fixname(FILENAME[0], fapl, filename, sizeof(filename));
 
     /* Create the file to work on */
-    if((file1 = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((file1 = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Get a pointer to the internal file object */
@@ -16367,7 +16383,7 @@ main(void)
     fapl = h5_fileaccess();
     ExpressMode = GetTestExpress();
     if(ExpressMode > 1)
-	printf("***Express test mode on.  Some tests may be skipped\n");
+        printf("***Express test mode on.  Some tests may be skipped\n");
 
     /* Initialize heap creation parameters */
     init_small_cparam(&small_cparam);
@@ -16434,11 +16450,10 @@ curr_test = FHEAP_TEST_NORMAL;
         nerrors += test_open_twice(fapl, &small_cparam, &tparam);
         nerrors += test_delete_open(fapl, &small_cparam, &tparam);
 
-        nerrors += test_id_limits(fapl, &small_cparam);
-
-        nerrors += test_filtered_create(fapl, &small_cparam);
-        nerrors += test_size(fapl, &small_cparam);
-        nerrors += test_reopen_hdr(fapl, &small_cparam);
+        nerrors += test_id_limits(fapl, &small_cparam, tparam.my_fcpl);
+        nerrors += test_filtered_create(fapl, &small_cparam, tparam.my_fcpl);
+        nerrors += test_size(fapl, &small_cparam, tparam.my_fcpl);
+        nerrors += test_reopen_hdr(fapl, &small_cparam, tparam.my_fcpl);
 #else /* QAK */
 HDfprintf(stderr, "Uncomment tests!\n");
 #endif /* QAK */
