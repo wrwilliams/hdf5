@@ -115,10 +115,6 @@ static uint8_t * H5C_encode_cache_image_entry(H5F_t *f, H5C_t *cache_ptr,
 static herr_t H5C__prep_for_file_close__compute_fd_heights(const H5C_t *cache_ptr);
 static void H5C__prep_for_file_close__compute_fd_heights_real(
     H5C_cache_entry_t  *entry_ptr, uint32_t fd_height);
-static void H5C_prep_for_file_close__partition_image_entries_array(
-    H5C_t *cache_ptr, int bottom, int *middle_ptr, int top);
-static void H5C_prep_for_file_close__qsort_image_entries_array(
-    H5C_t *cache_ptr, int bottom, int top);
 static herr_t H5C__prep_for_file_close__setup_image_entries_array(H5C_t *cache_ptr);
 static herr_t H5C__prep_for_file_close__scan_entries(const H5F_t *f,
     H5C_t *cache_ptr);
@@ -329,7 +325,6 @@ H5C_construct_cache_image_buffer(H5F_t * f, H5C_t *cache_ptr)
 
         for(u = 0; u < fake_cache_ptr->num_entries_in_image; u++) {
 	    (fake_cache_ptr->image_entries)[u].magic = H5C_IMAGE_ENTRY_T_MAGIC;
-            (fake_cache_ptr->image_entries)[u].image_index = (int)u;
             (fake_cache_ptr->image_entries)[u].image_ptr = NULL;
 
 	    /* touch up f->shared->cache to satisfy sanity checks... */
@@ -625,7 +620,6 @@ H5C_deserialize_prefetched_entry(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr,
     /* initialize cache image related fields */
     ds_entry_ptr->include_in_image          	= FALSE;
     ds_entry_ptr->lru_rank	            	= 0;
-    ds_entry_ptr->image_index	            	= -1;
     ds_entry_ptr->image_dirty	            	= FALSE;
     ds_entry_ptr->fd_parent_count           	= 0;
     ds_entry_ptr->fd_parent_addrs           	= NULL;
@@ -802,7 +796,6 @@ H5C_free_image_entries_array(H5C_t *cache_ptr)
             /* Sanity checks */ 
 	    HDassert(ie_ptr);
             HDassert(ie_ptr->magic == H5C_IMAGE_ENTRY_T_MAGIC);
-            HDassert((unsigned)ie_ptr->image_index == u);
 	    HDassert(ie_ptr->image_ptr);
 
 	    /* Free the parent addrs array if appropriate */
@@ -1250,7 +1243,6 @@ H5C_load_cache_image(H5F_t *f, hid_t dxpl_id)
 
 		HDassert(ie_ptr);
                 HDassert(ie_ptr->magic == H5C_IMAGE_ENTRY_T_MAGIC);
-                HDassert(ie_ptr->image_index == i);
 	        HDassert(ie_ptr->fd_parent_addrs == NULL);
                 HDassert(ie_ptr->image_ptr == NULL);
             }
@@ -1335,13 +1327,62 @@ H5C_load_cache_image_on_next_protect(H5F_t *f, haddr_t addr, hsize_t len,
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5C__image_entry_cmp
  *
+ * Purpose:     Comparison callback for qsort(3) on image entries.
+ *		Entries are sorted first by flush dependency height,
+ *		and then by LRU rank.
+ *
+ * Note:        Entries with a _greater_ flush dependency height should
+ *		be sorted earlier than entries with lower heights, since
+ *		leafs in the flush dependency graph are at height 0, and their
+ *		parents need to be earlier in the image, so that they can
+ *		construct their flush dependencies when decoded.
+ *
+ * Return:      An integer less than, equal to, or greater than zero if the
+ *		first entry is considered to be respectively less than,
+ *		equal to, or greater than the second.
+ *
+ * Programmer:  Quincey Koziol
+ *		1/20/16
+ *
+ *-------------------------------------------------------------------------
+ */
+static int
+H5C__image_entry_cmp(const void *_entry1, const void *_entry2)
+{
+    const H5C_image_entry_t *entry1 = (const H5C_image_entry_t *)_entry1;  /* Pointer to first image entry to compare */
+    const H5C_image_entry_t *entry2 = (const H5C_image_entry_t *)_entry2;  /* Pointer to second image entry to compare */
+    int ret_value = 0;          /* Return value */
+
+    FUNC_ENTER_STATIC_NOERR
+
+    /* Sanity checks */
+    HDassert(entry1);
+    HDassert(entry2);
+
+    if(entry1->image_fd_height > entry2->image_fd_height)
+        ret_value = -1;
+    else if(entry1->image_fd_height < entry2->image_fd_height)
+        ret_value = 1;
+    else {
+        /* Sanity check */
+        HDassert(entry1->lru_rank >= -1);
+        HDassert(entry2->lru_rank >= -1);
+
+        if(entry1->lru_rank < entry2->lru_rank)
+            ret_value = -1;
+        else if(entry1->lru_rank > entry2->lru_rank)
+            ret_value = 1;
+    } /* end else */
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C__image_entry_cmp() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5C_prep_for_file_close
  *
- * Purpose:     This function should be called just prior to the cache 
- *		flushes at file close.  There should be no protected 
- *		entries in the cache at this point.
- *		
  * Purpose:     The objective of the call is to allow the metadata cache 
  *		to do any preparatory work prior to generation of a 
  *		cache image.
@@ -1604,7 +1645,9 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
 		if(H5C__prep_for_file_close__setup_image_entries_array(cache_ptr) < 0)
 		    HGOTO_ERROR(H5E_CACHE, H5E_CANTINIT, FAIL, "can't setup image entries array")
 
-		H5C_prep_for_file_close__qsort_image_entries_array(cache_ptr, 0, cache_ptr->num_entries_in_image - 1);
+                /* Sort the entries */
+                HDqsort(cache_ptr->image_entries, (size_t)cache_ptr->num_entries_in_image,
+                        sizeof(H5C_image_entry_t), H5C__image_entry_cmp);
 	    } /* end if */
              else { /* cancel creation of metadata cache iamge */
 	        HDassert(cache_ptr->image_entries == NULL);
@@ -1933,7 +1976,6 @@ H5C_decode_cache_image_buffer(H5F_t * f, H5C_t * cache_ptr)
     for(u = 0; u < cache_ptr->num_entries_in_image; u++) {
 	(cache_ptr->image_entries)[u].magic = H5C_IMAGE_ENTRY_T_MAGIC;
         (cache_ptr->image_entries)[u].image_fd_height = 0;
-        (cache_ptr->image_entries)[u].image_index = u;
         (cache_ptr->image_entries)[u].image_ptr = NULL;
 
 	p = H5C_decode_cache_image_entry(f, cache_ptr, p, u, entry_header_size);
@@ -2861,228 +2903,6 @@ H5C__prep_for_file_close__compute_fd_heights_real(H5C_cache_entry_t  *entry_ptr,
 
 
 /*-------------------------------------------------------------------------
- *
- * Function:    H5C_prep_for_file_close__partition_image_entries_array
- *
- * Purpose:     Perform a quick sort on cache_ptr->image_entries.
- *		Entries are sorted first by flush dependency height,
- *		and then by LRU rank.
- *		
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  John Mainzer
- *              8/4/15
- *
- *-------------------------------------------------------------------------
- */
-void
-H5C_prep_for_file_close__partition_image_entries_array(H5C_t * cache_ptr, 
-                                                       int bottom, 
-						       int * middle_ptr,
-                                                       int top)
-{
-    hbool_t done = FALSE;
-    hbool_t i_le_pivot;
-    hbool_t j_ge_pivot;
-    int i;
-    int j;
-    H5C_image_entry_t   tmp;
-    H5C_image_entry_t * pivot_ptr;
-    H5C_image_entry_t * ith_ptr;
-    H5C_image_entry_t * jth_ptr;
-
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
-
-    /* sanity checks */
-    HDassert(cache_ptr);
-    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
-    HDassert(cache_ptr->close_warning_received);
-    HDassert(cache_ptr->num_entries_in_image > 0);
-    HDassert(cache_ptr->image_entries != NULL);
-    HDassert(bottom >= 0);
-    HDassert(middle_ptr);
-    HDassert(top < cache_ptr->num_entries_in_image);
-    HDassert(bottom <= top);
-
-    pivot_ptr = &((cache_ptr->image_entries)[bottom]);
-
-    HDassert((pivot_ptr->image_fd_height == 0) ||
-             (pivot_ptr->lru_rank == -1));
-
-    i = bottom - 1;
-    j = top + 1;
-
-    while ( ! done ) {
-	do {
-	    i_le_pivot = FALSE;
-	    i++;
-            ith_ptr = &((cache_ptr->image_entries)[i]);
-
-            if ( pivot_ptr->image_fd_height > 0 )
-            {
-                HDassert(pivot_ptr->lru_rank == -1);
-
-		if ( ith_ptr->image_fd_height <= pivot_ptr->image_fd_height )
-                {
-		    i_le_pivot = TRUE;
-                }
-            } 
-            else 
-            {
-                HDassert(pivot_ptr->lru_rank >= -1);
-
-		if ( ( ith_ptr->lru_rank >= pivot_ptr->lru_rank ) &&
-                     ( ith_ptr->image_fd_height == 0 ) )
-                {
-		    i_le_pivot = TRUE;
-                }
-            } 
-        } while ( ! i_le_pivot );
-
-	do {
-	    j_ge_pivot = FALSE;
-	    j--;
-	    jth_ptr = &((cache_ptr->image_entries)[j]);
-
-            if ( pivot_ptr->image_fd_height > 0 )
-            {
-                HDassert(pivot_ptr->lru_rank == -1);
-
-		if ( jth_ptr->image_fd_height >= pivot_ptr->image_fd_height )
-                {
-		    HDassert(jth_ptr->lru_rank == -1);
-
-		    j_ge_pivot = TRUE;
-                }
-            } 
-            else 
-            {
-                HDassert(pivot_ptr->lru_rank >= -1);
-
-		if ( ( jth_ptr->lru_rank <= pivot_ptr->lru_rank ) ||
-                     ( jth_ptr->image_fd_height > 0 ) )
-                {
-		    j_ge_pivot = TRUE;
-                }
-            } 
-	} while  ( ! j_ge_pivot );
-
-	if ( i < j ) { /* swap ith and jth entries */
-
-	    tmp = (cache_ptr->image_entries)[i];
-
-            (cache_ptr->image_entries)[i] = *jth_ptr;
-            ((cache_ptr->image_entries)[i]).image_index = i;
-
-            (cache_ptr->image_entries)[j] = tmp;
-            ((cache_ptr->image_entries)[j]).image_index = j;
-
-	} else {
-
-	   done = TRUE;
-	   *middle_ptr = j;
-	}
-    }
-
-    FUNC_LEAVE_NOAPI_VOID
-
-} /* H5C_prep_for_file_close__partition_image_entries_array() */
-
-
-/*-------------------------------------------------------------------------
- *
- * Function:    H5C_prep_for_file_close__qsort_image_entries_array
- *
- * Purpose:     Perform a quick sort on cache_ptr->image_entries.
- *		Entries are sorted first by highest flush dependency 
- *		height, and then by least LRU rank.
- *		
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  John Mainzer
- *              8/4/15
- *
- *-------------------------------------------------------------------------
- */
-void
-H5C_prep_for_file_close__qsort_image_entries_array(H5C_t * cache_ptr, 
-                                                   int bottom, 
-                                                   int top)
-{
-    int			middle;
-
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
-
-    /* sanity checks */
-    HDassert(cache_ptr);
-    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
-    HDassert(cache_ptr->close_warning_received);
-    HDassert(cache_ptr->num_entries_in_image > 0);
-    HDassert(cache_ptr->image_entries != NULL);
-    HDassert(bottom >= 0);
-    HDassert(top < cache_ptr->num_entries_in_image);
-    HDassert(bottom <= top);
-
-    if ( bottom < top ) {
-
-        H5C_prep_for_file_close__partition_image_entries_array(cache_ptr, 
-							       bottom, 
-                                                               &middle, 
-                                                               top);
-
-	H5C_prep_for_file_close__qsort_image_entries_array(cache_ptr, 
-                                                           bottom, 
-                                                           middle);
-
-	
-	H5C_prep_for_file_close__qsort_image_entries_array(cache_ptr, 
-                                                           middle + 1, 
-                                                           top);
-    }
-
-#ifndef NDEBUG
-    /* verify sort if this is the top level qsort call */
-    if ( ( bottom == 0 ) && ( top + 1 == cache_ptr->num_entries_in_image ) ) {
-
-        int i;
-        H5C_image_entry_t * ie_ptr;
-        H5C_image_entry_t * next_ie_ptr;
-
-        for ( i = 0; i < top; i++ ) {
-
-	    ie_ptr = &((cache_ptr->image_entries)[i]);
-            next_ie_ptr = &((cache_ptr->image_entries)[i + 1]);
-
-	    HDassert(ie_ptr);
-            HDassert(ie_ptr->magic == H5C_IMAGE_ENTRY_T_MAGIC);
-            HDassert(ie_ptr->image_index == i);
-            HDassert((ie_ptr->image_fd_height == 0) ||
-                     (ie_ptr->lru_rank == -1));
-
-	    HDassert(next_ie_ptr);
-            HDassert(next_ie_ptr->magic == H5C_IMAGE_ENTRY_T_MAGIC);
-            HDassert(next_ie_ptr->image_index == i + 1);
-            HDassert((next_ie_ptr->image_fd_height == 0 ) ||
-                     (next_ie_ptr->lru_rank == -1 ) );
-
-            HDassert(ie_ptr->image_fd_height >= 
-                     next_ie_ptr->image_fd_height);
-
-	    HDassert((ie_ptr->image_fd_height > 0) ||
-                     ((ie_ptr->lru_rank <= 0) &&
-                      (ie_ptr->lru_rank <= next_ie_ptr->lru_rank)) ||
-                     (ie_ptr->lru_rank < next_ie_ptr->lru_rank));
-        }
-    }
-#endif /* NDEBUG */
-
-    FUNC_LEAVE_NOAPI_VOID
-
-} /* H5C_prep_for_file_close__qsort_image_entries_array() */
-
-
-/*-------------------------------------------------------------------------
- *
  * Function:    H5C__prep_for_file_close__setup_image_entries_array
  *
  * Purpose:     Allocate space for the image_entries array, and load
@@ -3126,7 +2946,6 @@ H5C__prep_for_file_close__setup_image_entries_array(H5C_t *cache_ptr)
         image_entries[u].ring		      = H5C_RING_UNDEFINED;
         image_entries[u].age                  = 0;
 	image_entries[u].type_id              = -1;
-	image_entries[u].image_index          = -1;
 	image_entries[u].lru_rank             = 0;
 	image_entries[u].is_dirty             = FALSE; 
 	image_entries[u].image_fd_height      = 0;
@@ -3172,7 +2991,6 @@ H5C__prep_for_file_close__setup_image_entries_array(H5C_t *cache_ptr)
 		image_entries[u].age              = 0;
 	    } /* end else */
 
-	    image_entries[u].image_index          = u;
 	    image_entries[u].lru_rank             = entry_ptr->lru_rank;
 	    image_entries[u].is_dirty             = entry_ptr->is_dirty;
 	    image_entries[u].image_fd_height      = entry_ptr->image_fd_height;
@@ -3581,7 +3399,6 @@ H5C__reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
     for(u = 0; u < cache_ptr->num_entries_in_image; u++) {
 	ie_ptr = &(cache_ptr->image_entries[u]);
         HDassert(ie_ptr->magic == H5C_IMAGE_ENTRY_T_MAGIC);
-        HDassert(ie_ptr->image_index == u);
 
 	pf_entry_ptr = NULL;
 	H5C__SEARCH_INDEX(cache_ptr, ie_ptr->addr, pf_entry_ptr, FAIL);
@@ -3709,7 +3526,6 @@ H5C__reconstruct_cache_entry(H5C_t *cache_ptr, unsigned u)
     HDassert(u < cache_ptr->num_entries_in_image);
     ie_ptr = &((cache_ptr->image_entries)[u]);
     HDassert(ie_ptr->magic == H5C_IMAGE_ENTRY_T_MAGIC);
-    HDassert(ie_ptr->image_index == u);
     HDassert(H5F_addr_defined(ie_ptr->addr));
     HDassert(ie_ptr->size > 0);
     HDassert(ie_ptr->image_ptr);
@@ -3749,7 +3565,6 @@ H5C__reconstruct_cache_entry(H5C_t *cache_ptr, unsigned u)
 
     /* Initialize cache image related fields */
     pf_entry_ptr->lru_rank                      = ie_ptr->lru_rank;
-    pf_entry_ptr->image_index                   = -1;
     pf_entry_ptr->fd_parent_count               = ie_ptr->fd_parent_count;
     pf_entry_ptr->fd_parent_addrs               = ie_ptr->fd_parent_addrs;
     pf_entry_ptr->fd_child_count                = ie_ptr->fd_child_count;
