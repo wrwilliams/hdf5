@@ -442,6 +442,7 @@ set (H5O_SOURCES
     ${HDF5_SRC_DIR}/H5Obogus.c
     ${HDF5_SRC_DIR}/H5Obtreek.c
     ${HDF5_SRC_DIR}/H5Ocache.c
+    ${HDF5_SRC_DIR}/H5Ocache_image.c
     ${HDF5_SRC_DIR}/H5Ochunk.c
     ${HDF5_SRC_DIR}/H5Ocont.c
     ${HDF5_SRC_DIR}/H5Ocopy.c
@@ -456,7 +457,6 @@ set (H5O_SOURCES
     ${HDF5_SRC_DIR}/H5Olayout.c
     ${HDF5_SRC_DIR}/H5Olinfo.c
     ${HDF5_SRC_DIR}/H5Olink.c
-    ${HDF5_SRC_DIR}/H5Omdci_msg.c
     ${HDF5_SRC_DIR}/H5Omessage.c
     ${HDF5_SRC_DIR}/H5Omtime.c
     ${HDF5_SRC_DIR}/H5Oname.c

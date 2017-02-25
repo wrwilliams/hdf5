@@ -766,7 +766,7 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
             HGOTO_ERROR(H5E_FILE, H5E_EXISTS, FAIL, "unable to read object header")
         if(status) {
             hbool_t 	rw = ((rw_flags & H5AC__READ_ONLY_FLAG) == 0);
-            H5O_mdci_msg_t  mdci_msg;
+	    H5O_mdci_t  mdci_msg;
 
 	    /* if the metadata cache image superblock extension message exists,
              * read its contents and pass the data on to the metadata cache.
