@@ -798,7 +798,6 @@
 ./src/H5PBmodule.h
 ./src/H5PBpkg.h
 ./src/H5PBprivate.h
-./src/H5PBpublic.h
 ./src/H5PL.c
 ./src/H5PLmodule.h
 ./src/H5PLprivate.h

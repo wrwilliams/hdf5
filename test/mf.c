@@ -7640,7 +7640,6 @@ set_multi_split(hid_t fapl, hsize_t pagesize, hbool_t multi, hbool_t split)
 
 error:
     return(-1);
-
 } /* set_multi_split() */
 
 /*-------------------------------------------------------------------------
@@ -8357,6 +8356,8 @@ test_page_large(const char *env_h5_drvr, hid_t fapl)
         /* Allocate a large data block with gaddr3--should be on another page */
         /* Allocate 2 pages + 3808 bytes; 288 bytes in free-space manager */
         gaddr3 = H5MF_alloc(f, H5FD_MEM_DRAW, H5AC_ind_read_dxpl_id, (hsize_t)TBLOCK_SIZE12000);
+        if(!H5F_addr_defined(gaddr3))
+            TEST_ERROR
 
         /* Free the block with gaddr2 */
         /* Merged sections: 2192 + 8000 + 192 = 10384 */
@@ -8626,7 +8627,6 @@ test_page_alignment(const char *env_h5_drvr, hid_t fapl)
     haddr_t addr1, addr2;           /* Addresses for small meta data blocks */
     haddr_t saddr1, saddr2;         /* Addresses for small raw data blocks */
     haddr_t gaddr1, gaddr2;         /* Addresses for blocks */
-    H5FS_stat_t fs_stat;            /* Information for free-space manager */
     char filename[FILENAME_LEN];    /* Filename to use */
     hbool_t split = FALSE, multi = FALSE;
 
