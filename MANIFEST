@@ -740,7 +740,6 @@
 ./src/H5Obogus.c
 ./src/H5Obtreek.c
 ./src/H5Ocache.c
-./src/H5Ocache_image.c
 ./src/H5Ochunk.c
 ./src/H5Ocont.c
 ./src/H5Ocopy.c
@@ -755,6 +754,7 @@
 ./src/H5Olayout.c
 ./src/H5Olinfo.c
 ./src/H5Olink.c
+./src/H5Omdci_msg.c
 ./src/H5Omessage.c
 ./src/H5Omodule.h
 ./src/H5Omtime.c

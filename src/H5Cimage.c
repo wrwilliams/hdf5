@@ -4332,17 +4332,17 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
+herr_t
 H5C__write_cache_image_superblock_msg(H5F_t *f, hid_t dxpl_id, hbool_t create)
 {
     H5C_t *		cache_ptr;
-    H5O_mdci_t 	        mdci_msg;	/* metadata cache image message */
+    H5O_mdci_msg_t 	mdci_msg;	/* metadata cache image message */
 					/* to insert in the superblock  */
 					/* extension.			*/
     unsigned	   	mesg_flags = H5O_MSG_FLAG_FAIL_IF_UNKNOWN_ALWAYS;
     herr_t              ret_value = SUCCEED;      /* Return value */
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_NOAPI_NOINIT
 
     /* Sanity checks */
     HDassert(f);
@@ -4416,7 +4416,7 @@ H5C__write_cache_image(H5F_t *f, hid_t dxpl_id, const H5C_t *cache_ptr)
 
 	/* Write the buffer (if serial access, or rank 0 for parallel access) */
 	if(H5F_block_write(f, H5FD_MEM_SUPER, cache_ptr->image_addr, cache_ptr->image_len, dxpl_id, cache_ptr->image_buffer) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "can't write metadata cache image block to file")
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't write metadata cache image block to file")
 #ifdef H5_HAVE_PARALLEL
     } /* end if */
 } /* end block */

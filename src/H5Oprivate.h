@@ -808,10 +808,13 @@ typedef struct H5O_fsinfo_t {
  * Contains base address and length of the metadata cache image.
  * (Data structure in memory)
  */
-typedef struct H5O_mdci_t {
+typedef struct H5O_mdci_msg_t {
     haddr_t	addr;			/* address of MDC image block */
     hsize_t	size;			/* size of MDC image block    */
-} H5O_mdci_t;
+} H5O_mdci_msg_t;
+
+/* only one version of the metadata cache image message at present */
+#define H5O_MDCI_VERSION_0 	0
 
 /* Typedef for "application" iteration operations */
 typedef herr_t (*H5O_operator_t)(const void *mesg/*in*/, unsigned idx,
