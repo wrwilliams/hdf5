@@ -1368,6 +1368,10 @@ typedef int H5C_ring_t;
  *		either lru_rank -1 (if pinned) or 0 (if loaded during 
  *		the process of flushing the cache.
  *
+ * image_index:	Index of the entry in the array of pointer to 
+ *		H5C_cache_entry_t pointed to by cache_ptr->image_entries,
+ *		or -1 if not referenced by that array.
+ *
  * image_dirty: Boolean flag indicating whether the entry should be marked
  *		as dirty in the metadata cache image.  The flag is set to
  *		TRUE iff the entry is dirty when H5C_prep_for_file_close()
@@ -1658,6 +1662,7 @@ typedef struct H5C_cache_entry_t {
     /* fields supporting cache image */
     hbool_t                     include_in_image;
     int32_t                     lru_rank;
+    int32_t                     image_index;
     hbool_t                     image_dirty;
     uint64_t                    fd_parent_count;
     haddr_t                    *fd_parent_addrs;
@@ -1725,6 +1730,10 @@ typedef struct H5C_cache_entry_t {
  *		H5AC__CACHE_IMAGE__ENTRY_AGEOUT__MAX.
  *
  * type_id:	Integer field containing the type ID of the entry.
+ *
+ * image_index:	Index of the entry in the array of pointer to 
+ *		H5C_cache_entry_t pointed to by cache_ptr->image_entries,
+ *		or -1 if not referenced by that array.
  *
  * lru_rank:	Rank of the entry in the LRU just prior to file close.
  *
@@ -1839,6 +1848,7 @@ typedef struct H5C_image_entry_t {
     H5C_ring_t                  ring;
     int32_t                     age;
     int32_t                     type_id;
+    int32_t                     image_index;
     int32_t                     lru_rank;
     hbool_t                     is_dirty;
     unsigned                    image_fd_height;
