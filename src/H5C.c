@@ -1045,19 +1045,6 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 
             /* Only call the free space manager settle routines when close
              * warning has been received.
-             *
-             * Observe that the FSM rings should only be populated if
-             * persistant free space managers are enabled.  Thus don't
-             * call the settle routines unless persistant free space 
-             * managers are enabled.
-             *
-             * Note that if f->shared->fs_persist and 
-             * f->shared->first_alloc_dealloc are both TRUE, there
-             * have been no file space allocations or deallocations since
-             * file open.  Thus all free space managers are still settled 
-             * from the last file close.  In this case, we must not call
-             * the settle routines as they assume that this is not the 
-             * case.
              */
 	    if(cache_ptr->close_warning_received) {
 		switch(ring) {
@@ -1065,32 +1052,35 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 			break;
 
 		    case H5C_RING_RDFSM:
-                        if(f->shared->fs_persist && !f->shared->first_alloc_dealloc && !cache_ptr->rdfsm_settled) {
+			if(!cache_ptr->rdfsm_settled) {
+                            hbool_t fsm_settled = FALSE;        /* Whether the FSM was actually settled */
 
-                            if(H5MF_settle_raw_data_fsm(f, dxpl_id) < 0)
+                            /* Settle raw data FSM */
+			    if(H5MF_settle_raw_data_fsm(f, dxpl_id, &fsm_settled) < 0)
                                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "RD FSM settle failed")
 
-                            cache_ptr->rdfsm_settled = TRUE;
+                            /* Only set the flag if the FSM was actually settled */
+                            if(fsm_settled)
+                                cache_ptr->rdfsm_settled = TRUE;
                         } /* end if */
 			break;
 
 		    case H5C_RING_MDFSM:
-                        if(f->shared->fs_persist && !f->shared->first_alloc_dealloc && !cache_ptr->mdfsm_settled) {
+			if(!cache_ptr->mdfsm_settled) {
+                            hbool_t fsm_settled = FALSE;        /* Whether the FSM was actually settled */
 
-                            if(H5MF_settle_meta_data_fsm(f, dxpl_id) < 0)
+                            /* Settle metadata FSM */
+			    if(H5MF_settle_meta_data_fsm(f, dxpl_id, &fsm_settled) < 0)
                                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "MD FSM settle failed")
 
-                            cache_ptr->mdfsm_settled = TRUE;
+                            /* Only set the flag if the FSM was actually settled */
+                            if(fsm_settled)
+                                cache_ptr->mdfsm_settled = TRUE;
                         } /* end if */
 			break;
 
-#if 0 /* for bug -- bug fixed in cache image  -- uncomment after merge */
-                    case H5C_RING_SBE:
-                        break;
-#else
-		    case 4:
+		    case H5C_RING_SBE:
 			break;
-#endif
 
 		    case H5C_RING_SB:
 			break;
@@ -1528,7 +1518,7 @@ H5C_insert_entry(H5F_t *             f,
 
         if(H5C_make_space_in_cache(f, dxpl_id, space_needed, write_permitted) < 0)
             HGOTO_ERROR(H5E_CACHE, H5E_CANTINS, FAIL, "H5C_make_space_in_cache failed")
-    }
+    } /* end if */
 
     H5C__INSERT_IN_INDEX(cache_ptr, entry_ptr, FAIL)
 
@@ -2610,7 +2600,7 @@ H5C_protect(H5F_t *		f,
 
             if(H5C_make_space_in_cache(f, dxpl_id, space_needed, write_permitted) < 0 )
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, NULL, "H5C_make_space_in_cache failed")
-        }
+        } /* end if */
 
         /* Insert the entry in the hash table.  It can't be dirty yet, so
          * we don't even check to see if it should go in the skip list.
@@ -2648,7 +2638,7 @@ H5C_protect(H5F_t *		f,
         /* Record that the entry was loaded, to trigger a notify callback later */
         /* (After the entry is fully added to the cache) */
         was_loaded = TRUE;
-    }
+    } /* end else */
 
     HDassert(entry_ptr->addr == addr);
     HDassert(entry_ptr->type == type);
@@ -4724,7 +4714,7 @@ H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * f,
 
                 skipping_entry = TRUE;
                 prefetched_dirty_entries_skipped++;
-            }
+            } /* end else */
 
             if(prev_ptr != NULL) {
                 if(skipping_entry)
@@ -6932,7 +6922,6 @@ H5C_load_entry(H5F_t *              f,
     entry->tl_prev  = NULL;
     entry->tag_info = NULL;
 
-
     H5C__RESET_CACHE_ENTRY_STATS(entry);
 
     ret_value = thing;
@@ -6984,69 +6973,6 @@ done:
  *
  * Programmer:  John Mainzer, 5/14/04
  *
- * Changes:     Modified function to skip over entries with the 
- *		flush_in_progress flag set.  If this is not done,
- *		an infinite recursion is possible if the cache is 
- *		full, and the pre-serialize or serialize routine 
- *		attempts to load another entry.
- *
- *		This error was exposed by a re-factor of the 
- *		H5C__flush_single_entry() routine.  However, it was 
- *		a potential bug from the moment that entries were 
- *		allowed to load other entries on flush.
- *
- *		In passing, note that the primary and secondary dxpls 
- *		mentioned in the comment above have been replaced by 
- *		a single dxpl at some point, and thus the discussion 
- *		above is somewhat obsolete.  Date of this change is 
- *		unkown.
- *
- *						JRM -- 12/26/14
- *
- *		Modified function to detect deletions of entries 
- *		during a scan of the LRU, and where appropriate, 
- *		restart the scan to avoid proceeding with a next 
- *		entry that is no longer in the cache.
- *
- *		Note the absence of checks after flushes of clean 
- *		entries.  As a second entry can only be removed by 
- *		by a call to the pre_serialize or serialize callback
- *		of the first, and as these callbacks will not be called
- *		on clean entries, no checks are needed.
- *
- *						JRM -- 4/6/15
- *
- *              Modified function to skip over entries with the 
- *              prefetched_dirty flag set.
- *
- *              This is a fix for an issue with files with cache images
- *              which are loaded R/O.  In this case, dirty entries in the
- *              cache image must be marked as clean, as otherwise the 
- *              metadata cache will attempt to write them on file close --
- *              in which we would no longer be R/O.  However, this allows
- *              the cache to evict them to make space if needed.  Should 
- *              the entry be needed again later in the session, the 
- *              metadata cache will attempt to read it from file, which 
- *              will yield obsolete or invalid data.
- *
- *              Solve this by setting the prefetched_dirty flag on such 
- *              entries, and ignoring entries so marked in the candidate 
- *              selection code.  This solution isn't particularly efficient,
- *              so we should try to do better in the future.
- *
- *              Note that Evict on Close can also cause this issue.  For 
- *              now, we deal with it by disabling EOC in the R/O case.
- *
- *              SWMR is also a possible problem, but it is irrelevant in 
- *              the R/O case.
- *
- *                                              JRM -- 1/27/17
- *
- *              Added code to detect re-entrant calls to this function,
- *              and avoid the infinite recursion that might otherwise 
- *              occur.
- *                                              JRM -- 2/16/17
- *             
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -7365,18 +7291,13 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     }
 
 done:
-
     /* Sanity checks */
     HDassert(cache_ptr->msic_in_progress);
-
     if(!reentrant_call)
-
         cache_ptr->msic_in_progress = FALSE;
-
     HDassert((!reentrant_call) || (cache_ptr->msic_in_progress));
 
     FUNC_LEAVE_NOAPI(ret_value)
-
 } /* H5C_make_space_in_cache() */
 
 

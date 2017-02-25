@@ -960,18 +960,13 @@ typedef herr_t (*H5C_log_flush_func_t)(H5C_t *cache_ptr, haddr_t addr,
  * debugging.
  */
 
-#define H5C_RING_UNDEFINED      0 /* shouldn't appear in the cache */
-#define H5C_RING_USER           1 /* outermost ring */
-#define H5C_RING_RDFSM          2
-#define H5C_RING_MDFSM          3
-#define H5C_RING_SBE		5 /* temporarily merged with SB ring
-                                   * due to bug that is fixed in the 
-                                   * cache image branch.
-                                   */
-#define H5C_RING_SB             5 /* innermost ring */
-#define H5C_RING_NTYPES         6 
-
-#define H5C_MAX_RING_IN_IMAGE   H5C_RING_MDFSM
+#define H5C_RING_UNDEFINED  0 /* shouldn't appear in the cache */
+#define H5C_RING_USER       1 /* outermost ring */
+#define H5C_RING_RDFSM      2
+#define H5C_RING_MDFSM      3
+#define H5C_RING_SBE        4
+#define H5C_RING_SB         5 /* innermost ring */
+#define H5C_RING_NTYPES     6
 
 typedef int H5C_ring_t;
 

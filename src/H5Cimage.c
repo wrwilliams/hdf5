@@ -85,6 +85,9 @@
 #define H5C_IMAGE_ENTRY_T_MAGIC		0x005CAC08
 #define H5C_IMAGE_ENTRY_T_BAD_MAGIC	0xBeefDead
 
+/* Maximum ring allowed in image */
+#define H5C_MAX_RING_IN_IMAGE   H5C_RING_MDFSM
+
 
 /******************/
 /* Local Typedefs */
@@ -3930,33 +3933,34 @@ H5C_serialize_cache(H5F_t *f, hid_t dxpl_id)
                 break;
 
             case H5C_RING_RDFSM:
-                if(f->shared->fs_persist && !f->shared->first_alloc_dealloc && !cache_ptr->rdfsm_settled) {
+                if(!cache_ptr->rdfsm_settled) {
+                    hbool_t fsm_settled = FALSE;        /* Whether the FSM was actually settled */
+
                     /* Settle raw data FSM */
-                    if(H5MF_settle_raw_data_fsm(f, dxpl_id) < 0)
+                    if(H5MF_settle_raw_data_fsm(f, dxpl_id, &fsm_settled) < 0)
                         HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "RD FSM settle failed")
 
-                    cache_ptr->rdfsm_settled = TRUE;
+                    /* Only set the flag if the FSM was actually settled */
+                    if(fsm_settled)
+                        cache_ptr->rdfsm_settled = TRUE;
                 } /* end if */
                 break;
 
             case H5C_RING_MDFSM:
-                if(f->shared->fs_persist && !f->shared->first_alloc_dealloc && !cache_ptr->mdfsm_settled) {
+                if(!cache_ptr->mdfsm_settled) {
+                    hbool_t fsm_settled = FALSE;        /* Whether the FSM was actually settled */
 
-                    if(H5MF_settle_meta_data_fsm(f, dxpl_id) < 0)
+                    /* Settle metadata FSM */
+                    if(H5MF_settle_meta_data_fsm(f, dxpl_id, &fsm_settled) < 0)
                         HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "MD FSM settle failed")
 
-                    cache_ptr->mdfsm_settled = TRUE;
+                    /* Only set the flag if the FSM was actually settled */
+                    if(fsm_settled)
+                        cache_ptr->mdfsm_settled = TRUE;
                 } /* end if */
                 break;
 
-#if 0 /* for bug -- bug fixed in cache image  -- uncomment after merge */
             case H5C_RING_SBE:
-                break;
-#else
-            case 4:
-                break;
-#endif
-
             case H5C_RING_SB:
                 break;
 
