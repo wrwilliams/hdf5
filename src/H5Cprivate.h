@@ -995,16 +995,16 @@ typedef int H5C_ring_t;
  *              just before the entry is freed.
  *
  *              This is necessary, as the LRU list can be changed out
- *              from under H5C_make_space_in_cache() by the serialize
+ *              from under H5C__make_space_in_cache() by the serialize
  *              callback which may change the size of an existing entry,
  *              and/or load a new entry while serializing the target entry.
  *
  *              This in turn can cause a recursive call to
- *              H5C_make_space_in_cache() which may either flush or evict
+ *              H5C__make_space_in_cache() which may either flush or evict
  *              the next entry that the first invocation of that function
  *              was about to examine.
  *
- *              The magic field allows H5C_make_space_in_cache() to
+ *              The magic field allows H5C__make_space_in_cache() to
  *              detect this case, and re-start its scan from the bottom
  *              of the LRU when this situation occurs.
  *

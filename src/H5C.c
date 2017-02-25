@@ -46,9 +46,9 @@
  *	 - Change protect/unprotect to lock/unlock.
  *
  *	 - Flush entries in increasing address order in
- *	   H5C_make_space_in_cache().
+ *	   H5C__make_space_in_cache().
  *
- *	 - Also in H5C_make_space_in_cache(), use high and low water marks
+ *	 - Also in H5C__make_space_in_cache(), use high and low water marks
  *	   to reduce the number of I/O calls.
  *
  *	 - When flushing, attempt to combine contiguous entries to reduce
@@ -1165,7 +1165,7 @@ H5C_flush_to_min_clean(H5F_t * f,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "cache write is not permitted!?!")
 
 #if 1 /* original code */
-    if(H5C_make_space_in_cache(f, dxpl_id, (size_t)0, write_permitted) < 0)
+    if(H5C__make_space_in_cache(f, dxpl_id, (size_t)0, write_permitted) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C__make_space_in_cache failed")
 #else /* modified code -- commented out for now */
     if ( cache_ptr->max_cache_size > cache_ptr->index_size ) {
@@ -1493,7 +1493,7 @@ H5C_insert_entry(H5F_t *             f,
 
         /* Note that space_needed is just the amount of space that
          * needed to insert the new entry without exceeding the cache
-         * size limit.  The subsequent call to H5C_make_space_in_cache()
+         * size limit.  The subsequent call to H5C__make_space_in_cache()
          * may evict the entries required to free more or less space
          * depending on conditions.  It MAY be less if the cache is
          * currently undersized, or more if the cache is oversized.
@@ -1516,8 +1516,8 @@ H5C_insert_entry(H5F_t *             f,
          * no point in worrying about the third.
          */
 
-        if(H5C_make_space_in_cache(f, dxpl_id, space_needed, write_permitted) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTINS, FAIL, "H5C_make_space_in_cache failed")
+        if(H5C__make_space_in_cache(f, dxpl_id, space_needed, write_permitted) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTINS, FAIL, "H5C__make_space_in_cache failed")
     } /* end if */
 
     H5C__INSERT_IN_INDEX(cache_ptr, entry_ptr, FAIL)
@@ -1543,8 +1543,6 @@ H5C_insert_entry(H5F_t *             f,
         HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry inserted into cache")
 
     H5C__UPDATE_STATS_FOR_INSERTION(cache_ptr, entry_ptr)
-
-    cache_ptr->entries_inserted_counter++;
 
 #ifdef H5_HAVE_PARALLEL
     /* Get the dataset transfer property list */
@@ -2015,8 +2013,6 @@ H5C_move_entry(H5C_t *	     cache_ptr,
     } /* end if */
 
     H5C__UPDATE_STATS_FOR_MOVE(cache_ptr, entry_ptr)
-
-    cache_ptr->entries_relocated_counter++;
 
 done:
 #if H5C_DO_EXTREME_SANITY_CHECKS
@@ -2536,7 +2532,7 @@ H5C_protect(H5F_t *		f,
            empty_space = cache_ptr->max_cache_size - cache_ptr->index_size;
 
 	/* try to free up if necceary and if evictions are permitted.  Note
-	 * that if evictions are enabled, we will call H5C_make_space_in_cache()
+	 * that if evictions are enabled, we will call H5C__make_space_in_cache()
 	 * regardless if the min_free_space requirement is not met.
 	 */
         if ( ( cache_ptr->evictions_enabled ) &&
@@ -2571,7 +2567,7 @@ H5C_protect(H5F_t *		f,
 
             /* Note that space_needed is just the amount of space that
              * needed to insert the new entry without exceeding the cache
-             * size limit.  The subsequent call to H5C_make_space_in_cache()
+             * size limit.  The subsequent call to H5C__make_space_in_cache()
              * may evict the entries required to free more or less space
              * depending on conditions.  It MAY be less if the cache is
              * currently undersized, or more if the cache is oversized.
@@ -2598,8 +2594,8 @@ H5C_protect(H5F_t *		f,
              * see no point in worrying about the fourth.
              */
 
-            if(H5C_make_space_in_cache(f, dxpl_id, space_needed, write_permitted) < 0 )
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, NULL, "H5C_make_space_in_cache failed")
+            if(H5C__make_space_in_cache(f, dxpl_id, space_needed, write_permitted) < 0 )
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, NULL, "H5C__make_space_in_cache failed")
         } /* end if */
 
         /* Insert the entry in the hash table.  It can't be dirty yet, so
@@ -2707,7 +2703,7 @@ H5C_protect(H5F_t *		f,
              * bring the cache size down to the current maximum cache size.
 	     *
 	     * Also, if the min_clean_size requirement is not met, we
-	     * should also call H5C_make_space_in_cache() to bring us
+	     * should also call H5C__make_space_in_cache() to bring us
 	     * into complience.
              */
 
@@ -2724,8 +2720,8 @@ H5C_protect(H5F_t *		f,
 		if(cache_ptr->index_size > cache_ptr->max_cache_size)
                     cache_ptr->cache_full = TRUE;
 
-                if(H5C_make_space_in_cache(f, dxpl_id, (size_t)0, write_permitted) < 0 )
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, NULL, "H5C_make_space_in_cache failed")
+                if(H5C__make_space_in_cache(f, dxpl_id, (size_t)0, write_permitted) < 0 )
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, NULL, "H5C__make_space_in_cache failed")
             }
         } /* end if */
     }
@@ -6942,7 +6938,7 @@ done:
 
 /*-------------------------------------------------------------------------
  *
- * Function:    H5C_make_space_in_cache
+ * Function:    H5C__make_space_in_cache
  *
  * Purpose:     Attempt to evict cache entries until the index_size
  *		is at least needed_space below max_cache_size.
@@ -6976,7 +6972,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
+H5C__make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     hbool_t	write_permitted)
 {
     H5C_t *		cache_ptr = f->shared->cache;
@@ -6998,7 +6994,7 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     uint32_t 		num_corked_entries = 0;
     herr_t		ret_value = SUCCEED;      /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT
+    FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
     HDassert(f);
@@ -7019,20 +7015,14 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     cache_ptr->msic_in_progress = TRUE;
 
     if ( write_permitted ) {
-
         restart_scan = FALSE;
         initial_list_len = cache_ptr->LRU_list_len;
         entry_ptr = cache_ptr->LRU_tail_ptr;
 
-	if ( cache_ptr->index_size >= cache_ptr->max_cache_size ) {
-
+	if(cache_ptr->index_size >= cache_ptr->max_cache_size)
 	   empty_space = 0;
-
-	} else {
-
+	else
 	   empty_space = cache_ptr->max_cache_size - cache_ptr->index_size;
-
-	}
 
         while ( ( ( (cache_ptr->index_size + space_needed)
                     >
@@ -7298,7 +7288,7 @@ done:
     HDassert((!reentrant_call) || (cache_ptr->msic_in_progress));
 
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5C_make_space_in_cache() */
+} /* H5C__make_space_in_cache() */
 
 
 /*-------------------------------------------------------------------------
@@ -8246,7 +8236,6 @@ H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_p
         if(serialize_flags & H5C__SERIALIZE_MOVED_FLAG) {
             /* Update stats and entries relocated counter */
             H5C__UPDATE_STATS_FOR_MOVE(cache_ptr, entry_ptr)
-            cache_ptr->entries_relocated_counter++;
 
             /* We must update cache data structures for the change in address */
             if(entry_ptr->addr == old_addr) {

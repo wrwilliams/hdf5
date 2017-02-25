@@ -3659,7 +3659,7 @@ H5C_reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
      * necessary to remain within limits.
      */
     if(cache_ptr->index_size >= cache_ptr->max_cache_size) {
-	/* cache is oversized -- call H5C_make_space_in_cache() with zero
+	/* cache is oversized -- call H5C__make_space_in_cache() with zero
          * space needed to repair the situation if possible.
          */
         hbool_t write_permitted = FALSE;
@@ -3671,8 +3671,8 @@ H5C_reconstruct_cache_contents(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr)
         else
             write_permitted = cache_ptr->write_permitted;
 
-	if(H5C_make_space_in_cache(f, dxpl_id, 0, write_permitted) < 0)
-	    HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, FAIL, "H5C_make_space_in_cache failed")
+	if(H5C__make_space_in_cache(f, dxpl_id, 0, write_permitted) < 0)
+	    HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, FAIL, "H5C__make_space_in_cache failed")
     } /* end if */
 
 done:
@@ -4429,7 +4429,6 @@ H5C_serialize_single_entry(const H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr,
 
                 /* update stats and the entries relocated counter */
                 H5C__UPDATE_STATS_FOR_MOVE(cache_ptr, entry_ptr)
-                cache_ptr->entries_relocated_counter++;
 
                 /* we must update cache data structures for the 
                  * change in address.
