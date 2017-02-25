@@ -8119,7 +8119,7 @@ H5C__assert_flush_dep_nocycle(const H5C_cache_entry_t * entry,
  *-------------------------------------------------------------------------
  */
 herr_t
-H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, 
+H5C__generate_image(H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, 
     hid_t dxpl_id)
 {
     haddr_t		new_addr = HADDR_UNDEF;
@@ -8128,23 +8128,18 @@ H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_p
     unsigned            serialize_flags = H5C__SERIALIZE_NO_FLAGS_SET;
     herr_t              ret_value = SUCCEED;
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_PACKAGE
 
     /* Sanity check */
+    HDassert(f);
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+    HDassert(entry_ptr);
+    HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
     HDassert(!entry_ptr->image_up_to_date);
-
-    if(NULL == entry_ptr->image_ptr) {
-        if(NULL == (entry_ptr->image_ptr = H5MM_malloc(entry_ptr->size + H5C_IMAGE_EXTRA_SPACE)))
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for on disk image buffer")
-#if H5C_DO_MEMORY_SANITY_CHECKS
-        HDmemcpy(((uint8_t *)entry_ptr->image_ptr) + entry_ptr->size, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
-#endif /* H5C_DO_MEMORY_SANITY_CHECKS */
-    } /* end if */
-
-    /* reset cache_ptr->slist_changed so we can detect slist
-     * modifications in the pre_serialize call.
-     */
-    cache_ptr->slist_changed = FALSE;
+    HDassert(entry_ptr->is_dirty);
+    HDassert(!entry_ptr->is_protected);
+    HDassert(entry_ptr->type);
 
     /* make note of the entry's current address */
     old_addr = entry_ptr->addr;
