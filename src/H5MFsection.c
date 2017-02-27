@@ -884,10 +884,9 @@ H5MF_sect_small_merge(H5FS_section_info_t **_sect1, H5FS_section_info_t *_sect2,
         /* This is in response to the data corruption bug from fheap.c with page buffering + page strategy */
         /* Note: Large metadata page bypasses the PB cache */
         /* Note: Update of raw data page (large or small sized) is handled by the PB cache */
-        if(udata->f->shared->page_buf != NULL && udata->alloc_type != H5FD_MEM_DRAW) {
-            if(H5PB_remove_entry(udata->f, udata->alloc_type, (*sect1)->sect_info.addr, (*sect1)->sect_info.size) <0)
+        if(udata->f->shared->page_buf != NULL && udata->alloc_type != H5FD_MEM_DRAW)
+            if(H5PB_remove_entry(udata->f, (*sect1)->sect_info.addr) < 0)
                 HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "can't free merged section")
-        }
 
         if(H5MF_sect_free((H5FS_section_info_t *)(*sect1)) < 0)
             HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free section node")

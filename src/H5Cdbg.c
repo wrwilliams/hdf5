@@ -191,13 +191,12 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5C_dump_cache_LRU(H5C_t * cache_ptr, const char *  cache_name)
+H5C_dump_cache_LRU(H5C_t *cache_ptr, const char *cache_name)
 {
-    H5C_cache_entry_t * entry_ptr = NULL;
+    H5C_cache_entry_t * entry_ptr;
     int                 i = 0;
-    herr_t              ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_NOAPI(FAIL)
+    FUNC_ENTER_NOAPI_NOERR
 
     /* Sanity check */
     HDassert(cache_ptr != NULL);
@@ -224,9 +223,7 @@ H5C_dump_cache_LRU(H5C_t * cache_ptr, const char *  cache_name)
     HDfprintf(stdout, "----------------------------------------------------------------------------------------------------------------\n");
 
     entry_ptr = cache_ptr->LRU_head_ptr;
-
-    while ( entry_ptr != NULL ) {
-
+    while(entry_ptr != NULL) {
         HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
 
         /* Print entry */
@@ -247,16 +244,12 @@ H5C_dump_cache_LRU(H5C_t * cache_ptr, const char *  cache_name)
         HDfprintf(stdout, "\n");
 
         i++;
-
         entry_ptr = entry_ptr->next;
-    }
+    } /* end while */
 
     HDfprintf(stdout, "----------------------------------------------------------------------------------------------------------------\n");
 
-done:
-
-    FUNC_LEAVE_NOAPI(ret_value)
-
+    FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5C_dump_cache_LRU() */
 
 

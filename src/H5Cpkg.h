@@ -636,7 +636,8 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
             ((cache_ptr)->cache_flush_moves[(entry_ptr)->type->id])++; \
         if ( entry_ptr->flush_in_progress )                            \
             ((cache_ptr)->entry_flush_moves[(entry_ptr)->type->id])++; \
-	(((cache_ptr)->moves)[(entry_ptr)->type->id])++;
+	(((cache_ptr)->moves)[(entry_ptr)->type->id])++;               \
+        (cache_ptr)->entries_relocated_counter++;
 
 #define H5C__UPDATE_STATS_FOR_ENTRY_SIZE_CHANGE(cache_ptr, entry_ptr, new_size)\
 	if ( cache_ptr->flush_in_progress )                                    \
@@ -787,6 +788,7 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
             ((cache_ptr)->max_size)[(entry_ptr)->type->id] )         \
         ((cache_ptr)->max_size)[(entry_ptr)->type->id]               \
              = (entry_ptr)->size;                                    \
+    cache_ptr->entries_inserted_counter++;                           \
 }
 
 #define H5C__UPDATE_STATS_FOR_PROTECT(cache_ptr, entry_ptr, hit)            \
@@ -871,6 +873,7 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
         (cache_ptr)->max_slist_len = (cache_ptr)->slist_len;         \
     if ( (cache_ptr)->slist_size > (cache_ptr)->max_slist_size )     \
         (cache_ptr)->max_slist_size = (cache_ptr)->slist_size;       \
+    cache_ptr->entries_inserted_counter++;                           \
 }
 
 #define H5C__UPDATE_STATS_FOR_PROTECT(cache_ptr, entry_ptr, hit)            \
@@ -4088,7 +4091,7 @@ typedef struct H5C_tag_info_t {
  *
  * size_decreased:  Boolean flag set to TRUE whenever the maximum cache
  *		size is decreased.  The flag triggers a call to
- *		H5C_make_space_in_cache() on the next call to H5C_protect().
+ *		H5C__make_space_in_cache() on the next call to H5C_protect().
  *
  * resize_in_progress: As the metadata cache has become re-entrant, it is 
  *		possible that a protect may trigger a call to 
@@ -4513,29 +4516,29 @@ typedef struct H5C_tag_info_t {
  * max_pel_size: Largest value attained by the pel_size field in the
  *              current epoch.
  *
- * calls_to_msic: Total number of calls to H5C_make_space_in_cache
+ * calls_to_msic: Total number of calls to H5C__make_space_in_cache
  *
  * total_entries_skipped_in_msic: Number of clean entries skipped while
- *              enforcing the min_clean_fraction in H5C_make_space_in_cache().
+ *              enforcing the min_clean_fraction in H5C__make_space_in_cache().
  *
  * total_dirty_pf_entries_skipped_in_msic: Number of dirty prefetched entries
- *              skipped in H5C_make_space_in_cache().  Note that this can 
+ *              skipped in H5C__make_space_in_cache().  Note that this can 
  *              only occur when a file is opened R/O with a cache image
  *              containing dirty entries.
  *
  * total_entries_scanned_in_msic: Number of clean entries skipped while
- *              enforcing the min_clean_fraction in H5C_make_space_in_cache().
+ *              enforcing the min_clean_fraction in H5C__make_space_in_cache().
  *
  * max_entries_skipped_in_msic: Maximum number of clean entries skipped
- *              in any one call to H5C_make_space_in_cache().
+ *              in any one call to H5C__make_space_in_cache().
  *
  * max_dirty_pf_entries_skipped_in_msic: Maximum number of dirty prefetched
- *              entries skipped in any one call to H5C_make_space_in_cache().
+ *              entries skipped in any one call to H5C__make_space_in_cache().
  *              Note that this can only occur when the file is opened 
  *              R/O with a cache image containing dirty entries.
  *
  * max_entries_scanned_in_msic: Maximum number of entries scanned over
- *              in any one call to H5C_make_space_in_cache().
+ *              in any one call to H5C__make_space_in_cache().
  *
  * entries_scanned_to_make_space: Number of entries scanned only when looking
  *              for entries to evict in order to make space in cache.
@@ -4915,11 +4918,11 @@ H5_DLL herr_t H5C_load_cache_image(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5C__write_cache_image(H5F_t *f, hid_t dxpl_id, const H5C_t *cache_ptr);
 H5_DLL herr_t H5C__mark_flush_dep_serialized(H5C_cache_entry_t * entry_ptr);
 H5_DLL herr_t H5C__mark_flush_dep_unserialized(H5C_cache_entry_t * entry_ptr);
-H5_DLL herr_t H5C_make_space_in_cache(H5F_t * f, hid_t   dxpl_id,
+H5_DLL herr_t H5C__make_space_in_cache(H5F_t * f, hid_t dxpl_id,
     size_t  space_needed, hbool_t write_permitted);
 H5_DLL herr_t H5C__flush_marked_entries(H5F_t * f, hid_t dxpl_id);
-H5_DLL herr_t H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, 
-    hid_t dxpl_id);
+H5_DLL herr_t H5C__generate_image(H5F_t *f, H5C_t *cache_ptr,
+    H5C_cache_entry_t *entry_ptr, hid_t dxpl_id);
 H5_DLL herr_t H5C__iter_tagged_entries(H5C_t *cache, haddr_t tag, hbool_t match_global,
     H5C_tag_iter_cb_t cb, void *cb_ctx);
 

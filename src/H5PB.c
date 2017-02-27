@@ -43,35 +43,36 @@
 #include "H5PBpkg.h"            /* File access				*/
 #include "H5SLprivate.h"	/* Skip List				*/
 
+
 /****************/
 /* Local Macros */
 /****************/
 #define H5PB__PREPEND(page_ptr, head_ptr, tail_ptr, len) {              \
-        if ((head_ptr) == NULL) {                                       \
+        if((head_ptr) == NULL) {                                        \
             (head_ptr) = (page_ptr);                                    \
             (tail_ptr) = (page_ptr);                                    \
-        }                                                               \
+        } /* end if */                                                  \
         else {                                                          \
             (head_ptr)->prev = (page_ptr);                              \
             (page_ptr)->next = (head_ptr);                              \
             (head_ptr) = (page_ptr);                                    \
-        }                                                               \
+        } /* end else */                                                \
         (len)++;                                                        \
 } /* H5PB__PREPEND() */
 
 #define H5PB__REMOVE(page_ptr, head_ptr, tail_ptr, len) {               \
-        if ((head_ptr) == (page_ptr)) {                                 \
+        if((head_ptr) == (page_ptr)) {                                  \
             (head_ptr) = (page_ptr)->next;                              \
-            if ((head_ptr) != NULL)                                     \
+            if((head_ptr) != NULL)                                      \
                 (head_ptr)->prev = NULL;                                \
-        }                                                               \
+        } /* end if */                                                  \
         else                                                            \
             (page_ptr)->prev->next = (page_ptr)->next;                  \
-        if ((tail_ptr) == (page_ptr)) {                                 \
+        if((tail_ptr) == (page_ptr)) {                                  \
             (tail_ptr) = (page_ptr)->prev;                              \
-            if ((tail_ptr) != NULL)                                     \
+            if((tail_ptr) != NULL)                                      \
                 (tail_ptr)->next = NULL;                                \
-        }                                                               \
+        } /* end if */                                                  \
         else                                                            \
             (page_ptr)->next->prev = (page_ptr)->prev;                  \
         page_ptr->next = NULL;                                          \
@@ -80,30 +81,31 @@
 }
 
 #define H5PB__INSERT_LRU(page_buf, page_ptr) {                          \
-        HDassert( (page_buf) );                                         \
-        HDassert( (page_ptr) );                                         \
+        HDassert(page_buf);                                             \
+        HDassert(page_ptr);                                             \
         /* insert the entry at the head of the list. */                 \
         H5PB__PREPEND((page_ptr), (page_buf)->LRU_head_ptr,             \
                       (page_buf)->LRU_tail_ptr, (page_buf)->LRU_list_len) \
 }
 
 #define H5PB__REMOVE_LRU(page_buf, page_ptr) {                          \
-        HDassert( (page_buf) );                                         \
-        HDassert( (page_ptr) );                                         \
+        HDassert(page_buf);                                             \
+        HDassert(page_ptr);                                             \
         /* remove the entry from the list. */                           \
         H5PB__REMOVE((page_ptr), (page_buf)->LRU_head_ptr,              \
                      (page_buf)->LRU_tail_ptr, (page_buf)->LRU_list_len) \
 }
 
 #define H5PB__MOVE_TO_TOP_LRU(page_buf, page_ptr) {                     \
-        HDassert( (page_buf) );                                         \
-        HDassert( (page_ptr) );                                         \
+        HDassert(page_buf);                                             \
+        HDassert(page_ptr);                                             \
         /* Remove entry and insert at the head of the list. */          \
         H5PB__REMOVE((page_ptr), (page_buf)->LRU_head_ptr,              \
                      (page_buf)->LRU_tail_ptr, (page_buf)->LRU_list_len) \
-        H5PB__PREPEND((page_ptr), (page_buf)->LRU_head_ptr,            \
+        H5PB__PREPEND((page_ptr), (page_buf)->LRU_head_ptr,             \
                        (page_buf)->LRU_tail_ptr, (page_buf)->LRU_list_len) \
 }
+
 
 /******************/
 /* Local Typedefs */
@@ -134,12 +136,14 @@ static herr_t H5PB__insert_entry(H5PB_t *page_buf, H5PB_entry_t *page_entry);
 static htri_t H5PB__make_space(const H5F_t *f, H5PB_t *page_buf, H5P_genplist_t *dxpl, H5FD_mem_t inserted_type);
 static herr_t H5PB__write_entry(const H5F_t *f, H5PB_entry_t *page_entry, H5P_genplist_t *dxpl);
 
+
 /*********************/
 /* Package Variables */
 /*********************/
 
 /* Package initialization variable */
 hbool_t H5_PKG_INIT_VAR = FALSE;
+
 
 /*****************************/
 /* Library Private Variables */
@@ -148,6 +152,7 @@ hbool_t H5_PKG_INIT_VAR = FALSE;
 H5FL_DEFINE_STATIC(H5PB_t);
 /* Declare a free list to manage the H5PB_entry_t struct */
 H5FL_DEFINE_STATIC(H5PB_entry_t);
+
 
 /*******************/
 /* Local Variables */
@@ -172,10 +177,9 @@ H5FL_DEFINE_STATIC(H5PB_entry_t);
 herr_t 
 H5PB_reset_stats(H5PB_t *page_buf)
 {
-    herr_t ret_value = SUCCEED;
+    FUNC_ENTER_NOAPI_NOERR
 
-    FUNC_ENTER_NOAPI(FAIL)
-
+    /* Sanity checks */
     HDassert(page_buf);
 
     page_buf->accesses[0] = 0;
@@ -189,9 +193,7 @@ H5PB_reset_stats(H5PB_t *page_buf)
     page_buf->bypasses[0] = 0;
     page_buf->bypasses[1] = 0;
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-
+    FUNC_LEAVE_NOAPI(SUCCEED)
 }  /* H5PB_reset_stats() */
 
 
@@ -217,10 +219,9 @@ done:
 herr_t 
 H5PB_get_stats(const H5PB_t *page_buf, int accesses[2], int hits[2], int misses[2], int evictions[2], int bypasses[2])
 {
-    herr_t ret_value = SUCCEED;
+    FUNC_ENTER_NOAPI_NOERR
 
-    FUNC_ENTER_NOAPI(FAIL)
-
+    /* Sanity checks */
     HDassert(page_buf);
 
     accesses[0] = page_buf->accesses[0];
@@ -234,9 +235,7 @@ H5PB_get_stats(const H5PB_t *page_buf, int accesses[2], int hits[2], int misses[
     bypasses[0] = page_buf->bypasses[0];
     bypasses[1] = page_buf->bypasses[1];
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-
+    FUNC_LEAVE_NOAPI(SUCCEED)
 }  /* H5PB_get_stats */
 
 
@@ -321,7 +320,7 @@ H5PB_create(H5F_t *f, size_t size, unsigned page_buf_min_meta_perc, unsigned pag
         H5_CHECKED_ASSIGN(size, size_t, temp_size, hsize_t);
     } /* end if */
     else if(0 != size % f->shared->fs_page_size)
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTINIT, FAIL, "Page Buffer size must be >= to the page size");
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTINIT, FAIL, "Page Buffer size must be >= to the page size")
 
     /* Allocate the new page buffering structure */
     if(NULL == (page_buf = H5FL_CALLOC(H5PB_t)))
@@ -337,9 +336,6 @@ H5PB_create(H5F_t *f, size_t size, unsigned page_buf_min_meta_perc, unsigned pag
      */
     page_buf->min_meta_count = (unsigned)((size * page_buf_min_meta_perc) / (f->shared->fs_page_size * 100));
     page_buf->min_raw_count = (unsigned)((size * page_buf_min_raw_perc) / (f->shared->fs_page_size * 100));
-
-//fprintf(stderr, "Creating a page buffer of size %zu, Page size = %zu\n", size, (size_t)f->shared->fs_page_size);
-//fprintf(stderr, "MIN metadata count = %u, MIN raw data count = %u\n", page_buf->min_meta_count, page_buf->min_raw_count);
 
     if(NULL == (page_buf->slist_ptr = H5SL_create(H5SL_TYPE_HADDR, NULL)))
         HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTCREATE, FAIL, "can't create skip list")
@@ -464,7 +460,6 @@ H5PB__dest_cb(void *item, void H5_ATTR_UNUSED *key, void *_op_data)
 
     /* Sanity checking */
     HDassert(page_entry);
-    HDassert(FALSE == page_entry->is_dirty);
     HDassert(op_data);
     HDassert(op_data->page_buf);
 
@@ -556,8 +551,8 @@ H5PB_add_new_page(H5F_t *f, H5FD_mem_t type, haddr_t page_addr)
 
     FUNC_ENTER_NOAPI(FAIL)
 
+    /* Sanity checks */
     HDassert(page_buf);
-    //fprintf(stderr, "New page MF INSERT type %d at addr %llu\n", type, page_addr);
 
     /* if there is an existing page, this means that at some point the
        file space manager freed and re-allocated a page at the same
@@ -566,19 +561,20 @@ H5PB_add_new_page(H5F_t *f, H5FD_mem_t type, haddr_t page_addr)
        the page when it is freed from this list if it still exists and
        remove this check */
     if(H5SL_search(page_buf->mf_slist_ptr, &(page_addr)))
-        HGOTO_DONE(SUCCEED);
+        HGOTO_DONE(SUCCEED)
 
-    /* create the new PB entry */
+    /* Create the new PB entry */
     if(NULL == (page_entry = H5FL_CALLOC(H5PB_entry_t)))
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_NOSPACE, FAIL, "memory allocation failed");
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_NOSPACE, FAIL, "memory allocation failed")
 
+    /* Initialize page fields */
     page_entry->addr = page_addr;
     page_entry->type = (H5F_mem_page_t)type;
     page_entry->is_dirty = FALSE;
 
-    /* insert entry in skip list */
+    /* Insert entry in skip list */
     if(H5SL_insert(page_buf->mf_slist_ptr, page_entry, &(page_entry->addr)) < 0)
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_BADVALUE, FAIL, "Can't insert entry in skip list");
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_BADVALUE, FAIL, "Can't insert entry in skip list")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -605,7 +601,6 @@ H5PB_update_entry(H5PB_t *page_buf, haddr_t addr, size_t size, const void *buf)
 {
     H5PB_entry_t *page_entry = NULL;    /* pointer to the corresponding page entry */
     haddr_t page_addr;
-    herr_t ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI_NOERR
 
@@ -629,7 +624,7 @@ H5PB_update_entry(H5PB_t *page_buf, haddr_t addr, size_t size, const void *buf)
         H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
     }
 
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5PB_update_entry */
 #endif /* H5_HAVE_PARALLEL */
 
@@ -650,7 +645,7 @@ H5PB_update_entry(H5PB_t *page_buf, haddr_t addr, size_t size, const void *buf)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5PB_remove_entry(const H5F_t *f, H5FD_mem_t type, haddr_t addr, hsize_t size)
+H5PB_remove_entry(const H5F_t *f, haddr_t addr)
 {
     H5PB_t *page_buf = f->shared->page_buf;
     H5PB_entry_t *page_entry = NULL;        /* pointer to the page entry being searched */
@@ -658,9 +653,8 @@ H5PB_remove_entry(const H5F_t *f, H5FD_mem_t type, haddr_t addr, hsize_t size)
 
     FUNC_ENTER_NOAPI(FAIL)
 
+    /* Sanity checks */
     HDassert(page_buf);
-    HDassert(size == page_buf->page_size);
-    HDassert(type != H5FD_MEM_DRAW);
 
     /* Search for address in the skip list */
     page_entry = (H5PB_entry_t *)H5SL_search(page_buf->slist_ptr, (void *)(&addr));
@@ -680,7 +674,7 @@ H5PB_remove_entry(const H5F_t *f, H5FD_mem_t type, haddr_t addr, hsize_t size)
         H5MM_free(page_entry->page_buf_ptr);
         page_entry->page_buf_ptr = NULL;
         page_entry = H5FL_FREE(H5PB_entry_t, page_entry);
-    }
+    } /* end if */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -718,12 +712,12 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
     FUNC_ENTER_NOAPI(FAIL)
 
 #if H5PB_COLLECT_STATS
-        if(page_buf) {
-            if(type == H5FD_MEM_DRAW)
-                page_buf->accesses[1] ++;
-            else
-                page_buf->accesses[0] ++;
-        }
+    if(page_buf) {
+        if(type == H5FD_MEM_DRAW)
+            page_buf->accesses[1] ++;
+        else
+            page_buf->accesses[0] ++;
+    } /* end if */
 #endif /* H5PB_COLLECT_STATS */
 
 #ifdef H5_HAVE_PARALLEL
@@ -735,13 +729,12 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
         int mpi_size;
 
         if((mpi_size = H5F_mpi_get_size(f)) < 0)
-            HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "can't retrieve MPI communicator size");
+            HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "can't retrieve MPI communicator size")
         if(1 != mpi_size)
             mpio_bypass_pb = TRUE;
 #endif
     }
 #endif
-    //fprintf(stderr, "%s: addr %llu, size %zu\n", FUNC, addr, size);
     if(NULL == (dxpl = (H5P_genplist_t *)H5I_object(dxpl_id)))
         HGOTO_ERROR(H5E_PAGEBUF, H5E_BADTYPE, FAIL, "can't get property list")
 
@@ -755,7 +748,7 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
      *  But the real issue is with the core driver which will be addressed later.
      */
     if(NULL == page_buf || size >= page_buf->page_size ||
-       (mpio_bypass_pb && H5FD_MEM_DRAW == type)) {
+           (mpio_bypass_pb && H5FD_MEM_DRAW == type)) {
         H5F_io_info_t fio_info;             /* I/O info for operation */
 
         /* Set up I/O info for operation */
@@ -769,17 +762,17 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
                 page_buf->bypasses[1] ++;
             else
                 page_buf->bypasses[0] ++;
-        }
+        } /* end if */
 #endif /* H5PB_COLLECT_STATS */
-    }
+    } /* end if */
 
     /* If page buffering is disabled, 
        or if this is a large metadata access, 
        or if this is parallel raw data access, 
        we are done here */
     if(NULL == page_buf || (size >= page_buf->page_size && H5FD_MEM_DRAW != type) ||
-       (mpio_bypass_pb && H5FD_MEM_DRAW == type))
-        HGOTO_DONE(ret_value);
+           (mpio_bypass_pb && H5FD_MEM_DRAW == type))
+        HGOTO_DONE(ret_value)
 
     /* calculate the aligned address of the first page */
     first_page_addr = (addr/page_buf->page_size) * page_buf->page_size;
@@ -795,29 +788,25 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
         if(first_page_addr == last_page_addr) {
             HDassert(1 == num_touched_pages);
             last_page_addr = HADDR_UNDEF;
-        }
-    }
+        } /* end if */
+    } /* end if */
     /* Otherwise set last page addr to HADDR_UNDEF */
     else {
         num_touched_pages = 1;
         last_page_addr = HADDR_UNDEF;
-    }
+    } /* end else */
 
     /* Copy raw data from dirty pages into the read buffer if the read
        request spans pages in the page buffer*/
     if(H5FD_MEM_DRAW == type && size >= page_buf->page_size) {
-        H5SL_node_t *node = NULL;
+        H5SL_node_t *node;
 
-        //fprintf(stderr, "Checking RAW read that bypassed PB\n");
-
-        /* for each touched page in the page buffer, check if it
-           exists in the page Buffer and is dirty. If it does, we
-           update the buffer with what's in the page so we get the up
-           to date data into the buffer after the big read from the
-           file. */
-
+        /* For each touched page in the page buffer, check if it
+         * exists in the page Buffer and is dirty. If it does, we
+         * update the buffer with what's in the page so we get the up
+         * to date data into the buffer after the big read from the file.
+         */
         node = H5SL_find(page_buf->slist_ptr, (void *)(&first_page_addr));
-
         for(i=0 ; i<num_touched_pages ; i++) {
             search_addr = i*page_buf->page_size + first_page_addr;
 
@@ -849,7 +838,7 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
 
                         /* move to top of LRU list */
                         H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
-                    }
+                    } /* end if */
                     /* special handling for the last page if it is not a full page access */
                     else if(num_touched_pages > 1 && i == num_touched_pages-1 && search_addr < addr+size) {
                         offset = (num_touched_pages-2)*page_buf->page_size + 
@@ -860,31 +849,31 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
 
                         /* move to top of LRU list */
                         H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
-                    }
+                    } /* end else-if */
                     /* copy the entire fully accessed pages */
                     else {
                         offset = i*page_buf->page_size;
 
                         HDmemcpy((uint8_t *)buf+(i*page_buf->page_size) , page_entry->page_buf_ptr, 
                              page_buf->page_size);
-                    }
-                }
+                    } /* end else */
+                } /* end if */
                 node = H5SL_next(node);
-            }
-        }
-        HGOTO_DONE(ret_value);
-    }
+            } /* end if */
+        } /* end for */
+        HGOTO_DONE(ret_value)
+    } /* end if */
 
     /* a raw data access could span 1 or 2 PB entries at this point so
        we need to handle that */
     HDassert(1 == num_touched_pages || 2 == num_touched_pages);
 
-    for(i=0 ; i<num_touched_pages ; i++) {
+    for(i = 0 ; i < num_touched_pages; i++) {
 
         if(1 == i && HADDR_UNDEF == last_page_addr) {
             HDassert(1 == num_touched_pages);
-            HGOTO_DONE(ret_value);
-        }
+            HGOTO_DONE(ret_value)
+        } /* end if */
 
         /* calculate the aligned address of the page to search for it in the skip list */
         search_addr = (0==i ? first_page_addr : last_page_addr);
@@ -913,7 +902,7 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
 
             /* update LRU */
             H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
-        }
+        } /* end if */
         /* if not found */ 
         else {
             void *new_page_buf = NULL;
@@ -933,7 +922,7 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
 
                 /* check if we can make space in page buffer */
                 if((can_make_space = H5PB__make_space(f, page_buf, dxpl, type)) < 0)
-                    HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "make space in Page buffer Failed");
+                    HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "make space in Page buffer Failed")
 
                 /* if make_space returns 0, then we can't use the page
                    buffer for this I/O and we need to bypass */
@@ -943,24 +932,24 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
 
                     /* read entire block from VFD and return */
                     if(H5FD_read(f->shared->lf, dxpl, type, addr, size, buf) < 0)
-                        HGOTO_ERROR(H5E_PAGEBUF, H5E_READERROR, FAIL, "driver read request failed");
-                    HGOTO_DONE(SUCCEED);
-                }
-            }
+                        HGOTO_ERROR(H5E_PAGEBUF, H5E_READERROR, FAIL, "driver read request failed")
+                    HGOTO_DONE(SUCCEED)
+                } /* end if */
+            } /* end if */
 
             /* read page from VFD */
             if(NULL == (new_page_buf = H5MM_malloc(page_size)))
-                HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL, "memory allocation failed for page buffer entry");
+                HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL, "memory allocation failed for page buffer entry")
 
             /* Read page through the VFD layer, but make sure we don't read past the EOA. */
 
             /* Retrieve the 'eoa' for the file */
             if(HADDR_UNDEF == (eoa = H5F_get_eoa(f, type)))
-                HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "driver get_eoa request failed");
+                HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "driver get_eoa request failed")
 
             /* if the entire page falls outside the EOA, then fail */
             if(search_addr > eoa)
-                HGOTO_ERROR(H5E_PAGEBUF, H5E_READERROR, FAIL, "Reading an entire page that is outside the file EOA");
+                HGOTO_ERROR(H5E_PAGEBUF, H5E_READERROR, FAIL, "Reading an entire page that is outside the file EOA")
 
             /* adjust the read size to not go beyond the EOA */
             if(search_addr + page_size > eoa)
@@ -968,7 +957,7 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
 
             /* read page from VFD */
             if(H5FD_read(f->shared->lf, dxpl, type, search_addr, page_size, new_page_buf) < 0)
-                HGOTO_ERROR(H5E_PAGEBUF, H5E_READERROR, FAIL, "driver read request failed");
+                HGOTO_ERROR(H5E_PAGEBUF, H5E_READERROR, FAIL, "driver read request failed")
 
             /* copy the requested data from the page into the input buffer */
             offset = (0==i ? addr - search_addr : 0);
@@ -977,7 +966,7 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
 
             /* create the new PB entry */
             if(NULL == (page_entry = H5FL_CALLOC(H5PB_entry_t)))
-                HGOTO_ERROR(H5E_PAGEBUF, H5E_NOSPACE, FAIL, "memory allocation failed");
+                HGOTO_ERROR(H5E_PAGEBUF, H5E_NOSPACE, FAIL, "memory allocation failed")
 
             page_entry->page_buf_ptr = new_page_buf;
             page_entry->addr = search_addr;
@@ -986,9 +975,10 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
 
             /* insert page into PB */
             if(H5PB__insert_entry(page_buf, page_entry) < 0)
-                HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTSET, FAIL, "error inserting new page in page buffer");
-        }
-    }
+                HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTSET, FAIL, "error inserting new page in page buffer")
+        } /* end else */
+    } /* end for */
+
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PB_read() */
@@ -1033,7 +1023,6 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
                 page_buf->accesses[0] ++;
         }
 #endif /* H5PB_COLLECT_STATS */
-    //fprintf(stderr, "%s: addr %llu, size %zu\n", FUNC, addr, size);
 #ifdef H5_HAVE_PARALLEL
     if(H5F_HAS_FEATURE(f, H5FD_FEAT_HAS_MPI)) {
 #if 1
@@ -1043,7 +1032,7 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
         int mpi_size;
 
         if((mpi_size = H5F_mpi_get_size(f)) < 0)
-            HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "can't retrieve MPI communicator size");
+            HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "can't retrieve MPI communicator size")
         if(1 != mpi_size)
             mpio_bypass_pb = TRUE;
 #endif
@@ -1086,14 +1075,14 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
        we are done here */
     if(NULL == page_buf || (size >= page_buf->page_size && H5FD_MEM_DRAW != type) ||
        (mpio_bypass_pb && H5FD_MEM_DRAW == type))
-        HGOTO_DONE(ret_value);
+        HGOTO_DONE(ret_value)
 
 #ifdef H5_HAVE_PARALLEL
     if(mpio_bypass_pb) {
         HDassert(H5FD_MEM_DRAW != type);
         if(H5PB_update_entry(page_buf, addr, size, buf) > 0)
-            HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "Failed to update PB with metadata cache\n");
-        HGOTO_DONE(ret_value);
+            HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "Failed to update PB with metadata cache")
+        HGOTO_DONE(ret_value)
     }
 #endif
 
@@ -1119,12 +1108,8 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
         last_page_addr = HADDR_UNDEF;
     }
 
-    //fprintf(stderr, "First Page addr: %llu ; Last page addr: %llu\n", first_page_addr, last_page_addr);
-
     /* Check if existing pages for raw data need to be updated since raw data access is not atomic */
     if(H5FD_MEM_DRAW == type && size >= page_buf->page_size) {
-        //fprintf(stderr, "Checking RAW write that bypassed PB\n");
-
         /* For each touched page, check if it exists in the page
            buffer, and update it with the data in the buffer to keep
            it up to date */
@@ -1181,7 +1166,7 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
                 }
             }
         }
-        HGOTO_DONE(ret_value);
+        HGOTO_DONE(ret_value)
     }
 
     /* a raw data access could span 1 or 2 PBs at this point so we need to handle that */
@@ -1190,7 +1175,7 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
 
         if(1 == i && HADDR_UNDEF == last_page_addr) {
             HDassert(1 == num_touched_pages);
-            HGOTO_DONE(ret_value);
+            HGOTO_DONE(ret_value)
         }
 
         /* calculate the aligned address of the page to search for it in the skip list */
@@ -1213,11 +1198,9 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
             else
                 page_buf->hits[0] ++;
 #endif /* H5PB_COLLECT_STATS */
-            //fprintf(stderr, "Existing page at addr %llu, buf ptr %p\n", page_entry->addr, page_entry->page_buf_ptr);
             offset = (0==i ? addr - page_entry->addr : 0);
             buf_offset = (0==i ? 0 : size-access_size);
 
-            //fprintf(stderr, "Memcpy to offset %llu size %zu\n", offset, access_size);
             /* copy the requested data from the input buffer into the page */
             HDmemcpy((uint8_t *)page_entry->page_buf_ptr + offset, (const uint8_t *)buf + buf_offset, access_size);
 
@@ -1237,7 +1220,7 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
                 htri_t can_make_space;
                 /* check if we can make space in page buffer */
                 if((can_make_space = H5PB__make_space(f, page_buf, dxpl, type)) < 0)
-                    HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "make space in Page buffer Failed");
+                    HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "make space in Page buffer Failed")
 
                 /* if make_space returns 0, then we can't use the page
                    buffer for this I/O and we need to bypass */
@@ -1245,8 +1228,8 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
                     HDassert(0==i);
                     /* write to VFD and return */
                     if(H5FD_write(f->shared->lf, dxpl, type, addr, size, buf) < 0)
-                        HGOTO_ERROR(H5E_PAGEBUF, H5E_READERROR, FAIL, "driver read request failed");
-                    HGOTO_DONE(SUCCEED);
+                        HGOTO_ERROR(H5E_PAGEBUF, H5E_READERROR, FAIL, "driver read request failed")
+                    HGOTO_DONE(SUCCEED)
                 }
             }
 
@@ -1268,11 +1251,10 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
                 else
                     page_buf->hits[0] ++;
 #endif /* H5PB_COLLECT_STATS */
-                //fprintf(stderr, "New page EXISTING at addr %llu, buf ptr %p\n", search_addr, new_page_buf);
 
                 /* allocate space for the page buffer */
                 if(NULL == (new_page_buf = H5MM_malloc(page_buf->page_size)))
-                    HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL, "memory allocation failed for page buffer entry");
+                    HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL, "memory allocation failed for page buffer entry")
                 HDmemset(new_page_buf, 0, (size_t)offset);
                 HDmemset((uint8_t *)new_page_buf+offset+access_size , 0, page_size-((size_t)offset+access_size));
 
@@ -1282,15 +1264,13 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
             else {
                 haddr_t eoa, eof = 0;
 
-                //fprintf(stderr, "New page READ at addr %llu, buf ptr %p\n", search_addr, new_page_buf);
-
                 /* allocate space for the page buffer */
                 if(NULL == (new_page_buf = H5MM_calloc(page_size)))
-                    HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL, "memory allocation failed for page buffer entry");
+                    HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL, "memory allocation failed for page buffer entry")
 
                 /* create the new loaded PB entry */
                 if(NULL == (page_entry = H5FL_CALLOC(H5PB_entry_t)))
-                    HGOTO_ERROR(H5E_PAGEBUF, H5E_NOSPACE, FAIL, "memory allocation failed");
+                    HGOTO_ERROR(H5E_PAGEBUF, H5E_NOSPACE, FAIL, "memory allocation failed")
 
                 page_entry->page_buf_ptr = new_page_buf;
                 page_entry->addr = search_addr;
@@ -1298,10 +1278,10 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
 
                 /* Retrieve the 'eoa' for the file */
                 if(HADDR_UNDEF == (eoa = H5F_get_eoa(f, type)))
-                    HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "driver get_eoa request failed");
+                    HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "driver get_eoa request failed")
                 /* if the entire page falls outside the EOA, then fail */
                 if(search_addr > eoa)
-                    HGOTO_ERROR(H5E_PAGEBUF, H5E_READERROR, FAIL, "Writing to a page that is outside the file EOA");
+                    HGOTO_ERROR(H5E_PAGEBUF, H5E_READERROR, FAIL, "Writing to a page that is outside the file EOA")
 
                 /* Retrieve the 'eof' for the file - The MPI-VFD EOF
                    returned will most likely be HADDR_UNDEF, so skip
@@ -1328,14 +1308,13 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
             }
 
             /* copy the requested data from the page into the input buffer */
-            //fprintf(stderr, "Memcpy to offset %llu size %zu\n", offset, access_size);
             HDmemcpy((uint8_t *)new_page_buf + offset, (const uint8_t *)buf+buf_offset, access_size);
 
             page_entry->is_dirty = TRUE;
 
             /* insert page into PB, evicting other pages as necessary */
             if(H5PB__insert_entry(page_buf, page_entry) < 0)
-                HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTSET, FAIL, "error inserting new page in page buffer");
+                HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTSET, FAIL, "error inserting new page in page buffer")
         }
     }
 
@@ -1427,7 +1406,7 @@ H5PB__make_space(const H5F_t *f, H5PB_t *page_buf, H5P_genplist_t *dxpl, H5FD_me
            metadata, then we can't make space for raw data */
         if(0 == page_buf->raw_count && page_buf->min_meta_count == page_buf->meta_count) {
             HDassert(page_buf->meta_count*page_buf->page_size == page_buf->max_size);
-            HGOTO_DONE(0);
+            HGOTO_DONE(0)
         }
 
         /* check the metadata threshold before evicting metadata items */
@@ -1444,7 +1423,7 @@ H5PB__make_space(const H5F_t *f, H5PB_t *page_buf, H5P_genplist_t *dxpl, H5FD_me
            raw data, then we can't make space for meta data */
         if(0 == page_buf->meta_count && page_buf->min_raw_count == page_buf->raw_count) {
             HDassert(page_buf->raw_count*page_buf->page_size == page_buf->max_size);
-            HGOTO_DONE(0);
+            HGOTO_DONE(0)
         }
 
         /* check the raw data threshold before evicting raw data items */
@@ -1533,7 +1512,7 @@ H5PB__write_entry(const H5F_t *f, H5PB_entry_t *page_entry, H5P_genplist_t *dxpl
 
     /* Retrieve the 'eoa' for the file */
     if(HADDR_UNDEF == (eoa = H5F_get_eoa(f, type)))
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "driver get_eoa request failed");
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "driver get_eoa request failed")
 
     if(page_entry->addr <= eoa) {
         size_t page_size = f->shared->page_buf->page_size;
@@ -1544,7 +1523,7 @@ H5PB__write_entry(const H5F_t *f, H5PB_entry_t *page_entry, H5P_genplist_t *dxpl
 
         if(H5FD_write(f->shared->lf, my_dxpl, type, page_entry->addr, 
                       page_size, page_entry->page_buf_ptr) < 0)
-            HGOTO_ERROR(H5E_PAGEBUF, H5E_WRITEERROR, FAIL, "file write failed");
+            HGOTO_ERROR(H5E_PAGEBUF, H5E_WRITEERROR, FAIL, "file write failed")
     }
 
     page_entry->is_dirty = FALSE;

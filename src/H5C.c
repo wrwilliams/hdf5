@@ -46,9 +46,9 @@
  *	 - Change protect/unprotect to lock/unlock.
  *
  *	 - Flush entries in increasing address order in
- *	   H5C_make_space_in_cache().
+ *	   H5C__make_space_in_cache().
  *
- *	 - Also in H5C_make_space_in_cache(), use high and low water marks
+ *	 - Also in H5C__make_space_in_cache(), use high and low water marks
  *	   to reduce the number of I/O calls.
  *
  *	 - When flushing, attempt to combine contiguous entries to reduce
@@ -1045,19 +1045,6 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 
             /* Only call the free space manager settle routines when close
              * warning has been received.
-             *
-             * Observe that the FSM rings should only be populated if
-             * persistant free space managers are enabled.  Thus don't
-             * call the settle routines unless persistant free space 
-             * managers are enabled.
-             *
-             * Note that if f->shared->fs_persist and 
-             * f->shared->first_alloc_dealloc are both TRUE, there
-             * have been no file space allocations or deallocations since
-             * file open.  Thus all free space managers are still settled 
-             * from the last file close.  In this case, we must not call
-             * the settle routines as they assume that this is not the 
-             * case.
              */
 	    if(cache_ptr->close_warning_received) {
 		switch(ring) {
@@ -1065,32 +1052,35 @@ H5C_flush_cache(H5F_t *f, hid_t dxpl_id, unsigned flags)
 			break;
 
 		    case H5C_RING_RDFSM:
-                        if(f->shared->fs_persist && !f->shared->first_alloc_dealloc && !cache_ptr->rdfsm_settled) {
+			if(!cache_ptr->rdfsm_settled) {
+                            hbool_t fsm_settled = FALSE;        /* Whether the FSM was actually settled */
 
-                            if(H5MF_settle_raw_data_fsm(f, dxpl_id) < 0)
+                            /* Settle raw data FSM */
+			    if(H5MF_settle_raw_data_fsm(f, dxpl_id, &fsm_settled) < 0)
                                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "RD FSM settle failed")
 
-                            cache_ptr->rdfsm_settled = TRUE;
+                            /* Only set the flag if the FSM was actually settled */
+                            if(fsm_settled)
+                                cache_ptr->rdfsm_settled = TRUE;
                         } /* end if */
 			break;
 
 		    case H5C_RING_MDFSM:
-                        if(f->shared->fs_persist && !f->shared->first_alloc_dealloc && !cache_ptr->mdfsm_settled) {
+			if(!cache_ptr->mdfsm_settled) {
+                            hbool_t fsm_settled = FALSE;        /* Whether the FSM was actually settled */
 
-                            if(H5MF_settle_meta_data_fsm(f, dxpl_id) < 0)
+                            /* Settle metadata FSM */
+			    if(H5MF_settle_meta_data_fsm(f, dxpl_id, &fsm_settled) < 0)
                                 HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "MD FSM settle failed")
 
-                            cache_ptr->mdfsm_settled = TRUE;
+                            /* Only set the flag if the FSM was actually settled */
+                            if(fsm_settled)
+                                cache_ptr->mdfsm_settled = TRUE;
                         } /* end if */
 			break;
 
-#if 0 /* for bug -- bug fixed in cache image  -- uncomment after merge */
-                    case H5C_RING_SBE:
-                        break;
-#else
-		    case 4:
+		    case H5C_RING_SBE:
 			break;
-#endif
 
 		    case H5C_RING_SB:
 			break;
@@ -1175,7 +1165,7 @@ H5C_flush_to_min_clean(H5F_t * f,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "cache write is not permitted!?!")
 
 #if 1 /* original code */
-    if(H5C_make_space_in_cache(f, dxpl_id, (size_t)0, write_permitted) < 0)
+    if(H5C__make_space_in_cache(f, dxpl_id, (size_t)0, write_permitted) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C__make_space_in_cache failed")
 #else /* modified code -- commented out for now */
     if ( cache_ptr->max_cache_size > cache_ptr->index_size ) {
@@ -1503,7 +1493,7 @@ H5C_insert_entry(H5F_t *             f,
 
         /* Note that space_needed is just the amount of space that
          * needed to insert the new entry without exceeding the cache
-         * size limit.  The subsequent call to H5C_make_space_in_cache()
+         * size limit.  The subsequent call to H5C__make_space_in_cache()
          * may evict the entries required to free more or less space
          * depending on conditions.  It MAY be less if the cache is
          * currently undersized, or more if the cache is oversized.
@@ -1526,9 +1516,9 @@ H5C_insert_entry(H5F_t *             f,
          * no point in worrying about the third.
          */
 
-        if(H5C_make_space_in_cache(f, dxpl_id, space_needed, write_permitted) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTINS, FAIL, "H5C_make_space_in_cache failed")
-    }
+        if(H5C__make_space_in_cache(f, dxpl_id, space_needed, write_permitted) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTINS, FAIL, "H5C__make_space_in_cache failed")
+    } /* end if */
 
     H5C__INSERT_IN_INDEX(cache_ptr, entry_ptr, FAIL)
 
@@ -1553,8 +1543,6 @@ H5C_insert_entry(H5F_t *             f,
         HGOTO_ERROR(H5E_CACHE, H5E_CANTNOTIFY, FAIL, "can't notify client about entry inserted into cache")
 
     H5C__UPDATE_STATS_FOR_INSERTION(cache_ptr, entry_ptr)
-
-    cache_ptr->entries_inserted_counter++;
 
 #ifdef H5_HAVE_PARALLEL
     /* Get the dataset transfer property list */
@@ -2025,8 +2013,6 @@ H5C_move_entry(H5C_t *	     cache_ptr,
     } /* end if */
 
     H5C__UPDATE_STATS_FOR_MOVE(cache_ptr, entry_ptr)
-
-    cache_ptr->entries_relocated_counter++;
 
 done:
 #if H5C_DO_EXTREME_SANITY_CHECKS
@@ -2546,7 +2532,7 @@ H5C_protect(H5F_t *		f,
            empty_space = cache_ptr->max_cache_size - cache_ptr->index_size;
 
 	/* try to free up if necceary and if evictions are permitted.  Note
-	 * that if evictions are enabled, we will call H5C_make_space_in_cache()
+	 * that if evictions are enabled, we will call H5C__make_space_in_cache()
 	 * regardless if the min_free_space requirement is not met.
 	 */
         if ( ( cache_ptr->evictions_enabled ) &&
@@ -2581,7 +2567,7 @@ H5C_protect(H5F_t *		f,
 
             /* Note that space_needed is just the amount of space that
              * needed to insert the new entry without exceeding the cache
-             * size limit.  The subsequent call to H5C_make_space_in_cache()
+             * size limit.  The subsequent call to H5C__make_space_in_cache()
              * may evict the entries required to free more or less space
              * depending on conditions.  It MAY be less if the cache is
              * currently undersized, or more if the cache is oversized.
@@ -2608,9 +2594,9 @@ H5C_protect(H5F_t *		f,
              * see no point in worrying about the fourth.
              */
 
-            if(H5C_make_space_in_cache(f, dxpl_id, space_needed, write_permitted) < 0 )
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, NULL, "H5C_make_space_in_cache failed")
-        }
+            if(H5C__make_space_in_cache(f, dxpl_id, space_needed, write_permitted) < 0 )
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, NULL, "H5C__make_space_in_cache failed")
+        } /* end if */
 
         /* Insert the entry in the hash table.  It can't be dirty yet, so
          * we don't even check to see if it should go in the skip list.
@@ -2648,7 +2634,7 @@ H5C_protect(H5F_t *		f,
         /* Record that the entry was loaded, to trigger a notify callback later */
         /* (After the entry is fully added to the cache) */
         was_loaded = TRUE;
-    }
+    } /* end else */
 
     HDassert(entry_ptr->addr == addr);
     HDassert(entry_ptr->type == type);
@@ -2717,7 +2703,7 @@ H5C_protect(H5F_t *		f,
              * bring the cache size down to the current maximum cache size.
 	     *
 	     * Also, if the min_clean_size requirement is not met, we
-	     * should also call H5C_make_space_in_cache() to bring us
+	     * should also call H5C__make_space_in_cache() to bring us
 	     * into complience.
              */
 
@@ -2734,8 +2720,8 @@ H5C_protect(H5F_t *		f,
 		if(cache_ptr->index_size > cache_ptr->max_cache_size)
                     cache_ptr->cache_full = TRUE;
 
-                if(H5C_make_space_in_cache(f, dxpl_id, (size_t)0, write_permitted) < 0 )
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, NULL, "H5C_make_space_in_cache failed")
+                if(H5C__make_space_in_cache(f, dxpl_id, (size_t)0, write_permitted) < 0 )
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, NULL, "H5C__make_space_in_cache failed")
             }
         } /* end if */
     }
@@ -4724,7 +4710,7 @@ H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * f,
 
                 skipping_entry = TRUE;
                 prefetched_dirty_entries_skipped++;
-            }
+            } /* end else */
 
             if(prev_ptr != NULL) {
                 if(skipping_entry)
@@ -6932,7 +6918,6 @@ H5C_load_entry(H5F_t *              f,
     entry->tl_prev  = NULL;
     entry->tag_info = NULL;
 
-
     H5C__RESET_CACHE_ENTRY_STATS(entry);
 
     ret_value = thing;
@@ -6953,7 +6938,7 @@ done:
 
 /*-------------------------------------------------------------------------
  *
- * Function:    H5C_make_space_in_cache
+ * Function:    H5C__make_space_in_cache
  *
  * Purpose:     Attempt to evict cache entries until the index_size
  *		is at least needed_space below max_cache_size.
@@ -6984,73 +6969,10 @@ done:
  *
  * Programmer:  John Mainzer, 5/14/04
  *
- * Changes:     Modified function to skip over entries with the 
- *		flush_in_progress flag set.  If this is not done,
- *		an infinite recursion is possible if the cache is 
- *		full, and the pre-serialize or serialize routine 
- *		attempts to load another entry.
- *
- *		This error was exposed by a re-factor of the 
- *		H5C__flush_single_entry() routine.  However, it was 
- *		a potential bug from the moment that entries were 
- *		allowed to load other entries on flush.
- *
- *		In passing, note that the primary and secondary dxpls 
- *		mentioned in the comment above have been replaced by 
- *		a single dxpl at some point, and thus the discussion 
- *		above is somewhat obsolete.  Date of this change is 
- *		unkown.
- *
- *						JRM -- 12/26/14
- *
- *		Modified function to detect deletions of entries 
- *		during a scan of the LRU, and where appropriate, 
- *		restart the scan to avoid proceeding with a next 
- *		entry that is no longer in the cache.
- *
- *		Note the absence of checks after flushes of clean 
- *		entries.  As a second entry can only be removed by 
- *		by a call to the pre_serialize or serialize callback
- *		of the first, and as these callbacks will not be called
- *		on clean entries, no checks are needed.
- *
- *						JRM -- 4/6/15
- *
- *              Modified function to skip over entries with the 
- *              prefetched_dirty flag set.
- *
- *              This is a fix for an issue with files with cache images
- *              which are loaded R/O.  In this case, dirty entries in the
- *              cache image must be marked as clean, as otherwise the 
- *              metadata cache will attempt to write them on file close --
- *              in which we would no longer be R/O.  However, this allows
- *              the cache to evict them to make space if needed.  Should 
- *              the entry be needed again later in the session, the 
- *              metadata cache will attempt to read it from file, which 
- *              will yield obsolete or invalid data.
- *
- *              Solve this by setting the prefetched_dirty flag on such 
- *              entries, and ignoring entries so marked in the candidate 
- *              selection code.  This solution isn't particularly efficient,
- *              so we should try to do better in the future.
- *
- *              Note that Evict on Close can also cause this issue.  For 
- *              now, we deal with it by disabling EOC in the R/O case.
- *
- *              SWMR is also a possible problem, but it is irrelevant in 
- *              the R/O case.
- *
- *                                              JRM -- 1/27/17
- *
- *              Added code to detect re-entrant calls to this function,
- *              and avoid the infinite recursion that might otherwise 
- *              occur.
- *                                              JRM -- 2/16/17
- *             
  *-------------------------------------------------------------------------
  */
 herr_t
-H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
+H5C__make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     hbool_t	write_permitted)
 {
     H5C_t *		cache_ptr = f->shared->cache;
@@ -7072,7 +6994,7 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     uint32_t 		num_corked_entries = 0;
     herr_t		ret_value = SUCCEED;      /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT
+    FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
     HDassert(f);
@@ -7093,20 +7015,14 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     cache_ptr->msic_in_progress = TRUE;
 
     if ( write_permitted ) {
-
         restart_scan = FALSE;
         initial_list_len = cache_ptr->LRU_list_len;
         entry_ptr = cache_ptr->LRU_tail_ptr;
 
-	if ( cache_ptr->index_size >= cache_ptr->max_cache_size ) {
-
+	if(cache_ptr->index_size >= cache_ptr->max_cache_size)
 	   empty_space = 0;
-
-	} else {
-
+	else
 	   empty_space = cache_ptr->max_cache_size - cache_ptr->index_size;
-
-	}
 
         while ( ( ( (cache_ptr->index_size + space_needed)
                     >
@@ -7365,19 +7281,14 @@ H5C_make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
     }
 
 done:
-
     /* Sanity checks */
     HDassert(cache_ptr->msic_in_progress);
-
     if(!reentrant_call)
-
         cache_ptr->msic_in_progress = FALSE;
-
     HDassert((!reentrant_call) || (cache_ptr->msic_in_progress));
 
     FUNC_LEAVE_NOAPI(ret_value)
-
-} /* H5C_make_space_in_cache() */
+} /* H5C__make_space_in_cache() */
 
 
 /*-------------------------------------------------------------------------
@@ -8208,7 +8119,7 @@ H5C__assert_flush_dep_nocycle(const H5C_cache_entry_t * entry,
  *-------------------------------------------------------------------------
  */
 herr_t
-H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, 
+H5C__generate_image(H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, 
     hid_t dxpl_id)
 {
     haddr_t		new_addr = HADDR_UNDEF;
@@ -8217,23 +8128,18 @@ H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_p
     unsigned            serialize_flags = H5C__SERIALIZE_NO_FLAGS_SET;
     herr_t              ret_value = SUCCEED;
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_PACKAGE
 
     /* Sanity check */
+    HDassert(f);
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+    HDassert(entry_ptr);
+    HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
     HDassert(!entry_ptr->image_up_to_date);
-
-    if(NULL == entry_ptr->image_ptr) {
-        if(NULL == (entry_ptr->image_ptr = H5MM_malloc(entry_ptr->size + H5C_IMAGE_EXTRA_SPACE)))
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for on disk image buffer")
-#if H5C_DO_MEMORY_SANITY_CHECKS
-        HDmemcpy(((uint8_t *)entry_ptr->image_ptr) + entry_ptr->size, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
-#endif /* H5C_DO_MEMORY_SANITY_CHECKS */
-    } /* end if */
-
-    /* reset cache_ptr->slist_changed so we can detect slist
-     * modifications in the pre_serialize call.
-     */
-    cache_ptr->slist_changed = FALSE;
+    HDassert(entry_ptr->is_dirty);
+    HDassert(!entry_ptr->is_protected);
+    HDassert(entry_ptr->type);
 
     /* make note of the entry's current address */
     old_addr = entry_ptr->addr;
@@ -8325,7 +8231,6 @@ H5C__generate_image(const H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_p
         if(serialize_flags & H5C__SERIALIZE_MOVED_FLAG) {
             /* Update stats and entries relocated counter */
             H5C__UPDATE_STATS_FOR_MOVE(cache_ptr, entry_ptr)
-            cache_ptr->entries_relocated_counter++;
 
             /* We must update cache data structures for the change in address */
             if(entry_ptr->addr == old_addr) {

@@ -49,6 +49,7 @@ const size_t F2_OFFSET_SIZE = 8;
 const size_t F2_LENGTH_SIZE = 8;
 const unsigned F2_SYM_LEAF_K  = 8;
 const unsigned F2_SYM_INTERN_K = 32;
+const unsigned F2_ISTORE = 64;
 const H5std_string    FILE2("tfile2.h5");
 
 const hsize_t F3_USERBLOCK_SIZE = (hsize_t)0;
@@ -505,7 +506,6 @@ static void test_file_name()
     {
         issue_fail_msg("test_file_name()", __LINE__, __FILE__, E.getCDetailMsg());
     }
-
 }   // test_file_name()
 
 
@@ -514,8 +514,8 @@ const int	ATTR1_DIM1 = 3;
 const H5std_string	FILE5("tfattrs.h5");
 const H5std_string	FATTR1_NAME ("file attribute 1");
 const H5std_string	FATTR2_NAME ("file attribute 2");
-int fattr_data[ATTR1_DIM1]={512,-234,98123}; /* Test data for file attribute */
-int dattr_data[ATTR1_DIM1]={256,-123,1000}; /* Test data for dataset attribute */
+int fattr_data[ATTR1_DIM1]={512,-234,98123}; // Test data for file attribute
+int dattr_data[ATTR1_DIM1]={256,-123,1000}; // Test data for dataset attribute
 
 static void test_file_attribute()
 {
@@ -618,6 +618,7 @@ static void test_file_attribute()
         issue_fail_msg("test_file_attribute()", __LINE__, __FILE__, E.getCDetailMsg());
     }
 }   // test_file_attribute()
+
 
 const H5std_string	FILE6("tfile5.h5");
 const H5std_string	ROOTGROUP("/");
@@ -795,6 +796,125 @@ static void test_commonfg()
 
 } /* end test_commonfg() */
 
+const H5std_string	FILE7("tfile7.h5");
+
+/*-------------------------------------------------------------------------
+ * Function:	test_file_info
+ *
+ * Purpose:	Verify that various properties in a file creation property
+ *		lists are stored correctly in the file and can be retrieved
+ *		when the file is re-opened.
+ *
+ * Return:	None
+ *
+ * Programmer:	Binh-Minh Ribler
+ *		February, 2017
+ *
+ *-------------------------------------------------------------------------
+ */
+static void test_file_info()
+{
+    // Output message about test being performed
+    SUBTEST("File general information");
+
+    hsize_t in_threshold = 2;	// Free space section threshold to set */
+    hsize_t out_threshold = 0;	// Free space section threshold to get */
+    // File space handling strategy
+    H5F_file_space_type_t in_strategy = H5F_FILE_SPACE_ALL;
+    // File space handling strategy
+    H5F_file_space_type_t out_strategy = H5F_FILE_SPACE_DEFAULT;
+
+    try {
+        // Create a file using default properties.
+	H5File tempfile(FILE7, H5F_ACC_TRUNC);
+
+	// Get the file's version information.
+	H5F_info2_t finfo;
+	tempfile.getFileInfo(finfo);
+	verify_val(finfo.super.version, 0, "H5File::getFileInfo", __LINE__, __FILE__);
+	verify_val(finfo.free.version, 0, "H5File::getFileInfo", __LINE__, __FILE__);
+	verify_val(finfo.sohm.version, 0, "H5File::getFileInfo", __LINE__, __FILE__);
+
+	// Close the file.
+	tempfile.close();
+
+	// Create file creation property list.
+	FileCreatPropList fcpl;
+
+	// Set various file information.
+	fcpl.setUserblock(F2_USERBLOCK_SIZE);
+	fcpl.setSizes(F2_OFFSET_SIZE, F2_LENGTH_SIZE);
+	fcpl.setSymk(F2_SYM_INTERN_K, F2_SYM_LEAF_K);
+	fcpl.setIstorek(F2_ISTORE);
+	fcpl.setFileSpace(in_strategy, in_threshold);
+
+	// Creating a file with the non-default file creation property list
+	// should create a version 1 superblock
+
+	// Create file with custom file creation property list.
+	H5File file7(FILE7, H5F_ACC_TRUNC, fcpl);
+
+	// Close the file creation property list.
+	fcpl.close();
+
+	// Get the file's version information.
+	file7.getFileInfo(finfo);
+	verify_val(finfo.super.version, 2, "H5File::getFileInfo", __LINE__, __FILE__);
+	verify_val(finfo.free.version, 0, "H5File::getFileInfo", __LINE__, __FILE__);
+	verify_val(finfo.sohm.version, 0, "H5File::getFileInfo", __LINE__, __FILE__);
+
+	// Close the file.
+	file7.close();
+
+	// Re-open the file.
+	file7.openFile(FILE7, H5F_ACC_RDONLY);
+
+	// Get the file's creation property list.
+	FileCreatPropList fcpl2 = file7.getCreatePlist();
+
+	// Get the file's version information.
+	file7.getFileInfo(finfo);
+	verify_val(finfo.super.version, 2, "H5File::getFileInfo", __LINE__, __FILE__);
+	verify_val(finfo.free.version, 0, "H5File::getFileInfo", __LINE__, __FILE__);
+	verify_val(finfo.sohm.version, 0, "H5File::getFileInfo", __LINE__, __FILE__);
+
+	// Retrieve the property values & check them.
+	hsize_t userblock = fcpl2.getUserblock();
+	verify_val(userblock, F2_USERBLOCK_SIZE, "FileCreatPropList::getUserblock", __LINE__, __FILE__);
+
+	size_t off_size = 0, len_size = 0;
+	fcpl2.getSizes(off_size, len_size);
+	verify_val(off_size, F2_OFFSET_SIZE, "FileCreatPropList::getSizes", __LINE__, __FILE__);
+	verify_val(len_size, F2_LENGTH_SIZE, "FileCreatPropList::getSizes", __LINE__, __FILE__);
+
+	unsigned sym_ik = 0, sym_lk = 0;
+	fcpl2.getSymk(sym_ik, sym_lk);
+	verify_val(sym_ik, F2_SYM_INTERN_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
+	verify_val(sym_lk, F2_SYM_LEAF_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
+
+	unsigned istore_ik = fcpl2.getIstorek();
+	verify_val(istore_ik, F2_ISTORE, "FileCreatPropList::getIstorek", __LINE__, __FILE__);
+
+    /*  ret=H5Pget_shared_mesg_nindexes(fcpl2,&nindexes);
+    CHECK(ret, FAIL, "H5Pget_shared_mesg_nindexes");
+    VERIFY(nindexes, MISC11_NINDEXES, "H5Pget_shared_mesg_nindexes");
+ */ 
+
+	// Get and verify the file space info from the creation property list */
+	out_strategy = fcpl2.getFileSpaceStrategy();
+	verify_val(static_cast<unsigned>(out_strategy), static_cast<unsigned>(in_strategy), "FileCreatPropList::getFileSpaceStrategy", __LINE__, __FILE__);
+
+	out_threshold = fcpl2.getFileSpaceThreshold();
+	verify_val(static_cast<unsigned>(out_threshold), static_cast<unsigned>(in_threshold), "FileCreatPropList::getFileSpaceThreshold", __LINE__, __FILE__);
+
+	PASSED();
+    }   // end of try block
+    catch (Exception& E)
+    {
+        issue_fail_msg("test_filespace_info()", __LINE__, __FILE__, E.getCDetailMsg());
+    }
+}  /* test_file_info() */
+
 /*-------------------------------------------------------------------------
  * Function:    test_file
  *
@@ -821,7 +941,8 @@ void test_file()
     test_file_name();	// Test getting file's name
     test_file_attribute();	// Test file attribute feature
     test_libver_bounds();	// Test format version
-    test_commonfg();
+    test_commonfg();	// Test H5File as a root group
+    test_file_info();	// Test various file info
 }   // test_file()
 
 
@@ -849,4 +970,5 @@ void cleanup_file()
     HDremove(FILE4.c_str());
     HDremove(FILE5.c_str());
     HDremove(FILE6.c_str());
+    HDremove(FILE7.c_str());
 }   // cleanup_file
