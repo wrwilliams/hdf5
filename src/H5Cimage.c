@@ -106,7 +106,7 @@ static const uint8_t * H5C_decode_cache_image_header(H5F_t *f,
     H5C_t *cache_ptr, const uint8_t *buf);
 static const uint8_t *H5C_decode_cache_image_entry(H5F_t *f, H5C_t *cache_ptr,
     const uint8_t *buf, unsigned entry_num, size_t expected_entry_header_len);
-static herr_t H5C_destroy_pf_entry_child_flush_deps(H5C_t *cache_ptr, 
+static herr_t H5C__destroy_pf_entry_child_flush_deps(H5C_t *cache_ptr, 
     H5C_cache_entry_t *pf_entry_ptr, H5C_cache_entry_t **fd_children);
 static uint8_t * H5C_encode_cache_image_header(H5F_t *f, H5C_t *cache_ptr, 
     uint8_t *buf);
@@ -388,7 +388,7 @@ done:
 
 /*-------------------------------------------------------------------------
  *
- * Function:    H5C_deserialize_prefetched_entry()
+ * Function:    H5C__deserialize_prefetched_entry()
  *
  * Purpose:     Deserialize the supplied prefetched entry entry, and return
  *		a pointer to the deserialized entry in *entry_ptr_ptr. 
@@ -424,7 +424,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5C_deserialize_prefetched_entry(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr,
+H5C__deserialize_prefetched_entry(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr,
     H5C_cache_entry_t **entry_ptr_ptr, const H5C_class_t *type,
     haddr_t addr, void *udata)
 {
@@ -448,7 +448,7 @@ H5C_deserialize_prefetched_entry(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr,
     int			i;
     herr_t      	ret_value = SUCCEED;      /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT
+    FUNC_ENTER_PACKAGE
 
     /* sanity checks */
     HDassert(f);
@@ -518,8 +518,8 @@ H5C_deserialize_prefetched_entry(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr,
         if(NULL == (fd_children = (H5C_cache_entry_t **)H5MM_calloc(sizeof(H5C_cache_entry_t **) * (size_t)(pf_entry_ptr->fd_child_count + 1))))
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for fd child ptr array")
 
-        if(H5C_destroy_pf_entry_child_flush_deps(cache_ptr, pf_entry_ptr, fd_children) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL, "can't destroy pf entry child flush dependency(s)")
+        if(H5C__destroy_pf_entry_child_flush_deps(cache_ptr, pf_entry_ptr, fd_children) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL, "can't destroy pf entry child flush dependency(s).")
     } /* end if */
 
     /* Since the size of the on disk image is known exactly, there is 
@@ -751,7 +751,7 @@ done:
             HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "free_icr callback failed")
 
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5C_deserialize_prefetched_entry() */
+} /* H5C__deserialize_prefetched_entry() */
 
 
 /*-------------------------------------------------------------------------
@@ -861,7 +861,7 @@ H5C_force_cache_image_load(H5F_t *f, hid_t dxpl_id)
     /* Load the cache image, if requested */
     if(cache_ptr->load_image) {
         cache_ptr->load_image = FALSE;
-        if(H5C_load_cache_image(f, dxpl_id) < 0)
+        if(H5C__load_cache_image(f, dxpl_id) < 0)
             HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, FAIL, "can't load cache image")
     } /* end if */
 
@@ -1074,7 +1074,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5C_load_cache_image
+ * Function:    H5C__load_cache_image
  *
  * Purpose:     Read the cache image superblock extension message and
  *		delete it if so directed.
@@ -1091,16 +1091,12 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5C_load_cache_image(H5F_t *f, hid_t dxpl_id)
+H5C__load_cache_image(H5F_t *f, hid_t dxpl_id)
 {
-#ifndef NDEBUG
-    hbool_t             first_alloc_dealloc;
-    haddr_t             eoa_pre_fsm_fsalloc;
-#endif /* NDEBUG */
     H5C_t *             cache_ptr;
     herr_t		ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_NOAPI(FAIL)
+    FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
     HDassert(f);
@@ -1108,26 +1104,6 @@ H5C_load_cache_image(H5F_t *f, hid_t dxpl_id)
     cache_ptr = f->shared->cache;
     HDassert(cache_ptr);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
-
-    /* We used to remove the metadata cache image superblock extension 
-     * message here if so directed.
-     *
-     * However, with the current version of the hack to clean up the 
-     * the self referential FSM issue, it is necessary that if the
-     * hack is in use, and if a cache image is present, the deallocation
-     * of file space for the cache image must be the first file space 
-     * allocation / deallocation after file open.
-     *
-     * As freeing a superblock extension message may result in freeing
-     * of file space, this operation is moved until after the cache 
-     * image file space is dealt with.
-     */
-
-#ifndef NDEBUG
-    /* collect data for later sanity checks */
-    first_alloc_dealloc = f->shared->first_alloc_dealloc;
-    eoa_pre_fsm_fsalloc = f->shared->eoa_pre_fsm_fsalloc;
-#endif /* NDEBUG */
 
     /* If the image address is defined, load the image, decode it, 
      * and insert its contents into the metadata cache. 
@@ -1171,62 +1147,6 @@ H5C_load_cache_image(H5F_t *f, hid_t dxpl_id)
          */
         H5C__UPDATE_STATS_FOR_CACHE_IMAGE_LOAD(cache_ptr)
 
-	/* If directed, free the on disk metadata cache image */
-        if(cache_ptr->delete_image) { 
-	    HDassert(HADDR_UNDEF != cache_ptr->image_addr);
-            HDassert(first_alloc_dealloc == f->shared->first_alloc_dealloc);
-            HDassert(eoa_pre_fsm_fsalloc == f->shared->eoa_pre_fsm_fsalloc);
-
-            /* The space for the cache image block was allocated directly 
-             * from the VFD layer at the end of file.  As this was the 
-             * last file space allocation before shutdown, the cache image 
-             * should still be the last item in the file.
-             *
-             * If the hack to work around the self referential free space
-             * manager issue is in use, file space for the non-empty self 
-             * referential free space managers was also allocated from VFD
-             * layer at the end of file.  Since these allocations directly 
-             * preceeded the cache image allocation they should be directly
-             * adjacent to the cache image block at the end of file.
-             *
-             * In this case, just call H5MF_tidy_self_referential_fsm_hack().  
-             *
-             * That routine will float the self referential free space 
-             * managers, and reduce the eoa to its value just prior to 
-             * allocation of space for same.  Since the cache image appears 
-             * just after the self referential free space managers, this 
-             * will release the file space for the cache image as well.
-             *
-             * Note that in this case, there must not have been any file 
-             * space allocations / deallocations prior to the free of the
-             * cache image.  Verify this to the extent possible.
-             *
-             * If the hack to work around the persistant self referential 
-             * free space manager issue is NOT in use, just call H5MF_xfree() 
-             * to release the cache iamge.  In principle, we should be able 
-             * to just reduce the EOA to the base address of the cache 
-             * image block, as there shouldn't be any file space allocation
-             * before the first metadata cache access.  However, given
-             * time constraints, I don't want to go there now.
-             */
-            if(f->shared->first_alloc_dealloc) {
-                HDassert(HADDR_UNDEF != f->shared->eoa_pre_fsm_fsalloc);
-                HDassert(H5F_addr_ge(cache_ptr->image_addr, f->shared->eoa_pre_fsm_fsalloc));
-                if(H5MF_tidy_self_referential_fsm_hack(f, dxpl_id) < 0)
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFREE, FAIL, "tidy of self referential fsm hack failed")
-
-            } /* end if */
-            else {
-                if(H5MF_xfree(f, H5FD_MEM_SUPER, dxpl_id, cache_ptr->image_addr, (hsize_t)(cache_ptr->image_len)) < 0)
-                    HGOTO_ERROR(H5E_CACHE, H5E_CANTFREE, FAIL, "unable to free file space for cache image block")
-            } /* end else */
-
-            /* Clean up */
-            cache_ptr->image_len = 0;
-            cache_ptr->image_data_len = 0;
-            cache_ptr->image_addr = HADDR_UNDEF;
-        } /* end if */
-
         /* free the image entries array.  Note that all on disk image 
          * image buffers and fd parent address arrays have been transferred 
 	 * to their respective prefetched entries so we can just free the 
@@ -1255,22 +1175,20 @@ H5C_load_cache_image(H5F_t *f, hid_t dxpl_id)
         cache_ptr->image_loaded = TRUE;
     } /* end if */
 
-    /* Do this at the end of the function, as freeing of the file space 
-     * used by the cache image must be the first file space allocation / 
-     * deallocation operation after file open under some circumstances.
-     */
+    /* If directed, free the on disk metadata cache image */
     if(cache_ptr->delete_image) {
         if(H5F_super_ext_remove_msg(f, dxpl_id, H5O_MDCI_MSG_ID) < 0)
             HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove metadata cache image message from superblock extension")
 
-	/* This shouldn't be necessary, but must mark the superblock dirty */
-	if(H5F_super_dirty(f) < 0)
-	    HGOTO_ERROR(H5E_CACHE, H5E_CANTMARKDIRTY, FAIL, "can't mark superblock dirty")
+        /* Reset image block values */
+        cache_ptr->image_len = 0;
+        cache_ptr->image_data_len = 0;
+        cache_ptr->image_addr = HADDR_UNDEF;
     } /* end if */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5C_load_cache_image() */
+} /* H5C__load_cache_image() */
 
 
 /*-------------------------------------------------------------------------
@@ -1462,253 +1380,251 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
     if(cache_ptr->load_image) {
         cache_ptr->load_image = FALSE;
 
-        if(H5C_load_cache_image(f, dxpl_id) < 0)
+        if(H5C__load_cache_image(f, dxpl_id) < 0)
 	    HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, FAIL, "can't load cache image")
     } /* end if */
 
     cache_ptr->close_warning_received = TRUE;
 
-    if(cache_ptr->close_warning_received) {
-        if(cache_ptr->image_ctl.generate_image) { /* we have work to do */
+    if(cache_ptr->image_ctl.generate_image) { /* we have work to do */
 
-	    /* Create the cache image super block extension message.
-             * 
-             * Note that the base address and length of the metadata cache
- 	     * image are undefined at this point, and thus will have to be
-	     * updated later.
-             *
-             * Create the super block extension message now so that space 
-	     * is allocated for it (if necessary) before we allocate space
- 	     * for the cache image block.
-             *
-             * To simplify testing, do this only if the 
-             * H5C_CI__GEN_MDCI_SBE_MESG bit is set in 
-             * cache_ptr->image_ctl.flags.
-             */
-            if(cache_ptr->image_ctl.flags & H5C_CI__GEN_MDCI_SBE_MESG)
-		if(H5C__write_cache_image_superblock_msg(f, dxpl_id, TRUE) < 0)
-		    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "creation of cache image SB mesg failed")
+        /* Create the cache image super block extension message.
+         * 
+         * Note that the base address and length of the metadata cache
+         * image are undefined at this point, and thus will have to be
+         * updated later.
+         *
+         * Create the super block extension message now so that space 
+         * is allocated for it (if necessary) before we allocate space
+         * for the cache image block.
+         *
+         * To simplify testing, do this only if the 
+         * H5C_CI__GEN_MDCI_SBE_MESG bit is set in 
+         * cache_ptr->image_ctl.flags.
+         */
+        if(cache_ptr->image_ctl.flags & H5C_CI__GEN_MDCI_SBE_MESG)
+            if(H5C__write_cache_image_superblock_msg(f, dxpl_id, TRUE) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "creation of cache image SB mesg failed")
 
-	    /* Serialize the cache */
-	    if(H5C__serialize_cache(f, dxpl_id) < 0)
- 	        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "serialization of the cache failed")
+        /* Serialize the cache */
+        if(H5C__serialize_cache(f, dxpl_id) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "serialization of the cache failed")
 
-	    /* Scan the cache and record data needed to construct the 
-	     * cache image.  In particular, for each entry we must record:
-             *
-             * 1) rank in LRU (if entry is in LRU)
-             *
-             * 2) Whether the entry is dirty prior to flush of 
-             *    cache just prior to close.
-             *
-             * 3) Addresses of flush dependency parents (if any).
-             *
-             * 4) Number of flush dependency children (if any).  
-             *
-             * In passing, also compute the size of the metadata cache 
-             * image.  With the recent modifications of the free space 
- 	     * manager code, this size should be correct.
-             */
-	    if(H5C__prep_for_file_close__scan_entries(f, cache_ptr) < 0)
-		HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C__prep_for_file_close__scan_entries failed")
-            HDassert(HADDR_UNDEF == cache_ptr->image_addr);
+        /* Scan the cache and record data needed to construct the 
+         * cache image.  In particular, for each entry we must record:
+         *
+         * 1) rank in LRU (if entry is in LRU)
+         *
+         * 2) Whether the entry is dirty prior to flush of 
+         *    cache just prior to close.
+         *
+         * 3) Addresses of flush dependency parents (if any).
+         *
+         * 4) Number of flush dependency children (if any).  
+         *
+         * In passing, also compute the size of the metadata cache 
+         * image.  With the recent modifications of the free space 
+         * manager code, this size should be correct.
+         */
+        if(H5C__prep_for_file_close__scan_entries(f, cache_ptr) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C__prep_for_file_close__scan_entries failed")
+        HDassert(HADDR_UNDEF == cache_ptr->image_addr);
 
 #ifdef H5_HAVE_PARALLEL
-	    /* In the parallel case, overwrite the image_len with the 
- 	     * value computed by process 0.
-             */
-	    if(cache_ptr->aux_ptr) { /* we have multiple processes */
-                int mpi_result;
-		unsigned p0_image_len;
-                H5AC_aux_t * aux_ptr;
-
-                aux_ptr = (H5AC_aux_t *)cache_ptr->aux_ptr;
-
-		if(aux_ptr->mpi_rank == 0) {
-		    aux_ptr->p0_image_len = (unsigned)cache_ptr->image_data_len;
-                    p0_image_len = aux_ptr->p0_image_len;
-
-		    if(MPI_SUCCESS != (mpi_result = MPI_Bcast(&p0_image_len, 1, MPI_UNSIGNED, 0, aux_ptr->mpi_comm)))
-                        HMPI_GOTO_ERROR(FAIL, "MPI_Bcast failed", mpi_result)
-
-                    HDassert(p0_image_len == aux_ptr->p0_image_len);
-	    } /* end if */
-            else {
-                if(MPI_SUCCESS != (mpi_result = MPI_Bcast(&p0_image_len, 1, MPI_UNSIGNED, 0, aux_ptr->mpi_comm)))
-                    HMPI_GOTO_ERROR(FAIL, "MPI_Bcast failed", mpi_result)
-                    
-                    aux_ptr->p0_image_len = p0_image_len;
-	    } /* end else */
-
-	        /* Allocate space for a cache image of size equal to that 
-                 * computed by the process 0.  This may be different from 
-                 * cache_ptr->image_data_len if mpi_rank != 0.  However, since
-                 * cache image write is suppressed on all processes other than 
-                 * process 0, this doesn't matter.
-                 *
-                 * Note that we allocate the cache image directly from the file 
-                 * driver so as to avoid unsettling the free space managers.
-                 */
-	        if(HADDR_UNDEF == (cache_ptr->image_addr = H5FD_alloc(f->shared->lf, dxpl_id, H5FD_MEM_SUPER, f,
-                        (hsize_t)p0_image_len, &eoa_frag_addr, &eoa_frag_size)))
-                    HGOTO_ERROR(H5E_CACHE, H5E_NOSPACE, FAIL, "can't allocate file space for metadata cache image")
-        } /* end if */
-        else
-
-#endif /* H5_HAVE_PARALLEL */
-
-            /* Allocate the cache image block.  Note that we allocate this 
-             * this space directly from the file driver so as to avoid 
-             * unsettling the free space managers.
-             */
-	    if(HADDR_UNDEF == (cache_ptr->image_addr = H5FD_alloc(f->shared->lf, dxpl_id, H5FD_MEM_SUPER, f,
-                    (hsize_t)(cache_ptr->image_data_len), &eoa_frag_addr, &eoa_frag_size)))
-                HGOTO_ERROR(H5E_CACHE, H5E_NOSPACE, FAIL, "can't allocate file space for metadata cache image")
-
-            /* make note of the eoa after allocation of the cache image 
-             * block.  This value is used for sanity checking when we 
-             * shutdown the self referential free space managers after 
-             * we destroy the metadata cache.
-             */
-            HDassert(HADDR_UNDEF == f->shared->eoa_post_mdci_fsalloc);
-            if(HADDR_UNDEF == (f->shared->eoa_post_mdci_fsalloc = H5FD_get_eoa(f->shared->lf, H5FD_MEM_DEFAULT)))
-                HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to get file size")
-
-	    /* For now, drop any fragment left over from the allocation of the
-	     * image block on the ground.  A fragment should only be returned
-	     * if the underlying file alignment is greater than 1.
-	     *
-	     * Clean this up eventually by extending the size of the cache
-	     * image block to the next alignement boundary, and then setting
-	     * the image_data_len to the actual size of the cache_image.
-             *
-             * On the off chance that there is some other way to get a 
-             * a fragment on a cache image allocation, leave the following
-             * assertion in the code so we will find out.
-             */
-	    HDassert((eoa_frag_size == 0) || (f->shared->alignment != 1));
-
-	    /* Eventually it will be possible for the length of the cache image
-             * block on file to be greater than the size of the data it 
-             * contains.  However, for now they must be the same.  Set 
-             * cache_ptr->image_len accordingly.
-             */
-            cache_ptr->image_len = cache_ptr->image_data_len;
-
-	    /* update the metadata cache image superblock extension 
-             * message with the new cache image block base address and 
-             * length.
-             *
-             * to simplify testing, do this only if the 
-             * H5C_CI__GEN_MDC_IMAGE_BLK bit is set in 
-             * cache_ptr->image_ctl.flags.
-             */
-            if(cache_ptr->image_ctl.flags & H5C_CI__GEN_MDC_IMAGE_BLK)
-	        if(H5C__write_cache_image_superblock_msg(f, dxpl_id, FALSE) < 0)
-	            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "update of cache image SB mesg failed")
-
-	    /* At this point:
-             *
-             *   1) space in the file for the metadata cache image
-             *      is allocated, 
-             *
-             *   2) the metadata cache image superblock extension 
-             *      message exists and (if so configured) contains 
-             *      the correct data,
-             *
-             *   3) All entries in the cache that will appear in the 
-	     *      cache image are serialized with up to date images.
-             *
-	     *      Since we just updated the cache image message,
-             *      the super block extension message is dirty.  However,
-             *      since the superblock and the superblock extension 
-             *      can't be included in the cache image, this is a non-
-             *      issue.
-             *
-             *   4) All entries in the cache that will be include in
-             *      the cache are marked as such, and we have a count
-             *      of same.
-             *
-             *   5) Flush dependency heights are calculated for all 
-             *      entries that will be included in the cache image.
-             *
-             * If there are any entries to be included in the metadata cache
-             * image, allocate, populate, and sort the image_entries array.  
-             *
-             * If the metadata cache image will be empty, delete the 
-             * metadata cache image superblock extension message, set 
-             * cache_ptr->image_ctl.generate_image to FALSE.  This will
-             * allow the file close to continue normally without the 
-             * unecessary generation of the metadata cache image.
-             */
-	    if(cache_ptr->num_entries_in_image > 0) {
-		if(H5C__prep_for_file_close__setup_image_entries_array(cache_ptr) < 0)
-		    HGOTO_ERROR(H5E_CACHE, H5E_CANTINIT, FAIL, "can't setup image entries array")
-
-                /* Sort the entries */
-                HDqsort(cache_ptr->image_entries, (size_t)cache_ptr->num_entries_in_image,
-                        sizeof(H5C_image_entry_t), H5C__image_entry_cmp);
-	    } /* end if */
-             else { /* cancel creation of metadata cache iamge */
-	        HDassert(cache_ptr->image_entries == NULL);
-
-		/* To avoid breaking the control flow tests, only delete 
-                 * the mdci superblock extension message if the 
-                 * H5C_CI__GEN_MDC_IMAGE_BLK flag is set in 
-                 * cache_ptr->image_ctl.flags.
-                 */
-                if(cache_ptr->image_ctl.flags & H5C_CI__GEN_MDC_IMAGE_BLK)
-                    if(H5F_super_ext_remove_msg(f, dxpl_id, H5O_MDCI_MSG_ID) < 0)
-		        HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove MDC image msg from superblock ext")
-
-		cache_ptr->image_ctl.generate_image = FALSE;
-	    } /* end else */
-        } /* if ( cache_ptr->image_ctl.generate_image ) */
-#ifdef H5_HAVE_PARALLEL
-        else if(cache_ptr->aux_ptr != NULL && f->shared->fs_persist) {
-            /* if persistant free space managers are enabled, flushing the
-             * metadata cache may result in the deletion, insertion, and/or
-             * dirtying of entries.  
-             *
-             * This is a problem in PHDF5, as it breaks two invarients of 
-             * our management of the metadata cache across all processes:
-             *
-             * 1) Entries will not be dirtied, deleted, inserted, or moved 
-             *    during flush in the parallel case.
-             *
-             * 2) All processes contain the same set of dirty metadata 
-             *    entries on entry to a sync point.
-             *
-             * To solve this problem for the persistant free space managers,
-             * serialize the metadata cache on all processes prior to the 
-             * first sync point on file shutdown.  The shutdown warning is 
-             * a convenient location for this call.
-             *
-             * This is sufficient since:
-             *
-             * 1) FSM settle routines are only invoked on file close.  Since
-             *    seriaization make the same settle calls as flush on file 
-             *    close, and since the close warning is issued after all 
-             *    non FSM related space allocations and just before the 
-             *    first sync point on close, this call will leave the caches 
-             *    in a consistant state across the processes if they were 
-             *    consistant before.
-             *
-             * 2) Since the FSM settle routines are only invoked once during
-             *    file close, invoking them now will prevent their invocation
-             *    during a flush, and thus avoid any resulting entrie dirties,
-             *    deletions, insertion, or moves during the flush.
-             * of the metadata cache across all processes, serialize all the
-             */
+        /* In the parallel case, overwrite the image_len with the 
+         * value computed by process 0.
+         */
+        if(cache_ptr->aux_ptr) { /* we have multiple processes */
+            int mpi_result;
+            unsigned p0_image_len;
             H5AC_aux_t * aux_ptr;
 
             aux_ptr = (H5AC_aux_t *)cache_ptr->aux_ptr;
-            HDassert(aux_ptr->write_permitted == FALSE);
-            if(H5C__serialize_cache(f, dxpl_id) < 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTSERIALIZE, FAIL, "serialization of the cache failed")
-        } /* end else-if */
+
+            if(aux_ptr->mpi_rank == 0) {
+                aux_ptr->p0_image_len = (unsigned)cache_ptr->image_data_len;
+                p0_image_len = aux_ptr->p0_image_len;
+
+                if(MPI_SUCCESS != (mpi_result = MPI_Bcast(&p0_image_len, 1, MPI_UNSIGNED, 0, aux_ptr->mpi_comm)))
+                    HMPI_GOTO_ERROR(FAIL, "MPI_Bcast failed", mpi_result)
+
+                HDassert(p0_image_len == aux_ptr->p0_image_len);
+        } /* end if */
+        else {
+            if(MPI_SUCCESS != (mpi_result = MPI_Bcast(&p0_image_len, 1, MPI_UNSIGNED, 0, aux_ptr->mpi_comm)))
+                HMPI_GOTO_ERROR(FAIL, "MPI_Bcast failed", mpi_result)
+                
+                aux_ptr->p0_image_len = p0_image_len;
+        } /* end else */
+
+            /* Allocate space for a cache image of size equal to that 
+             * computed by the process 0.  This may be different from 
+             * cache_ptr->image_data_len if mpi_rank != 0.  However, since
+             * cache image write is suppressed on all processes other than 
+             * process 0, this doesn't matter.
+             *
+             * Note that we allocate the cache image directly from the file 
+             * driver so as to avoid unsettling the free space managers.
+             */
+            if(HADDR_UNDEF == (cache_ptr->image_addr = H5FD_alloc(f->shared->lf, dxpl_id, H5FD_MEM_SUPER, f,
+                    (hsize_t)p0_image_len, &eoa_frag_addr, &eoa_frag_size)))
+                HGOTO_ERROR(H5E_CACHE, H5E_NOSPACE, FAIL, "can't allocate file space for metadata cache image")
+    } /* end if */
+    else
+
 #endif /* H5_HAVE_PARALLEL */
-    } /* end if ( cache_ptr->close_warning_received ) */
+
+        /* Allocate the cache image block.  Note that we allocate this 
+         * this space directly from the file driver so as to avoid 
+         * unsettling the free space managers.
+         */
+        if(HADDR_UNDEF == (cache_ptr->image_addr = H5FD_alloc(f->shared->lf, dxpl_id, H5FD_MEM_SUPER, f,
+                (hsize_t)(cache_ptr->image_data_len), &eoa_frag_addr, &eoa_frag_size)))
+            HGOTO_ERROR(H5E_CACHE, H5E_NOSPACE, FAIL, "can't allocate file space for metadata cache image")
+
+        /* make note of the eoa after allocation of the cache image 
+         * block.  This value is used for sanity checking when we 
+         * shutdown the self referential free space managers after 
+         * we destroy the metadata cache.
+         */
+        HDassert(HADDR_UNDEF == f->shared->eoa_post_mdci_fsalloc);
+        if(HADDR_UNDEF == (f->shared->eoa_post_mdci_fsalloc = H5FD_get_eoa(f->shared->lf, H5FD_MEM_DEFAULT)))
+            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to get file size")
+
+        /* For now, drop any fragment left over from the allocation of the
+         * image block on the ground.  A fragment should only be returned
+         * if the underlying file alignment is greater than 1.
+         *
+         * Clean this up eventually by extending the size of the cache
+         * image block to the next alignement boundary, and then setting
+         * the image_data_len to the actual size of the cache_image.
+         *
+         * On the off chance that there is some other way to get a 
+         * a fragment on a cache image allocation, leave the following
+         * assertion in the code so we will find out.
+         */
+        HDassert((eoa_frag_size == 0) || (f->shared->alignment != 1));
+
+        /* Eventually it will be possible for the length of the cache image
+         * block on file to be greater than the size of the data it 
+         * contains.  However, for now they must be the same.  Set 
+         * cache_ptr->image_len accordingly.
+         */
+        cache_ptr->image_len = cache_ptr->image_data_len;
+
+        /* update the metadata cache image superblock extension 
+         * message with the new cache image block base address and 
+         * length.
+         *
+         * to simplify testing, do this only if the 
+         * H5C_CI__GEN_MDC_IMAGE_BLK bit is set in 
+         * cache_ptr->image_ctl.flags.
+         */
+        if(cache_ptr->image_ctl.flags & H5C_CI__GEN_MDC_IMAGE_BLK)
+            if(H5C__write_cache_image_superblock_msg(f, dxpl_id, FALSE) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "update of cache image SB mesg failed")
+
+        /* At this point:
+         *
+         *   1) space in the file for the metadata cache image
+         *      is allocated, 
+         *
+         *   2) the metadata cache image superblock extension 
+         *      message exists and (if so configured) contains 
+         *      the correct data,
+         *
+         *   3) All entries in the cache that will appear in the 
+         *      cache image are serialized with up to date images.
+         *
+         *      Since we just updated the cache image message,
+         *      the super block extension message is dirty.  However,
+         *      since the superblock and the superblock extension 
+         *      can't be included in the cache image, this is a non-
+         *      issue.
+         *
+         *   4) All entries in the cache that will be include in
+         *      the cache are marked as such, and we have a count
+         *      of same.
+         *
+         *   5) Flush dependency heights are calculated for all 
+         *      entries that will be included in the cache image.
+         *
+         * If there are any entries to be included in the metadata cache
+         * image, allocate, populate, and sort the image_entries array.  
+         *
+         * If the metadata cache image will be empty, delete the 
+         * metadata cache image superblock extension message, set 
+         * cache_ptr->image_ctl.generate_image to FALSE.  This will
+         * allow the file close to continue normally without the 
+         * unecessary generation of the metadata cache image.
+         */
+        if(cache_ptr->num_entries_in_image > 0) {
+            if(H5C__prep_for_file_close__setup_image_entries_array(cache_ptr) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTINIT, FAIL, "can't setup image entries array")
+
+            /* Sort the entries */
+            HDqsort(cache_ptr->image_entries, (size_t)cache_ptr->num_entries_in_image,
+                    sizeof(H5C_image_entry_t), H5C__image_entry_cmp);
+        } /* end if */
+         else { /* cancel creation of metadata cache iamge */
+            HDassert(cache_ptr->image_entries == NULL);
+
+            /* To avoid breaking the control flow tests, only delete 
+             * the mdci superblock extension message if the 
+             * H5C_CI__GEN_MDC_IMAGE_BLK flag is set in 
+             * cache_ptr->image_ctl.flags.
+             */
+            if(cache_ptr->image_ctl.flags & H5C_CI__GEN_MDC_IMAGE_BLK)
+                if(H5F_super_ext_remove_msg(f, dxpl_id, H5O_MDCI_MSG_ID) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_CANTREMOVE, FAIL, "can't remove MDC image msg from superblock ext")
+
+            cache_ptr->image_ctl.generate_image = FALSE;
+        } /* end else */
+    } /* if ( cache_ptr->image_ctl.generate_image ) */
+#ifdef H5_HAVE_PARALLEL
+    else if(cache_ptr->aux_ptr != NULL && f->shared->fs_persist) {
+        /* if persistent free space managers are enabled, flushing the
+         * metadata cache may result in the deletion, insertion, and/or
+         * dirtying of entries.
+         *
+         * This is a problem in PHDF5, as it breaks two invariants of
+         * our management of the metadata cache across all processes:
+         *
+         * 1) Entries will not be dirtied, deleted, inserted, or moved
+         *    during flush in the parallel case.
+         *
+         * 2) All processes contain the same set of dirty metadata
+         *    entries on entry to a sync point.
+         *
+         * To solve this problem for the persistent free space managers,
+         * serialize the metadata cache on all processes prior to the
+         * first sync point on file shutdown.  The shutdown warning is
+         * a convenient location for this call.
+         *
+         * This is sufficient since:
+         *
+         * 1) FSM settle routines are only invoked on file close.  Since
+         *    serialization make the same settle calls as flush on file
+         *    close, and since the close warning is issued after all
+         *    non FSM related space allocations and just before the
+         *    first sync point on close, this call will leave the caches
+         *    in a consistant state across the processes if they were
+         *    consistant before.
+         *
+         * 2) Since the FSM settle routines are only invoked once during
+         *    file close, invoking them now will prevent their invocation
+         *    during a flush, and thus avoid any resulting entrie dirties,
+         *    deletions, insertion, or moves during the flush.
+         * of the metadata cache across all processes, serialize all the
+         */
+        H5AC_aux_t * aux_ptr;
+
+        aux_ptr = (H5AC_aux_t *)cache_ptr->aux_ptr;
+        HDassert(aux_ptr->write_permitted == FALSE);
+        if(H5C__serialize_cache(f, dxpl_id) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTSERIALIZE, FAIL, "serialization of the cache failed")
+    } /* end else-if */
+#endif /* H5_HAVE_PARALLEL */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2258,7 +2174,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5C_destroy_pf_entry_child_flush_deps()
+ * Function:    H5C__destroy_pf_entry_child_flush_deps()
  *
  * Purpose:     Destroy all flush dependencies in this the supplied 
  *		prefetched entry is the parent.  Note that the children
@@ -2282,8 +2198,8 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
-H5C_destroy_pf_entry_child_flush_deps(H5C_t *cache_ptr, 
+static herr_t
+H5C__destroy_pf_entry_child_flush_deps(H5C_t *cache_ptr, 
     H5C_cache_entry_t *pf_entry_ptr, H5C_cache_entry_t **fd_children)
 {
     H5C_cache_entry_t * entry_ptr;
@@ -2292,7 +2208,7 @@ H5C_destroy_pf_entry_child_flush_deps(H5C_t *cache_ptr,
     hbool_t		found;
     herr_t		ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_NOAPI(FAIL)
+    FUNC_ENTER_STATIC
 
     /* Sanity checks */
     HDassert(cache_ptr);
@@ -2382,7 +2298,7 @@ H5C_destroy_pf_entry_child_flush_deps(H5C_t *cache_ptr,
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5C_destroy_pf_entry_child_flush_deps() */
+} /* H5C__destroy_pf_entry_child_flush_deps() */
 
 
 /*-------------------------------------------------------------------------

@@ -1382,11 +1382,12 @@ H5C_cache_is_clean(const H5C_t *cache_ptr, H5C_ring_t inner_ring)
 
     while(ring <= inner_ring) {
 	if(cache_ptr->dirty_index_ring_size[ring] > 0)
-            ret_value = FALSE;
+            HGOTO_DONE(FALSE)
 
 	ring++;
     } /* end while */
 
+done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5C_cache_is_clean() */
 #endif /* NDEBUG */

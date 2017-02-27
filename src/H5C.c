@@ -2360,7 +2360,7 @@ H5C_protect(H5F_t *		f,
     /* Load the cache image, if requested */
     if(cache_ptr->load_image) {
         cache_ptr->load_image = FALSE;
-        if(H5C_load_cache_image(f, dxpl_id) < 0)
+        if(H5C__load_cache_image(f, dxpl_id) < 0)
             HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, NULL, "Can't load cache image")
     } /* end if */
 
@@ -2404,7 +2404,7 @@ H5C_protect(H5F_t *		f,
              * and replaces it with an entry deserialized from the 
              * image of the prefetched entry.
              */
-            if(H5C_deserialize_prefetched_entry(f, dxpl_id, cache_ptr, &entry_ptr, type, addr, udata) < 0)
+            if(H5C__deserialize_prefetched_entry(f, dxpl_id, cache_ptr, &entry_ptr, type, addr, udata) < 0)
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, NULL, "can't deserialize prefetched entry")
 
             HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
@@ -7132,7 +7132,7 @@ H5C__make_space_in_cache(H5F_t *f, hid_t dxpl_id, size_t space_needed,
                 didnt_flush_entry = TRUE;
 
 #if H5C_COLLECT_CACHE_STATS
-                if ( entry_ptr->prefetched_dirty )
+                if(entry_ptr->prefetched_dirty)
                     dirty_pf_entries_skipped++;
 #endif /* H5C_COLLECT_CACHE_STATS */
             }

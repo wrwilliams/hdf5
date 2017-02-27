@@ -2758,11 +2758,10 @@ H5MF_settle_raw_data_fsm(H5F_t *f, hid_t dxpl_id, hbool_t *fsm_settled)
 
     FUNC_ENTER_NOAPI_TAG(dxpl_id, H5AC__FREESPACE_TAG, FAIL)
 
-    /* check args */
+    /* Check args */
     HDassert(f);
     HDassert(f->shared);
-    HDassert(f->shared->lf);
-    HDassert(f->shared->sblock);
+    HDassert(fsm_settled);
 
     /* Only need to settle things if we are persisting the free space info 
      * and allocation/deallocation has occurred.
@@ -2770,6 +2769,9 @@ H5MF_settle_raw_data_fsm(H5F_t *f, hid_t dxpl_id, hbool_t *fsm_settled)
     if(f->shared->fs_persist && !f->shared->first_alloc_dealloc) {
         hbool_t fsm_opened[H5F_MEM_PAGE_NTYPES];        /* State of FSM */
         hbool_t fsm_visited[H5F_MEM_PAGE_NTYPES];       /* State of FSM */
+
+        /* Sanity check */
+        HDassert(f->shared->sblock);
 
         /* should only be called if file is opened R/W */
         HDassert(H5F_INTENT(f) & H5F_ACC_RDWR);
@@ -3113,11 +3115,11 @@ done:
  *
  * Purpose: 	If the free space manager is persistent, handle any tasks 
  *		required before the metadata cache can serialize or flush 
- *		the metadata free space manager(sI) that handle file space 
+ *		the metadata free space manager(s) that handle file space 
  *		allocation for free space managers.
  *
  *		In most cases, there will be only one manager assigned 
- *		to this role.  However, since for reason or reason unknown,
+ *		to this role.  However, since for reasons unknown,
  *		free space manager headers and section info blocks are 
  *		different classes of memory, it is possible that two free 
  *		space managers will be involved.
@@ -3236,13 +3238,15 @@ H5MF_settle_meta_data_fsm(H5F_t *f, hid_t dxpl_id, hbool_t *fsm_settled)
     /* Check args */
     HDassert(f);
     HDassert(f->shared);
-    HDassert(f->shared->lf);
     HDassert(fsm_settled);
 
     /* Only need to settle things if we are persisting the free space info 
      * and allocation/deallocation has occurred.
      */
     if(f->shared->fs_persist && !f->shared->first_alloc_dealloc) {
+        /* Sanity check */
+        HDassert(f->shared->lf);
+
         /* should only be called if file is opened R/W */
         HDassert(H5F_INTENT(f) & H5F_ACC_RDWR);
 
@@ -3500,17 +3504,17 @@ done:
 hbool_t
 H5MF__fsm_type_is_self_referential(H5F_t *f, H5F_mem_page_t fsm_type)
 {
-    hbool_t result = FALSE;
     H5F_mem_page_t sm_fshdr_fsm;
     H5F_mem_page_t sm_fssinfo_fsm;
     H5F_mem_page_t lg_fshdr_fsm;
     H5F_mem_page_t lg_fssinfo_fsm;
+    hbool_t result = FALSE;
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
+    /* Sanity check */
     HDassert(f);
     HDassert(f->shared);
-
     HDassert(fsm_type >= H5F_MEM_PAGE_DEFAULT);
     HDassert(fsm_type < H5F_MEM_PAGE_NTYPES);
 
@@ -3558,17 +3562,16 @@ H5MF__fsm_type_is_self_referential(H5F_t *f, H5F_mem_page_t fsm_type)
  *
  *-------------------------------------------------------------------------
  */
-hbool_t
+static hbool_t
 H5MF__fsm_is_self_referential(H5F_t *f, H5FS_t *fspace)
 {
     H5F_mem_page_t sm_fshdr_fsm;
     H5F_mem_page_t sm_fssinfo_fsm;
-    H5F_mem_page_t lg_fshdr_fsm;
-    H5F_mem_page_t lg_fssinfo_fsm;
     hbool_t result = FALSE;
 
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
+    FUNC_ENTER_STATIC_NOERR
 
+    /* Sanity check */
     HDassert(f);
     HDassert(f->shared);
     HDassert(fspace);
@@ -3576,20 +3579,23 @@ H5MF__fsm_is_self_referential(H5F_t *f, H5FS_t *fspace)
     H5MF_alloc_to_fs_type(f, H5FD_MEM_FSPACE_HDR, (size_t)1, &sm_fshdr_fsm);
     H5MF_alloc_to_fs_type(f, H5FD_MEM_FSPACE_SINFO, (size_t)1, &sm_fssinfo_fsm);
 
-    if ( H5F_PAGED_AGGR(f) ) {
+    if(H5F_PAGED_AGGR(f)) {
+        H5F_mem_page_t lg_fshdr_fsm;
+        H5F_mem_page_t lg_fssinfo_fsm;
+
         H5MF_alloc_to_fs_type(f, H5FD_MEM_FSPACE_HDR, 
                               f->shared->fs_page_size + 1, &lg_fshdr_fsm);
         H5MF_alloc_to_fs_type(f, H5FD_MEM_FSPACE_SINFO, 
                               f->shared->fs_page_size + 1, &lg_fssinfo_fsm);
 
-        result = ( ( fspace == f->shared->fs_man[sm_fshdr_fsm] ) ||
-                   ( fspace == f->shared->fs_man[sm_fssinfo_fsm] ) ||
-                   ( fspace == f->shared->fs_man[lg_fshdr_fsm] ) ||
-                   ( fspace == f->shared->fs_man[lg_fssinfo_fsm] ) );
-    } else {
-        result = ( ( fspace == f->shared->fs_man[sm_fshdr_fsm] ) ||
-                   ( fspace == f->shared->fs_man[sm_fssinfo_fsm] ) );
-    }
+        result = (fspace == f->shared->fs_man[sm_fshdr_fsm]) ||
+                   (fspace == f->shared->fs_man[sm_fssinfo_fsm]) ||
+                   (fspace == f->shared->fs_man[lg_fshdr_fsm]) ||
+                   (fspace == f->shared->fs_man[lg_fssinfo_fsm]);
+    } /* end if */
+    else
+        result = (fspace == f->shared->fs_man[sm_fshdr_fsm]) ||
+                   (fspace == f->shared->fs_man[sm_fssinfo_fsm]);
 
     FUNC_LEAVE_NOAPI(result)
 } /* H5MF__fsm_is_self_referential() */
@@ -3599,15 +3605,15 @@ H5MF__fsm_is_self_referential(H5F_t *f, H5FS_t *fspace)
  * Function:    H5MF_tidy_self_referential_fsm_hack
  *
  * Purpose:     As discussed in the comments of the settle routines above,
- *		the existence of the self referential free space managers
+ *		the existence of self referential free space managers
  *		as currently implemented creates the possibility of 
  *		infinite loops at file close.
  *
- *		As a hack to avoid this, we have added code to settle the 
+ *		As a hack to avoid this, we have added code to settle
  *		self referential free space managers, and then allocate 
  *		space for them directly from the file driver.
  *
- *		To avoid droping ever increasing amounts of file space 
+ *		To avoid dropping ever increasing amounts of file space 
  *              on the floor with each subsequent file close/open cycle,
  *              we need to clean this up on file open.  To avoid this,
  *              this function is called on the first file space allocation
