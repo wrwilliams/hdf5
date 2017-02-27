@@ -709,6 +709,7 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
     haddr_t search_addr;
     H5P_genplist_t *dxpl = NULL;
     haddr_t first_page_addr, last_page_addr;
+    size_t access_size;
     hsize_t i;
     hsize_t num_touched_pages;
     hbool_t mpio_bypass_pb = FALSE;
@@ -879,7 +880,6 @@ H5PB_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
     HDassert(1 == num_touched_pages || 2 == num_touched_pages);
 
     for(i=0 ; i<num_touched_pages ; i++) {
-        size_t access_size;
 
         if(1 == i && HADDR_UNDEF == last_page_addr) {
             HDassert(1 == num_touched_pages);
@@ -1017,6 +1017,7 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
     haddr_t search_addr;
     H5P_genplist_t *dxpl = NULL;
     haddr_t first_page_addr, last_page_addr;
+    size_t access_size;
     hsize_t i;
     hsize_t num_touched_pages;
     hbool_t mpio_bypass_pb = FALSE;
@@ -1186,7 +1187,6 @@ H5PB_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
     /* a raw data access could span 1 or 2 PBs at this point so we need to handle that */
     HDassert(1 == num_touched_pages || 2 == num_touched_pages);
     for(i=0 ; i<num_touched_pages ; i++) {
-        size_t access_size;
 
         if(1 == i && HADDR_UNDEF == last_page_addr) {
             HDassert(1 == num_touched_pages);

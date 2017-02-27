@@ -77,7 +77,7 @@ const char *FILENAME[] = {
  *              1 if test fails
  *
  * Programmer:  unknown
- *              ??/??/??
+ *              ?? / ?? / ??
  *
  *-------------------------------------------------------------------------
  */
@@ -216,7 +216,7 @@ error:
  *              1 if test fails
  *
  * Programmer:  unknown
- *              ??/??/??
+ *              ?? / ?? / ??
  *
  *-------------------------------------------------------------------------
  */
@@ -371,7 +371,7 @@ error:
  *              1 if test fails
  *
  * Programmer:  unknown
- *              ??/??/??
+ *              ?? / ?? / ??
  *
  *-------------------------------------------------------------------------
  */
@@ -544,7 +544,7 @@ error:
  *              1 if test fails
  *
  * Programmer:  unknown
- *              ??/??/??
+ *              ?? / ?? / ??
  *              
  * Changes:     Added base_page_cnt field as supporting code.  This allows
  *              the test to adjust to the number of page buffer pages
@@ -822,7 +822,7 @@ error:
  *              1 if test fails
  *
  * Programmer:  unknown
- *              ??/??/??
+ *              ?? / ?? / ??
  *              
  * Changes:     Added base_page_cnt field as supporting code.  This allows
  *              the test to adjust to the number of page buffer pages
@@ -1075,7 +1075,7 @@ error:
  *              1 if test fails
  *
  * Programmer:  unknown
- *              ??/??/??
+ *              ?? / ?? / ??
  *              
  * Changes:     Added the base_raw_cnt and base_meta_cnt fields and
  *              supporting code.  This allows the test to adjust to the 
@@ -1711,7 +1711,7 @@ error:
  *              1 if test fails
  *
  * Programmer:  unknown
- *              ??/??/??
+ *              ?? / ?? / ??
  *              
  * Changes:     Added the base_raw_cnt and base_meta_cnt fields and
  *              supporting code.  This allows the test to adjust to the 
@@ -1797,7 +1797,7 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
 
     /* reset statistics before we begin the tests */
 
-    if(H5PB_reset_stats(file_id) < 0)
+    if(H5Freset_page_buffering_stats(file_id) < 0)
         FAIL_STACK_ERROR;
 
     if(HADDR_UNDEF == (meta_addr = H5MF_alloc(f, H5FD_MEM_SUPER, H5AC_ind_read_dxpl_id, sizeof(int)*(size_t)num_elements)))
@@ -2010,7 +2010,7 @@ error:
  *              1 if test fails
  *
  * Programmer:  unknown
- *              ??/??/??
+ *              ?? / ?? / ??
  *
  *-------------------------------------------------------------------------
  */
