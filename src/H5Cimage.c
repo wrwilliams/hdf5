@@ -65,8 +65,6 @@
 #define H5C__MDCI_BLOCK_SIGNATURE	"MDCI"
 #define H5C__MDCI_BLOCK_SIGNATURE_LEN	4
 #define H5C__MDCI_BLOCK_VERSION_0	0
-#define H5C__MDCI_ENTRY_SIGNATURE	"MDEI"
-#define H5C__MDCI_ENTRY_SIGNATURE_LEN	4
 
 /* Metadata cache image header flags -- max 8 bits */
 #define H5C__MDCI_HEADER_HAVE_RESIZE_STATUS	0x01
@@ -1776,8 +1774,7 @@ H5C__cache_image_block_entry_header_size(const H5F_t * f)
     FUNC_ENTER_STATIC_NOERR
 
     /* Set return value */
-    ret_value = (size_t)( 4 +                   /* signature                */
-			  1 +			/* type                     */
+    ret_value = (size_t)( 1 +			/* type                     */
 			  1 +			/* flags                    */
 			  1 +			/* ring                     */
 			  1 +			/* age                      */
@@ -2062,12 +2059,6 @@ H5C_decode_cache_image_entry(H5F_t * f, H5C_t *cache_ptr,
 
     /* Get pointer to buffer */
     p = buf;
-
-
-    /* check signature */
-    if(HDmemcmp(buf, H5C__MDCI_ENTRY_SIGNATURE, (size_t)H5C__MDCI_ENTRY_SIGNATURE_LEN) )
-	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, NULL, "Bad metadata cache image entry signature")
-    p += H5C__MDCI_ENTRY_SIGNATURE_LEN;
 
     /* Decode type id */
     type_id = *p++;
@@ -2420,10 +2411,6 @@ H5C_encode_cache_image_entry(H5F_t *f, H5C_t *cache_ptr, uint8_t *buf,
 
     /* Get pointer to buffer to encode into */
     p = buf;
-
-    /* Copy signature */
-    HDmemcpy(p, H5C__MDCI_ENTRY_SIGNATURE, (size_t)H5C__MDCI_ENTRY_SIGNATURE_LEN);
-    p += H5C__MDCI_ENTRY_SIGNATURE_LEN;
 
     /* Encode type */
     if((ie_ptr->type_id < 0) || (ie_ptr->type_id > 255))
