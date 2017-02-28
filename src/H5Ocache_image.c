@@ -29,12 +29,11 @@
  */
 
 #include "H5Omodule.h"          /* This source code file is part of the H5O module */
-#define H5F_FRIEND		/*suppress error about including H5Fpkg	  */
 
 
 #include "H5private.h"          /* Generic Functions                     */
 #include "H5Eprivate.h"         /* Error handling                        */
-#include "H5Fpkg.h"		/* Files				*/
+#include "H5Fprivate.h"		/* Files				*/
 #include "H5FLprivate.h"        /* Free Lists                            */
 #include "H5Opkg.h"             /* Object headers                        */
 #include "H5MFprivate.h"        /* File space management                 */
@@ -325,9 +324,9 @@ H5O__mdci_delete(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, void *_mesg)
          * before the first metadata cache access.  However, given
          * time constraints, I don't want to go there now.
          */
-        if(f->shared->first_alloc_dealloc) {
-            HDassert(HADDR_UNDEF != f->shared->eoa_pre_fsm_fsalloc);
-            HDassert(H5F_addr_ge(mesg->addr, f->shared->eoa_pre_fsm_fsalloc));
+        if(H5F_FIRST_ALLOC_DEALLOC(f)) {
+            HDassert(HADDR_UNDEF !=H5F_EOA_PRE_FSM_FSALLOC(f));
+            HDassert(H5F_addr_ge(mesg->addr, H5F_EOA_PRE_FSM_FSALLOC(f)));
             if(H5MF_tidy_self_referential_fsm_hack(f, dxpl_id) < 0)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTFREE, FAIL, "tidy of self referential fsm hack failed")
         } /* end if */
