@@ -669,8 +669,8 @@ H5C_mark_entries_as_clean(H5F_t *  f,
     unsigned		entries_examined;
     unsigned		initial_list_len;
     haddr_t		addr;
-#if H5C_DO_SANITY_CHECKS
     unsigned		pinned_entries_marked = 0;
+#if H5C_DO_SANITY_CHECKS
     unsigned		protected_entries_marked = 0;
     unsigned		other_entries_marked = 0;
     haddr_t		last_addr;
@@ -754,19 +754,13 @@ H5C_mark_entries_as_clean(H5F_t *  f,
             } /* end if */
 
             entry_ptr->clear_on_unprotect = TRUE;
-#if H5C_DO_SANITY_CHECKS
-	    if ( entry_ptr->is_protected ) {
-
-		protected_entries_marked++;
-
-	    } else if ( entry_ptr->is_pinned ) {
-
+	    if(entry_ptr->is_pinned)
 		pinned_entries_marked++;
-
-	    } else {
-
+#if H5C_DO_SANITY_CHECKS
+	    else if(entry_ptr->is_protected)
+		protected_entries_marked++;
+	    else
 		other_entries_marked++;
-	    }
 #endif /* H5C_DO_SANITY_CHECKS */
         }
     }
