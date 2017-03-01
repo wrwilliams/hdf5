@@ -2335,7 +2335,7 @@ H5_DLL herr_t H5C_mark_entries_as_clean(H5F_t *f, hid_t dxpl_id, int32_t ce_arra
 #endif /* H5_HAVE_PARALLEL */
 
 #ifndef NDEBUG	/* debugging functions */
-H5_DLL hbool_t H5C_get_serialization_in_progress(H5F_t * f);
+H5_DLL hbool_t H5C_get_serialization_in_progress(const H5C_t *cache_ptr);
 H5_DLL hbool_t H5C_cache_is_clean(const H5C_t *cache_ptr, H5C_ring_t inner_ring);
 H5_DLL herr_t H5C_dump_cache_skip_list(H5C_t *cache_ptr, char *calling_fcn);
 H5_DLL herr_t H5C_get_entry_ptr_from_addr(H5C_t *cache_ptr, haddr_t addr,
