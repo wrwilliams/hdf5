@@ -1358,6 +1358,7 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
     /* Sanity checks */
     HDassert(f);
     HDassert(f->shared);
+    HDassert(f->shared->sblock);
     HDassert(f->shared->cache);
     cache_ptr = f->shared->cache;
     HDassert(cache_ptr);
@@ -1385,6 +1386,23 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
     } /* end if */
 
     cache_ptr->close_warning_received = TRUE;
+
+    /* Before we start to generate the cache image (if requested), verify
+     * that the superblock supports superblock extension messages, and 
+     * silently cancel any request for a cache image if it does not.
+     *
+     * Ideally, we would do this when the cache image is requested,
+     * but the necessary information is not necessary available at that 
+     * time -- hence this last minute check.
+     */
+    if ( f->shared->sblock->super_vers < HDF5_SUPERBLOCK_VERSION_2 ) {
+
+        H5C_cache_image_ctl_t default_image_ctl = H5C__DEFAULT_CACHE_IMAGE_CTL;
+
+        cache_ptr->image_ctl = default_image_ctl;
+
+        HDassert(!(cache_ptr->image_ctl.generate_image));
+    }
 
     if(cache_ptr->image_ctl.generate_image) { /* we have work to do */
 
@@ -1466,11 +1484,13 @@ H5C_prep_for_file_close(H5F_t *f, hid_t dxpl_id)
              * Note that we allocate the cache image directly from the file 
              * driver so as to avoid unsettling the free space managers.
              */
-            if(HADDR_UNDEF == (cache_ptr->image_addr = H5FD_alloc(f->shared->lf, dxpl_id, H5FD_MEM_SUPER, f,
-                    (hsize_t)p0_image_len, &eoa_frag_addr, &eoa_frag_size)))
+            if ( HADDR_UNDEF == (cache_ptr->image_addr = 
+                    H5FD_alloc(f->shared->lf, dxpl_id, H5FD_MEM_SUPER, f,
+                               (hsize_t)p0_image_len, &eoa_frag_addr, 
+                               &eoa_frag_size)))
                 HGOTO_ERROR(H5E_CACHE, H5E_NOSPACE, FAIL, "can't allocate file space for metadata cache image")
-    } /* end if */
-    else
+        } /* end if */
+        else
 
 #endif /* H5_HAVE_PARALLEL */
 
@@ -1638,6 +1658,18 @@ done:
  *		image_ctl field of *cache_ptr.  Make adjustments for 
  *		changes in configuration as required.
  *
+ *              If the file is open read only, silently
+ *              force the cache image configuration to its default
+ *              (which disables contstruction of a cache image).
+ *
+ *              Note that in addition to being inapplicable in the
+ *              read only case, cache image is also inapplicable if
+ *              the superblock does not support superblock extension 
+ *              messages.  Unfortunately, this information need not 
+ *              be available at this point. Thus we check for this 
+ *              later, in H5C_prep_for_file_close() and cancel the
+ *              cache image request if appropriate.
+ *
  *		Fail if the new configuration is invalid.
  *
  * Return:      SUCCEED on success, and FAIL on failure.
@@ -1663,22 +1695,42 @@ H5C_set_cache_image_config(const H5F_t *f, H5C_t *cache_ptr,
     /* Check arguments */
     if((cache_ptr == NULL) || (cache_ptr->magic != H5C__H5C_T_MAGIC))
         HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Bad cache_ptr on entry")
+
     if(config_ptr == NULL)
         HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "NULL config_ptr on entry")
+
     if(config_ptr->version != H5C__CURR_CACHE_IMAGE_CTL_VER)
         HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Unknown config version")
 
-    /* check general configuration section of the config: */
+    /* validate the config: */
     if(H5C_validate_cache_image_config(config_ptr) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "invalid cache image configuration")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, \
+                    "invalid cache image configuration")
 
-    if(H5F_INTENT(f) & H5F_ACC_RDWR)    /* file has been opened R/W */
+    /* A cache image can only be generated if the file is opened read / write
+     * and the superblock supports superblock extension messages.  
+     *
+     * However, the superblock version is not available at this point -- 
+     * hence we can only check the former requirement now.  Do the latter
+     * check just before we construct the image..  
+     *
+     * If the file is opened read / write, apply the supplied configuration.
+     *
+     * If it is not, set the image configuration to the default, which has 
+     * the effect of silently disabling the cache image if it was requested.
+     */
+    if (H5F_INTENT(f) & H5F_ACC_RDWR) {
+
         cache_ptr->image_ctl = *config_ptr;
-    else { /* file opened R/O -- suppress cache image silently */
+
+    } else {
+
 	H5C_cache_image_ctl_t default_image_ctl = H5C__DEFAULT_CACHE_IMAGE_CTL;
 
         cache_ptr->image_ctl = default_image_ctl;
+
 	HDassert(!(cache_ptr->image_ctl.generate_image));
+
     } /* end else */
 
 #ifdef H5_HAVE_PARALLEL
