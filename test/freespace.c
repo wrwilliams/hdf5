@@ -1235,7 +1235,7 @@ test_fs_sect_find(hid_t fapl)
     init_sect_node(sect_node1, (haddr_t)TEST_SECT_ADDR60, (hsize_t)TEST_SECT_SIZE30, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
         FAIL_STACK_ERROR
 
     HDmemset(&state, 0, sizeof(frspace_state_t));
@@ -1290,7 +1290,7 @@ error:
         if(sect_node4)
             TEST_sect_free((H5FS_section_info_t *)sect_node4);
         if(frsp)
-            H5FS_close(f, dxpl_id, frsp);
+	    H5FS_close(f, dxpl_id, frsp);
         H5Fclose(file);
         H5Pclose(dxpl_id);
     } H5E_END_TRY;
@@ -1374,8 +1374,8 @@ test_fs_sect_merge(hid_t fapl)
         FAIL_STACK_ERROR
 
     if(NULL == (frsp = H5FS_create(f, dxpl_id, &fs_addr,
-            &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
-        FAIL_STACK_ERROR
+	    &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
+	FAIL_STACK_ERROR
 
     if(!H5F_addr_defined(fs_addr))
         TEST_ERROR
@@ -1384,13 +1384,13 @@ test_fs_sect_merge(hid_t fapl)
      * Add section C
      */
     if(NULL == (sect_node1 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node1, (haddr_t)TEST_SECT_ADDR100, (hsize_t)TEST_SECT_SIZE50, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     HDmemset(&state, 0, sizeof(frspace_state_t));
     state.tot_space += TEST_SECT_SIZE50;
@@ -1422,13 +1422,13 @@ test_fs_sect_merge(hid_t fapl)
      * Add section A
      */
     if(NULL == (sect_node3 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node3, (haddr_t)TEST_SECT_ADDR60, (hsize_t)TEST_SECT_SIZE10, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node3,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     /* section A is merged with the merged section of B & C */
     state.tot_space += TEST_SECT_SIZE10;
@@ -1440,13 +1440,13 @@ test_fs_sect_merge(hid_t fapl)
      * Add section D
      */
     if(NULL == (sect_node4 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node4, (haddr_t)TEST_SECT_ADDR150, (hsize_t)TEST_SECT_SIZE80, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node4,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     /* section D is merged with the merged section of A & B & C */
     state.tot_space += TEST_SECT_SIZE80;
@@ -1458,24 +1458,24 @@ test_fs_sect_merge(hid_t fapl)
     /* should be able to find the merged section of A, B, C & D */
     if((node_found = H5FS_sect_find(f, dxpl_id, frsp,
             (hsize_t)(TEST_SECT_SIZE10+TEST_SECT_SIZE30+TEST_SECT_SIZE50+TEST_SECT_SIZE80), (H5FS_section_info_t **)&node)) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     if (!node_found) TEST_ERROR
     if ((node->sect_info.addr != TEST_SECT_ADDR60) ||
-            (node->sect_info.size != (TEST_SECT_SIZE10+TEST_SECT_SIZE30+TEST_SECT_SIZE50+TEST_SECT_SIZE80)))
-        TEST_ERROR
+	(node->sect_info.size != (TEST_SECT_SIZE10+TEST_SECT_SIZE30+TEST_SECT_SIZE50+TEST_SECT_SIZE80)))
+	TEST_ERROR
 
     if(TEST_sect_free((H5FS_section_info_t *)node) < 0)
-        TEST_ERROR
+	TEST_ERROR
 
     /* Close the free space manager */
     if(H5FS_close(f, dxpl_id, frsp) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     frsp = NULL;
 
     /* Delete free space manager */
     if(H5FS_delete(f, dxpl_id, fs_addr) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     fs_addr = HADDR_UNDEF;
 
     /* Close the file */
@@ -1502,8 +1502,8 @@ test_fs_sect_merge(hid_t fapl)
 
     init_flags = H5FS_CLS_SEPAR_OBJ;
     if(NULL == (frsp = H5FS_create(f, dxpl_id, &fs_addr,
-            &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
-        FAIL_STACK_ERROR
+	    &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
+	FAIL_STACK_ERROR
 
     if(!H5F_addr_defined(fs_addr))
         TEST_ERROR
@@ -1512,13 +1512,13 @@ test_fs_sect_merge(hid_t fapl)
      * Add section A
      */
     if(NULL == (sect_node1 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node1, (haddr_t)TEST_SECT_ADDR70, (hsize_t)TEST_SECT_SIZE30, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     HDmemset(&state, 0, sizeof(frspace_state_t));
     state.tot_space += TEST_SECT_SIZE30;
@@ -1532,13 +1532,13 @@ test_fs_sect_merge(hid_t fapl)
      * Add section B
      */
     if(NULL == (sect_node2 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node2, (haddr_t)TEST_SECT_ADDR100, (hsize_t)TEST_SECT_SIZE50, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node2,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     /* section A & B are not merged because H5FS_CLS_SEPAR_OBJ is set */
     state.tot_space += TEST_SECT_SIZE50;
@@ -1551,33 +1551,33 @@ test_fs_sect_merge(hid_t fapl)
     /* should not be able to find the merged section of A & B */
     if((node_found = H5FS_sect_find(f, dxpl_id, frsp,
             (hsize_t)(TEST_SECT_SIZE30+TEST_SECT_SIZE50), (H5FS_section_info_t **)&node)) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     if (node_found) TEST_ERROR
 
     /* remove section A from free-space */
     if(H5FS_sect_remove(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     /* remove section B from free-space */
     if(H5FS_sect_remove(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node2) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     /* Free the section node(s) */
     if(TEST_sect_free((H5FS_section_info_t *)sect_node1) < 0)
-        TEST_ERROR
+	TEST_ERROR
     sect_node1 = NULL;
     if(TEST_sect_free((H5FS_section_info_t *)sect_node2) < 0)
-        TEST_ERROR
+	TEST_ERROR
     sect_node2 = NULL;
 
     /* Close the free space manager */
     if(H5FS_close(f, dxpl_id, frsp) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     frsp = NULL;
 
     /* Delete free space manager */
     if(H5FS_delete(f, dxpl_id, fs_addr) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     fs_addr = HADDR_UNDEF;
 
     /* Close the file */
@@ -1604,8 +1604,8 @@ test_fs_sect_merge(hid_t fapl)
 
     init_flags = 0; /* reset */
     if(NULL == (frsp = H5FS_create(f, dxpl_id, &fs_addr,
-            &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
-        FAIL_STACK_ERROR
+	    &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
+	FAIL_STACK_ERROR
 
     if(!H5F_addr_defined(fs_addr))
         TEST_ERROR
@@ -1614,13 +1614,13 @@ test_fs_sect_merge(hid_t fapl)
      * Add section A
      */
     if(NULL == (sect_node1 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node1, (haddr_t)TEST_SECT_ADDR60, (hsize_t)TEST_SECT_SIZE10, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     HDmemset(&state, 0, sizeof(frspace_state_t));
     state.tot_space += TEST_SECT_SIZE10;
@@ -1634,13 +1634,13 @@ test_fs_sect_merge(hid_t fapl)
      * Add section B
      */
     if(NULL == (sect_node2 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node2, (haddr_t)TEST_SECT_ADDR70, (hsize_t)TEST_SECT_SIZE30, TEST_FSPACE_SECT_TYPE_NEW, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node2,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     /* sections A & B are not merged because H5FS_CLS_MERGE_SYM is set & section class type is different */
     state.tot_space += TEST_SECT_SIZE30;
@@ -1654,13 +1654,13 @@ test_fs_sect_merge(hid_t fapl)
      * Add section C
      */
     if(NULL == (sect_node3 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node3, (haddr_t)TEST_SECT_ADDR100, (hsize_t)TEST_SECT_SIZE50, TEST_FSPACE_SECT_TYPE_NEW, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node3,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     /* sections B & C are merged because H5FS_CLS_MERGE_SYM is set & section class type is the same */
     state.tot_space += TEST_SECT_SIZE50;
@@ -1677,8 +1677,8 @@ test_fs_sect_merge(hid_t fapl)
     init_sect_node(sect_node4, (haddr_t)TEST_SECT_ADDR150, (hsize_t)TEST_SECT_SIZE80, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node4,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     /*
      * section D is not merged with the merged section of B & C because
@@ -1694,58 +1694,58 @@ test_fs_sect_merge(hid_t fapl)
     /* should not be able to find a merged section of A, B, C & D */
     if((node_found = H5FS_sect_find(f, dxpl_id, frsp,
             (hsize_t)(TEST_SECT_SIZE10+TEST_SECT_SIZE30+TEST_SECT_SIZE50+TEST_SECT_SIZE80), (H5FS_section_info_t **)&node)) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     if (node_found) TEST_ERROR
 
     /* should be able to find the merged section of B & C */
     if((node_found = H5FS_sect_find(f, dxpl_id, frsp,
             (hsize_t)(TEST_SECT_SIZE30+TEST_SECT_SIZE50), (H5FS_section_info_t **)&node)) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     if (!node_found) TEST_ERROR
 
     if ((node->sect_info.addr != TEST_SECT_ADDR70) ||
-            (node->sect_info.size != (TEST_SECT_SIZE30+TEST_SECT_SIZE50)))
-        TEST_ERROR
+	(node->sect_info.size != (TEST_SECT_SIZE30+TEST_SECT_SIZE50)))
+	TEST_ERROR
 
     if(TEST_sect_free((H5FS_section_info_t *)node) < 0)
-        TEST_ERROR
+	TEST_ERROR
 
     /* should be able to find section A */
     if((node_found = H5FS_sect_find(f, dxpl_id, frsp,
             (hsize_t)(TEST_SECT_SIZE10), (H5FS_section_info_t **)&node)) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     if (!node_found) TEST_ERROR
 
     if ((node->sect_info.addr != TEST_SECT_ADDR60) || (node->sect_info.size != TEST_SECT_SIZE10))
-        TEST_ERROR
+	TEST_ERROR
 
     if(TEST_sect_free((H5FS_section_info_t *)node) < 0)
-        TEST_ERROR
+	TEST_ERROR
 
     /* should be able to find section D */
     if((node_found = H5FS_sect_find(f, dxpl_id, frsp,
             (hsize_t)(TEST_SECT_SIZE80), (H5FS_section_info_t **)&node)) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     if (!node_found) TEST_ERROR
 
     if ((node->sect_info.addr != TEST_SECT_ADDR150) || (node->sect_info.size != TEST_SECT_SIZE80))
-        TEST_ERROR
+	TEST_ERROR
 
     if(TEST_sect_free((H5FS_section_info_t *)node) < 0)
 	TEST_ERROR
 
     /* Close the free space manager */
     if(H5FS_close(f, dxpl_id, frsp) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     frsp = NULL;
 
     /* Delete free space manager */
     if(H5FS_delete(f, dxpl_id, fs_addr) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     fs_addr = HADDR_UNDEF;
 
     /* Close the file and dxpl */
@@ -1850,8 +1850,8 @@ test_fs_sect_shrink(hid_t fapl)
         FAIL_STACK_ERROR
 
     if(NULL == (frsp = H5FS_create(f, dxpl_id, &fs_addr,
-            &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
-        FAIL_STACK_ERROR
+	    &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
+	FAIL_STACK_ERROR
 
     if(!H5F_addr_defined(fs_addr))
         TEST_ERROR
@@ -1860,14 +1860,14 @@ test_fs_sect_shrink(hid_t fapl)
      * Add section A that allow shrinking but its section class type does not define "can_shrink"
      */
     if(NULL == (sect_node1 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node1, (haddr_t)TEST_SECT_ADDR100, (hsize_t)TEST_SECT_SIZE50, TEST_FSPACE_SECT_TYPE_NEW, H5FS_SECT_LIVE);
 
     can_shrink = FALSE;
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1,
-            H5FS_ADD_RETURNED_SPACE, &can_shrink) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, &can_shrink) < 0)
+	FAIL_STACK_ERROR
 
     HDmemset(&state, 0, sizeof(frspace_state_t));
     state.tot_space += sect_node1->sect_info.size;
@@ -1880,28 +1880,28 @@ test_fs_sect_shrink(hid_t fapl)
     /* section A should still be there in free-space */
     if((node_found = H5FS_sect_find(f, dxpl_id, frsp,
             (hsize_t)(TEST_SECT_SIZE50), (H5FS_section_info_t **)&node)) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     if (!node_found) TEST_ERROR
 
     if ((node->sect_info.addr != TEST_SECT_ADDR100) || (node->sect_info.size != TEST_SECT_SIZE50))
-        TEST_ERROR
+	TEST_ERROR
 
     if(TEST_sect_free((H5FS_section_info_t *)node) < 0)
-        TEST_ERROR
+	TEST_ERROR
 
     /*
      * Re-add section A that allow shrinking and its section class type defines "can_shrink"
      */
     if(NULL == (sect_node1 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node1, (haddr_t)TEST_SECT_ADDR100, (hsize_t)TEST_SECT_SIZE50, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     can_shrink = FALSE;
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1,
-            H5FS_ADD_RETURNED_SPACE, &can_shrink) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, &can_shrink) < 0)
+	FAIL_STACK_ERROR
 
     /* should have nothing in free-space */
     HDmemset(&state, 0, sizeof(frspace_state_t));
@@ -1912,18 +1912,18 @@ test_fs_sect_shrink(hid_t fapl)
     /* section A should not be there in free-space */
     if((node_found = H5FS_sect_find(f, dxpl_id, frsp,
             (hsize_t)(TEST_SECT_SIZE50), (H5FS_section_info_t **)&node)) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     if (node_found) TEST_ERROR
 
     /* Close the free space manager */
     if(H5FS_close(f, dxpl_id, frsp) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     frsp = NULL;
 
     /* Delete free space manager */
     if(H5FS_delete(f, dxpl_id, fs_addr) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     fs_addr = HADDR_UNDEF;
 
     /* Close the file */
@@ -1951,8 +1951,8 @@ test_fs_sect_shrink(hid_t fapl)
     /* does not allow merging */
     init_flags = H5FS_CLS_SEPAR_OBJ;
     if(NULL == (frsp = H5FS_create(f, dxpl_id, &fs_addr,
-            &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
-        FAIL_STACK_ERROR
+	    &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
+	FAIL_STACK_ERROR
 
     if(!H5F_addr_defined(fs_addr))
         TEST_ERROR
@@ -1961,13 +1961,13 @@ test_fs_sect_shrink(hid_t fapl)
      * Add section A
      */
     if(NULL == (sect_node1 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node1, (haddr_t)TEST_SECT_ADDR80, (hsize_t)TEST_SECT_SIZE20, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1,
-            H5FS_ADD_RETURNED_SPACE, &can_shrink) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, &can_shrink) < 0)
+	FAIL_STACK_ERROR
 
     HDmemset(&state, 0, sizeof(frspace_state_t));
     state.tot_space += sect_node1->sect_info.size;
@@ -1981,13 +1981,13 @@ test_fs_sect_shrink(hid_t fapl)
      * Add section B
      */
     if(NULL == (sect_node2 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node2, (haddr_t)TEST_SECT_ADDR100, (hsize_t)TEST_SECT_SIZE50, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node2,
-            H5FS_ADD_RETURNED_SPACE, &can_shrink) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, &can_shrink) < 0)
+	FAIL_STACK_ERROR
 
     /* free-space should be the same since section B is shrunk */
     if(check_stats(f, frsp, &state))
@@ -1996,7 +1996,7 @@ test_fs_sect_shrink(hid_t fapl)
     /* section B should not be there in free-space */
     if((node_found = H5FS_sect_find(f, dxpl_id, frsp,
             (hsize_t)(TEST_SECT_SIZE50), (H5FS_section_info_t **)&node)) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     if (node_found)
         TEST_ERROR
@@ -2008,24 +2008,24 @@ test_fs_sect_shrink(hid_t fapl)
     /* section A should still be there in free-space */
     if((node_found = H5FS_sect_find(f, dxpl_id, frsp,
             (hsize_t)(TEST_SECT_SIZE20), (H5FS_section_info_t **)&node)) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     if (!node_found) TEST_ERROR
 
     if ((node->sect_info.addr != TEST_SECT_ADDR80) || (node->sect_info.size != TEST_SECT_SIZE20))
-        TEST_ERROR
+	TEST_ERROR
 
     if(TEST_sect_free((H5FS_section_info_t *)node) < 0)
-        TEST_ERROR
+	TEST_ERROR
 
     /* Close the free space manager */
     if(H5FS_close(f, dxpl_id, frsp) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     frsp = NULL;
 
     /* Delete free space manager */
     if(H5FS_delete(f, dxpl_id, fs_addr) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     fs_addr = HADDR_UNDEF;
 
     /* Close the file */
@@ -2051,8 +2051,8 @@ test_fs_sect_shrink(hid_t fapl)
 
     init_flags = 0; /* reset */
     if(NULL == (frsp = H5FS_create(f, dxpl_id, &fs_addr,
-            &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
-        FAIL_STACK_ERROR
+	    &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
+	FAIL_STACK_ERROR
 
     if(!H5F_addr_defined(fs_addr))
         TEST_ERROR
@@ -2061,13 +2061,13 @@ test_fs_sect_shrink(hid_t fapl)
      * Add section A
      */
     if(NULL == (sect_node1 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node1, (haddr_t)TEST_SECT_ADDR70, (hsize_t)TEST_SECT_SIZE30, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1,
-            H5FS_ADD_RETURNED_SPACE, &can_shrink) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, &can_shrink) < 0)
+	FAIL_STACK_ERROR
 
     HDmemset(&state, 0, sizeof(frspace_state_t));
     state.tot_space += sect_node1->sect_info.size;
@@ -2081,13 +2081,13 @@ test_fs_sect_shrink(hid_t fapl)
      * Add section B
      */
     if(NULL == (sect_node2 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node2, (haddr_t)TEST_SECT_ADDR100, (hsize_t)TEST_SECT_SIZE50, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node2,
 	    H5FS_ADD_RETURNED_SPACE, &can_shrink) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     /* section A & B are merged and then strunk, so there is nothing in free-space */
     HDmemset(&state, 0, sizeof(frspace_state_t));
@@ -2097,7 +2097,7 @@ test_fs_sect_shrink(hid_t fapl)
     /* section B should not be there in free-space */
     if((node_found = H5FS_sect_find(f, dxpl_id, frsp,
             (hsize_t)(TEST_SECT_SIZE50), (H5FS_section_info_t **)&node)) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     if (node_found)
         TEST_ERROR
@@ -2105,18 +2105,18 @@ test_fs_sect_shrink(hid_t fapl)
     /* section A should not be there in free-space */
     if((node_found = H5FS_sect_find(f, dxpl_id, frsp,
             (hsize_t)(TEST_SECT_SIZE30), (H5FS_section_info_t **)&node)) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     if (node_found) TEST_ERROR
 
     /* Close the free space manager */
     if(H5FS_close(f, dxpl_id, frsp) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     frsp = NULL;
 
     /* Delete free space manager */
     if(H5FS_delete(f, dxpl_id, fs_addr) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     fs_addr = HADDR_UNDEF;
 
     /* Close the file and dxpl */
@@ -2197,8 +2197,8 @@ test_fs_sect_change_class(hid_t fapl)
 
     init_flags = H5FS_CLS_GHOST_OBJ;
     if(NULL == (frsp = H5FS_create(f, dxpl_id, &fs_addr,
-            &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
-        FAIL_STACK_ERROR
+	    &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
+	FAIL_STACK_ERROR
 
     if(!H5F_addr_defined(fs_addr))
         TEST_ERROR
@@ -2207,13 +2207,13 @@ test_fs_sect_change_class(hid_t fapl)
      * Add section A
      */
     if(NULL == (sect_node1 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node1, (haddr_t)TEST_SECT_ADDR60, (hsize_t)TEST_SECT_SIZE30, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     HDmemset(&state, 0, sizeof(frspace_state_t));
     state.tot_space += TEST_SECT_SIZE30;
@@ -2227,13 +2227,13 @@ test_fs_sect_change_class(hid_t fapl)
      * Add section B
      */
     if(NULL == (sect_node2 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node2, (haddr_t)TEST_SECT_ADDR100, (hsize_t)TEST_SECT_SIZE50, TEST_FSPACE_SECT_TYPE_NONE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node2,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     state.tot_space += TEST_SECT_SIZE50;
     state.tot_sect_count += 1;
@@ -2253,30 +2253,30 @@ test_fs_sect_change_class(hid_t fapl)
 
     if(H5FS_sect_find(f, dxpl_id, frsp,
             (hsize_t)TEST_SECT_SIZE30, (H5FS_section_info_t **)&node) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     if (node->sect_info.type != TEST_FSPACE_SECT_TYPE_NONE)
-        TEST_ERROR
+	TEST_ERROR
 
     if(TEST_sect_free((H5FS_section_info_t *)node) < 0)
-        TEST_ERROR
+	TEST_ERROR
 
     if(H5FS_sect_remove(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node2) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     /* Free the section node(s) */
     if(TEST_sect_free((H5FS_section_info_t *)sect_node2) < 0)
-        TEST_ERROR
+	TEST_ERROR
     sect_node2 = NULL;
 
     /* Close the free space manager */
     if(H5FS_close(f, dxpl_id, frsp) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     frsp = NULL;
 
     /* Delete free space manager */
     if(H5FS_delete(f, dxpl_id, fs_addr) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     fs_addr = HADDR_UNDEF;
 
     /* Close the file */
@@ -2303,8 +2303,8 @@ test_fs_sect_change_class(hid_t fapl)
 
     init_flags = H5FS_CLS_SEPAR_OBJ;
     if(NULL == (frsp = H5FS_create(f, dxpl_id, &fs_addr,
-            &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
-        FAIL_STACK_ERROR
+	    &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
+	FAIL_STACK_ERROR
 
     if(!H5F_addr_defined(fs_addr))
         TEST_ERROR
@@ -2313,25 +2313,25 @@ test_fs_sect_change_class(hid_t fapl)
      * Add section A
      */
     if(NULL == (sect_node1 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node1, (haddr_t)TEST_SECT_ADDR70, (hsize_t)TEST_SECT_SIZE30, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     /*
      * Add section B
      */
     if(NULL == (sect_node2 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node2, (haddr_t)TEST_SECT_ADDR100, (hsize_t)TEST_SECT_SIZE50, TEST_FSPACE_SECT_TYPE_NONE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node2,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     /*
      * Add section C
@@ -2342,63 +2342,63 @@ test_fs_sect_change_class(hid_t fapl)
     init_sect_node(sect_node3, (haddr_t)TEST_SECT_ADDR200, (hsize_t)TEST_SECT_SIZE80, TEST_FSPACE_SECT_TYPE_NONE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node3,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     /* change the class of B to A's class */
     if (H5FS_sect_change_class(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node2,
-            TEST_FSPACE_SECT_TYPE) < 0)
-        TEST_ERROR
+		    TEST_FSPACE_SECT_TYPE) < 0)
+	TEST_ERROR
 
     /* change the class of C to A's class */
     if (H5FS_sect_change_class(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node3,
-            TEST_FSPACE_SECT_TYPE) < 0)
-        TEST_ERROR
+		    TEST_FSPACE_SECT_TYPE) < 0)
+	TEST_ERROR
 
     /* the merge_list should be empty */
     if (frsp->sinfo->merge_list)
-        if (H5SL_count(frsp->sinfo->merge_list))
-            TEST_ERROR
+	if (H5SL_count(frsp->sinfo->merge_list))
+	    TEST_ERROR
 
     /* verify that section B has changed class */
     if(H5FS_sect_find(f, dxpl_id, frsp,
             (hsize_t)TEST_SECT_SIZE50, (H5FS_section_info_t **)&node) < 0)
-        FAIL_STACK_ERROR
-
-    if (node->sect_info.type != TEST_FSPACE_SECT_TYPE)
-        TEST_ERROR
-
-    if(TEST_sect_free((H5FS_section_info_t *)node) < 0)
-        TEST_ERROR
-
-    /* verify that section C has changed class */
-    if(H5FS_sect_find(f, dxpl_id, frsp,
-            (hsize_t)TEST_SECT_SIZE80, (H5FS_section_info_t **)&node) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     if (node->sect_info.type != TEST_FSPACE_SECT_TYPE)
 	TEST_ERROR
 
     if(TEST_sect_free((H5FS_section_info_t *)node) < 0)
-        TEST_ERROR
+	TEST_ERROR
+
+    /* verify that section C has changed class */
+    if(H5FS_sect_find(f, dxpl_id, frsp,
+            (hsize_t)TEST_SECT_SIZE80, (H5FS_section_info_t **)&node) < 0)
+	FAIL_STACK_ERROR
+
+    if (node->sect_info.type != TEST_FSPACE_SECT_TYPE)
+	TEST_ERROR
+
+    if(TEST_sect_free((H5FS_section_info_t *)node) < 0)
+	TEST_ERROR
 
     /* remove section A from free-space */
     if(H5FS_sect_remove(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     /* Free the section node(s) */
     if(TEST_sect_free((H5FS_section_info_t *)sect_node1) < 0)
-        TEST_ERROR
+	TEST_ERROR
     sect_node1 = NULL;
 
     /* Close the free space manager */
     if(H5FS_close(f, dxpl_id, frsp) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     frsp = NULL;
 
     /* Delete free space manager */
     if(H5FS_delete(f, dxpl_id, fs_addr) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     fs_addr = HADDR_UNDEF;
 
     /* Close the file and dxpl */
@@ -2497,8 +2497,8 @@ test_fs_sect_extend(hid_t fapl)
     nclasses = NELMTS(test_classes);
 
     if(NULL == (frsp = H5FS_create(f, dxpl_id, &fs_addr,
-            &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
-        FAIL_STACK_ERROR
+	    &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
+	FAIL_STACK_ERROR
 
     if(!H5F_addr_defined(fs_addr))
         TEST_ERROR
@@ -2507,13 +2507,13 @@ test_fs_sect_extend(hid_t fapl)
      * Add section A
      */
     if(NULL == (sect_node1 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node1, (haddr_t)TEST_SECT_ADDR70, (hsize_t)TEST_SECT_SIZE5, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     HDmemset(&state, 0, sizeof(frspace_state_t));
     state.tot_space += sect_node1->sect_info.size;
@@ -2527,13 +2527,13 @@ test_fs_sect_extend(hid_t fapl)
      * Add section B
      */
     if(NULL == (sect_node2 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node2, (haddr_t)TEST_SECT_ADDR100, (hsize_t)TEST_SECT_SIZE40, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node2,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     state.tot_space += sect_node2->sect_info.size;
     state.tot_sect_count += 1;
@@ -2544,7 +2544,7 @@ test_fs_sect_extend(hid_t fapl)
 
     /* Extend a block by requested-size */
     if((status = H5FS_sect_try_extend(f, dxpl_id, frsp, (haddr_t)TEST_SECT_SIZE80, (hsize_t)TEST_SECT_SIZE20, (hsize_t)TEST_SECT_SIZE40, 0, NULL)) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     if(FALSE == status)
         TEST_ERROR
 
@@ -2557,12 +2557,12 @@ test_fs_sect_extend(hid_t fapl)
 
     /* Close the free space manager */
     if(H5FS_close(f, dxpl_id, frsp) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     frsp = NULL;
 
     /* Delete free space manager */
     if(H5FS_delete(f, dxpl_id, fs_addr) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     fs_addr = HADDR_UNDEF;
 
     PASSED()
@@ -2573,8 +2573,8 @@ test_fs_sect_extend(hid_t fapl)
     TESTING("a block's extension by requested-size which is > adjoining free section's size: Test 2");
 
     if(NULL == (frsp = H5FS_create(f, dxpl_id, &fs_addr,
-            &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
-        FAIL_STACK_ERROR
+	    &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
+	FAIL_STACK_ERROR
 
     if(!H5F_addr_defined(fs_addr))
         TEST_ERROR
@@ -2583,13 +2583,13 @@ test_fs_sect_extend(hid_t fapl)
      * Add section A
      */
     if(NULL == (sect_node1 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node1, (haddr_t)TEST_SECT_ADDR70, (hsize_t)TEST_SECT_SIZE5, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     HDmemset(&state, 0, sizeof(frspace_state_t));
     state.tot_space += sect_node1->sect_info.size;
@@ -2603,13 +2603,13 @@ test_fs_sect_extend(hid_t fapl)
      * Add section B
      */
     if(NULL == (sect_node2 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node2, (haddr_t)TEST_SECT_ADDR100, (hsize_t)TEST_SECT_SIZE40, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node2,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     state.tot_space += sect_node2->sect_info.size;
     state.tot_sect_count += 1;
@@ -2620,7 +2620,7 @@ test_fs_sect_extend(hid_t fapl)
 
     /* Extend the block by requested-size */
     if((status = H5FS_sect_try_extend(f, dxpl_id, frsp, (haddr_t)TEST_SECT_ADDR80, (hsize_t)TEST_SECT_SIZE20, (hsize_t)TEST_SECT_SIZE50, 0, NULL)) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     if(TRUE == status)
         TEST_ERROR
 
@@ -2630,12 +2630,12 @@ test_fs_sect_extend(hid_t fapl)
 
     /* Close the free space manager */
     if(H5FS_close(f, dxpl_id, frsp) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     frsp = NULL;
 
     /* Delete free space manager */
     if(H5FS_delete(f, dxpl_id, fs_addr) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     fs_addr = HADDR_UNDEF;
 
     PASSED()
@@ -2646,8 +2646,8 @@ test_fs_sect_extend(hid_t fapl)
     TESTING("a block's extension by requested-size which is < adjoining free section's size: Test 3");
 
     if(NULL == (frsp = H5FS_create(f, dxpl_id, &fs_addr,
-            &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
-        FAIL_STACK_ERROR
+	    &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
+	FAIL_STACK_ERROR
 
     if(!H5F_addr_defined(fs_addr))
         TEST_ERROR
@@ -2656,13 +2656,13 @@ test_fs_sect_extend(hid_t fapl)
      * Add section A
      */
     if(NULL == (sect_node1 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node1, (haddr_t)TEST_SECT_ADDR70, (hsize_t)TEST_SECT_SIZE5, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     HDmemset(&state, 0, sizeof(frspace_state_t));
     state.tot_space += sect_node1->sect_info.size;
@@ -2676,13 +2676,13 @@ test_fs_sect_extend(hid_t fapl)
      * Add section B
      */
     if(NULL == (sect_node2 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node2, (haddr_t)TEST_SECT_ADDR100, (hsize_t)TEST_SECT_SIZE40, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node2,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     state.tot_space += sect_node2->sect_info.size;
     state.tot_sect_count += 1;
@@ -2693,7 +2693,7 @@ test_fs_sect_extend(hid_t fapl)
 
     /* Extend the block by requested-size */
     if((status = H5FS_sect_try_extend(f, dxpl_id, frsp, (haddr_t)TEST_SECT_ADDR80, (hsize_t)TEST_SECT_SIZE20, (hsize_t)TEST_SECT_SIZE30, 0, NULL)) < 0)
-        TEST_ERROR
+	TEST_ERROR
     if(FALSE == status)
         TEST_ERROR
 
@@ -2704,12 +2704,12 @@ test_fs_sect_extend(hid_t fapl)
 
     /* Close the free space manager */
     if(H5FS_close(f, dxpl_id, frsp) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     frsp = NULL;
 
     /* Delete free space manager */
     if(H5FS_delete(f, dxpl_id, fs_addr) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     fs_addr = HADDR_UNDEF;
 
     PASSED()
@@ -2720,8 +2720,8 @@ test_fs_sect_extend(hid_t fapl)
     TESTING("a block's extension by requested-size which does not adjoin any free section: Test 4");
 
     if(NULL == (frsp = H5FS_create(f, dxpl_id, &fs_addr,
-            &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
-        FAIL_STACK_ERROR
+	    &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
+	FAIL_STACK_ERROR
 
     if(!H5F_addr_defined(fs_addr))
         TEST_ERROR
@@ -2730,13 +2730,13 @@ test_fs_sect_extend(hid_t fapl)
      * Add section A
      */
     if(NULL == (sect_node1 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node1, (haddr_t)TEST_SECT_ADDR70, (hsize_t)TEST_SECT_SIZE5, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node1,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     HDmemset(&state, 0, sizeof(frspace_state_t));
     state.tot_space += sect_node1->sect_info.size;
@@ -2750,13 +2750,13 @@ test_fs_sect_extend(hid_t fapl)
      * Add section B
      */
     if(NULL == (sect_node2 = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
 
     init_sect_node(sect_node2, (haddr_t)TEST_SECT_ADDR100, (hsize_t)TEST_SECT_SIZE40, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
     if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node2,
-            H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-        FAIL_STACK_ERROR
+	    H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	FAIL_STACK_ERROR
 
     state.tot_space += sect_node2->sect_info.size;
     state.tot_sect_count += 1;
@@ -2767,7 +2767,7 @@ test_fs_sect_extend(hid_t fapl)
 
     /* Extend the block by requested-size */
     if((status = H5FS_sect_try_extend(f, dxpl_id, frsp, (haddr_t)TEST_SECT_ADDR80, (hsize_t)TEST_SECT_SIZE15, (hsize_t)TEST_SECT_SIZE40, 0, NULL)) < 0)
-        TEST_ERROR
+	TEST_ERROR
     if(TRUE == status)
         TEST_ERROR
 
@@ -2777,12 +2777,12 @@ test_fs_sect_extend(hid_t fapl)
 
     /* Close the free space manager */
     if(H5FS_close(f, dxpl_id, frsp) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     frsp = NULL;
 
     /* Delete free space manager */
     if(H5FS_delete(f, dxpl_id, fs_addr) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     fs_addr = HADDR_UNDEF;
 
     PASSED()
@@ -2857,43 +2857,43 @@ test_fs_sect_iterate(hid_t fapl)
         FAIL_STACK_ERROR
 
     init_flags = H5FS_CLS_SEPAR_OBJ;
-    if(NULL == (frsp = H5FS_create(f, dxpl_id, &fs_addr, &cparam, nclasses,
-            test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
-        FAIL_STACK_ERROR
+    if(NULL == (frsp = H5FS_create(f, dxpl_id, &fs_addr,
+	    &cparam, nclasses, test_classes, &init_flags, (hsize_t)FSPACE_THRHD_DEF, (hsize_t)FSPACE_ALIGN_DEF)))
+	FAIL_STACK_ERROR
 
     if(!H5F_addr_defined(fs_addr))
         TEST_ERROR
 
     for (i = 1; i <= NUM_SECTIONS; i++) {
-        if(NULL == (sect_node = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
-            FAIL_STACK_ERROR
+	if(NULL == (sect_node = (TEST_free_section_t *)HDmalloc(sizeof(TEST_free_section_t))))
+	    FAIL_STACK_ERROR
 
-        sect_size = (unsigned)((i-1) % 9) + 1;
-        init_sect_node(sect_node, (haddr_t)i*10, (hsize_t)sect_size, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
+	sect_size = (unsigned)((i-1) % 9) + 1;
+	init_sect_node(sect_node, (haddr_t)i*10, (hsize_t)sect_size, TEST_FSPACE_SECT_TYPE, H5FS_SECT_LIVE);
 
-        if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node,
-                H5FS_ADD_RETURNED_SPACE, NULL) < 0)
-            FAIL_STACK_ERROR
+	if(H5FS_sect_add(f, dxpl_id, frsp, (H5FS_section_info_t *)sect_node,
+		H5FS_ADD_RETURNED_SPACE, NULL) < 0)
+	    FAIL_STACK_ERROR
     } /* end for */
 
     if(H5FS_sect_iterate(f, dxpl_id, frsp, TEST_sects_cb, &udata) < 0)
-        TEST_ERROR
+	TEST_ERROR
 
     H5FS_sect_stats(frsp, &tot_space, &nsects);
 
     if (udata.tot_size != tot_space)
-        TEST_ERROR
+	TEST_ERROR
     if (udata.tot_sect_count != nsects)
-        TEST_ERROR
+	TEST_ERROR
 
     /* Close the free space manager */
     if(H5FS_close(f, dxpl_id, frsp) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     frsp = NULL;
 
     /* Delete free space manager */
     if(H5FS_delete(f, dxpl_id, fs_addr) < 0)
-        FAIL_STACK_ERROR
+	FAIL_STACK_ERROR
     fs_addr = HADDR_UNDEF;
 
     /* Close the file and dxpl */

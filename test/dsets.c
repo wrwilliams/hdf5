@@ -12826,12 +12826,10 @@ main(void)
         } /* end for new_format */
     } /* end for paged */
 
-    /* Close 2nd FAPL */
+    /* Close property lists */
     if(H5Pclose(fapl2) < 0) TEST_ERROR
-
     if(H5Pclose(fcpl) < 0) TEST_ERROR
     if(H5Pclose(fcpl2) < 0) TEST_ERROR
-
 
     /* Tests that do not use files */
     nerrors += (test_scatter() < 0                          ? 1 : 0);
@@ -12862,3 +12860,4 @@ error:
             nerrors, 1 == nerrors ? "" : "S");
     return 1;
 }
+

@@ -13599,7 +13599,6 @@ main(void)
     int     nerrors = 0;
     hid_t	fapl, fapl2;
     hid_t   fcpl_shared, ocpl;
-    hid_t	fcpl;
     unsigned    max_compact, min_dense;
     int     configuration;  /* Configuration of tests. */
     int	ExpressMode;
@@ -13620,8 +13619,7 @@ main(void)
     if(H5Pset_libver_bounds(fapl2, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0) TEST_ERROR
 
     /* Create an FCPL with sharing enabled */
-    if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0) TEST_ERROR
-    if((fcpl_shared = H5Pcopy(fcpl)) < 0) TEST_ERROR
+    if((fcpl_shared = H5Pcreate(H5P_FILE_CREATE)) < 0) TEST_ERROR
     if(H5Pset_shared_mesg_nindexes(fcpl_shared, 1) < 0) TEST_ERROR
     if(H5Pset_shared_mesg_index(fcpl_shared, 0, H5O_SHMESG_ALL_FLAG, 10) < 0) TEST_ERROR
 
@@ -13653,7 +13651,7 @@ main(void)
         }
         else {
             puts("\nTesting without shared src messages:");
-            fcpl_src = fcpl;
+            fcpl_src = H5P_DEFAULT;
         }
         if(configuration & CONFIG_SHARE_DST) {
             puts("Testing with shared dst messages:");
@@ -13662,7 +13660,7 @@ main(void)
         }
         else {
             puts("Testing without shared dst messages:");
-            fcpl_dst = fcpl;
+            fcpl_dst = H5P_DEFAULT;
         }
 
         /* Set the FAPL for the source file's type of format */

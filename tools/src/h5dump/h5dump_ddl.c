@@ -1279,11 +1279,11 @@ dump_fcpl(hid_t fid)
     } else
         PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "Unknown strategy");
     indentation(dump_indent + COL);
-    HDfprintf(rawoutstream, "%s %s\n","FREE_SPACE_PERSIST", fs_persist ? "TRUE" : "FALSE");
+    PRINTSTREAM(rawoutstream, "%s %s\n","FREE_SPACE_PERSIST", fs_persist ? "TRUE" : "FALSE");
     indentation(dump_indent + COL);
-    HDfprintf(rawoutstream, "%s %Hu\n","FREE_SPACE_SECTION_THRESHOLD", fs_threshold);
+    PRINTSTREAM(rawoutstream, "%s %Hu\n","FREE_SPACE_SECTION_THRESHOLD", fs_threshold);
     indentation(dump_indent + COL);
-    HDfprintf(rawoutstream, "%s %Hu\n","FILE_SPACE_PAGE_SIZE", fsp_size);
+    PRINTSTREAM(rawoutstream, "%s %Hu\n","FILE_SPACE_PAGE_SIZE", fsp_size);
 
     /*-------------------------------------------------------------------------
     * USER_BLOCK

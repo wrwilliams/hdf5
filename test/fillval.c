@@ -2371,15 +2371,6 @@ main(int argc, char *argv[])
     int	nerrors=0, argno, test_contig=1, test_chunk=1, test_compact=1;
     hid_t	fapl = (-1), fapl2 = (-1);    /* File access property lists */
     unsigned 	new_format;     	/* Whether to use the new format or not */
-    const char  *env_h5_drvr;	/* File Driver value from environment */
-    hbool_t contig_addr_vfd;
-
-    env_h5_drvr = HDgetenv("HDF5_DRIVER");
-    if(env_h5_drvr == NULL)
-        env_h5_drvr = "nomatch";
-
-    /* Current VFD that does not support contigous address space */
-    contig_addr_vfd = (hbool_t)(HDstrcmp(env_h5_drvr, "split") && HDstrcmp(env_h5_drvr, "multi"));
 
     if(argc >= 2) {
         test_contig = test_chunk = test_compact = 0;
@@ -2435,7 +2426,6 @@ main(int argc, char *argv[])
         /* Contiguous storage layout tests */
         if(test_contig) {
             nerrors += test_create(my_fapl, FILENAME[1], H5D_CONTIGUOUS);
-            nerrors += test_rdwr  (my_fapl, FILENAME[3], H5D_CONTIGUOUS);
             nerrors += test_rdwr  (my_fapl, FILENAME[3], H5D_CONTIGUOUS);
             nerrors += test_extend(my_fapl, FILENAME[5], H5D_CONTIGUOUS);
             nerrors += test_compatible();
