@@ -852,27 +852,10 @@ H5C_dest(H5F_t * f, hid_t dxpl_id)
     if(H5C_flush_invalidate_cache(f, dxpl_id, H5C__NO_FLAGS_SET) < 0 )
         HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
 
-    if(cache_ptr->close_warning_received && cache_ptr->image_ctl.generate_image) {
-	/* construct cache image */
-    if(H5C_construct_cache_image_buffer(f, cache_ptr) < 0)
-	    HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't create metadata cache image")
-
-	/* free image entries array */
-	if(H5C_free_image_entries_array(cache_ptr) < 0)
-	    HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't free image entries array")
-
-	/* write cache image block if so configured */
-	if(cache_ptr->image_ctl.flags & H5C_CI__GEN_MDC_IMAGE_BLK) {
-	    if(H5C__write_cache_image(f, dxpl_id, cache_ptr) < 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't write metadata cache image block to file")
-
-	    H5C__UPDATE_STATS_FOR_CACHE_IMAGE_CREATE(cache_ptr);
-	} /* end if */
-
-	/* free cache image buffer */
-        HDassert(cache_ptr->image_buffer);
-        cache_ptr->image_buffer = H5MM_xfree(cache_ptr->image_buffer);
-    } /* end if */
+    /* Generate & write cache image if requested */
+    if(cache_ptr->image_ctl.generate_image)
+        if(H5C__generate_cache_image(f, dxpl_id, cache_ptr) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTCREATE, FAIL, "Can't generate metadata cache image")
 
     if(cache_ptr->slist_ptr != NULL) {
         H5SL_close(cache_ptr->slist_ptr);
@@ -5703,8 +5686,8 @@ H5C_flush_invalidate_ring(H5F_t * f, hid_t dxpl_id, H5C_ring_t ring,
          */
 
         if(node_ptr == NULL) {
-            HDassert(cache_ptr->slist_len == (initial_slist_len + cache_ptr->slist_len_increase));
-            HDassert(cache_ptr->slist_size == (initial_slist_size + cache_ptr->slist_size_increase));
+            HDassert(cache_ptr->slist_len == (uint32_t)((int32_t)initial_slist_len + cache_ptr->slist_len_increase));
+            HDassert(cache_ptr->slist_size == (size_t)((ssize_t)initial_slist_size + cache_ptr->slist_size_increase));
         } /* end if */
 #endif /* H5C_DO_SANITY_CHECKS */
 
@@ -6111,8 +6094,8 @@ H5C_flush_ring(H5F_t *f, hid_t dxpl_id, H5C_ring_t ring,  unsigned flags)
 
 #if H5C_DO_SANITY_CHECKS
         /* Verify that the slist size and length are as expected. */
-        HDassert((initial_slist_len + cache_ptr->slist_len_increase) == cache_ptr->slist_len);
-        HDassert((initial_slist_size + cache_ptr->slist_size_increase) == cache_ptr->slist_size);
+        HDassert((uint32_t)((int32_t)initial_slist_len + cache_ptr->slist_len_increase) == cache_ptr->slist_len);
+        HDassert((size_t)((ssize_t)initial_slist_size + cache_ptr->slist_size_increase) == cache_ptr->slist_size);
 #endif /* H5C_DO_SANITY_CHECKS */
     } /* while */
 

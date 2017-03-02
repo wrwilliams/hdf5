@@ -696,7 +696,7 @@ H5C_stats(H5C_t * cache_ptr,
               (double)average_entries_skipped_per_calls_to_msic,
               (long)(cache_ptr->max_entries_skipped_in_msic));
 
-    if (cache_ptr->calls_to_msic > 0)
+    if(cache_ptr->calls_to_msic > 0)
         average_dirty_pf_entries_skipped_per_call_to_msic =
             (((double)(cache_ptr->total_dirty_pf_entries_skipped_in_msic)) /
             ((double)(cache_ptr->calls_to_msic)));
