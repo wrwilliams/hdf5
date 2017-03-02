@@ -1334,7 +1334,6 @@ H5C__prep_image_for_file_close(H5F_t *f, hid_t dxpl_id, hbool_t *image_generated
     /* Sanity checks */
     HDassert(f);
     HDassert(f->shared);
-    HDassert(f->shared->sblock);
     HDassert(f->shared->cache);
     cache_ptr = f->shared->cache;
     HDassert(cache_ptr);
@@ -1360,8 +1359,13 @@ H5C__prep_image_for_file_close(H5F_t *f, hid_t dxpl_id, hbool_t *image_generated
      * Ideally, we would do this when the cache image is requested,
      * but the necessary information is not necessary available at that 
      * time -- hence this last minute check.
+     *
+     * Note that under some error conditions, the superblock will be 
+     * undefined in this case as well -- if so, assume that the 
+     * superblock does not support superblock extension messages.
      */
-    if ( f->shared->sblock->super_vers < HDF5_SUPERBLOCK_VERSION_2 ) {
+    if ( ( NULL == f->shared->sblock ) ||
+         ( f->shared->sblock->super_vers < HDF5_SUPERBLOCK_VERSION_2 ) ) {
 
         H5C_cache_image_ctl_t default_image_ctl = H5C__DEFAULT_CACHE_IMAGE_CTL;
 
