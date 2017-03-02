@@ -2292,7 +2292,6 @@ H5_DLL void * H5C_protect(H5F_t *f, hid_t dxpl_id, const H5C_class_t *type,
     haddr_t addr, void *udata, unsigned flags);
 H5_DLL herr_t H5C_reset_cache_hit_rate_stats(H5C_t *cache_ptr);
 H5_DLL herr_t H5C_resize_entry(void *thing, size_t new_size);
-H5_DLL herr_t H5C_serialize_cache(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5C_set_cache_auto_resize_config(H5C_t *cache_ptr, H5C_auto_size_ctl_t *config_ptr);
 H5_DLL herr_t H5C_set_cache_image_config(const H5F_t *f, H5C_t *cache_ptr,
     H5C_cache_image_ctl_t *config_ptr);
@@ -2330,12 +2329,12 @@ H5_DLL herr_t H5C_apply_candidate_list(H5F_t *f, hid_t dxpl_id,
 H5_DLL herr_t H5C_construct_candidate_list__clean_cache(H5C_t *cache_ptr);
 H5_DLL herr_t H5C_construct_candidate_list__min_clean(H5C_t *cache_ptr);
 H5_DLL herr_t H5C_clear_coll_entries(H5C_t * cache_ptr, hbool_t partial);
-H5_DLL herr_t H5C_mark_entries_as_clean(H5F_t *f, hid_t dxpl_id, int32_t ce_array_len,
+H5_DLL herr_t H5C_mark_entries_as_clean(H5F_t *f, hid_t dxpl_id, unsigned ce_array_len,
     haddr_t *ce_array_ptr);
 #endif /* H5_HAVE_PARALLEL */
 
 #ifndef NDEBUG	/* debugging functions */
-H5_DLL hbool_t H5C_get_serialization_in_progress(H5F_t * f);
+H5_DLL hbool_t H5C_get_serialization_in_progress(const H5C_t *cache_ptr);
 H5_DLL hbool_t H5C_cache_is_clean(const H5C_t *cache_ptr, H5C_ring_t inner_ring);
 H5_DLL herr_t H5C_dump_cache_skip_list(H5C_t *cache_ptr, char *calling_fcn);
 H5_DLL herr_t H5C_get_entry_ptr_from_addr(H5C_t *cache_ptr, haddr_t addr,

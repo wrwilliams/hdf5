@@ -3483,7 +3483,6 @@ takedown_cache(H5F_t * file_ptr,
     }
 
     if ( saved_fcpl_id != H5P_DEFAULT ) {
-
         H5Pclose(saved_fcpl_id);
 	saved_fcpl_id = H5P_DEFAULT;
     }

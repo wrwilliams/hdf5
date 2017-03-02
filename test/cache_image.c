@@ -6312,10 +6312,6 @@ cache_image_api_error_check_3(void)
 
     TESTING("metadata cache image api error check 3");
 
-    /* skip this test until the supporting code makes it in from develop */
-    SKIPPED();
-    return(0);
-
     pass = TRUE;
 
     if ( show_progress ) 

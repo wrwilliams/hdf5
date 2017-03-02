@@ -20,9 +20,6 @@
  *		with the cache implemented in H5C.c
  */
 
-#include "h5test.h"
-#include "H5Iprivate.h"
-#include "H5ACprivate.h"
 #include "cache_common.h"
 
 /* extern declarations */
@@ -116,11 +113,10 @@ check_fapl_mdc_api_calls(unsigned paged, hid_t fcpl_id)
     H5C_auto_size_ctl_t default_auto_size_ctl;
     H5C_auto_size_ctl_t mod_auto_size_ctl;
 
-    if(paged)  {
-        TESTING("MDC/FAPL related API calls for paged aggregation strategy");
-    } else {
-        TESTING("MDC/FAPL related API calls");
-    }
+    if(paged)
+        TESTING("MDC/FAPL related API calls for paged aggregation strategy")
+    else
+        TESTING("MDC/FAPL related API calls")
 
     pass = TRUE;
 
@@ -676,11 +672,10 @@ check_file_mdc_api_calls(unsigned paged, hid_t fcpl_id)
 				      H5AC__DEFAULT_METADATA_WRITE_STRATEGY
     };
 
-    if(paged) {
-        TESTING("MDC/FILE related API calls for paged aggregation strategy");
-    } else {
-        TESTING("MDC/FILE related API calls");
-    }
+    if(paged)
+        TESTING("MDC/FILE related API calls for paged aggregation strategy")
+    else
+        TESTING("MDC/FILE related API calls")
 
     pass = TRUE;
 
@@ -1014,11 +1009,10 @@ mdc_api_call_smoke_check(int express_test, unsigned paged, hid_t fcpl_id)
 				      H5AC__DEFAULT_METADATA_WRITE_STRATEGY
     };
 
-    if(paged) {
-        TESTING("MDC API smoke check for paged aggregation strategy");
-    } else {
-        TESTING("MDC API smoke check");
-    }
+    if(paged)
+        TESTING("MDC API smoke check for paged aggregation strategy")
+    else
+        TESTING("MDC API smoke check")
 
     pass = TRUE;
 
@@ -1952,11 +1946,10 @@ check_file_mdc_api_errs(unsigned paged, hid_t fcpl_id)
     H5AC_cache_config_t default_config = H5AC__DEFAULT_CACHE_CONFIG;
     H5AC_cache_config_t scratch;
 
-    if(paged) {
-        TESTING("MDC/FILE related API input errors for paged aggregation strategy");
-    } else {
-        TESTING("MDC/FILE related API input errors");
-    }
+    if(paged)
+        TESTING("MDC/FILE related API input errors for paged aggregation strategy")
+    else
+        TESTING("MDC/FILE related API input errors")
 
     pass = TRUE;
 
@@ -2354,7 +2347,7 @@ main(void)
     if(!check_fapl_mdc_api_errs())
         nerrs += 1;
 
-    if(invalid_configs )
+    if(invalid_configs)
         HDfree(invalid_configs);
 
     if(H5Pclose(fcpl_id) < 0 ) {

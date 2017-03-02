@@ -2066,11 +2066,10 @@ test_reopen(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tparam)
     if((file_size = h5_get_file_size(filename, fapl)) < 0)
         TEST_ERROR
 
-    if(!page || (page && !tparam->reopen_heap)) {
-        /* Verify the file is correct size */
+    /* Verify the file is correct size */
+    if(!page || (page && !tparam->reopen_heap))
         if(file_size != empty_size)
             TEST_ERROR
-    }
 
     /* All tests passed */
     PASSED()
@@ -2240,11 +2239,10 @@ test_open_twice(hid_t fapl, H5HF_create_t *cparam, fheap_test_param_t *tparam)
     if((file_size = h5_get_file_size(filename, fapl)) < 0)
         TEST_ERROR
 
-    if(!page || (page && !tparam->reopen_heap)) {
-        /* Verify the file is correct size */
+    /* Verify the file is correct size */
+    if(!page || (page && !tparam->reopen_heap))
         if(file_size != empty_size)
             TEST_ERROR
-    }
 
     /* All tests passed */
     PASSED()
@@ -16383,7 +16381,7 @@ main(void)
     fapl = h5_fileaccess();
     ExpressMode = GetTestExpress();
     if(ExpressMode > 1)
-        printf("***Express test mode on.  Some tests may be skipped\n");
+	printf("***Express test mode on.  Some tests may be skipped\n");
 
     /* Initialize heap creation parameters */
     init_small_cparam(&small_cparam);
@@ -16409,14 +16407,7 @@ main(void)
         shared_wobj_g[u] = (unsigned char)u;
 
     /* Iterate over the testing parameters */
-#ifndef QAK
     for(curr_test = FHEAP_TEST_NORMAL; curr_test < FHEAP_TEST_NTESTS; H5_INC_ENUM(fheap_test_type_t, curr_test)) {
-
-#else /* QAK */
-HDfprintf(stderr, "Uncomment test loop!\n");
-curr_test = FHEAP_TEST_NORMAL;
-/* curr_test = FHEAP_TEST_REOPEN; */
-#endif /* QAK */
         /* Clear the testing parameters */
         HDmemset(&tparam, 0, sizeof(fheap_test_param_t));
         tparam.actual_id_len = HEAP_ID_LEN;
@@ -16444,7 +16435,6 @@ curr_test = FHEAP_TEST_NORMAL;
         } /* end switch */
 
         /* Test fractal heap creation */
-#ifndef QAK
         nerrors += test_create(fapl, &small_cparam, &tparam);
         nerrors += test_reopen(fapl, &small_cparam, &tparam);
         nerrors += test_open_twice(fapl, &small_cparam, &tparam);
@@ -16454,23 +16444,12 @@ curr_test = FHEAP_TEST_NORMAL;
         nerrors += test_filtered_create(fapl, &small_cparam, tparam.my_fcpl);
         nerrors += test_size(fapl, &small_cparam, tparam.my_fcpl);
         nerrors += test_reopen_hdr(fapl, &small_cparam, tparam.my_fcpl);
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
 
-#ifndef QAK2
-#ifndef QAK
         {
         fheap_test_fill_t fill;        /* Size of objects to fill heap blocks with */
 
-#ifndef QAK2
         /* Filling with different sized objects */
         for(fill = FHEAP_TEST_FILL_LARGE; fill < FHEAP_TEST_FILL_N; H5_INC_ENUM(fheap_test_fill_t, fill)) {
-#else /* QAK2 */
-HDfprintf(stderr, "Uncomment test loop!\n");
-fill = FHEAP_TEST_FILL_LARGE;
-/* fill = FHEAP_TEST_FILL_SINGLE; */
-#endif /* QAK2 */
             tparam.fill = fill;
 
             /* Set appropriate testing parameters for each test */
@@ -16495,12 +16474,8 @@ fill = FHEAP_TEST_FILL_LARGE;
              * Test fractal heap managed object insertion
              */
 
-#ifndef QAK
             /* "Weird" sized objects */
             nerrors += test_man_insert_weird(fapl, &small_cparam, &tparam);
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
 
 #ifdef ALL_INSERT_TESTS
             /* "Standard" sized objects, building from simple to complex heaps */
@@ -16536,20 +16511,15 @@ HDfprintf(stderr, "Uncomment tests!\n");
             /* If this test fails, uncomment the tests above, which build up to this
              * level of complexity gradually. -QAK
              */
-#ifndef QAK
             if(ExpressMode > 1)
                 printf("***Express test mode on.  test_man_start_5th_recursive_indirect is skipped\n");
             else
                 nerrors += test_man_start_5th_recursive_indirect(fapl, &small_cparam, &tparam);
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
 
             /*
              * Test fractal heap object deletion
              */
             /* Simple removal */
-#ifndef QAK
             nerrors += test_man_remove_bogus(fapl, &small_cparam, &tparam);
             nerrors += test_man_remove_one(fapl, &small_cparam, &tparam);
             nerrors += test_man_remove_two(fapl, &small_cparam, &tparam);
@@ -16566,12 +16536,7 @@ HDfprintf(stderr, "Uncomment tests!\n");
             /* Incremental insert & removal */
             tparam.del_dir = FHEAP_DEL_FORWARD;
             nerrors += test_man_incr_insert_remove(fapl, &small_cparam, &tparam);
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
 
-#ifndef QAK
-#ifndef QAK2
             {
             fheap_test_del_dir_t del_dir;        /* Deletion direction */
             fheap_test_del_drain_t drain_half;   /* Deletion draining */
@@ -16581,19 +16546,10 @@ HDfprintf(stderr, "Uncomment tests!\n");
                 tparam.del_dir = del_dir;
                 for(drain_half = FHEAP_DEL_DRAIN_ALL; drain_half < FHEAP_DEL_DRAIN_N; H5_INC_ENUM(fheap_test_del_drain_t, drain_half)) {
                     tparam.drain_half = drain_half;
-#else /* QAK2 */
-HDfprintf(stderr, "Uncomment test loops!\n");
-/* tparam.del_dir = FHEAP_DEL_FORWARD; */
-/* tparam.del_dir = FHEAP_DEL_REVERSE; */
-tparam.del_dir = FHEAP_DEL_HEAP;
-tparam.drain_half = FHEAP_DEL_DRAIN_ALL;
-/* tparam.drain_half = FHEAP_DEL_DRAIN_HALF; */
-#endif /* QAK2 */
                     /* Don't need to test deletion directions when deleting entire heap */
                     if(tparam.del_dir == FHEAP_DEL_HEAP && tparam.drain_half > FHEAP_DEL_DRAIN_ALL)
                         break;
 
-#ifndef QAK
                     /* Simple insertion patterns */
                     nerrors += test_man_remove_root_direct(fapl, &small_cparam, &tparam);
                     nerrors += test_man_remove_two_direct(fapl, &small_cparam, &tparam);
@@ -16607,11 +16563,7 @@ tparam.drain_half = FHEAP_DEL_DRAIN_ALL;
                         nerrors += test_man_remove_2nd_indirect(fapl, &small_cparam, &tparam);
                         nerrors += test_man_remove_3rd_indirect(fapl, &small_cparam, &tparam);
                     } /* end else */
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
 
-#ifndef QAK
                     /* Skip blocks insertion */
                     /* (covers insertion & deletion of skipped blocks) */
                     nerrors += test_man_skip_start_block(fapl, &small_cparam, &tparam);
@@ -16643,21 +16595,13 @@ HDfprintf(stderr, "Uncomment tests!\n");
                         nerrors += test_man_fill_3rd_direct_fill_2nd_direct_fill_direct_skip_3rd_indirect_wrap_start_block_add_skipped(fapl, &small_cparam, &tparam);
                         nerrors += test_man_fill_4th_direct_less_one_fill_2nd_direct_fill_direct_skip_3rd_indirect_wrap_start_block_add_skipped(fapl, &small_cparam, &tparam);
                     } /* end else */
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
 
-#ifndef QAK
                     /* Fragmented insertion patterns */
                     /* (covers insertion & deletion of fragmented blocks) */
                     nerrors += test_man_frag_simple(fapl, &small_cparam, &tparam);
                     nerrors += test_man_frag_direct(fapl, &small_cparam, &tparam);
                     nerrors += test_man_frag_2nd_direct(fapl, &small_cparam, &tparam);
                     nerrors += test_man_frag_3rd_direct(fapl, &small_cparam, &tparam);
-#else /* QAK */
-    HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
-#ifndef QAK2
                 } /* end for */
             } /* end for */
 
@@ -16665,22 +16609,12 @@ HDfprintf(stderr, "Uncomment tests!\n");
             tparam.drain_half = FHEAP_DEL_DRAIN_ALL;
 
             } /* end block */
-#endif /* QAK2 */
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
-#ifndef QAK2
             } /* end for */
-#endif /* QAK2 */
         } /* end block */
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
 
         /*
          * Test fractal heap 'huge' & 'tiny' object insertion & deletion
          */
-#ifndef QAK
         {
         fheap_test_del_dir_t del_dir;   /* Deletion direction */
         unsigned id_len;                /* Length of heap IDs */
@@ -16722,24 +16656,16 @@ HDfprintf(stderr, "Uncomment tests!\n");
                 tparam.del_dir = del_dir;
 
                 /* Test 'huge' object insert & delete */
-#ifndef QAK
                 nerrors += test_huge_insert_one(fapl, &small_cparam, &tparam);
                 nerrors += test_huge_insert_two(fapl, &small_cparam, &tparam);
                 nerrors += test_huge_insert_three(fapl, &small_cparam, &tparam);
                 nerrors += test_huge_insert_mix(fapl, &small_cparam, &tparam);
                 nerrors += test_filtered_huge(fapl, &small_cparam, &tparam);
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
 
-#ifndef QAK
                 /* Test 'tiny' object insert & delete */
                 nerrors += test_tiny_insert_one(fapl, &small_cparam, &tparam);
                 nerrors += test_tiny_insert_two(fapl, &small_cparam, &tparam);
                 nerrors += test_tiny_insert_mix(fapl, &small_cparam, &tparam);
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
             } /* end for */
         } /* end for */
 
@@ -16747,16 +16673,9 @@ HDfprintf(stderr, "Uncomment tests!\n");
         small_cparam.id_len = 0;
         tparam.actual_id_len = HEAP_ID_LEN;
         } /* end block */
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
-#else /* QAK2 */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK2 */
 
         /* Test I/O filter support */
 
-#ifndef QAK
         /* Try several different methods of deleting objects */
         {
         fheap_test_del_dir_t del_dir;   /* Deletion direction */
@@ -16778,16 +16697,11 @@ HDfprintf(stderr, "Uncomment tests!\n");
             tparam.comp = FHEAP_TEST_NO_COMPRESS;
         } /* end for */
         } /* end block */
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
 
-#ifndef QAK
         /* Random object insertion & deletion */
         if(ExpressMode > 1)
             printf("***Express test mode on.  Some tests skipped\n");
         else {
-#ifndef QAK
             /* Random tests using "small" heap creation parameters */
             puts("Using 'small' heap creation parameters");
 
@@ -16800,11 +16714,7 @@ HDfprintf(stderr, "Uncomment tests!\n");
             tparam.del_dir = FHEAP_DEL_HEAP;
             nerrors += test_random((curr_test == FHEAP_TEST_NORMAL ? (hsize_t)(100*1000*1000) : (hsize_t)(50*1000*1000)), fapl, &small_cparam, &tparam);
             nerrors += test_random_pow2((curr_test == FHEAP_TEST_NORMAL ? (hsize_t)(100*1000*1000) : (hsize_t)(4*1000*1000)), fapl, &small_cparam, &tparam);
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
 
-#ifndef QAK
             /* Random tests using "large" heap creation parameters */
             puts("Using 'large' heap creation parameters");
             tparam.actual_id_len = LARGE_HEAP_ID_LEN;
@@ -16818,18 +16728,11 @@ HDfprintf(stderr, "Uncomment tests!\n");
             tparam.del_dir = FHEAP_DEL_HEAP;
             nerrors += test_random((curr_test == FHEAP_TEST_NORMAL ? (hsize_t)(100*1000*1000) : (hsize_t)(50*1000*1000)), fapl, &large_cparam, &tparam);
             nerrors += test_random_pow2((curr_test == FHEAP_TEST_NORMAL ? (hsize_t)(100*1000*1000) : (hsize_t)(4*1000*1000)), fapl, &large_cparam, &tparam);
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
 
             /* Reset the "normal" heap ID length */
             tparam.actual_id_len = SMALL_HEAP_ID_LEN;
         } /* end else */
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
 
-#ifndef QAK
         /* Test object writing support */
 
         /* Basic object writing */
@@ -16841,19 +16744,10 @@ HDfprintf(stderr, "Uncomment tests!\n");
 
         /* Reset block compression */
         tparam.comp = FHEAP_TEST_NO_COMPRESS;
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
-#ifndef QAK
     } /* end for */
-#endif /* QAK */
 
     /* Tests that address specific bugs */
-#ifndef QAK
     nerrors += test_bug1(fapl, &small_cparam, &tparam);
-#else /* QAK */
-HDfprintf(stderr, "Uncomment tests!\n");
-#endif /* QAK */
 
     /* Verify symbol table messages are cached */
     nerrors += (h5_verify_cached_stabs(FILENAME, fapl) < 0 ? 1 : 0);

@@ -276,7 +276,7 @@ H5C_dump_cache_skip_list(H5C_t * cache_ptr, char * calling_fcn)
     H5C_cache_entry_t * entry_ptr = NULL;
     H5SL_node_t *       node_ptr = NULL;
 
-    FUNC_ENTER_STATIC_NOERR
+    FUNC_ENTER_NOAPI_NOERR
 
     HDassert(cache_ptr != NULL);
     HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
@@ -696,7 +696,7 @@ H5C_stats(H5C_t * cache_ptr,
               (double)average_entries_skipped_per_calls_to_msic,
               (long)(cache_ptr->max_entries_skipped_in_msic));
 
-    if (cache_ptr->calls_to_msic > 0)
+    if(cache_ptr->calls_to_msic > 0)
         average_dirty_pf_entries_skipped_per_call_to_msic =
             (((double)(cache_ptr->total_dirty_pf_entries_skipped_in_msic)) /
             ((double)(cache_ptr->calls_to_msic)));
@@ -738,7 +738,7 @@ H5C_stats(H5C_t * cache_ptr,
               cache_ptr->prefix,
               cache_ptr->images_created,
               cache_ptr->images_loaded,
-              (long long)cache_ptr->last_image_size);
+              cache_ptr->last_image_size);
 
     HDfprintf(stdout,
 	      "%s  prefetches / dirty prefetches      = %lld / %lld\n",
@@ -990,7 +990,7 @@ H5C_stats__reset(H5C_t H5_ATTR_UNUSED * cache_ptr)
 
     cache_ptr->images_created           = 0;
     cache_ptr->images_loaded            = 0;
-    cache_ptr->last_image_size          = (size_t)0;
+    cache_ptr->last_image_size          = (hsize_t)0;
 
     cache_ptr->prefetches               = 0;
     cache_ptr->dirty_prefetches			= 0;
@@ -1345,6 +1345,34 @@ H5C_get_entry_ptr_from_addr(H5C_t *cache_ptr, haddr_t addr, void **entry_ptr_ptr
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5C_get_entry_ptr_from_addr() */
+#endif /* NDEBUG */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5C_get_serialization_in_progress
+ *
+ * Purpose:     Return the current value of 
+ *              cache_ptr->serialization_in_progress.
+ *
+ * Return:      Current value of cache_ptr->serialization_in_progress.
+ *
+ * Programmer:  John Mainzer
+ *		8/24/15
+ *
+ *-------------------------------------------------------------------------
+ */
+#ifndef NDEBUG
+hbool_t
+H5C_get_serialization_in_progress(const H5C_t *cache_ptr)
+{
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    /* Sanity check */
+    HDassert(cache_ptr);
+    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+
+    FUNC_LEAVE_NOAPI(cache_ptr->serialization_in_progress)
+} /* H5C_get_serialization_in_progress() */
 #endif /* NDEBUG */
 
 

@@ -670,7 +670,7 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
 
             /* Get message flags */
             if(H5O_msg_get_flags(&ext_loc, H5O_FSINFO_ID, dxpl_id, &flags) < 0)
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to message flags for free-space manager info message")
+                HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to message flags for free-space manager info message")
 
             /* If message is NOT marked "unknown"--set up file space info  */
             if(!(flags & H5O_MSG_FLAG_WAS_UNKNOWN)) {
@@ -747,12 +747,10 @@ H5F__super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read)
 #endif /* JRM */
 
                     if(H5F_super_ext_remove_msg(f, dxpl_id, H5O_FSINFO_ID) < 0)
-                        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, \
-                                    "error in removing message from superblock extension")
+                        HGOTO_ERROR(H5E_FILE, H5E_CANTDELETE, FAIL,  "error in removing message from superblock extension")
 
                     if(H5F_super_ext_write_msg(f, dxpl_id, H5O_FSINFO_ID, &fsinfo, TRUE, H5O_MSG_FLAG_MARK_IF_UNKNOWN) < 0)
-                        HGOTO_ERROR(H5E_RESOURCE, H5E_WRITEERROR, FAIL, \
-                                    "error in writing fsinfo message to superblock extension")
+                        HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "error in writing fsinfo message to superblock extension")
 #if 1 /* bug fix test code -- tidy this up if all goes well */ /* JRM */
                     f->shared->sblock = NULL;
 #endif /* JRM */
