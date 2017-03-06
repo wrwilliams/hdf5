@@ -268,6 +268,7 @@ H5_DLL herr_t H5Fformat_convert(hid_t fid);
 H5_DLL herr_t H5Freset_page_buffering_stats(hid_t file_id);
 H5_DLL herr_t H5Fget_page_buffering_stats(hid_t file_id, int accesses[2], int hits[2], 
                                           int misses[2], int evictions[2], int bypasses[2]);
+H5_DLL herr_t H5Fget_mdc_image_info(hid_t file_id, haddr_t *image_addr, hsize_t *image_size);
 
 #ifdef H5_HAVE_PARALLEL
 H5_DLL herr_t H5Fset_mpi_atomicity(hid_t file_id, hbool_t flag);

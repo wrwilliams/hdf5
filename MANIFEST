@@ -1466,6 +1466,10 @@
 ./tools/test/misc/testh5mkgrp.sh.in
 ./tools/test/misc/testh5repart.sh.in
 ./tools/test/misc/talign.c
+./tools/test/misc/testfiles/h5clear_missing_file.ddl
+./tools/test/misc/testfiles/h5clear_no_mdc_image.ddl
+./tools/test/misc/testfiles/h5clear_open_fail.ddl
+./tools/test/misc/testfiles/h5clear_usage.ddl
 ./tools/test/misc/testfiles/h5mkgrp_help.txt
 ./tools/test/misc/testfiles/h5mkgrp_version.txt.in
 ./tools/test/misc/h5perf_gentest.c
