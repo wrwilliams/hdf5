@@ -3141,7 +3141,9 @@
 ./tools/test/h5stat/CMakeTests.cmake
 ./tools/src/misc/CMakeLists.txt
 ./tools/test/misc/CMakeLists.txt
-./tools/test/misc/CMakeTests.cmake
+./tools/test/misc/CMakeTestsClear.cmake
+./tools/test/misc/CMakeTestsMkgrp.cmake
+./tools/test/misc/CMakeTestsRepart.cmake
 ./tools/test/misc/vds/CMakeLists.txt
 ./tools/test/perform/CMakeLists.txt
 ./tools/test/perform/CMakeTests.cmake
