@@ -1066,9 +1066,9 @@ typedef int H5C_ring_t;
  *
  * is_read_only: Boolean flag that is only meaningful if is_protected is
  * 		TRUE.  In this circumstance, it indicates whether the
- * 		entry has been protected read only, or read/write.
+ * 		entry has been protected read-only, or read/write.
  *
- * 		If the entry has been protected read only (i.e. is_protected
+ * 		If the entry has been protected read-only (i.e. is_protected
  * 		and is_read_only are both TRUE), we allow the entry to be
  * 		protected more than once.
  *
@@ -1078,7 +1078,7 @@ typedef int H5C_ring_t;
  *		the entry is actually unprotected.
  *
  * ro_ref_count: Integer field used to maintain a count of the number of
- * 		outstanding read only protects on this entry.  This field
+ * 		outstanding read-only protects on this entry.  This field
  * 		must be zero whenever either is_protected or is_read_only
  * 		are TRUE.
  *
@@ -1458,13 +1458,13 @@ typedef int H5C_ring_t;
  *		the load of a cache image block, although other scenarios 
  *		are contemplated for the use of this feature.  Note that 
  *		unlike the usual prefetch situation, this means that a 
- *		pre fetched entry can be dirty, and/or can be a party to 
+ *		prefetched entry can be dirty, and/or can be a party to 
  *		flush dependency relationship(s).  This complicates matters 
  *		somewhat.
  *
- *		The essential feature of a pre-fetched entry is that it 
+ *		The essential feature of a prefetched entry is that it 
  *		consists only of a buffer containing the on disk image of 
- *		the entry.  Thus it must be  deserialized before it can 
+ *		the entry.  Thus it must be deserialized before it can 
  *		be passed back to the library on a protect call.  This 
  *		task is handled by H5C_deserialized_prefetched_entry().
  *		In essence, this routine calls the deserialize callback 
@@ -1475,7 +1475,7 @@ typedef int H5C_ring_t;
  *
  *		Further, if the prefetched entry is a flush dependency parent, 
  *		all its flush dependency children (which must also be 
- *		pre-fetched entries), must be tranfered to the new cache 
+ *		prefetched entries), must be tranfered to the new cache 
  *		entry returned by the deserailization callback.
  *
  *		Finally, if the prefetched entry is a flush dependency child, 
@@ -1526,9 +1526,9 @@ typedef int H5C_ring_t;
  *
  *              If the cache image contains a dirty entry, that entry
  *              must be marked clean when it is inserted into the cache
- *              in the read only case, as otherwise the metadata cache 
+ *              in the read-only case, as otherwise the metadata cache 
  *              will attempt to flush it on file close -- which is poor 
- *              form in the read only case.
+ *              form in the read-only case.
  *
  *              However, since the entry is marked clean, it is possible 
  *              that the metadata cache will evict it if the size of the 
@@ -1546,7 +1546,7 @@ typedef int H5C_ring_t;
  *              selection code to skip over the entry, thus avoiding the 
  *              issue.
  *
- *              Since the issue only arrises in the R/O case, there is 
+ *              Since the issue only arises in the R/O case, there is 
  *              no possible interaction with SWMR.  There are also 
  *              potential interactions with Evict On Close -- at present,
  *              we deal with this by disabling EOC in the R/O case.
