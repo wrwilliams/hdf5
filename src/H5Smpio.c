@@ -180,6 +180,7 @@ H5S_mpio_create_point_datatype (size_t elmt_size, hsize_t num_points,
     hbool_t        elmt_type_created = FALSE;   /* Whether the element MPI datatype was created */
     int            mpi_code;            /* MPI error code */
     int            *blocks = NULL;      /* Array of block sizes for MPI hindexed create call */
+    hsize_t        u;                   /* Local index variable */
     herr_t        ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
