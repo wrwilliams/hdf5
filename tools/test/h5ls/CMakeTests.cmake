@@ -32,6 +32,7 @@
       ${HDF5_TOOLS_DIR}/testfiles/tudfilter.h5
       ${HDF5_TOOLS_DIR}/testfiles/tudlink.h5
       ${HDF5_TOOLS_DIR}/testfiles/tvldtypes1.h5
+      ${HDF5_TOOLS_DIR}/testfiles/tdset_idx.h5
   )
 
   set (LIST_OTHER_TEST_FILES
@@ -92,6 +93,7 @@
       ${HDF5_TOOLS_DIR}/testfiles/tvldtypes1.ls
       ${HDF5_TOOLS_DIR}/testfiles/tvldtypes2le.ls
       ${HDF5_TOOLS_DIR}/testfiles/tvldtypes2be.ls
+      ${HDF5_TOOLS_DIR}/testfiles/tdset_idx.ls
   )
 
   file (MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles")
