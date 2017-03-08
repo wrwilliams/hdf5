@@ -1470,6 +1470,10 @@
 ./tools/test/misc/testfiles/h5clear_no_mdc_image.ddl
 ./tools/test/misc/testfiles/h5clear_open_fail.ddl
 ./tools/test/misc/testfiles/h5clear_usage.ddl
+./tools/test/misc/testfiles/mod_h5clear_mdc_image.h5
+./tools/test/misc/testfiles/orig_h5clear_sec2_v0.h5
+./tools/test/misc/testfiles/orig_h5clear_sec2_v2.h5
+./tools/test/misc/testfiles/orig_h5clear_sec2_v3.h5
 ./tools/test/misc/testfiles/h5mkgrp_help.txt
 ./tools/test/misc/testfiles/h5mkgrp_version.txt.in
 ./tools/test/misc/h5perf_gentest.c
@@ -3141,7 +3145,9 @@
 ./tools/test/h5stat/CMakeTests.cmake
 ./tools/src/misc/CMakeLists.txt
 ./tools/test/misc/CMakeLists.txt
-./tools/test/misc/CMakeTests.cmake
+./tools/test/misc/CMakeTestsClear.cmake
+./tools/test/misc/CMakeTestsMkgrp.cmake
+./tools/test/misc/CMakeTestsRepart.cmake
 ./tools/test/misc/vds/CMakeLists.txt
 ./tools/test/perform/CMakeLists.txt
 ./tools/test/perform/CMakeTests.cmake
