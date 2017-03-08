@@ -146,7 +146,7 @@
   ADD_H5_CMP (h5clear_missing_file_ms h5clear_missing_file 1 "-m" "-s")
   ADD_H5_CMP (h5clear_open_fail_ms h5clear_open_fail 1 "-m" "-s"  junk.h5)
   ADD_H5_CMP (h5clear_no_mdc_image_m h5clear_no_mdc_image 0 "-m" orig_h5clear_sec2_v2.h5)
-  ADD_H5_CMP (h5clear_no_mdc_image_ms h5clear_no_mdc_image 0 "-m" "-s" orig_h5clear_sec2_v2.h5)
+  ADD_H5_CMP (h5clear_no_mdc_image_ms h5clear_no_mdc_image 0 "-m" "-s" orig_h5clear_sec2_v0.h5)
 #
 #
 #
