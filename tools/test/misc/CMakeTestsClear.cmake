@@ -36,8 +36,8 @@
           NAME H5CLEAR_CMP-${testname}-clear-objects
           COMMAND    ${CMAKE_COMMAND}
               -E remove
-                  ${resultfile}.out
-                  ${resultfile}.out.err
+                  ${testname}.out
+                  ${testname}.out.err
       )
       add_test (
           NAME H5CLEAR_CMP-${testname}
@@ -45,7 +45,7 @@
               -D "TEST_PROGRAM=$<TARGET_FILE:h5clear>"
               -D "TEST_ARGS:STRING=${ARGN}"
               -D "TEST_FOLDER=${PROJECT_BINARY_DIR}/testfiles"
-              -D "TEST_OUTPUT=${resultfile}.out"
+              -D "TEST_OUTPUT=${testname}.out"
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=${resultfile}.ddl"
               -P "${HDF_RESOURCES_EXT_DIR}/runTest.cmake"
