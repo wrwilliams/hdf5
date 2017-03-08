@@ -246,16 +246,28 @@ main (int argc, const char *argv[])
 
     /* -m option */
     if(remove_cache_image) { 
-        if(H5Fget_mdc_image_info(fid, &image_addr, &image_len) < 0) {
-            error_msg("H5Fget_mdc_image_info\n");
+        H5AC_cache_image_config_t config;
+
+        /* Retrieve cache image config */
+        if((fapl = H5Fget_access_plist(fid)) < 0) {
+            error_msg("H5Fget_access_plist\n");
             h5tools_setstatus(EXIT_FAILURE);
             goto done;
         }
-        if(image_addr == HADDR_UNDEF && image_len == 0)
+        config.version = H5AC__CURR_CACHE_IMAGE_CONFIG_VERSION;
+        if(H5Pget_mdc_image_config(fapl, &config) < 0) {
+            error_msg("H5Pget_mdc_image_config\n");
+            h5tools_setstatus(EXIT_FAILURE);
+            goto done;
+        }
+
+        /* Check for image */
+        if(!config.generate_image)
             warn_msg("No cache image in the file\n");
     } 
 
     h5tools_setstatus(EXIT_SUCCESS);
+
 done:
     if(fname)
         HDfree(fname);
