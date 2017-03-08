@@ -39,11 +39,6 @@
                   ${resultfile}.out
                   ${resultfile}.out.err
       )
-      set_tests_properties (H5CLEAR_CMP-${testname}-clear-objects PROPERTIES WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles")
-      if (NOT "${last_test}" STREQUAL "")
-        set_tests_properties (H5CLEAR_CMP-${testname}-clear-objects PROPERTIES DEPENDS ${last_test})
-      endif ()
-      set (last_test "H5CLEAR_CMP-${testname}-clear-objects")
       add_test (
           NAME H5CLEAR_CMP-${testname}
           COMMAND "${CMAKE_COMMAND}"
@@ -56,7 +51,6 @@
               -P "${HDF_RESOURCES_EXT_DIR}/runTest.cmake"
       )
       set_tests_properties (H5CLEAR_CMP-${testname} PROPERTIES DEPENDS H5CLEAR_CMP-${testname}-clear-objects)
-      set (last_test "H5CLEAR_CMP-${testname}")
     endif ()
   endmacro ()
 
