@@ -13,6 +13,10 @@
       h5clear_open_fail.ddl
       h5clear_missing_file.ddl
       h5clear_no_mdc_image.ddl
+      orig_h5clear_sec2_v0.h5
+      orig_h5clear_sec2_v2.h5
+      orig_h5clear_sec2_v3.h5
+      mod_h5clear_mdc_image.h5
   )
 
   foreach (h5_file ${HDF5_REFERENCE_TEST_FILES})
@@ -102,6 +106,7 @@
     COMMAND    ${CMAKE_COMMAND}
         -E remove
         h5clear_log_v3.h5
+        h5clear_mdc_image.h5
         h5clear_sec2_v0.h5
         h5clear_sec2_v2.h5
         h5clear_sec2_v3.h5
@@ -126,23 +131,23 @@
 # "h5clear -h"
 # "h5clear"                             (no options, no file)
 # "h5clear junk.h5"                     (no options, nonexisting file)
-# "h5clear h5clear_sec2_v3.h5"          (no options, existing file)
+# "h5clear orig_h5clear_sec2_v3.h5"          (no options, existing file)
 # "h5clear -m"                          (valid 1 option, no file)
 # "h5clear -s junk.h5"                  (valid 1 option, nonexisting file)
 # "h5clear -m -s junk.h5"               (valid 2 options, no file)
 # "h5clear -m -s junk.h5"               (valid 2 options, nonexisting file)
-# "h5clear -m h5clear_sec2_v2.h5"       (valid 1 option, existing file, no cache image)
-# "h5clear -s -m h5clear_sec2_v0.h5"    (valid 2 options, existing file, no cache image)
+# "h5clear -m orig_h5clear_sec2_v2.h5"       (valid 1 option, existing file, no cache image)
+# "h5clear -s -m orig_h5clear_sec2_v0.h5"    (valid 2 options, existing file, no cache image)
   ADD_H5_CMP (h5clear_usage_h h5clear_usage 0 "-h")
   ADD_H5_CMP (h5clear_usage h5clear_usage 1 "")
   ADD_H5_CMP (h5clear_usage_junk h5clear_usage 1 "" junk.h5)
-  ADD_H5_CMP (h5clear_usage_none h5clear_usage 1 "" h5clear_sec2_v3.h5)
+  ADD_H5_CMP (h5clear_usage_none h5clear_usage 1 "" orig_h5clear_sec2_v3.h5)
   ADD_H5_CMP (h5clear_missing_file_m h5clear_missing_file 1 "-m")
   ADD_H5_CMP (h5clear_open_fail_s h5clear_open_fail 1 "-s" junk.h5)
   ADD_H5_CMP (h5clear_missing_file_ms h5clear_missing_file 1 "-m" "-s")
   ADD_H5_CMP (h5clear_open_fail_ms h5clear_open_fail 1 "-m" "-s"  junk.h5)
-  ADD_H5_CMP (h5clear_no_mdc_image_m h5clear_no_mdc_image 0 "-m" h5clear_sec2_v2.h5)
-  ADD_H5_CMP (h5clear_no_mdc_image_ms h5clear_no_mdc_image 0 "-m" "-s" h5clear_sec2_v2.h5)
+  ADD_H5_CMP (h5clear_no_mdc_image_m h5clear_no_mdc_image 0 "-m" orig_h5clear_sec2_v2.h5)
+  ADD_H5_CMP (h5clear_no_mdc_image_ms h5clear_no_mdc_image 0 "-m" "-s" orig_h5clear_sec2_v2.h5)
 #
 #
 #
@@ -173,8 +178,8 @@
 #
 #
 # h5clear_mdc_image.h5 already has cache image removed earlier, verify the expected warning from h5clear:
-  ADD_H5_CMP (h5clear_mdc_image_m h5clear_no_mdc_image 0 "-m" h5clear_mdc_image.h5)
-  ADD_H5_CMP (h5clear_mdc_image_sm h5clear_no_mdc_image 0 "-m" "-s" h5clear_mdc_image.h5)
+  ADD_H5_CMP (h5clear_mdc_image_m h5clear_no_mdc_image 0 "-m" mod_h5clear_mdc_image.h5)
+  ADD_H5_CMP (h5clear_mdc_image_sm h5clear_no_mdc_image 0 "-m" "-s" mod_h5clear_mdc_image.h5)
 #
 #
 #
