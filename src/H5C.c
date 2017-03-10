@@ -6132,6 +6132,7 @@ H5C__flush_single_entry(H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_ptr,
     hbool_t		write_entry;		/* internal flag */
     hbool_t		destroy_entry;		/* internal flag */
     hbool_t		generate_image;		/* internal flag */
+    hbool_t		update_page_buffer;	/* internal flag */
     hbool_t		was_dirty;
     hbool_t		suppress_image_entry_writes = FALSE;
     hbool_t		suppress_image_entry_frees = FALSE;
@@ -6157,6 +6158,7 @@ H5C__flush_single_entry(H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_ptr,
     del_from_slist_on_destroy = ((flags & H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG) != 0);
     during_flush           = ((flags & H5C__DURING_FLUSH_FLAG) != 0);
     generate_image         = ((flags & H5C__GENERATE_IMAGE_FLAG) != 0);
+    update_page_buffer     = ((flags & H5C__UPDATE_PAGE_BUFFER_FLAG) != 0);
 
     /* Set the flag for destroying the entry, based on the 'take ownership'
      * and 'destroy' flags
@@ -6571,6 +6573,19 @@ H5C__flush_single_entry(H5F_t *f, hid_t dxpl_id, H5C_cache_entry_t *entry_ptr,
             entry_ptr->magic = H5C__H5C_CACHE_ENTRY_T_BAD_MAGIC;
         } /* end else */
     } /* if (destroy) */
+
+    /* Check if we have to update the page buffer with cleared entries 
+     * so it doesn't go out of date 
+     */
+    if(update_page_buffer) {
+        /* Sanity check */
+        HDassert(!destroy);
+        HDassert(entry_ptr->image_ptr);
+
+        if(f->shared->page_buf && f->shared->page_buf->page_size >= entry_ptr->size)
+            if(H5PB_update_entry(f->shared->page_buf, entry_ptr->addr, entry_ptr->size, entry_ptr->image_ptr) > 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Failed to update PB with metadata cache")
+    } /* end if */
 
     if(cache_ptr->log_flush)
         if((cache_ptr->log_flush)(cache_ptr, entry_addr, was_dirty, flags) < 0)

@@ -580,7 +580,6 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5PB_add_new_page */
 
-#ifdef H5_HAVE_PARALLEL
 
 /*-------------------------------------------------------------------------
  * Function:	H5PB_update_entry
@@ -626,7 +625,6 @@ H5PB_update_entry(H5PB_t *page_buf, haddr_t addr, size_t size, const void *buf)
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5PB_update_entry */
-#endif /* H5_HAVE_PARALLEL */
 
 
 /*-------------------------------------------------------------------------
@@ -661,7 +659,7 @@ H5PB_remove_entry(const H5F_t *f, haddr_t addr)
 
     /* If found, remove the entry from the PB cache */
     if(page_entry) {
-        HDassert(page_entry->type != H5FD_MEM_DRAW);
+        HDassert(page_entry->type != H5F_MEM_PAGE_DRAW);
         if(NULL == H5SL_remove(page_buf->slist_ptr, &(page_entry->addr)))
             HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Page Entry is not in skip list")
 
