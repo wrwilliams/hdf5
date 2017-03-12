@@ -2303,8 +2303,6 @@ H5_DLL herr_t H5C_set_trace_file_ptr(H5C_t *cache_ptr, FILE *trace_file_ptr);
 H5_DLL herr_t H5C_stats(H5C_t *cache_ptr, const char *cache_name,
     hbool_t display_detailed_stats);
 H5_DLL void H5C_stats__reset(H5C_t *cache_ptr);
-H5_DLL herr_t H5C_dump_cache(H5C_t *cache_ptr, const char *cache_name);
-H5_DLL herr_t H5C_dump_cache_LRU(H5C_t *cache_ptr, const char *cache_name);
 H5_DLL herr_t H5C_unpin_entry(void *thing);
 H5_DLL herr_t H5C_destroy_flush_dependency(void *parent_thing, void *child_thing);
 H5_DLL herr_t H5C_unprotect(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *thing,
@@ -2336,6 +2334,8 @@ H5_DLL herr_t H5C_mark_entries_as_clean(H5F_t *f, hid_t dxpl_id, unsigned ce_arr
 #endif /* H5_HAVE_PARALLEL */
 
 #ifndef NDEBUG	/* debugging functions */
+H5_DLL herr_t H5C_dump_cache(H5C_t *cache_ptr, const char *cache_name);
+H5_DLL herr_t H5C_dump_cache_LRU(H5C_t *cache_ptr, const char *cache_name);
 H5_DLL hbool_t H5C_get_serialization_in_progress(const H5C_t *cache_ptr);
 H5_DLL hbool_t H5C_cache_is_clean(const H5C_t *cache_ptr, H5C_ring_t inner_ring);
 H5_DLL herr_t H5C_dump_cache_skip_list(H5C_t *cache_ptr, char *calling_fcn);

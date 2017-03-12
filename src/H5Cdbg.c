@@ -70,6 +70,7 @@
 /*******************/
 
 
+#ifndef NDEBUG
 
 /*-------------------------------------------------------------------------
  * Function:    H5C_dump_cache
@@ -175,7 +176,9 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5C_dump_cache() */
+#endif /* NDEBUG */
 
+#ifndef NDEBUG
 
 /*-------------------------------------------------------------------------
  * Function:    H5C_dump_cache_LRU
@@ -251,6 +254,7 @@ H5C_dump_cache_LRU(H5C_t *cache_ptr, const char *cache_name)
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5C_dump_cache_LRU() */
+#endif /* NDEBUG */
 
 
 /*-------------------------------------------------------------------------

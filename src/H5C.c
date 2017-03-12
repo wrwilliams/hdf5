@@ -3472,18 +3472,6 @@ H5C_unprotect(H5F_t *		  f,
             HDassert(((!was_clean) || dirtied) == entry_ptr->in_slist);
             if(H5C__flush_single_entry(f, dxpl_id, entry_ptr, flush_flags) < 0)
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTUNPROTECT, FAIL, "Can't flush entry")
-
-#if H5C_DO_SANITY_CHECKS
-            if((take_ownership) && ((!was_clean) || (dirtied))) {
-                /* we have just removed an entry from the skip list.  Thus 
-                 * we must touch up cache_ptr->slist_len_increase and
-                 * cache_ptr->slist_size_increase to keep from skewing
-                 * the sanity checks on flushes.
-                 */
-                cache_ptr->slist_len_increase -= 1;
-                cache_ptr->slist_size_increase -= (int64_t)(entry_ptr->size);
-            } /* end if */
-#endif /* H5C_DO_SANITY_CHECKS */
         } /* end if */
 #ifdef H5_HAVE_PARALLEL
         else if(clear_entry) {
@@ -4665,11 +4653,9 @@ H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * f,
                                                 hid_t   dxpl_id,
                                                 hbool_t write_permitted)
 {
-    int32_t             prefetched_dirty_entries_skipped = 0;
     H5C_t *		cache_ptr = f->shared->cache;
     size_t		eviction_size_limit;
     size_t		bytes_evicted = 0;
-    hbool_t             skipping_entry;
     hbool_t		prev_is_dirty = FALSE;
     hbool_t             restart_scan;
     H5C_cache_entry_t * entry_ptr;
@@ -4707,12 +4693,12 @@ H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * f,
                 ( (entry_ptr->type)->id != H5AC_EPOCH_MARKER_ID ) &&
                 ( bytes_evicted < eviction_size_limit ) )
         {
+            hbool_t skipping_entry = FALSE;
+
             HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
             HDassert( ! (entry_ptr->is_protected) );
             HDassert( ! (entry_ptr->is_read_only) );
             HDassert( (entry_ptr->ro_ref_count) == 0 );
-
-            skipping_entry = FALSE;
 
 	    next_ptr = entry_ptr->next;
             prev_ptr = entry_ptr->prev;
@@ -4757,7 +4743,6 @@ H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * f,
                 HDassert(entry_ptr->prefetched_dirty);
 
                 skipping_entry = TRUE;
-                prefetched_dirty_entries_skipped++;
             } /* end else */
 
             if(prev_ptr != NULL) {
@@ -4821,12 +4806,9 @@ H5C__autoadjust__ageout__evict_aged_out_entries(H5F_t * f,
 
             prev_ptr = entry_ptr->prev;
 
-            if(!(entry_ptr->is_dirty) && !(entry_ptr->prefetched_dirty)) {
+            if(!(entry_ptr->is_dirty) && !(entry_ptr->prefetched_dirty))
                 if(H5C__flush_single_entry(f, dxpl_id, entry_ptr, H5C__FLUSH_INVALIDATE_FLAG | H5C__DEL_FROM_SLIST_ON_DESTROY_FLAG) < 0)
                     HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush clean entry")
-            } /* end if */
-            else if(entry_ptr->prefetched_dirty)
-                prefetched_dirty_entries_skipped++;
 
             /* just skip the entry if it is dirty, as we can't do
              * anything with it now since we can't write.

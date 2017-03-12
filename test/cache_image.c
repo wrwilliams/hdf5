@@ -31,19 +31,14 @@ const char *FILENAMES[] = {
 };
 
 /* local utility function declarations */
-
 static void create_datasets(hid_t file_id, int min_dset, int max_dset);
 static void delete_datasets(hid_t file_id, int min_dset, int max_dset);
-
-static void open_hdf5_file(const hbool_t create_file,
-    const hbool_t mdci_sbem_expected, const hbool_t read_only, 
-    const hbool_t set_mdci_fapl, const hbool_t config_fsm,
-    const char * hdf_file_name, const unsigned cache_image_flags, 
-    hid_t * file_id_ptr, H5F_t ** file_ptr_ptr, H5C_t ** cache_ptr_ptr);
-
-static void attempt_swmr_open_hdf5_file(const hbool_t create_file,
-    const hbool_t set_mdci_fapl, const char * hdf_file_name);
-
+static void open_hdf5_file(hbool_t create_file, hbool_t mdci_sbem_expected,
+    hbool_t read_only, hbool_t set_mdci_fapl, hbool_t config_fsm,
+    const char *hdf_file_name, unsigned cache_image_flags, 
+    hid_t *file_id_ptr, H5F_t **file_ptr_ptr, H5C_t **cache_ptr_ptr);
+static void attempt_swmr_open_hdf5_file(hbool_t create_file,
+    hbool_t set_mdci_fapl, const char *hdf_file_name);
 static void verify_datasets(hid_t file_id, int min_dset, int max_dset);
 
 /* local test function declarations */
