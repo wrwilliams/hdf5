@@ -568,7 +568,9 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
     hid_t file_id = -1;          /* File ID */
     hid_t fcpl = -1;
     hid_t fapl = -1;
-    H5P_genplist_t *plist = (H5P_genplist_t *)H5I_object(H5AC_rawdata_dxpl_id);
+    H5FD_io_info_t fdio_info;
+    H5P_genplist_t *meta_plist = (H5P_genplist_t *)H5I_object(H5AC_ind_read_dxpl_id);
+    H5P_genplist_t *raw_plist = (H5P_genplist_t *)H5I_object(H5AC_rawdata_dxpl_id);
     size_t base_page_cnt;
     size_t page_count = 0;
     int i, num_elements = 2000;
@@ -717,7 +719,10 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
 
     /* read elements 0 - 800 using the VFD.. this should result in -1s
        except for the writes that went through the PB (100-300 & 600-800) */
-    if(H5FD_read(f->shared->lf, plist, H5FD_MEM_DRAW, addr, sizeof(int)*800, data) < 0)
+    fdio_info.file = f->shared->lf;
+    fdio_info.meta_dxpl = meta_plist;
+    fdio_info.raw_dxpl = raw_plist;
+    if(H5FD_read(&fdio_info, H5FD_MEM_DRAW, addr, sizeof(int)*800, data) < 0)
         FAIL_STACK_ERROR;
     i = 0;
     while (i < 800) {
@@ -1728,7 +1733,6 @@ error:
  *
  *-------------------------------------------------------------------------
  */
-
 static unsigned
 test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
 {
@@ -1796,7 +1800,6 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
         TEST_ERROR;
 
     /* reset statistics before we begin the tests */
-
     if(H5Freset_page_buffering_stats(file_id) < 0)
         FAIL_STACK_ERROR;
 
@@ -1895,7 +1898,7 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
     if(H5F_block_read(f, H5FD_MEM_SUPER, meta_addr+(sizeof(int)*800), sizeof(int)*100, H5AC_ind_read_dxpl_id, data) < 0)
         FAIL_STACK_ERROR;
 
-    if(f->shared->page_buf->accesses[0] != 11)
+    if(f->shared->page_buf->accesses[0] != 8)
         TEST_ERROR;
     if(f->shared->page_buf->accesses[1] != 16)
         TEST_ERROR;
@@ -1915,22 +1918,22 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
     if(f->shared->page_buf->misses[1] != 11)
         TEST_ERROR;
 
-    if(f->shared->page_buf->evictions[0] != 5 + (int)base_meta_cnt)
+    if(f->shared->page_buf->evictions[0] != 5 + base_meta_cnt)
         TEST_ERROR;
-    if(f->shared->page_buf->evictions[1] != 9 + (int)base_raw_cnt)
+    if(f->shared->page_buf->evictions[1] != 9 + base_raw_cnt)
         TEST_ERROR;
 
     {
-        int accesses[2];
-        int hits[2];
-        int misses[2];
-        int evictions[2];
-        int bypasses[2];
+        unsigned accesses[2];
+        unsigned hits[2];
+        unsigned misses[2];
+        unsigned evictions[2];
+        unsigned bypasses[2];
 
         if(H5Fget_page_buffering_stats(file_id, accesses, hits, misses, evictions, bypasses) < 0)
             FAIL_STACK_ERROR;
 
-        if(accesses[0] != 11)
+        if(accesses[0] != 8)
             TEST_ERROR;
         if(accesses[1] != 16)
             TEST_ERROR;
@@ -1946,9 +1949,9 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
             TEST_ERROR;
         if(misses[1] != 11)
             TEST_ERROR;
-        if(evictions[0] != 5 + (int)base_meta_cnt)
+        if(evictions[0] != 5 + base_meta_cnt)
             TEST_ERROR;
-        if(evictions[1] != 9 + (int)base_raw_cnt)
+        if(evictions[1] != 9 + base_raw_cnt)
             TEST_ERROR;
 
         if(H5Freset_page_buffering_stats(file_id) < 0)
@@ -1986,6 +1989,7 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
         FAIL_STACK_ERROR;
     HDfree(data);
 
+
     PASSED()
     return 0;
 
@@ -1997,6 +2001,7 @@ error:
         if(data)
             HDfree(data);
     } H5E_END_TRY;
+
     return 1;
 } /* test_stats_collection */
 
