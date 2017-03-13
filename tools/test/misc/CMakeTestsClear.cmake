@@ -22,6 +22,8 @@
   foreach (h5_file ${HDF5_REFERENCE_TEST_FILES})
     HDFTEST_COPY_FILE("${PROJECT_SOURCE_DIR}/testfiles/${h5_file}" "${PROJECT_BINARY_DIR}/testfiles/${h5_file}" "h5clear_files")
   endforeach ()
+  # make second copy of mod_h5clear_mdc_image.h5
+  HDFTEST_COPY_FILE("${PROJECT_SOURCE_DIR}/testfiles/mod_h5clear_mdc_image.h5" "${PROJECT_BINARY_DIR}/testfiles/mod_h5clear_mdc_image2.h5" "h5clear_files")
   add_custom_target(h5clear_files ALL COMMENT "Copying files needed by h5clear tests" DEPENDS ${h5clear_files_list})
 
 ##############################################################################
@@ -178,7 +180,7 @@
 #
 # h5clear_mdc_image.h5 already has cache image removed earlier, verify the expected warning from h5clear:
   ADD_H5_CMP (h5clear_mdc_image_m h5clear_no_mdc_image 0 "-m" mod_h5clear_mdc_image.h5)
-  ADD_H5_CMP (h5clear_mdc_image_sm h5clear_no_mdc_image 0 "-m" "-s" mod_h5clear_mdc_image.h5)
+  ADD_H5_CMP (h5clear_mdc_image_sm h5clear_no_mdc_image 0 "-m" "-s" mod_h5clear_mdc_image2.h5)
 #
 #
 #
