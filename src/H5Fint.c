@@ -76,7 +76,7 @@ typedef struct H5F_olist_t {
 static int H5F_get_objects_cb(void *obj_ptr, hid_t obj_id, void *key);
 static herr_t H5F_build_actual_name(const H5F_t *f, const H5P_genplist_t *fapl,
     const char *name, char ** /*out*/ actual_name);/* Declare a free list to manage the H5F_t struct */
-static herr_t H5F__flush_phase1(H5F_t *f, hid_t meta_dxpl_id, hid_t raw_dxpl_id);
+static herr_t H5F__flush_phase1(H5F_t *f, hid_t meta_dxpl_id);
 static herr_t H5F__flush_phase2(H5F_t *f, hid_t meta_dxpl_id, hid_t raw_dxpl_id, hbool_t closing);
 
 
@@ -865,7 +865,7 @@ H5F__dest(H5F_t *f, hid_t meta_dxpl_id, hid_t raw_dxpl_id, hbool_t flush)
          * the caller requested a flush.
          */
         if((H5F_ACC_RDWR & H5F_INTENT(f)) && flush)
-            if(H5F__flush_phase1(f, meta_dxpl_id, raw_dxpl_id) < 0)
+            if(H5F__flush_phase1(f, meta_dxpl_id) < 0)
                 /* Push error, but keep going*/
                 HDONE_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "unable to flush cached data (phase 1)")
 
@@ -1517,7 +1517,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5F__flush_phase1(H5F_t *f, hid_t meta_dxpl_id, hid_t raw_dxpl_id)
+H5F__flush_phase1(H5F_t *f, hid_t meta_dxpl_id)
 {
     herr_t   ret_value = SUCCEED;       /* Return value */
 
@@ -1527,7 +1527,7 @@ H5F__flush_phase1(H5F_t *f, hid_t meta_dxpl_id, hid_t raw_dxpl_id)
     HDassert(f);
 
     /* Flush any cached dataset storage raw data */
-    if(H5D_flush(f, raw_dxpl_id) < 0)
+    if(H5D_flush(f, meta_dxpl_id) < 0)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush dataset cache")
 
@@ -1636,7 +1636,7 @@ H5F__flush(H5F_t *f, hid_t meta_dxpl_id, hid_t raw_dxpl_id, hbool_t closing)
     HDassert(f);
 
     /* First phase of flushing data */
-    if(H5F__flush_phase1(f, meta_dxpl_id, raw_dxpl_id) < 0)
+    if(H5F__flush_phase1(f, meta_dxpl_id) < 0)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush file data")
 
