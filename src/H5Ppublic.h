@@ -538,10 +538,8 @@ H5_DLL herr_t H5Pget_filter_by_id1(hid_t plist_id, H5Z_filter_t id,
 H5_DLL herr_t H5Pget_version(hid_t plist_id, unsigned *boot/*out*/,
          unsigned *freelist/*out*/, unsigned *stab/*out*/,
          unsigned *shhdr/*out*/);
-
 H5_DLL herr_t H5Pset_file_space(hid_t plist_id, H5F_file_space_type_t strategy, hsize_t threshold);
 H5_DLL herr_t H5Pget_file_space(hid_t plist_id, H5F_file_space_type_t *strategy, hsize_t *threshold);
-
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 #ifdef __cplusplus

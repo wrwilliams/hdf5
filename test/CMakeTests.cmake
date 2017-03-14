@@ -630,7 +630,7 @@ set (H5TEST_TESTS
     cross_read
     freespace
     mf
-#    page_buffer
+    page_buffer
     vds
     file_image
     unregister

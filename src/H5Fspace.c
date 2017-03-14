@@ -97,7 +97,7 @@
 haddr_t
 H5F_alloc(H5F_t *f, hid_t dxpl_id, H5F_mem_t type, hsize_t size, haddr_t *frag_addr, hsize_t *frag_size)
 {
-    haddr_t     ret_value;      /* Return value */
+    haddr_t     ret_value = 0;          /* Return value */
 
     FUNC_ENTER_NOAPI(HADDR_UNDEF)
 
@@ -126,9 +126,9 @@ H5F_alloc(H5F_t *f, hid_t dxpl_id, H5F_mem_t type, hsize_t size, haddr_t *frag_a
     if(!H5F_addr_defined(ret_value))
         HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, HADDR_UNDEF, "file driver 'alloc' request failed")
 
-    /* Mark superblock dirty in cache, so change to EOA will get encoded */
-    if(H5F_super_dirty(f) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, HADDR_UNDEF, "unable to mark superblock as dirty")
+    /* Mark EOA dirty */
+    if(H5F_eoa_dirty(f, dxpl_id) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, HADDR_UNDEF, "unable to mark EOA as dirty")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -171,9 +171,9 @@ H5F_free(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type, haddr_t addr, hsize_t size)
     if(H5FD_free(f->shared->lf, dxpl_id, type, f, addr, size) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTFREE, FAIL, "file driver 'free' request failed")
 
-    /* Mark superblock dirty in cache, so change to EOA will get encoded */
-    if(H5F_super_dirty(f) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
+    /* Mark EOA dirty */
+    if(H5F_eoa_dirty(f, dxpl_id) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark EOA as dirty")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -201,7 +201,7 @@ done:
 htri_t
 H5F_try_extend(H5F_t *f, hid_t dxpl_id, H5FD_mem_t type, haddr_t blk_end, hsize_t extra_requested)
 {
-    htri_t ret_value;           /* Return value */
+    htri_t ret_value = FALSE;   /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 

@@ -1271,15 +1271,13 @@ H5Pget_shared_mesg_phase_change(hid_t plist_id, unsigned *max_list, unsigned *mi
     if(NULL == (plist = H5P_object_verify(plist_id,H5P_FILE_CREATE)))
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID");
 
-    /* Get value */
-    if (max_list) {
+    /* Get value(s) */
+    if(max_list)
         if(H5P_get(plist, H5F_CRT_SHMSG_LIST_MAX_NAME, max_list) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get list maximum");
-    }
-    if (min_btree) {
+    if(min_btree)
         if(H5P_get(plist, H5F_CRT_SHMSG_BTREE_MIN_NAME, min_btree) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get SOHM information");
-    }
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1323,13 +1321,12 @@ H5Pset_file_space_strategy(hid_t plist_id, H5F_fspace_strategy_t strategy, hbool
 
     /* Ignore persist and threshold settings for strategies that do not use FSM */
     if(strategy ==  H5F_FSPACE_STRATEGY_FSM_AGGR || strategy == H5F_FSPACE_STRATEGY_PAGE) {
-
         if(H5P_set(plist, H5F_CRT_FREE_SPACE_PERSIST_NAME, &persist) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set free-space persisting status")
 
         if(H5P_set(plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, &threshold) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set free-space threshold")
-    }
+    } /* end if */
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1362,16 +1359,12 @@ H5Pget_file_space_strategy(hid_t plist_id, H5F_fspace_strategy_t *strategy, hboo
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
     /* Get value(s) */
-    if(strategy) {
+    if(strategy)
         if(H5P_get(plist, H5F_CRT_FILE_SPACE_STRATEGY_NAME, strategy) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get file space strategy")
-    } /* end if */
-
-    if(persist) {
+    if(persist)
         if(H5P_get(plist, H5F_CRT_FREE_SPACE_PERSIST_NAME, persist) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get free-space persisting status")
-    } /* end if */
-
     if(threshold)
         if(H5P_get(plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, threshold) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get free-space threshold")

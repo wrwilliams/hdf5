@@ -27,7 +27,6 @@
 
 #include "H5Bprivate.h"
 #include "H5Pprivate.h"
-#include "H5Iprivate.h"
 
 /*
  * This file needs to access private information from the H5F package.
@@ -4450,19 +4449,17 @@ test_filespace_compatible(void)
 static void
 test_filespace_1_10_0_compatible(void)
 {
-    int fd_old = (-1), fd_new = (-1);   /* File descriptors for copying data */
-    hid_t fid = -1;                     /* File id */
-    hid_t did = -1;		                /* Dataset id */
-    hid_t fcpl;                         /* File creation property list */
-    unsigned i, j;                      /* Local index variable */
-    hbool_t	persist;                    /* Persist free-space or not */
-    hsize_t	threshold;                  /* Free-space section threshold */
+    hid_t       fid = -1;               /* File id */
+    hid_t       did = -1;		/* Dataset id */
+    hid_t       fcpl;                   /* File creation property list */
+    hbool_t	persist;                /* Persist free-space or not */
+    hsize_t	threshold;              /* Free-space section threshold */
     H5F_fspace_strategy_t strategy;     /* File space handling strategy */
-    int  wbuf[24]; 		                /* Buffer for dataset data */
-    int  rdbuf[24];		                /* Buffer for dataset data */
-    uint8_t buf[READ_OLD_BUFSIZE];	    /* temporary buffer for reading */
-    ssize_t nread;  		            /* Number of bytes read in */
-    herr_t	ret;			            /* Return value */
+    int         wbuf[24]; 		/* Buffer for dataset data */
+    int         rdbuf[24];		/* Buffer for dataset data */
+    int         status;                 /* Status from copying the existing file */
+    unsigned    i, j;                   /* Local index variable */
+    herr_t	ret;			/* Return value */
 
     /* Output message about test being performed */
     MESSAGE(5, ("File space compatibility testing for 1.10.0 files\n"));
@@ -4470,23 +4467,9 @@ test_filespace_1_10_0_compatible(void)
     for(j = 0; j < NELMTS(OLD_1_10_0_FILENAME); j++) {
         const char *filename = H5_get_srcdir_filename(OLD_1_10_0_FILENAME[j]); /* Corrected test file name */
 
-        /* Open and copy the test file into a temporary file */
-        fd_old = HDopen(filename, O_RDONLY, 0666);
-        CHECK(fd_old, FAIL, "HDopen");
-        fd_new = HDopen(FILE5, O_RDWR|O_CREAT|O_TRUNC, 0666);
-        CHECK(fd_new, FAIL, "HDopen");
-
-	    /* Copy data */
-        while((nread = HDread(fd_old, buf, (size_t)READ_OLD_BUFSIZE)) > 0) {
-            ssize_t write_err = HDwrite(fd_new, buf, (size_t)nread);
-            CHECK(write_err, -1, "HDwrite");
-        } /* end while */
-
-        /* Close the files */
-        ret = HDclose(fd_old);
-        CHECK(ret, FAIL, "HDclose");
-        ret = HDclose(fd_new);
-        CHECK(ret, FAIL, "HDclose");
+        /* Make a copy of the test file */
+        status = h5_make_local_copy(filename, FILE5);
+	CHECK(status, FAIL, "h5_make_local_copy");
 
         /* Open the temporary test file */
         fid = H5Fopen(FILE5, H5F_ACC_RDWR, H5P_DEFAULT);
@@ -4782,16 +4765,14 @@ test_filespace_1_10_0_compatible(void)
 static void
 test_filespace_round_compatible(void)
 {
-    int fd_old = (-1), fd_new = (-1);   /* File descriptors for copying data */
     hid_t	fid = -1;		/* File id */
     hid_t	fcpl = -1;		/* File creation property list ID */
-    uint8_t     buf[READ_OLD_BUFSIZE];	/* Temporary buffer for reading */
-    ssize_t 	nread;  		/* Number of bytes read in */
     unsigned    j;			/* Local index variable */
-    H5F_fspace_strategy_t strategy;		/* File space strategy */
+    H5F_fspace_strategy_t strategy;	/* File space strategy */
     hbool_t 	persist;		/* Persist free-space or not */
     hsize_t 	threshold;		/* Free-space section threshold */
     hssize_t	free_space;		/* Amount of free space in the file */
+    int         status;                 /* Status from copying the existing file */
     herr_t	ret;			/* Return value */
 
     /* Output message about test being performed */
@@ -4800,21 +4781,9 @@ test_filespace_round_compatible(void)
     for(j = 0; j < NELMTS(FSPACE_FILENAMES); j++) {
         const char *filename = H5_get_srcdir_filename(FSPACE_FILENAMES[j]);
 
-	/* Open and copy the test file into a temporary file */
-	fd_old = HDopen(filename, O_RDONLY, 0666);
-	CHECK(fd_old, FAIL, "HDopen");
-	fd_new = HDopen(FILE5, O_RDWR|O_CREAT|O_TRUNC, 0666);
-	CHECK(fd_new, FAIL, "HDopen");
-
-	/* Copy data */
-	while((nread = HDread(fd_old, buf, (size_t)READ_OLD_BUFSIZE)) > 0)
-	    HDwrite(fd_new, buf, (size_t)nread);
-
-	/* Close the files */
-	ret = HDclose(fd_old);
-	CHECK(ret, FAIL, "HDclose");
-	ret = HDclose(fd_new);
-	CHECK(ret, FAIL, "HDclose");
+        /* Make a copy of the test file */
+        status = h5_make_local_copy(filename, FILE5);
+	CHECK(status, FAIL, "h5_make_local_copy");
 
 	/* Open the temporary test file */
 	fid = H5Fopen(FILE5, H5F_ACC_RDWR, H5P_DEFAULT);
@@ -4979,7 +4948,8 @@ test_libver_macros(void)
     VERIFY(H5_VERSION_GE(major-1,minor,release+1), TRUE, "H5_VERSION_GE");
     VERIFY(H5_VERSION_GE(major,minor-1,release), TRUE, "H5_VERSION_GE");
     VERIFY(H5_VERSION_GE(major,minor-1,release+1), TRUE, "H5_VERSION_GE");
-    VERIFY(H5_VERSION_GE(major,minor,release-1), TRUE, "H5_VERSION_GE");
+    if(H5_VERS_RELEASE > 0)
+        VERIFY(H5_VERSION_GE(major,minor,release-1), TRUE, "H5_VERSION_GE");
 
     VERIFY(H5_VERSION_GE(major+1,minor,release), FALSE, "H5_VERSION_GE");
     VERIFY(H5_VERSION_GE(major+1,minor-1,release), FALSE, "H5_VERSION_GE");
@@ -5001,7 +4971,8 @@ test_libver_macros(void)
     VERIFY(H5_VERSION_LE(major-1,minor+1,release+1), FALSE, "H5_VERSION_LE");
     VERIFY(H5_VERSION_LE(major,minor-1,release), FALSE, "H5_VERSION_LE");
     VERIFY(H5_VERSION_LE(major,minor-1,release+1), FALSE, "H5_VERSION_LE");
-    VERIFY(H5_VERSION_LE(major,minor,release-1), FALSE, "H5_VERSION_LE");
+    if(H5_VERS_RELEASE > 0)
+        VERIFY(H5_VERSION_LE(major,minor,release-1), FALSE, "H5_VERSION_LE");
 } /* test_libver_macros() */
 
 /****************************************************************
@@ -5080,15 +5051,15 @@ test_deprec(void)
 {
     hid_t       file;           /* File IDs for old & new files */
     hid_t       fcpl;           /* File creation property list */
-  hid_t       fapl;           /* File creation property list */
+    hid_t       fapl;           /* File creation property list */
+    hid_t new_fapl;
+    hsize_t align;
     unsigned    super;          /* Superblock version # */
     unsigned    freelist;       /* Free list version # */
     unsigned    stab;           /* Symbol table entry version # */
     unsigned    shhdr;          /* Shared object header version # */
     H5F_info1_t	finfo;		/* global information about file */
     herr_t      ret;            /* Generic return value */
-hid_t new_fapl;
-hsize_t align;
 
     /* Output message about test being performed */
     MESSAGE(5, ("Testing deprecated routines\n"));
@@ -5150,7 +5121,7 @@ hsize_t align;
     /* Create file with custom file creation property list */
     file= H5Fcreate(FILE1, H5F_ACC_TRUNC , fcpl, fapl);
     CHECK(file, FAIL, "H5Fcreate");
-    
+
     new_fapl = H5Fget_access_plist(file);
     H5Pget_alignment(new_fapl, NULL, &align);
 
@@ -5336,21 +5307,17 @@ test_file(void)
     test_rw_noupdate();                         /* Test to ensure that RW permissions don't write the file unless dirtied */
     test_userblock_alignment();                 /* Tests that files created with a userblock and alignment interact properly */
     test_userblock_alignment_paged();           /* Tests files created with a userblock and alignment (via paged aggregation) interact properly */
-
     test_filespace_info(env_h5_drvr);           /* Test file creation public routines: */
                                                 /* H5Pget/set_file_space_strategy() & H5Pget/set_file_space_page_size() */
                                                 /* Skipped testing for multi/split drivers */
-
     test_file_freespace(env_h5_drvr);           /* Test file public routine H5Fget_freespace() */
                                                 /* Skipped testing for multi/split drivers */
                                                 /* Setup for multi/split drivers are there already */
-
     test_sects_freespace(env_h5_drvr, TRUE);    /* Test file public routine H5Fget_free_sections() for new format */
                                                 /* Skipped testing for multi/split drivers */
                                                 /* Setup for multi/split drivers are there already */
     test_sects_freespace(env_h5_drvr, FALSE);   /* Test file public routine H5Fget_free_sections() */
                                                 /* Skipped testing for multi/split drivers */
-
     test_filespace_compatible();                /* Test compatibility for file space management */
     test_filespace_round_compatible();          /* Testing file space compatibility for files from trunk to 1_8 to trunk */
     test_filespace_1_10_0_compatible();          /* Testing file space compatibility for files from release 1.10.0 */

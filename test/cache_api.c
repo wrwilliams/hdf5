@@ -2296,32 +2296,30 @@ main(void)
     /* Initialize invalid configurations.
      */
     invalid_configs = init_invalid_configs();
-
     if ( NULL == invalid_configs ) {
-
         failure_mssg = "Unable to allocate memory for invalid configs.";
         HDfprintf(stdout, "%s: failure_mssg = \"%s\".\n", FUNC, failure_mssg);
         return EXIT_FAILURE;
-    }
+    } /* end if */
 
     if((fcpl_id = H5Pcreate(H5P_FILE_CREATE)) < 0) {
         failure_mssg = "H5Pcreate(H5P_FILE_CREATE) failed.\n";
         HDfprintf(stdout, "%s: failure_mssg = \"%s\".\n", FUNC, failure_mssg);
         return EXIT_FAILURE;
-    }
+    } /* end if */
 
     /* Set file space strategy to default or paged aggregation strategy */
     if((fcpl2_id = H5Pcopy(fcpl_id)) < 0) {
         failure_mssg = "H5Pcreate(H5P_FILE_CREATE) failed.\n";
         HDfprintf(stdout, "%s: failure_mssg = \"%s\".\n", FUNC, failure_mssg);
         return EXIT_FAILURE;
-    }
+    } /* end if */
 
     if(H5Pset_file_space_strategy(fcpl2_id, H5F_FSPACE_STRATEGY_PAGE, 1, (hsize_t)1) < 0) {
         failure_mssg = "H5Pset_file_space_strategy() failed.\n";
         HDfprintf(stdout, "%s: failure_mssg = \"%s\".\n", FUNC, failure_mssg);
         return EXIT_FAILURE;
-    }
+    } /* end if */
 
     /* Test with paged aggregation enabled or not */
     /* The "my_fcpl" passed to each test has the paged or non-paged strategy set up accordinly */
@@ -2354,7 +2352,7 @@ main(void)
         failure_mssg = "H5Pclose() failed.\n";
         HDfprintf(stdout, "%s: failure_mssg = \"%s\".\n", FUNC, failure_mssg);
         return EXIT_FAILURE;
-    }
+    } /* end if */
 
     if(nerrs > 0)
         return EXIT_FAILURE;

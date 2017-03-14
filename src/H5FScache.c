@@ -601,7 +601,7 @@ H5FS__cache_hdr_pre_serialize(H5F_t *f, hid_t dxpl_id, void *_thing,
             HDassert(fspace->serial_sect_count > 0);
             HDassert(fspace->sect_size > 0);
             HDassert(fspace->alloc_sect_size == (size_t)fspace->sect_size);
-        }
+        } /* end if */
 
         if(H5F_IS_TMP_ADDR(f, fspace->sect_addr)) {
             unsigned sect_status = 0;

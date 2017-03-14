@@ -193,7 +193,7 @@ HDfprintf(stderr, "%s: type = %u, size = %Hu\n", FUNC, (unsigned)type, size);
                 *frag_addr = eoa - file->base_addr;     /* adjust for file's base address */
             if(frag_size)
                 *frag_size = extra;
-        }
+        } /* end if */
     } /* end if */
 
     /* Dispatch to driver `alloc' callback or extend the end-of-address marker */

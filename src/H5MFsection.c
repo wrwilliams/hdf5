@@ -622,12 +622,11 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5MF_sect_simple_shrink() */
 
-
-
-
 /* 
  * "small" section callbacks
  */
+
+
 /*-------------------------------------------------------------------------
  * Function:    H5MF_sect_small_add
  *
@@ -690,7 +689,6 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5MF_sect_small_add() */
 
-
 
 /*-------------------------------------------------------------------------
  * Function:	H5MF_sect_small_can_shrink
@@ -739,7 +737,6 @@ HDfprintf(stderr, "%s: section {%a, %Hu}, shrinks file, eoa = %a\n", FUNC, sect-
 
         /* Indicate shrinking can occur */
         HGOTO_DONE(TRUE)
-
     } /* end if */
 
 done:
@@ -814,7 +811,7 @@ H5MF_sect_small_can_merge(const H5FS_section_info_t *_sect1,
     const H5MF_free_section_t *sect1 = (const H5MF_free_section_t *)_sect1;   /* File free section */
     const H5MF_free_section_t *sect2 = (const H5MF_free_section_t *)_sect2;   /* File free section */
     H5MF_sect_ud_t *udata = (H5MF_sect_ud_t *)_udata;   /* User data for callback */
-    htri_t ret_value;                   		/* Return value */
+    htri_t ret_value = FALSE;                   	/* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -901,7 +898,6 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5MF_sect_small_merge() */
 
-
 /* 
  * "Large" section callbacks
  */
@@ -927,7 +923,7 @@ H5MF_sect_large_can_merge(const H5FS_section_info_t *_sect1,
 {
     const H5MF_free_section_t *sect1 = (const H5MF_free_section_t *)_sect1;   	/* File free section */
     const H5MF_free_section_t *sect2 = (const H5MF_free_section_t *)_sect2;   	/* File free section */
-    htri_t ret_value;                   /* Return value */
+    htri_t ret_value = FALSE;           /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -1091,8 +1087,9 @@ H5MF_sect_large_shrink(H5FS_section_info_t **_sect, void *_udata)
 
         /* Mark section as freed, for free space manager */
         *sect = NULL;
-    }
+    } /* end else */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5MF_sect_large_shrink() */
+

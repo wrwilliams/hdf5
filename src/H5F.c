@@ -23,20 +23,20 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"      /* Generic Functions                */
-#include "H5Aprivate.h"     /* Attributes                       */
-#include "H5ACprivate.h"    /* Metadata cache                   */
-#include "H5Dprivate.h"		/* Datasets                         */
-#include "H5Eprivate.h"		/* Error handling                   */
-#include "H5Fpkg.h"         /* File access                      */
-#include "H5FDprivate.h"	/* File drivers                     */
-#include "H5Gprivate.h"		/* Groups                           */
-#include "H5Iprivate.h"		/* IDs                              */
-#include "H5MFprivate.h"	/* File memory management           */
-#include "H5MMprivate.h"	/* Memory management                */
-#include "H5Pprivate.h"		/* Property lists                   */
-#include "H5SMprivate.h"	/* Shared Object Header Messages    */
-#include "H5Tprivate.h"		/* Datatypes                        */
+#include "H5private.h"		/* Generic Functions			*/
+#include "H5Aprivate.h"		/* Attributes				*/
+#include "H5ACprivate.h"        /* Metadata cache                       */
+#include "H5Dprivate.h"		/* Datasets				*/
+#include "H5Eprivate.h"		/* Error handling		  	*/
+#include "H5Fpkg.h"             /* File access				*/
+#include "H5FDprivate.h"	/* File drivers				*/
+#include "H5Gprivate.h"		/* Groups				*/
+#include "H5Iprivate.h"		/* IDs			  		*/
+#include "H5MFprivate.h"	/* File memory management		*/
+#include "H5MMprivate.h"	/* Memory management			*/
+#include "H5Pprivate.h"		/* Property lists			*/
+#include "H5SMprivate.h"	/* Shared Object Header Messages	*/
+#include "H5Tprivate.h"		/* Datatypes				*/
 
 
 /****************/
@@ -2067,7 +2067,7 @@ H5Fget_page_buffering_stats(hid_t file_id, unsigned accesses[2], unsigned hits[2
     herr_t     ret_value = SUCCEED;     /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE6("e", "i*Is*Is*Is*Is*Is", file_id, accesses, hits, misses, evictions,
+    H5TRACE6("e", "i*Iu*Iu*Iu*Iu*Iu", file_id, accesses, hits, misses, evictions,
              bypasses);
 
     /* Check args */

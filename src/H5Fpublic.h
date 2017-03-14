@@ -264,7 +264,6 @@ H5_DLL herr_t H5Fget_mdc_logging_status(hid_t file_id,
                                         /*OUT*/ hbool_t *is_enabled,
                                         /*OUT*/ hbool_t *is_currently_logging);
 H5_DLL herr_t H5Fformat_convert(hid_t fid);
-
 H5_DLL herr_t H5Freset_page_buffering_stats(hid_t file_id);
 H5_DLL herr_t H5Fget_page_buffering_stats(hid_t file_id, unsigned accesses[2],
     unsigned hits[2], unsigned misses[2], unsigned evictions[2], unsigned bypasses[2]);

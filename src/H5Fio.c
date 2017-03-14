@@ -41,6 +41,7 @@
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5PBprivate.h"	/* Page Buffer				*/
 
+
 /****************/
 /* Local Macros */
 /****************/
@@ -132,6 +133,7 @@ H5F_block_read(const H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size,
     /* Pass through page buffer layer */
     if(H5PB_read(&fio_info, map_type, addr, size, buf) < 0)
         HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "read through page buffer failed")
+
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F_block_read() */
