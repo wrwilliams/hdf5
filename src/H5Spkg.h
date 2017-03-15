@@ -87,7 +87,12 @@ struct H5S_pnt_node_t {
 
 /* Information about point selection list */
 typedef struct {
+    /* The following two fields defines the bounding box of the whole set of points, relative to the offset */
+    hsize_t low_bounds[H5S_MAX_RANK];   /* The smallest element selected in each dimension */
+    hsize_t high_bounds[H5S_MAX_RANK];  /* The largest element selected in each dimension */
+
     H5S_pnt_node_t *head;   /* Pointer to head of point list */
+    H5S_pnt_node_t *tail;   /* Pointer to tail of point list */
 } H5S_pnt_list_t;
 
 /* Information about new-style hyperslab spans */
@@ -101,32 +106,63 @@ struct H5S_hyper_span_t {
     struct H5S_hyper_span_t *next;     /* Pointer to next span in list */
 };
 
-/* Information about a list of hyperslab spans */
+/* Information about a list of hyperslab spans in one dimension */
 struct H5S_hyper_span_info_t {
     unsigned count;                    /* Ref. count of number of spans which share this span */
+
+    /* The following two fields defines the bounding box of this set of spans and all lower dimensions, relative to the offset */
+    /* (NOTE: The bounds arrays are _relative_ to the depth of the span_info
+     *          node in the span tree, so the top node in a 5-D span tree will
+     *          use indices 0-4 in the arrays to store it's bounds information,
+     *          but the next level down in the span tree will use indices 0-3.
+     *          So, each level in the span tree will have the 0th index in the
+     *          arrays correspond to the bounds in "this" dimension, even if
+     *          it's not the highest level in the span tree.
+     */
+    hsize_t low_bounds[H5S_MAX_RANK];   /* The smallest element selected in each dimension */
+    hsize_t high_bounds[H5S_MAX_RANK];  /* The largest element selected in each dimension */
+
     struct H5S_hyper_span_info_t *scratch;  /* Scratch pointer
                                              * (used during copies, as mark
                                              * during precomputes for I/O &
                                              * to point to the last span in a
                                              * list during single element adds)
                                              */
-    struct H5S_hyper_span_t *head;  /* Pointer to list of spans in next dimension down */
+    struct H5S_hyper_span_t *head;  /* Pointer to the first span of list of spans in the current dimension */
+    struct H5S_hyper_span_t *tail;  /* Pointer to the last span of list of spans in the current dimension */
 };
 
-/* Information about new-style hyperslab selection */
+/* Enum for diminfo_valid field in H5S_hyper_sel_t */
+typedef enum {
+    H5S_DIMINFO_VALID_IMPOSSIBLE, /* 0: diminfo is not valid and can never be valid with the current selection */
+    H5S_DIMINFO_VALID_NO,       /* 1: diminfo is not valid but may or may not be possible to constuct */
+    H5S_DIMINFO_VALID_YES       /* 2: diminfo is valid */
+} H5S_diminfo_valid_t;
+
+/* Information about 'diminfo' form of hyperslab selection */
 typedef struct {
-    hbool_t diminfo_valid;                      /* Whether the dataset has valid diminfo */
-    H5S_hyper_dim_t opt_diminfo[H5S_MAX_RANK];  /* per-dim selection info */
-    H5S_hyper_dim_t app_diminfo[H5S_MAX_RANK];  /* per-dim selection info */
-	/* 'opt_diminfo' points to a [potentially] optimized version of the user's
-         * hyperslab information.  'app_diminfo' points to the actual parameters
-         * that the application used for setting the hyperslab selection.  These
-         * are only used for re-gurgitating the original values used to set the
-         * hyperslab to the application when it queries the hyperslab selection
-         * information. */
-    int unlim_dim;                              /* Dimension where selection is unlimited, or -1 if none */
-    hsize_t num_elem_non_unlim;                 /* # of elements in a "slice" excluding the unlimited dimension */
-    H5S_hyper_span_info_t *span_lst; /* List of hyperslab span information */
+    /* 'opt' points to a [potentially] optimized version of the user's
+     * hyperslab information.  'app' points to the actual parameters
+     * that the application used for setting the hyperslab selection.  These
+     * are only used for regurgitating the original values used to set the
+     * hyperslab to the application when it queries the hyperslab selection
+     * information. */
+    H5S_hyper_dim_t opt[H5S_MAX_RANK];  /* per-dim selection info */
+    H5S_hyper_dim_t app[H5S_MAX_RANK];  /* per-dim selection info */
+
+    /* The following two fields defines the bounding box of the diminfo selection, relative to the offset */
+    hsize_t low_bounds[H5S_MAX_RANK];   /* The smallest element selected in each dimension */
+    hsize_t high_bounds[H5S_MAX_RANK];  /* The largest element selected in each dimension */
+} H5S_hyper_diminfo_t;
+
+/* Information about hyperslab selection */
+typedef struct {
+    H5S_diminfo_valid_t diminfo_valid;  /* Whether the dataset has valid diminfo */
+
+    H5S_hyper_diminfo_t diminfo;        /* Dimension info form of hyperslab selection */
+    int unlim_dim;                      /* Dimension where selection is unlimited, or -1 if none */
+    hsize_t num_elem_non_unlim;         /* # of elements in a "slice" excluding the unlimited dimension */
+    H5S_hyper_span_info_t *span_lst;    /* List of hyperslab span information of all dimensions */
 } H5S_hyper_sel_t;
 
 /* Selection information methods */
@@ -163,7 +199,7 @@ typedef htri_t (*H5S_sel_is_single_func_t)(const H5S_t *space);
 /* Method to determine if current selection is "regular" */
 typedef htri_t (*H5S_sel_is_regular_func_t)(const H5S_t *space);
 /* Method to adjust a selection by an offset */
-typedef herr_t (*H5S_sel_adjust_u_func_t)(H5S_t *space, const hsize_t *offset);
+typedef void (*H5S_sel_adjust_u_func_t)(H5S_t *space, const hsize_t *offset);
 /* Method to construct single element projection onto scalar dataspace */
 typedef herr_t (*H5S_sel_project_scalar)(const H5S_t *space, hsize_t *offset);
 /* Method to construct selection projection onto/into simple dataspace */
@@ -185,7 +221,7 @@ typedef struct {
     H5S_sel_deserialize_func_t deserialize;     /* Method to store create selection from "serialized" form (a byte sequence suitable for storing on disk) */
     H5S_sel_bounds_func_t bounds;               /* Method to determine to smallest n-D bounding box containing the current selection */
     H5S_sel_offset_func_t offset;               /* Method to determine linear offset of initial element in selection within dataspace */
-    H5S_sel_unlim_dim_func_t unlim_dim;              /* Method to get unlimited dimension of selection (or -1 for none) */
+    H5S_sel_unlim_dim_func_t unlim_dim;         /* Method to get unlimited dimension of selection (or -1 for none) */
     H5S_sel_num_elem_non_unlim_func_t num_elem_non_unlim; /* Method to get the number of elements in a slice through the unlimited dimension */
     H5S_sel_is_contiguous_func_t is_contiguous; /* Method to determine if current selection is contiguous */
     H5S_sel_is_single_func_t is_single;         /* Method to determine if current selection is a single block */
@@ -199,12 +235,15 @@ typedef struct {
 /* Selection information object */
 typedef struct {
     const H5S_select_class_t *type;     /* Pointer to selection's class info */
+
     hbool_t offset_changed;             /* Indicate that the offset for the selection has been changed */
     hssize_t offset[H5S_MAX_RANK];      /* Offset within the extent */
-    hsize_t num_elem;   /* Number of elements in selection */
+
+    hsize_t num_elem;                   /* Number of elements in selection */
+
     union {
-        H5S_pnt_list_t *pnt_lst; /* List of selected points (order is important) */
-        H5S_hyper_sel_t *hslab;  /* Info about hyperslab selections */
+        H5S_pnt_list_t *pnt_lst;        /* Info about list of selected points (order is important) */
+        H5S_hyper_sel_t *hslab;         /* Info about hyperslab selection */
     } sel_info;
 } H5S_select_t;
 
@@ -270,6 +309,7 @@ H5_DLL herr_t H5S_extent_copy_real(H5S_extent_t *dst, const H5S_extent_t *src,
     hbool_t copy_max);
 
 /* Operations on selections */
+H5_DLL void H5S__hyper_rebuild(H5S_t *space);
 H5_DLL herr_t H5S__hyper_project_intersection(const H5S_t *src_space,
     const H5S_t *dst_space, const H5S_t *src_intersect_space,
     H5S_t *proj_space);
@@ -278,7 +318,11 @@ H5_DLL herr_t H5S__hyper_subtract(H5S_t *space, H5S_t *subtract_space);
 /* Testing functions */
 #ifdef H5S_TESTING
 H5_DLL htri_t H5S_select_shape_same_test(hid_t sid1, hid_t sid2);
-H5_DLL htri_t H5S_get_rebuild_status_test(hid_t space_id);
+H5_DLL herr_t H5S_get_rebuild_status_test(hid_t space_id,
+    H5S_diminfo_valid_t *status1, H5S_diminfo_valid_t *status2);
+H5_DLL herr_t H5S_get_diminfo_status_test(hid_t space_id,
+    H5S_diminfo_valid_t *status);
+H5_DLL htri_t H5S_internal_consistency_test(hid_t space_id);
 #endif /* H5S_TESTING */
 
 #endif /*_H5Spkg_H*/

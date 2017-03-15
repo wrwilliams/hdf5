@@ -857,7 +857,6 @@ H5D__chunk_io_init(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
     hbool_t iter_init = FALSE;  /* Selection iteration info has been initialized */
     unsigned f_ndims;           /* The number of dimensions of the file's dataspace */
     int sm_ndims;               /* The number of dimensions of the memory buffer's dataspace (signed) */
-    H5SL_node_t *curr_node;     /* Current node in skip list */
     char bogus;                 /* "bogus" buffer to pass to selection iterator */
     unsigned u;                 /* Local index variable */
     herr_t ret_value = SUCCEED;	/* Return value		*/
@@ -883,8 +882,7 @@ H5D__chunk_io_init(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
      * speed up hyperslab calculations by removing the extra checks and/or
      * additions involving the offset and the hyperslab selection -QAK)
      */
-    if((file_space_normalized = H5S_hyper_normalize_offset((H5S_t *)file_space, old_offset)) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_BADSELECT, FAIL, "unable to normalize dataspace by offset")
+    file_space_normalized = H5S_hyper_normalize_offset((H5S_t *)file_space, old_offset);
 
     /* Decide the number of chunks in each dimension*/
     for(u = 0; u < f_ndims; u++) {
@@ -957,6 +955,9 @@ H5D__chunk_io_init(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to create chunk selections for single element")
     } /* end if */
     else {
+#ifdef OLD_WAY
+        H5SL_node_t *curr_node;     /* Current node in skip list */
+#endif /* OLD_WAY */
         hbool_t sel_hyper_flag;         /* Whether file selection is a hyperslab */
 
         /* Initialize skip list for chunk selections */
@@ -988,6 +989,7 @@ H5D__chunk_io_init(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
             if(H5D__create_chunk_file_map_hyper(fm, io_info) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to create file chunk selections")
 
+#ifdef OLD_WAY
             /* Clean file chunks' hyperslab span "scratch" information */
             curr_node = H5SL_first(fm->sel_chunks);
             while(curr_node) {
@@ -1004,6 +1006,7 @@ H5D__chunk_io_init(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
                 /* Get the next chunk node in the skip list */
                 curr_node = H5SL_next(curr_node);
             } /* end while */
+#endif /* OLD_WAY */
         } /* end if */
         else {
             H5S_sel_iter_op_t iter_op;  /* Operator for iteration */
@@ -1077,6 +1080,7 @@ H5D__chunk_io_init(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
             if(H5S_select_iterate(&bogus, file_type, file_space, &iter_op, fm) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to create memory chunk selections")
 
+#ifdef OLD_WAY
             /* Clean up hyperslab stuff, if necessary */
             if(fm->msel_type != H5S_SEL_POINTS) {
                 /* Clean memory chunks' hyperslab span "scratch" information */
@@ -1096,6 +1100,7 @@ H5D__chunk_io_init(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
                     curr_node = H5SL_next(curr_node);
                 } /* end while */
             } /* end if */
+#endif /* OLD_WAY */
         } /* end else */
     } /* end else */
 
@@ -1121,8 +1126,7 @@ done:
         HDONE_ERROR(H5E_DATATYPE, H5E_CANTFREE, FAIL, "Can't free temporary datatype")
     if(file_space_normalized) {
         /* (Casting away const OK -QAK) */
-        if(H5S_hyper_denormalize_offset((H5S_t *)file_space, old_offset) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_BADSELECT, FAIL, "unable to normalize dataspace by offset")
+        H5S_hyper_denormalize_offset((H5S_t *)file_space, old_offset);
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1322,8 +1326,7 @@ H5D__create_chunk_map_single(H5D_chunk_map_t *fm, const H5D_io_info_t
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, FAIL, "unable to copy file selection")
 
     /* Move selection back to have correct offset in chunk */
-    if(H5S_SELECT_ADJUST_U(fm->single_space, coords) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTSELECT, FAIL, "can't adjust chunk selection")
+    H5S_SELECT_ADJUST_U(fm->single_space, coords);
 
 #ifdef H5_HAVE_PARALLEL
     /* store chunk selection information */
@@ -1435,10 +1438,7 @@ H5D__create_chunk_file_map_hyper(H5D_chunk_map_t *fm, const H5D_io_info_t
             } /* end if */
 
             /* Move selection back to have correct offset in chunk */
-            if(H5S_SELECT_ADJUST_U(tmp_fchunk, coords) < 0) {
-                (void)H5S_close(tmp_fchunk);
-                HGOTO_ERROR(H5E_DATASPACE, H5E_CANTSELECT, FAIL, "can't adjust chunk selection")
-            } /* end if */
+            H5S_SELECT_ADJUST_U(tmp_fchunk, coords);
 
             /* Add temporary chunk to the list of chunks */
 
@@ -1637,8 +1637,7 @@ H5D__create_chunk_mem_map_hyper(const H5D_chunk_map_t *fm)
             } /* end for */
 
             /* Adjust the selection */
-            if(H5S_hyper_adjust_s(chunk_info->mspace,chunk_adjust) < 0) /*lint !e772 The chunk_adjust array will always be initialized */
-                HGOTO_ERROR(H5E_DATASPACE, H5E_CANTSELECT, FAIL, "can't adjust chunk selection")
+            H5S_hyper_adjust_s(chunk_info->mspace, chunk_adjust); /*lint !e772 The chunk_adjust array will always be initialized */
 
             /* Get the next chunk node in the skip list */
             curr_node=H5SL_next(curr_node);

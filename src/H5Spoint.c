@@ -17,7 +17,7 @@
  * Programmer:  Quincey Koziol <koziol@ncsa.uiuc.edu>
  *              Tuesday, June 16, 1998
  *
- * Purpose:	Point selection data space I/O functions.
+ * Purpose:	Point selection dataspace I/O functions.
  */
 
 #include "H5Smodule.h"          /* This source code file is part of the H5S module */
@@ -50,7 +50,7 @@ static int H5S__point_unlim_dim(const H5S_t *space);
 static htri_t H5S_point_is_contiguous(const H5S_t *space);
 static htri_t H5S_point_is_single(const H5S_t *space);
 static htri_t H5S_point_is_regular(const H5S_t *space);
-static herr_t H5S_point_adjust_u(H5S_t *space, const hsize_t *offset);
+static void H5S_point_adjust_u(H5S_t *space, const hsize_t *offset);
 static herr_t H5S_point_project_scalar(const H5S_t *space, hsize_t *offset);
 static herr_t H5S_point_project_simple(const H5S_t *space, H5S_t *new_space, hsize_t *offset);
 static herr_t H5S_point_iter_init(H5S_sel_iter_t *iter, const H5S_t *space);
@@ -404,6 +404,8 @@ H5S_point_add(H5S_t *space, H5S_seloper_t op, size_t num_elem, const hsize_t *co
     HDassert(op == H5S_SELECT_SET || op == H5S_SELECT_APPEND || op == H5S_SELECT_PREPEND);
 
     for(u = 0; u < num_elem; u++) {
+        unsigned dim;                       /* Counter for dimensions */
+
         /* Allocate space for the new node */
         if(NULL == (new_node = H5FL_MALLOC(H5S_pnt_node_t)))
             HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, FAIL, "can't allocate point node")
@@ -422,31 +424,45 @@ H5S_point_add(H5S_t *space, H5S_seloper_t op, size_t num_elem, const hsize_t *co
         else
             curr->next = new_node;
         curr = new_node;
+
+        /** 
+         * Note: when op is H5S_SELECT_SET, the bound box has been reset
+         * inside H5S_select_elements, the only caller of this function.
+         * So the following bound box update procedure works correctly
+         * for the SET operation.
+         */ 
+        /* update bound box */
+        for(dim = 0; dim < space->extent.rank; dim++) {
+            space->select.low_bounds[dim] = MIN(space->select.low_bounds[dim], curr->pnt[dim]);
+            space->select.high_bounds[dim] = MAX(space->select.high_bounds[dim], curr->pnt[dim]);
+        } /* end for */
     } /* end for */
     new_node = NULL;
 
     /* Insert the list of points selected in the proper place */
     if(op == H5S_SELECT_SET || op == H5S_SELECT_PREPEND) {
         /* Append current list, if there is one */
-        if(space->select.sel_info.pnt_lst->head != NULL)
+        if(NULL != space->select.sel_info.pnt_lst->head)
             curr->next = space->select.sel_info.pnt_lst->head;
 
         /* Put new list in point selection */
         space->select.sel_info.pnt_lst->head = top;
+
+        /* Change the tail pointer if tail has not been set */
+        if(NULL == space->select.sel_info.pnt_lst->tail)
+            space->select.sel_info.pnt_lst->tail = curr;
     } /* end if */
     else {  /* op==H5S_SELECT_APPEND */
         H5S_pnt_node_t *tmp_node;       /* Temporary point selection node */
 
         tmp_node = space->select.sel_info.pnt_lst->head;
         if(tmp_node != NULL) {
-            while(tmp_node->next != NULL)
-                tmp_node = tmp_node->next;
-
-            /* Append new list to point selection */
-            tmp_node->next = top;
+            HDassert(space->select.sel_info.pnt_lst->tail);
+            space->select.sel_info.pnt_lst->tail->next = top;
         } /* end if */
         else
             space->select.sel_info.pnt_lst->head = top;
+        space->select.sel_info.pnt_lst->tail = curr;
     } /* end else */
 
     /* Set the number of elements in the new selection */
@@ -570,9 +586,16 @@ H5S_select_elements(H5S_t *space, H5S_seloper_t op, size_t num_elem,
             HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't release point selection")
 
     /* Allocate space for the point selection information if necessary */
-    if(H5S_GET_SELECT_TYPE(space) != H5S_SEL_POINTS || space->select.sel_info.pnt_lst == NULL)
+    if(H5S_GET_SELECT_TYPE(space) != H5S_SEL_POINTS || space->select.sel_info.pnt_lst == NULL) {
+        hsize_t tmp = HSIZET_MAX;
+
         if(NULL == (space->select.sel_info.pnt_lst = H5FL_CALLOC(H5S_pnt_list_t)))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate element information")
+
+        /* Set the bound box to the default value */
+        H5VM_array_fill(space->select.low_bounds, &tmp, sizeof(hsize_t), space->extent.rank);
+        HDmemset(space->select.high_bounds, 0, sizeof(hsize_t) * space->extent.rank);
+    } /* end if */
 
     /* Add points to selection */
     if(H5S_point_add(space, op, num_elem, coord) < 0)
@@ -645,6 +668,7 @@ H5S_point_copy(H5S_t *dst, const H5S_t *src, hbool_t H5_ATTR_UNUSED share_select
 
         curr = curr->next;
     } /* end while */
+    dst->select.sel_info.pnt_lst->tail = new_tail;
 
 done:
     if(ret_value < 0 && dst->select.sel_info.pnt_lst) {
@@ -688,28 +712,21 @@ done:
 static htri_t
 H5S_point_is_valid (const H5S_t *space)
 {
-    H5S_pnt_node_t *curr;      /* Point information nodes */
-    unsigned u;                   /* Counter */
-    htri_t ret_value=TRUE;     /* return value */
+    unsigned u;                 /* Counter */
+    htri_t ret_value = TRUE;    /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     HDassert(space);
 
-    /* Check each point to determine whether selection+offset is within extent */
-    curr = space->select.sel_info.pnt_lst->head;
-    while(curr != NULL) {
-        /* Check each dimension */
-        for(u = 0; u < space->extent.rank; u++) {
-            /* Check if an offset has been defined */
-            /* Bounds check the selected point + offset against the extent */
-            if(((curr->pnt[u] + (hsize_t)space->select.offset[u]) > space->extent.size[u])
-                    || (((hssize_t)curr->pnt[u] + space->select.offset[u]) < 0))
-                HGOTO_DONE(FALSE)
-        } /* end for */
-
-        curr = curr->next;
-    } /* end while */
+    /* Check each dimension */
+    for(u = 0; u < space->extent.rank; u++) {
+        /* Bounds check the selected point + offset against the extent */
+        if((space->select.high_bounds[u] + (hsize_t)space->select.offset[u]) > space->extent.size[u])
+            HGOTO_DONE(FALSE)
+        if(((hssize_t)space->select.low_bounds[u] + space->select.offset[u]) < 0)
+            HGOTO_DONE(FALSE)
+    } /* end for */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -744,7 +761,7 @@ H5Sget_select_elem_npoints(hid_t spaceid)
 
     /* Check args */
     if(NULL == (space = (H5S_t *)H5I_object_verify(spaceid, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace")
     if(H5S_GET_SELECT_TYPE(space) != H5S_SEL_POINTS)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not an element selection")
 
@@ -777,7 +794,6 @@ done:
 static hssize_t
 H5S_point_serial_size (const H5S_t *space)
 {
-    H5S_pnt_node_t *curr;       /* Point information nodes */
     hssize_t ret_value = -1;    /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -788,15 +804,11 @@ H5S_point_serial_size (const H5S_t *space)
      *  <type (4 bytes)> + <version (4 bytes)> + <padding (4 bytes)> +
      *      <length (4 bytes)> + <rank (4 bytes)> + <# of points (4 bytes)> = 24 bytes
      */
-    ret_value=24;
+    ret_value = 24;
 
     /* Count points in selection */
-    curr=space->select.sel_info.pnt_lst->head;
-    while(curr!=NULL) {
-        /* Add 4 bytes times the rank for each element selected */
-        ret_value+=4*space->extent.rank;
-        curr=curr->next;
-    } /* end while */
+    /* (Add 4 bytes times the rank for each element selected) */
+    ret_value += (4 * space->extent.rank) * (hssize_t)H5S_GET_SELECT_NPOINTS(space);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5S_point_serial_size() */
@@ -1057,7 +1069,7 @@ H5Sget_select_elem_pointlist(hid_t spaceid, hsize_t startpoint,
     if(NULL == buf)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid pointer")
     if(NULL == (space = (H5S_t *)H5I_object_verify(spaceid, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace")
     if(H5S_GET_SELECT_TYPE(space) != H5S_SEL_POINTS)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a point selection")
 
@@ -1097,41 +1109,29 @@ done:
 static herr_t
 H5S_point_bounds(const H5S_t *space, hsize_t *start, hsize_t *end)
 {
-    H5S_pnt_node_t *node;       /* Point node */
-    unsigned rank;              /* Dataspace rank */
-    unsigned u;                 /* index variable */
-    herr_t ret_value = SUCCEED;   /* Return value */
+    unsigned u;                 /* Local index variable */
+    herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
 
+    /* Sanity check */
     HDassert(space);
     HDassert(start);
     HDassert(end);
 
-    /* Get the dataspace extent rank */
-    rank = space->extent.rank;
+    /* Loop over dimensions */
+    for(u = 0; u < space->extent.rank; u++) {
+        /* Sanity check */
+        HDassert(space->select.low_bounds[u] <= space->select.high_bounds[u]);
 
-    /* Set the start and end arrays up */
-    for(u = 0; u < rank; u++) {
-        start[u] = HSIZET_MAX;
-        end[u] = 0;
+        /* Check for offset moving selection negative */
+        if(((hssize_t)space->select.low_bounds[u] + space->select.offset[u]) < 0)
+            HGOTO_ERROR(H5E_DATASPACE, H5E_BADRANGE, FAIL, "offset moves selection out of bounds")
+
+        /* Set the low & high bounds in this dimension */
+        start[u] = (hsize_t)((hssize_t)space->select.low_bounds[u] + space->select.offset[u]);
+        end[u] = (hsize_t)((hssize_t)space->select.high_bounds[u] + space->select.offset[u]);
     } /* end for */
-
-    /* Iterate through the node, checking the bounds on each element */
-    node = space->select.sel_info.pnt_lst->head;
-    while(node != NULL) {
-        for(u = 0; u < rank; u++) {
-            /* Check for offset moving selection negative */
-            if(((hssize_t)node->pnt[u] + space->select.offset[u]) < 0)
-                HGOTO_ERROR(H5E_DATASPACE, H5E_BADRANGE, FAIL, "offset moves selection out of bounds")
-
-            if(start[u] > (hsize_t)((hssize_t)node->pnt[u] + space->select.offset[u]))
-                start[u] = (hsize_t)((hssize_t)node->pnt[u] + space->select.offset[u]);
-            if(end[u] < (hsize_t)((hssize_t)node->pnt[u] + space->select.offset[u]))
-                end[u] = (hsize_t)((hssize_t)node->pnt[u] + space->select.offset[u]);
-        } /* end for */
-        node = node->next;
-      } /* end while */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1355,11 +1355,11 @@ H5S_point_is_regular(const H5S_t *space)
  PURPOSE
     Adjust a "point" selection by subtracting an offset
  USAGE
-    herr_t H5S_point_adjust_u(space, offset)
+    void H5S_point_adjust_u(space, offset)
         H5S_t *space;           IN/OUT: Pointer to dataspace to adjust
         const hsize_t *offset; IN: Offset to subtract
  RETURNS
-    Non-negative on success, negative on failure
+    None
  DESCRIPTION
     Moves a point selection by subtracting an offset from it.
  GLOBAL VARIABLES
@@ -1367,11 +1367,12 @@ H5S_point_is_regular(const H5S_t *space)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static herr_t
+static void
 H5S_point_adjust_u(H5S_t *space, const hsize_t *offset)
 {
     H5S_pnt_node_t *node;               /* Point node */
     unsigned rank;                      /* Dataspace rank */
+    unsigned u;                         /* Local index variable */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -1382,8 +1383,6 @@ H5S_point_adjust_u(H5S_t *space, const hsize_t *offset)
     node = space->select.sel_info.pnt_lst->head;
     rank = space->extent.rank;
     while(node) {
-        unsigned u;                         /* Local index variable */
-
         /* Adjust each coordinate for point node */
         for(u = 0; u < rank; u++) {
             /* Check for offset moving selection negative */
@@ -1397,7 +1396,13 @@ H5S_point_adjust_u(H5S_t *space, const hsize_t *offset)
         node = node->next;
     } /* end while */
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    /* update the bound box of the selection */
+    for(u = 0; u < rank; u++) {
+        space->select.low_bounds[u] -= offset[u];
+        space->select.high_bounds[u] -= offset[u];
+    } /* end for */
+
+    FUNC_LEAVE_NOAPI_VOID
 }   /* H5S_point_adjust_u() */
 
 
@@ -1461,6 +1466,7 @@ H5S_point_project_simple(const H5S_t *base_space, H5S_t *new_space, hsize_t *off
     H5S_pnt_node_t *new_node;           /* Point node in new space */
     H5S_pnt_node_t *prev_node;          /* Previous point node in new space */
     unsigned rank_diff;                 /* Difference in ranks between spaces */
+    unsigned u;                         /* Local index variable */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -1517,6 +1523,12 @@ H5S_point_project_simple(const H5S_t *base_space, H5S_t *new_space, hsize_t *off
             /* Advance to next node */
             base_node = base_node->next;
         } /* end while */
+
+        /* Update the bounding box */
+        for(u = 0; u < new_space->extent.rank; u++) {
+            new_space->select.low_bounds[u] = base_space->select.low_bounds[u + rank_diff];
+            new_space->select.high_bounds[u] = base_space->select.high_bounds[u + rank_diff];
+        } /* end for */
     } /* end if */
     else {
         HDassert(new_space->extent.rank > base_space->extent.rank);
@@ -1555,6 +1567,16 @@ H5S_point_project_simple(const H5S_t *base_space, H5S_t *new_space, hsize_t *off
             /* Advance to next node */
             base_node = base_node->next;
         } /* end while */
+
+        /* Update the bounding box */
+        for(u = 0; u < rank_diff; u++) {
+            new_space->select.low_bounds[u] = 0;
+            new_space->select.high_bounds[u] = 0;
+        } /* end for */
+        for(; u < new_space->extent.rank; u++) {
+            new_space->select.low_bounds[u] = base_space->select.low_bounds[u - rank_diff];
+            new_space->select.high_bounds[u] = base_space->select.high_bounds[u - rank_diff];
+        } /* end for */
     } /* end else */
 
     /* Number of elements selected will be the same */
@@ -1694,7 +1716,7 @@ H5S_point_get_seq_list(const H5S_t *space, unsigned flags, H5S_sel_iter_t *iter,
 
     /* Get the dataspace dimensions */
     if((ndims = H5S_get_simple_extent_dims (space, dims, NULL)) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to retrieve data space dimensions")
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to retrieve dataspace dimensions")
 
     /* Walk through the points in the selection, starting at the current */
     /*  location in the iterator */
