@@ -310,10 +310,9 @@ H5_DLL herr_t H5S_extent_copy_real(H5S_extent_t *dst, const H5S_extent_t *src,
 
 /* Operations on selections */
 H5_DLL void H5S__hyper_rebuild(H5S_t *space);
+H5_DLL herr_t H5S__modify_select(H5S_t *space1, H5S_seloper_t op, H5S_t *space2);
 H5_DLL herr_t H5S__hyper_project_intersection(const H5S_t *src_space,
-    const H5S_t *dst_space, const H5S_t *src_intersect_space,
-    H5S_t *proj_space);
-H5_DLL herr_t H5S__hyper_subtract(H5S_t *space, H5S_t *subtract_space);
+    const H5S_t *dst_space, const H5S_t *src_intersect_space, H5S_t *proj_space);
 
 /* Testing functions */
 #ifdef H5S_TESTING

@@ -433,8 +433,8 @@ H5S_point_add(H5S_t *space, H5S_seloper_t op, size_t num_elem, const hsize_t *co
          */ 
         /* update bound box */
         for(dim = 0; dim < space->extent.rank; dim++) {
-            space->select.low_bounds[dim] = MIN(space->select.low_bounds[dim], curr->pnt[dim]);
-            space->select.high_bounds[dim] = MAX(space->select.high_bounds[dim], curr->pnt[dim]);
+            space->select.sel_info.pnt_lst->low_bounds[dim] = MIN(space->select.sel_info.pnt_lst->low_bounds[dim], curr->pnt[dim]);
+            space->select.sel_info.pnt_lst->high_bounds[dim] = MAX(space->select.sel_info.pnt_lst->high_bounds[dim], curr->pnt[dim]);
         } /* end for */
     } /* end for */
     new_node = NULL;
@@ -593,8 +593,8 @@ H5S_select_elements(H5S_t *space, H5S_seloper_t op, size_t num_elem,
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate element information")
 
         /* Set the bound box to the default value */
-        H5VM_array_fill(space->select.low_bounds, &tmp, sizeof(hsize_t), space->extent.rank);
-        HDmemset(space->select.high_bounds, 0, sizeof(hsize_t) * space->extent.rank);
+        H5VM_array_fill(space->select.sel_info.pnt_lst->low_bounds, &tmp, sizeof(hsize_t), space->extent.rank);
+        HDmemset(space->select.sel_info.pnt_lst->high_bounds, 0, sizeof(hsize_t) * space->extent.rank);
     } /* end if */
 
     /* Add points to selection */
@@ -722,9 +722,9 @@ H5S_point_is_valid (const H5S_t *space)
     /* Check each dimension */
     for(u = 0; u < space->extent.rank; u++) {
         /* Bounds check the selected point + offset against the extent */
-        if((space->select.high_bounds[u] + (hsize_t)space->select.offset[u]) > space->extent.size[u])
+        if((space->select.sel_info.pnt_lst->high_bounds[u] + (hsize_t)space->select.offset[u]) > space->extent.size[u])
             HGOTO_DONE(FALSE)
-        if(((hssize_t)space->select.low_bounds[u] + space->select.offset[u]) < 0)
+        if(((hssize_t)space->select.sel_info.pnt_lst->low_bounds[u] + space->select.offset[u]) < 0)
             HGOTO_DONE(FALSE)
     } /* end for */
 
@@ -1122,15 +1122,15 @@ H5S_point_bounds(const H5S_t *space, hsize_t *start, hsize_t *end)
     /* Loop over dimensions */
     for(u = 0; u < space->extent.rank; u++) {
         /* Sanity check */
-        HDassert(space->select.low_bounds[u] <= space->select.high_bounds[u]);
+        HDassert(space->select.sel_info.pnt_lst->low_bounds[u] <= space->select.sel_info.pnt_lst->high_bounds[u]);
 
         /* Check for offset moving selection negative */
-        if(((hssize_t)space->select.low_bounds[u] + space->select.offset[u]) < 0)
+        if(((hssize_t)space->select.sel_info.pnt_lst->low_bounds[u] + space->select.offset[u]) < 0)
             HGOTO_ERROR(H5E_DATASPACE, H5E_BADRANGE, FAIL, "offset moves selection out of bounds")
 
         /* Set the low & high bounds in this dimension */
-        start[u] = (hsize_t)((hssize_t)space->select.low_bounds[u] + space->select.offset[u]);
-        end[u] = (hsize_t)((hssize_t)space->select.high_bounds[u] + space->select.offset[u]);
+        start[u] = (hsize_t)((hssize_t)space->select.sel_info.pnt_lst->low_bounds[u] + space->select.offset[u]);
+        end[u] = (hsize_t)((hssize_t)space->select.sel_info.pnt_lst->high_bounds[u] + space->select.offset[u]);
     } /* end for */
 
 done:
@@ -1398,8 +1398,8 @@ H5S_point_adjust_u(H5S_t *space, const hsize_t *offset)
 
     /* update the bound box of the selection */
     for(u = 0; u < rank; u++) {
-        space->select.low_bounds[u] -= offset[u];
-        space->select.high_bounds[u] -= offset[u];
+        space->select.sel_info.pnt_lst->low_bounds[u] -= offset[u];
+        space->select.sel_info.pnt_lst->high_bounds[u] -= offset[u];
     } /* end for */
 
     FUNC_LEAVE_NOAPI_VOID
@@ -1526,8 +1526,8 @@ H5S_point_project_simple(const H5S_t *base_space, H5S_t *new_space, hsize_t *off
 
         /* Update the bounding box */
         for(u = 0; u < new_space->extent.rank; u++) {
-            new_space->select.low_bounds[u] = base_space->select.low_bounds[u + rank_diff];
-            new_space->select.high_bounds[u] = base_space->select.high_bounds[u + rank_diff];
+            new_space->select.sel_info.pnt_lst->low_bounds[u] = base_space->select.sel_info.pnt_lst->low_bounds[u + rank_diff];
+            new_space->select.sel_info.pnt_lst->high_bounds[u] = base_space->select.sel_info.pnt_lst->high_bounds[u + rank_diff];
         } /* end for */
     } /* end if */
     else {
@@ -1570,12 +1570,12 @@ H5S_point_project_simple(const H5S_t *base_space, H5S_t *new_space, hsize_t *off
 
         /* Update the bounding box */
         for(u = 0; u < rank_diff; u++) {
-            new_space->select.low_bounds[u] = 0;
-            new_space->select.high_bounds[u] = 0;
+            new_space->select.sel_info.pnt_lst->low_bounds[u] = 0;
+            new_space->select.sel_info.pnt_lst->high_bounds[u] = 0;
         } /* end for */
         for(; u < new_space->extent.rank; u++) {
-            new_space->select.low_bounds[u] = base_space->select.low_bounds[u - rank_diff];
-            new_space->select.high_bounds[u] = base_space->select.high_bounds[u - rank_diff];
+            new_space->select.sel_info.pnt_lst->low_bounds[u] = base_space->select.sel_info.pnt_lst->low_bounds[u - rank_diff];
+            new_space->select.sel_info.pnt_lst->high_bounds[u] = base_space->select.sel_info.pnt_lst->high_bounds[u - rank_diff];
         } /* end for */
     } /* end else */
 

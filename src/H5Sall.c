@@ -649,7 +649,6 @@ H5S__all_bounds(const H5S_t *space, hsize_t *start, hsize_t *end)
 --------------------------------------------------------------------------*/
 static herr_t
 H5S__all_offset(const H5S_t H5_ATTR_UNUSED *space, hsize_t *offset)
->>>>>>> .r30321
 {
     FUNC_ENTER_STATIC_NOERR
 

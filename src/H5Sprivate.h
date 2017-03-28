@@ -285,12 +285,14 @@ H5_DLL herr_t H5S_select_hyperslab(H5S_t *space, H5S_seloper_t op, const hsize_t
     const hsize_t *stride, const hsize_t count[], const hsize_t *block);
 H5_DLL herr_t H5S_hyper_add_span_element(H5S_t *space, unsigned rank,
     const hsize_t *coords);
+#ifdef OLD_WAY
 H5_DLL herr_t H5S_hyper_reset_scratch(H5S_t *space);
+#endif /* OLD_WAY */
 H5_DLL herr_t H5S_hyper_convert(H5S_t *space);
 H5_DLL htri_t H5S_hyper_intersect_block(H5S_t *space, const hsize_t *start, const hsize_t *end);
-H5_DLL void H5S_hyper_adjust_s(H5S_t *space, const hssize_t *offset);
-H5_DLL hbool_t H5S_hyper_normalize_offset(H5S_t *space, hssize_t *old_offset);
-H5_DLL void H5S_hyper_denormalize_offset(H5S_t *space, const hssize_t *old_offset);
+H5_DLL herr_t H5S_hyper_adjust_s(H5S_t *space, const hssize_t *offset);
+H5_DLL htri_t H5S_hyper_normalize_offset(H5S_t *space, hssize_t *old_offset);
+H5_DLL herr_t H5S_hyper_denormalize_offset(H5S_t *space, const hssize_t *old_offset);
 H5_DLL herr_t H5S_hyper_clip_unlim(H5S_t *space, hsize_t clip_size);
 H5_DLL hsize_t H5S_hyper_get_clip_extent(const H5S_t *clip_space,
     const H5S_t *match_space, hbool_t incl_trail);
