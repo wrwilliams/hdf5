@@ -176,17 +176,16 @@ static unsigned int     H5PL_plugin_g = H5PL_ALL_PLUGIN;
 
 
 
-/*--------------------------------------------------------------------------
-NAME
-   H5PL__init_package -- Initialize interface-specific information
-USAGE
-    herr_t H5PL__init_package()
-RETURNS
-    Non-negative on success/Negative on failure
-DESCRIPTION
-    Initializes any interface-specific data or routines.
-
---------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__init_package
+ *
+ * Purpose:     Initialize any package-specific data and call any init
+ *              routines for the package.
+ *
+ * Return:      Success:    Non-negative
+ *              Failture:   Negative
+ *-------------------------------------------------------------------------
+ */
 herr_t
 H5PL__init_package(void)
 {
@@ -214,11 +213,8 @@ H5PL__init_package(void)
  *              types have been destroyed from other interfaces.
  *
  * Return:      Success:    Positive if any action was taken that might
- *                          affect some other interface; zero otherwise.
- *              Failure:    Negative.
- *
- * Programmer:  Raymond Lu
- *              20 February 2013
+ *                          affect some other interface; zero otherwise
+ *              Failure:    Negative
  *
  *-------------------------------------------------------------------------
  */
@@ -265,21 +261,23 @@ H5PL_term_package(void)
 
 
 /*-------------------------------------------------------------------------
- * Function: H5PLset_loading_state
+ * Function:    H5PLset_loading_state
  *
- * Purpose: Control the loading of dynamic plugin types.
+ * Purpose:     Control the loading of dynamic plugin types.
  *
- * This function will not allow plugin types if the pathname from the HDF5_PLUGIN_PRELOAD
- * environment variable is set to the special "::" string.
+ *              This function will not allow plugin types if the pathname
+ *              from the HDF5_PLUGIN_PRELOAD environment variable is set to
+ *              the special "::" string.
  *
- * plugin bit = 0, will prevent the use of that dynamic plugin type.
- * plugin bit = 1, will allow the use of that dynamic plugin type.
+ *              plugin bit = 0, will prevent the use of that dynamic plugin type.
+ *              plugin bit = 1, will allow the use of that dynamic plugin type.
  *
- * H5PL_TYPE_FILTER changes just dynamic filters
- * A H5PL_ALL_PLUGIN will enable all dynamic plugin types
- * A zero value will disable all dynamic plugin types
+ *              H5PL_TYPE_FILTER changes just dynamic filters
+ *              A H5PL_ALL_PLUGIN will enable all dynamic plugin types
+ *              A zero value will disable all dynamic plugin types
  *
- * Return: Non-negative or success
+ * Return:      Success:    Non-negative
+ *              Failture:   Negative
  *
  *-------------------------------------------------------------------------
  */
@@ -307,17 +305,19 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function: H5PLget_loading_state
+ * Function:    H5PLget_loading_state
  *
- * Purpose: Query state of the loading of dynamic plugin types.
+ * Purpose:     Query state of the loading of dynamic plugin types.
  *
- * This function will return the state of the global flag.
+ *              This function will return the state of the global flag.
  *
- * Return: Zero if all plugin types are disabled, negative if all
- * plugin types are enabled, positive if one or more of the plugin types are enabled.
+ *  Return:     Zero if all plugin types are disabled
+ *              Negative if all plugin types are enabled
+ *              Positive if one or more of the plugin types are enabled
  *
  *-------------------------------------------------------------------------
  */
+/* XXX: THIS SHOULD BE AN ENUM!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
 herr_t
 H5PLget_loading_state(unsigned int *plugin_type)
 {
@@ -341,10 +341,8 @@ done:
  *              and/or loads a dynamic plugin library first among the already
  *              opened libraries then in the designated location paths.
  *
- * Return:      Non-NULL on success/NULL on failure
- *
- * Programmer:  Raymond Lu
- *              13 February 2013
+ * Return:      Success:    A pointer to the plugin info
+ *              Failture:   NULL
  *
  *-------------------------------------------------------------------------
  */
@@ -406,11 +404,12 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function: H5PLappend
+ * Function:    H5PLappend
  *
- * Purpose: Insert a plugin path at the end of the list.
+ * Purpose:     Insert a plugin path at the end of the list.
  *
- * Return: Non-negative or success.
+ * Return:      Success:    Non-negative
+ *              Failture:   Negative
  *
  *-------------------------------------------------------------------------
  */
@@ -438,13 +437,14 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5PLappend() */
 
-
+
 /*-------------------------------------------------------------------------
- * Function: H5PLprepend
+ * Function:    H5PLprepend
  *
- * Purpose: Insert a plugin path at the beginning of the list.
+ * Purpose:     Insert a plugin path at the beginning of the list.
  *
- * Return: Non-negative or success.
+ * Return:      Success:    Non-negative
+ *              Failture:   Negative
  *
  *-------------------------------------------------------------------------
  */
@@ -475,13 +475,13 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5PLprepend() */
 
-
+
 /*-------------------------------------------------------------------------
- * Function: H5PLreplace
+ * Function:    H5PLreplace
  *
- * Purpose: Replace the path at the specified index.
+ * Purpose:     Replace the path at the specified index.
  *
- * Return: Non-negative or success.
+ * Return:      Non-negative or success.
  *
  *-------------------------------------------------------------------------
  */
@@ -510,13 +510,15 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5PLreplace() */
 
-
+
 /*-------------------------------------------------------------------------
- * Function: H5PLinsert
+ * Function:    H5PLinsert
  *
- * Purpose: Insert a plugin path at the specified index, moving other paths after the index.
+ * Purpose:     Insert a plugin path at the specified index, moving other
+ *              paths after the index.
  *
- * Return: Non-negative or success.
+ * Return:      Success:    Non-negative
+ *              Failture:   Negative
  *
  *-------------------------------------------------------------------------
  */
@@ -549,13 +551,17 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5PLinsert() */
 
-
+
 /*-------------------------------------------------------------------------
- * Function: H5PLremove
+ * Function:    H5PLremove
  *
- * Purpose: Remove the plugin path at the specifed index and compacting the list.
+ * Purpose:     Remove the plugin path at the specifed index and compacting
+ *              the list.
  *
- * Return: Non-negative or success.
+ * Return:      Success:    Non-negative
+ *              Failture:   Negative
+ *
+ * Return:      Non-negative or success.
  *
  *-------------------------------------------------------------------------
  */
@@ -584,13 +590,11 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5PLremove() */
 
-
+
 /*-------------------------------------------------------------------------
- * Function: H5PLget
+ * Function:    H5PLget
  *
- * Purpose: Query the plugin path at the specified index.
- *
- * Return: Success: The length of path.
+ * Purpose:     Query the plugin path at the specified index.
  *
  *  If `pathname' is non-NULL then write up to `size' bytes into that
  *  buffer and always return the length of the pathname.
@@ -600,6 +604,8 @@ done:
  *  is unchanged and the function returns a negative value.
  *  If a zero is returned for the name's length, then there is no pathname
  *  associated with the index.
+ *
+ * Return:      Success: The length of path.
  *
  *-------------------------------------------------------------------------
  */
@@ -632,18 +638,18 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5PLget() */
 
-
+
 /*-------------------------------------------------------------------------
- * Function: H5PLsize
+ * Function:    H5PLsize
  *
- * Purpose: Query the size of the current list of plugin paths.
+ * Purpose:     Query the size of the current list of plugin paths.
  *
- * Return: Plugin path size
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5PLsize(unsigned int *listsize)
+H5PLsize(unsigned int *listsize /*out*/)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
@@ -656,16 +662,13 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5PLsize() */
 
-
+
 /*-------------------------------------------------------------------------
  * Function:    H5PL__init_path_table
  *
  * Purpose:     Initialize the path table.
  *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Quincey Koziol
- *              18 March 2013
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
@@ -725,9 +728,6 @@ done:
  * Return:      TRUE on success,
  *              FALSE on not found,
  *              negative on failure
- *
- * Programmer:  Raymond Lu
- *              13 February 2013
  *
  *-------------------------------------------------------------------------
  */
@@ -859,9 +859,6 @@ done:
  *              FALSE on not found,
  *              negative on failure
  *
- * Programmer:  Raymond Lu
- *              13 February 2013
- *
  *-------------------------------------------------------------------------
  */
 static htri_t
@@ -946,9 +943,6 @@ done:
  *              FALSE on not found,
  *              Negative on failure
  *
- * Programmer:  Raymond Lu
- *              13 February 2013
- *
  *-------------------------------------------------------------------------
  */
 static htri_t
@@ -989,10 +983,7 @@ done:
  *
  * Purpose:     Closes the handle for dynamic library
  *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Raymond Lu
- *              13 February 2013
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */

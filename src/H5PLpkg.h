@@ -11,6 +11,12 @@
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/*
+ * Purpose: This file contains declarations which are visible only within
+ *          the H5PL package.  Source files outside the H5PL package should
+ *          include H5PLprivate.h instead.
+ */
+
 #if !(defined H5PL_FRIEND || defined H5PL_MODULE)
 #error "Do not include this file outside the H5PL package!"
 #endif
