@@ -160,9 +160,7 @@ extern size_t           H5PL_table_alloc_g;
 extern size_t           H5PL_table_used_g;
 extern H5PL_table_t    *H5PL_table_g;
 
-/* Table of location paths for plugin libraries */
-extern char            *H5PL_paths_g[H5PL_MAX_PATH_NUM];
-extern size_t           H5PL_num_paths_g;
+/* XXX: ??? */
 extern hbool_t          H5PL_path_found_g;
 
 /* Enable all plugin libraries */

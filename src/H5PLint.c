@@ -41,7 +41,7 @@
 /* Local Prototypes */
 /********************/
 
-static htri_t H5PL__find(H5PL_type_t plugin_type, int type_id, char *dir, const void **info);
+static htri_t H5PL__find(H5PL_type_t plugin_type, int type_id, const char *dir, const void **info);
 static htri_t H5PL__open(H5PL_type_t pl_type, char *libname, int plugin_id, const void **pl_info);
 static htri_t H5PL__search_table(H5PL_type_t plugin_type, int type_id, const void **info);
 static herr_t H5PL__close(H5PL_HANDLE handle);
@@ -198,10 +198,16 @@ H5PL_load(H5PL_type_t type, int id)
 
     /* If not found, iterate through the path table to find the right dynamic library */
     if (!found) {
-        size_t       i;                   /* Local index variable */
+        size_t      i;                  /* Local index variable */
+        size_t      num_paths;          /* Number of paths in table */
 
-        for (i = 0; i < H5PL_num_paths_g; i++) {
-            if ((found = H5PL__find(type, id, H5PL_paths_g[i], &plugin_info)) < 0)
+        num_paths = H5PL__get_num_paths();
+
+        for (i = 0; i < num_paths; i++) {
+
+            const char *path = H5PL__get_path((unsigned int)i);
+
+            if ((found = H5PL__find(type, id, path, &plugin_info)) < 0)
                 HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, NULL, "search in paths failed")
 
             /* Break out if found */
@@ -237,7 +243,7 @@ done:
  */
 #ifndef H5_HAVE_WIN32_API
 static htri_t
-H5PL__find(H5PL_type_t plugin_type, int type_id, char *dir, const void **info)
+H5PL__find(H5PL_type_t plugin_type, int type_id, const char *dir, const void **info)
 {
     char           *pathname = NULL;
     DIR            *dirp = NULL;
@@ -300,7 +306,7 @@ done:
 } /* end H5PL__find() */
 #else /* H5_HAVE_WIN32_API */
 static htri_t
-H5PL__find(H5PL_type_t plugin_type, int type_id, char *dir, const void **info)
+H5PL__find(H5PL_type_t plugin_type, int type_id, const char *dir, const void **info)
 {
     WIN32_FIND_DATAA    fdFile;
     HANDLE              hFind;
