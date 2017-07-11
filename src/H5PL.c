@@ -175,7 +175,7 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5PLprepend
  *
- * Purpose:     Insert a plugin path at the beginning of the list.
+ * Purpose:     Insert a plugin search path at the beginning of the list.
  *
  * Return:      Success:    Non-negative
  *              Failture:   Negative
@@ -183,29 +183,22 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5PLprepend(const char *plugin_path)
+H5PLprepend(const char *search_path)
 {
-    char        *dl_path = NULL;
-    unsigned int plindex;
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE1("e", "*s", plugin_path);
+    H5TRACE1("e", "*s", search_path);
 
-    if (NULL == plugin_path)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "no path provided")
+    /* Check args */
+    if (NULL == search_path)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "plugin_path parameter cannot be NULL")
+    if (0 == HDstrlen(search_path))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "plugin_path parameter cannot have length zero")
 
-    if (H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "too many directories in path for table")
-    if (NULL == (dl_path = H5MM_strdup(plugin_path)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for path")
-
-    H5PL_EXPAND_ENV_VAR
-
-    for (plindex = (unsigned int)H5PL_num_paths_g; plindex > 0; plindex--)
-        H5PL_paths_g[plindex] = H5PL_paths_g[plindex - 1];
-    H5PL_paths_g[0] = dl_path;
-    H5PL_num_paths_g++;
+    /* Prepend the search path to the path table */
+    if (H5PL__prepend_path(search_path) < 0)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINSERT, FAIL, "unable to prepend search path")
 
 done:
     FUNC_LEAVE_API(ret_value)

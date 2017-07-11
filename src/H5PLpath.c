@@ -195,7 +195,7 @@ H5PL__get_num_paths(void)
 herr_t
 H5PL__append_path(const char *path)
 {
-    char    *path_copy = NULL;
+    char    *path_copy = NULL;      /* copy of path string (for storing) */
     herr_t  ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -206,7 +206,7 @@ H5PL__append_path(const char *path)
 
     /* Is the table full? */
     if (H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "too many directories in path for table")
+        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no room in path table to add new path")
 
     /* Copy the path for storage so the caller can dispose of theirs */
     if (NULL == (path_copy = H5MM_strdup(path)))
@@ -223,4 +223,50 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__append_path() */
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__prepend_path
+ *
+ * Purpose:     Insert a path at the beginning of the table.
+ *
+ * Return:      Success:    Non-negative
+ *              Failture:   Negative
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5PL__prepend_path(const char *path)
+{
+    size_t u;                       /* iterator */
+    char    *path_copy = NULL;      /* copy of path string (for storing) */
+    herr_t  ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_PACKAGE
+
+    /* Check args - Just assert on package functions */
+    HDassert(path);
+    HDassert(HDstrlen(path));
+
+    /* Is the table full? */
+    if (H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no room in path table to add new path")
+
+    /* Copy the path for storage so the caller can dispose of theirs */
+    if (NULL == (path_copy = H5MM_strdup(path)))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't make internal copy of path")
+
+    /* XXX: Try to minimize this usage */
+    H5PL_EXPAND_ENV_VAR
+
+    /* Copy the paths back to make a space at the head */
+    for (u = H5PL_num_paths_g; u > 0; u--)
+        H5PL_paths_g[u] = H5PL_paths_g[u-1];
+
+    /* Insert the copy of the search path into the table at the head */
+    H5PL_paths_g[0] = path_copy;
+    H5PL_num_paths_g++;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PL__append_path() */
 
