@@ -151,6 +151,21 @@ typedef struct H5PL_table_t {
 /* Package Private Variables */
 /*****************************/
 
+/* These variables are defined in H5PLint.c */
+
+/* Table for opened plugin libraries */
+extern size_t           H5PL_table_alloc_g;
+extern size_t           H5PL_table_used_g;
+extern H5PL_table_t    *H5PL_table_g;
+
+/* Table of location paths for plugin libraries */
+extern char            *H5PL_path_table_g[H5PL_MAX_PATH_NUM];
+extern size_t           H5PL_num_paths_g;
+extern hbool_t          H5PL_path_found_g;
+
+/* Enable all plugin libraries */
+extern unsigned int     H5PL_plugin_g;
+
 
 /******************************/
 /* Package Private Prototypes */

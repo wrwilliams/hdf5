@@ -50,19 +50,6 @@
 /* Library Private Variables */
 /*****************************/
 
-/* Table for opened plugin libraries */
-size_t          H5PL_table_alloc_g = 0;
-size_t          H5PL_table_used_g = 0;
-H5PL_table_t   *H5PL_table_g = NULL;
-
-/* Table of location paths for plugin libraries */
-char           *H5PL_path_table_g[H5PL_MAX_PATH_NUM];
-size_t          H5PL_num_paths_g = 0;
-hbool_t         H5PL_path_found_g = FALSE;
-
-/* Enable all plugin libraries */
-unsigned int    H5PL_plugin_g = H5PL_ALL_PLUGIN;
-
 
 /*******************/
 /* Local Variables */
