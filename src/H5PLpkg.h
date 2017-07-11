@@ -109,6 +109,11 @@
     typedef const void *(*H5PL_get_plugin_info_t)(void);
 #endif /* H5_HAVE_WIN32_API */
 
+/* This is required to expand Microsoft Windows environment variable strings
+ * containing things like %variableName%. The ExpandEnvironmentStrings() API
+ * call will replace the variables with the user's current values for them.
+ */
+/* XXX: This should not be a macro */
 #ifdef H5_HAVE_WIN32_API
 #define H5PL_EXPAND_ENV_VAR {                                                            \
         long bufCharCount;                                                               \
@@ -156,7 +161,7 @@ extern size_t           H5PL_table_used_g;
 extern H5PL_table_t    *H5PL_table_g;
 
 /* Table of location paths for plugin libraries */
-extern char            *H5PL_path_table_g[H5PL_MAX_PATH_NUM];
+extern char            *H5PL_paths_g[H5PL_MAX_PATH_NUM];
 extern size_t           H5PL_num_paths_g;
 extern hbool_t          H5PL_path_found_g;
 
@@ -167,6 +172,11 @@ extern unsigned int     H5PL_plugin_g;
 /******************************/
 /* Package Private Prototypes */
 /******************************/
+
+herr_t H5PL__init_path_table(void);
+herr_t H5PL__close_path_table(void);
+size_t H5PL__get_num_paths(void);
+herr_t H5PL__append_path(const char *path);
 
 #endif /* _H5PLpkg_H */
 

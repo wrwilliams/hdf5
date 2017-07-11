@@ -158,8 +158,13 @@ H5PLappend(const char *plugin_path)
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "*s", plugin_path);
 
+    /* Check args */
     if(NULL == plugin_path)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "no path provided")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "plugin_path parameter cannot be NULL")
+    if(0 == HDstrlen(plugin_path))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "plugin_path parameter cannot have length zero")
+
+
     if(H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
         HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "too many directories in path for table")
     if(NULL == (dl_path = H5MM_strdup(plugin_path)))
@@ -167,7 +172,7 @@ H5PLappend(const char *plugin_path)
 
     H5PL_EXPAND_ENV_VAR
 
-    H5PL_path_table_g[H5PL_num_paths_g] = dl_path;
+    H5PL_paths_g[H5PL_num_paths_g] = dl_path;
     H5PL_num_paths_g++;
 
 done:
@@ -206,8 +211,8 @@ H5PLprepend(const char *plugin_path)
     H5PL_EXPAND_ENV_VAR
 
     for(plindex = (unsigned int)H5PL_num_paths_g; plindex > 0; plindex--)
-        H5PL_path_table_g[plindex] = H5PL_path_table_g[plindex - 1];
-    H5PL_path_table_g[0] = dl_path;
+        H5PL_paths_g[plindex] = H5PL_paths_g[plindex - 1];
+    H5PL_paths_g[0] = dl_path;
     H5PL_num_paths_g++;
 
 done:
@@ -242,9 +247,9 @@ H5PLreplace(const char *plugin_path, unsigned int index)
 
     H5PL_EXPAND_ENV_VAR
 
-    if(H5PL_path_table_g[index])
-        H5PL_path_table_g[index] = (char *)H5MM_xfree(H5PL_path_table_g[index]);
-    H5PL_path_table_g[index] = dl_path;
+    if(H5PL_paths_g[index])
+        H5PL_paths_g[index] = (char *)H5MM_xfree(H5PL_paths_g[index]);
+    H5PL_paths_g[index] = dl_path;
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -284,8 +289,8 @@ H5PLinsert(const char *plugin_path, unsigned int index)
     H5PL_EXPAND_ENV_VAR
 
     for(plindex = (unsigned int)H5PL_num_paths_g; plindex > index; plindex--)
-        H5PL_path_table_g[plindex] = H5PL_path_table_g[plindex - 1];
-    H5PL_path_table_g[index] = dl_path;
+        H5PL_paths_g[plindex] = H5PL_paths_g[plindex - 1];
+    H5PL_paths_g[index] = dl_path;
     H5PL_num_paths_g++;
 
 done:
@@ -319,14 +324,14 @@ H5PLremove(unsigned int index)
         HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no directories in table")
     if(index >= H5PL_MAX_PATH_NUM)
         HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "index path out of bounds for table")
-    if(NULL == H5PL_path_table_g[index])
+    if(NULL == H5PL_paths_g[index])
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "no directory path at index")
-    H5PL_path_table_g[index] = (char *)H5MM_xfree(H5PL_path_table_g[index]);
+    H5PL_paths_g[index] = (char *)H5MM_xfree(H5PL_paths_g[index]);
 
     H5PL_num_paths_g--;
     for(plindex = index; plindex < (unsigned int)H5PL_num_paths_g; plindex++)
-        H5PL_path_table_g[plindex] = H5PL_path_table_g[plindex + 1];
-    H5PL_path_table_g[H5PL_num_paths_g] = NULL;
+        H5PL_paths_g[plindex] = H5PL_paths_g[plindex + 1];
+    H5PL_paths_g[H5PL_num_paths_g] = NULL;
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -366,7 +371,7 @@ H5PLget(unsigned int index, char *pathname/*out*/, size_t size)
 
     if(H5PL_num_paths_g == 0)
         HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no directories in table")
-    if(NULL == (dl_path = H5PL_path_table_g[index]))
+    if(NULL == (dl_path = H5PL_paths_g[index]))
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "no directory path at index")
     len = HDstrlen(dl_path);
     if(pathname) {
@@ -386,21 +391,27 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5PLsize
  *
- * Purpose:     Query the size of the current list of plugin paths.
+ * Purpose:     Get the number of stored plugin paths.
+ *              XXX: This is a terrible name. Can it be changed?
  *
  * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5PLsize(unsigned int *listsize)
+H5PLsize(unsigned int *num_paths)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE1("e", "*Iu", listsize);
+    H5TRACE1("e", "*Iu", num_paths);
 
-    *listsize = (unsigned int)H5PL_num_paths_g;
+    /* Check arguments */
+    if(!num_paths)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "num_paths parameter cannot be NULL")
+
+    /* Get the number of stored plugin paths */
+    *num_paths = (unsigned int)H5PL__get_num_paths();
 
 done:
     FUNC_LEAVE_API(ret_value)

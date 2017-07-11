@@ -24,8 +24,7 @@
 /* Public Typedefs */
 /*******************/
 
-/* Special string to indicate no plugin loading when setting the 
- * environment variable.
+/* Special string to indicate no plugin loading.
  */
 #define H5PL_NO_PLUGIN          "::"
 

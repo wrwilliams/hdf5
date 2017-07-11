@@ -41,7 +41,6 @@
 /* Local Prototypes */
 /********************/
 
-static herr_t H5PL__init_path_table(void);
 static htri_t H5PL__find(H5PL_type_t plugin_type, int type_id, char *dir, const void **info);
 static htri_t H5PL__open(H5PL_type_t pl_type, char *libname, int plugin_id, const void **pl_info);
 static htri_t H5PL__search_table(H5PL_type_t plugin_type, int type_id, const void **info);
@@ -64,11 +63,6 @@ hbool_t H5_PKG_INIT_VAR = FALSE;
 size_t          H5PL_table_alloc_g = 0;
 size_t          H5PL_table_used_g = 0;
 H5PL_table_t   *H5PL_table_g = NULL;
-
-/* Table of location paths for plugin libraries */
-char           *H5PL_path_table_g[H5PL_MAX_PATH_NUM];
-size_t          H5PL_num_paths_g = 0;
-hbool_t         H5PL_path_found_g = FALSE;
 
 /* Enable all plugin libraries */
 unsigned int    H5PL_plugin_g = H5PL_ALL_PLUGIN;
@@ -93,18 +87,17 @@ unsigned int    H5PL_plugin_g = H5PL_ALL_PLUGIN;
 herr_t
 H5PL__init_package(void)
 {
-    char        *preload_path = NULL;
+    char        *env_var = NULL;
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    /* Retrieve pathnames from HDF5_PLUGIN_PRELOAD if the user sets it
-     * to tell the library to load plugin libraries without search.
-     *
-     * The special symbol "::" means no plugin during data reading.
+    /* Check the environment variable to determine if the user wants
+     * to ignore plugins. The special symbol H5PL_NO_PLUGIN (defined in
+     * H5PLpublic.h) means we don't want to load plugins.
      */
-    if(NULL != (preload_path = HDgetenv("HDF5_PLUGIN_PRELOAD")))
-        if(!HDstrcmp(preload_path, H5PL_NO_PLUGIN))
-            H5PL_plugin_g = 0;
+    if(NULL != (env_var = HDgetenv("HDF5_PLUGIN_PRELOAD")))
+        if(!HDstrcmp(env_var, H5PL_NO_PLUGIN))
+            H5PL_plugin_g = 0;  /* XXX: Use an API call here */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5PL__init_package() */
@@ -126,9 +119,9 @@ H5PL__init_package(void)
 int
 H5PL_term_package(void)
 {
-    int  n = 0;
+    int     ret_value = 0;
 
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
+    FUNC_ENTER_NOAPI_NOINIT
 
     if(H5_PKG_INIT_VAR) {
         size_t u;       /* Local index variable */
@@ -142,26 +135,20 @@ H5PL_term_package(void)
             H5PL_table_g = (H5PL_table_t *)H5MM_xfree(H5PL_table_g);
             H5PL_table_used_g = H5PL_table_alloc_g = 0;
 
-            n++;
+            ret_value++;
         } /* end if */
 
-        /* Free the table of search paths */
-        if(H5PL_num_paths_g > 0) {
-            for(u = 0; u < H5PL_num_paths_g; u++)
-                if(H5PL_path_table_g[u])
-                    H5PL_path_table_g[u] = (char *)H5MM_xfree(H5PL_path_table_g[u]);
-            H5PL_num_paths_g = 0;
-            H5PL_path_found_g = FALSE;
-
-            n++;
-        } /* end if */
+        /* Close the search path table and free the paths */
+        if(H5PL__close_path_table() < 0)
+            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTFREE, (-1), "problem closing search path table")
 
         /* Mark the interface as uninitialized */
-        if(0 == n)
+        if(0 == ret_value)
             H5_PKG_INIT_VAR = FALSE;
     } /* end if */
 
-    FUNC_LEAVE_NOAPI(n)
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL_term_package() */
 
 
@@ -214,7 +201,7 @@ H5PL_load(H5PL_type_t type, int id)
         size_t       i;                   /* Local index variable */
 
         for(i = 0; i < H5PL_num_paths_g; i++) {
-            if((found = H5PL__find(type, id, H5PL_path_table_g[i], &plugin_info)) < 0)
+            if((found = H5PL__find(type, id, H5PL_paths_g[i], &plugin_info)) < 0)
                 HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, NULL, "search in paths failed")
 
             /* Break out if found */
@@ -232,60 +219,6 @@ H5PL_load(H5PL_type_t type, int id)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL_load() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5PL__init_path_table
- *
- * Purpose:     Initialize the path table.
- *
- * Return:      SUCCEED/FAIL
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5PL__init_path_table(void)
-{
-    char        *dl_path = NULL;
-    char        *origin_dl_path = NULL;
-    char        *dir = NULL;
-    herr_t      ret_value = SUCCEED;    /* Return value */
-
-    FUNC_ENTER_STATIC
-
-    /* Retrieve paths from HDF5_PLUGIN_PATH if the user sets it
-     * or from the default paths if it isn't set.
-     */
-    origin_dl_path = HDgetenv("HDF5_PLUGIN_PATH");
-    if(NULL == origin_dl_path)
-        dl_path = H5MM_strdup(H5PL_DEFAULT_PATH);
-    else
-        dl_path = H5MM_strdup(origin_dl_path);
-    if(NULL == dl_path)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for path")
-
-    H5PL_EXPAND_ENV_VAR
-
-    /* Put paths in the path table.  They are separated by ":" */
-    dir = HDstrtok(dl_path, H5PL_PATH_SEPARATOR);
-    while(dir) {
-        /* Check for too many directories in path */
-        if(H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
-            HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "too many directories in path for table")
-        if(NULL == (H5PL_path_table_g[H5PL_num_paths_g] = H5MM_strdup(dir)))
-            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for path")
-        H5PL_num_paths_g++;
-        dir = HDstrtok(NULL, H5PL_PATH_SEPARATOR);
-    } /* end while */
-
-    H5PL_path_found_g = TRUE;
-
-done:
-    if(dl_path)
-        dl_path = (char *)H5MM_xfree(dl_path);
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5PL__init_path_table() */
 
 
 /*-------------------------------------------------------------------------
