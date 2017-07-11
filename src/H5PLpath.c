@@ -97,7 +97,7 @@ H5PL__init_path_table(void)
     else
         paths = H5MM_strdup(env_var);
 
-    if(NULL == paths)
+    if (NULL == paths)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for path copy")
 
     /* XXX: Try to minimize this usage */
@@ -111,11 +111,11 @@ H5PL__init_path_table(void)
         /* The path collection can only hold so many paths, so complain if
          * there are too many.
          */
-        if(H5PL_MAX_PATH_NUM == H5PL_num_paths_g)
+        if (H5PL_MAX_PATH_NUM == H5PL_num_paths_g)
             HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "maximum number of plugin search directories stored")
 
         /* Insert the path into the table */
-        if(H5PL__append_path(next_path) < 0)
+        if (H5PL__append_path(next_path) < 0)
             HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't insert path: %s", next_path)
 
         /* Get the next path from the environment string */
@@ -126,7 +126,7 @@ H5PL__init_path_table(void)
     H5PL_path_found_g = TRUE;
 
 done:
-    if(paths)
+    if (paths)
         paths = (char *)H5MM_xfree(paths);
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -151,8 +151,8 @@ H5PL__close_path_table(void)
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    for(u = 0; u < H5PL_num_paths_g; u++)
-        if(H5PL_paths_g[u])
+    for (u = 0; u < H5PL_num_paths_g; u++)
+        if (H5PL_paths_g[u])
             H5PL_paths_g[u] = (char *)H5MM_xfree(H5PL_paths_g[u]);
 
     H5PL_num_paths_g = 0;
@@ -205,11 +205,11 @@ H5PL__append_path(const char *path)
     HDassert(HDstrlen(path));
 
     /* Is the table full? */
-    if(H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
+    if (H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
         HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "too many directories in path for table")
 
     /* Copy the path for storage so the caller can dispose of theirs */
-    if(NULL == (path_copy = H5MM_strdup(path)))
+    if (NULL == (path_copy = H5MM_strdup(path)))
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't make internal copy of path")
 
     /* XXX: Try to minimize this usage */
