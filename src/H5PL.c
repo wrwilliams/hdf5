@@ -208,7 +208,8 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5PLreplace
  *
- * Purpose:     Replace the path at the specified index.
+ * Purpose:     Replace the path at the specified index. The path at the
+ *              index must exist.
  *
  * Return:      Non-negative or success.
  *

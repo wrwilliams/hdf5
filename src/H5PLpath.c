@@ -43,7 +43,7 @@
 
 static herr_t H5PL__insert_at(const char *path, unsigned int index);
 static herr_t H5PL__make_space_at(unsigned int index);
-
+static herr_t H5PL__replace_at(const char *path, unsigned int index);
 
 /*********************/
 /* Package Variables */
@@ -75,7 +75,7 @@ hbool_t         H5PL_path_found_g = FALSE;
  *
  * Purpose:     Insert a path at a particular index in the path table.
  *              Does not clobber! Will move existing paths up to make
- *              room. Use H5PL_remove(index) first if you want to clobber.
+ *              room. Use H5PL__replace_at(index) if you want to clobber.
  *
  * Return:      SUCCEED/FAIL
  *
@@ -152,6 +152,51 @@ H5PL__make_space_at(unsigned int index)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__make_space_at() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__replace_at()
+ *
+ * Purpose:     Replace a path at a particular index in the path table.
+ *              The path in the table must exist and will be freed by this
+ *              function.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5PL__replace_at(const char *path, unsigned int index)
+{
+    char    *path_copy = NULL;      /* copy of path string (for storing) */
+    herr_t  ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_STATIC
+
+    /* Check args - Just assert on package functions */
+    HDassert(path);
+    HDassert(HDstrlen(path));
+
+    /* Check that the table entry is in use */
+    if (!H5PL_paths_g[index])
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTFREE, FAIL, "path entry at index %u in the table is NULL", index)
+
+    /* Copy the path for storage so the caller can dispose of theirs */
+    if (NULL == (path_copy = H5MM_strdup(path)))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't make internal copy of path")
+
+    /* Clean up Microsoft Windows environment variables in the path string */
+    H5PL_EXPAND_ENV_VAR
+
+    /* Free the existing path entry */
+    H5PL_paths_g[index] = (char *)H5MM_xfree(H5PL_paths_g[index]);
+
+    /* Copy the search path into the table at the specified index */
+    H5PL_paths_g[index] = path_copy;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PL__replace_at() */
 
 
 /*-------------------------------------------------------------------------
@@ -340,7 +385,6 @@ done:
 herr_t
 H5PL__replace_path(const char *path, unsigned int index)
 {
-    char    *path_copy = NULL;      /* copy of path string (for storing) */
     herr_t  ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -350,19 +394,9 @@ H5PL__replace_path(const char *path, unsigned int index)
     HDassert(HDstrlen(path));
     HDassert(index < H5PL_MAX_PATH_NUM);
 
-    /* Copy the path for storage so the caller can dispose of theirs */
-    if (NULL == (path_copy = H5MM_strdup(path)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't make internal copy of path")
-
-    /* XXX: Try to minimize this usage */
-    H5PL_EXPAND_ENV_VAR
-
-    /* Free up any existing path */
-    if (H5PL_paths_g[index])
-        H5PL_paths_g[index] = (char *)H5MM_xfree(H5PL_paths_g[index]);
-
-    /* Insert the copy of the search path into the table at the index */
-    H5PL_paths_g[index] = path_copy;
+    /* Insert the path at the requested index */
+    if (H5PL__replace_at(path, index) < 0)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINSERT, FAIL, "unable to replace search path")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
