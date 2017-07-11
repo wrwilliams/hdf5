@@ -341,7 +341,7 @@ H5PLget(unsigned int index, char *path_name, size_t size)
     ssize_t      ret_value = 0;     /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE3("Zs", "Iuxz", index, path_name, size);
+    H5TRACE3("Zs", "Iu*sz", index, path_name, size);
 
     /* Check args */
     if (index >= H5PL_MAX_PATH_NUM)
