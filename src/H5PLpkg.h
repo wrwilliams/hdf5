@@ -109,33 +109,6 @@
     typedef const void *(*H5PL_get_plugin_info_t)(void);
 #endif /* H5_HAVE_WIN32_API */
 
-/* This is required to expand Microsoft Windows environment variable strings
- * containing things like %variableName%. The ExpandEnvironmentStrings() API
- * call will replace the variables with the user's current values for them.
- */
-/* XXX: This should not be a macro */
-#ifdef H5_HAVE_WIN32_API
-#define H5PL_EXPAND_ENV_VAR {                                                            \
-        long bufCharCount;                                                               \
-        char *tempbuf;                                                                   \
-        if(NULL == (tempbuf = (char *)H5MM_malloc(H5PL_EXPAND_BUFFER_SIZE)))             \
-            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for expanded path")                          \
-        if((bufCharCount = ExpandEnvironmentStringsA(dl_path, tempbuf, H5PL_EXPAND_BUFFER_SIZE)) > H5PL_EXPAND_BUFFER_SIZE) { \
-            tempbuf = (char *)H5MM_xfree(tempbuf);                                       \
-            HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "expanded path is too long")      \
-        }                                                                                \
-        if(bufCharCount == 0) {                                                          \
-            tempbuf = (char *)H5MM_xfree(tempbuf);                                       \
-            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "failed to expand path")          \
-        }                                                                                \
-        dl_path = (char *)H5MM_xfree(dl_path);                                           \
-        dl_path = tempbuf;                                                               \
- }
-#else
-#define H5PL_EXPAND_ENV_VAR
-#endif /* H5_HAVE_WIN32_API */
-
-
 
 /****************************/
 /* Package Private Typedefs */
