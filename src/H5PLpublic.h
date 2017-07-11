@@ -24,6 +24,11 @@
 /* Public Typedefs */
 /*******************/
 
+/* Special string to indicate no plugin loading when setting the 
+ * environment variable.
+ */
+#define H5PL_NO_PLUGIN          "::"
+
 /* Plugin type used by the plugin library */
 typedef enum H5PL_type_t {
     H5PL_TYPE_ERROR        = -1,  /*error                    */

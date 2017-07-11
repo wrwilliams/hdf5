@@ -88,11 +88,18 @@ H5PLset_loading_state(unsigned int plugin_type)
     H5TRACE1("e", "Iu", plugin_type);
 
     /* change the bit value of the requested plugin type(s) */
+    /* XXX: This is not a bitwise operation and clobbers instead of
+     *      setting bits.
+     */
     H5PL_plugin_g = plugin_type;
 
-    /* check if special ENV variable is set and disable all plugin types */
+    /* check if special ENV variable is set and disable all plugin types.
+     *
+     * NOTE: The special symbol "::" means no plugin during data reading.
+     *
+     * This should be checked at library init, not here.
+     */
     if(NULL != (preload_path = HDgetenv("HDF5_PLUGIN_PRELOAD")))
-        /* Special symbol "::" means no plugin during data reading. */
         if(!HDstrcmp(preload_path, H5PL_NO_PLUGIN))
             H5PL_plugin_g = 0;
 
@@ -114,7 +121,6 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-/* XXX: THIS SHOULD BE AN ENUM!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
 herr_t
 H5PLget_loading_state(unsigned int *plugin_type)
 {
@@ -123,10 +129,12 @@ H5PLget_loading_state(unsigned int *plugin_type)
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "*Iu", plugin_type);
 
+    /* XXX: This is a mess */
     if(plugin_type)
         *plugin_type = H5PL_plugin_g;
 
 done:
+    /* XXX: This is egregious abuse of the herr_t type. */
     FUNC_LEAVE_API(ret_value)
 } /* end H5PLget_loading_state() */
 
@@ -149,10 +157,11 @@ H5PLappend(const char *plugin_path)
 
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "*s", plugin_path);
-    if(H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "too many directories in path for table")
+
     if(NULL == plugin_path)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "no path provided")
+    if(H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "too many directories in path for table")
     if(NULL == (dl_path = H5MM_strdup(plugin_path)))
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for path")
 
@@ -185,10 +194,12 @@ H5PLprepend(const char *plugin_path)
 
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "*s", plugin_path);
-    if(H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "too many directories in path for table")
+
     if(NULL == plugin_path)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "no path provided")
+
+    if(H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "too many directories in path for table")
     if(NULL == (dl_path = H5MM_strdup(plugin_path)))
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for path")
 
@@ -350,10 +361,11 @@ H5PLget(unsigned int index, char *pathname/*out*/, size_t size)
     FUNC_ENTER_API(FAIL)
     H5TRACE3("Zs", "Iuxz", index, pathname, size);
 
-    if(H5PL_num_paths_g == 0)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no directories in table")
     if(index >= H5PL_MAX_PATH_NUM)
         HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "index path out of bounds for table")
+
+    if(H5PL_num_paths_g == 0)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no directories in table")
     if(NULL == (dl_path = H5PL_path_table_g[index]))
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "no directory path at index")
     len = HDstrlen(dl_path);

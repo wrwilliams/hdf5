@@ -39,9 +39,6 @@
 /* Whether to pre-load pathnames for plugin libraries */
 #define H5PL_DEFAULT_PATH       H5_DEFAULT_PLUGINDIR
 
-/* Special symbol to indicate no plugin loading */
-#define H5PL_NO_PLUGIN          "::"
-
 
 /****************************/
 /* Macros for supporting    */
