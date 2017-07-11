@@ -187,8 +187,7 @@ H5PL__get_num_paths(void)
  *
  * Purpose:     Insert a path at the end of the table.
  *
- * Return:      Success:    Non-negative
- *              Failture:   Negative
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
@@ -229,8 +228,7 @@ done:
  *
  * Purpose:     Insert a path at the beginning of the table.
  *
- * Return:      Success:    Non-negative
- *              Failture:   Negative
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
@@ -269,4 +267,45 @@ H5PL__prepend_path(const char *path)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__append_path() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__replace_path
+ *
+ * Purpose:     Replace a path at particular index in the table.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5PL__replace_path(const char *path, unsigned int index)
+{
+    char    *path_copy = NULL;      /* copy of path string (for storing) */
+    herr_t  ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_PACKAGE
+
+    /* Check args - Just assert on package functions */
+    HDassert(path);
+    HDassert(HDstrlen(path));
+    HDassert(index < H5PL_MAX_PATH_NUM);
+
+    /* Copy the path for storage so the caller can dispose of theirs */
+    if (NULL == (path_copy = H5MM_strdup(path)))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't make internal copy of path")
+
+    /* XXX: Try to minimize this usage */
+    H5PL_EXPAND_ENV_VAR
+
+    /* Free up any existing path */
+    if (H5PL_paths_g[index])
+        H5PL_paths_g[index] = (char *)H5MM_xfree(H5PL_paths_g[index]);
+
+    /* Insert the copy of the search path into the table at the index */
+    H5PL_paths_g[index] = path_copy;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PL__replace_path() */
 

@@ -215,26 +215,24 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5PLreplace(const char *plugin_path, unsigned int index)
+H5PLreplace(const char *search_path, unsigned int index)
 {
-    char        *dl_path = NULL;
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE2("e", "*sIu", plugin_path, index);
+    H5TRACE2("e", "*sIu", search_path, index);
 
-    if (NULL == plugin_path)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "no path provided")
+    /* Check args */
+    if (NULL == search_path)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "plugin_path parameter cannot be NULL")
+    if (0 == HDstrlen(search_path))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "plugin_path parameter cannot have length zero")
     if (index >= H5PL_MAX_PATH_NUM)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "index path out of bounds for table")
-    if (NULL == (dl_path = H5MM_strdup(plugin_path)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for path")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "index path out of bounds for table - can't be more than %u", (H5PL_MAX_PATH_NUM - 1))
 
-    H5PL_EXPAND_ENV_VAR
-
-    if (H5PL_paths_g[index])
-        H5PL_paths_g[index] = (char *)H5MM_xfree(H5PL_paths_g[index]);
-    H5PL_paths_g[index] = dl_path;
+    /* Insert the search path into the path table */
+    if (H5PL__replace_path(search_path, index) < 0)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINSERT, FAIL, "unable to replace search path")
 
 done:
     FUNC_LEAVE_API(ret_value)
