@@ -313,47 +313,58 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5PLget
  *
- * Purpose:     Query the plugin path at the specified index.
+ * Purpose:     Query the plugin path at a specified index.
  *
- *  If `pathname' is non-NULL then write up to `size' bytes into that
- *  buffer and always return the length of the pathname.
- *  Otherwise `size' is ignored and the function does not store the pathname,
- *  just returning the number of characters required to store the pathname.
- *  If an error occurs then the buffer pointed to by `pathname' (NULL or non-NULL)
- *  is unchanged and the function returns a negative value.
+ *  If 'pathname' is non-NULL then up to 'size' bytes will be written into
+ *  that buffer and the length of the pathname will be returned.
+ *
+ *  If 'pathname' is NULL, this function will simply return the number of
+ *  characters required to store the pathname, ignoring 'pathname' and 'size'
+ *
+ *  If an error occurs then the buffer pointed to by `pathname'
+ *  (NULL or non-NULL) will be unchanged and the function will return a
+ *  negative value.
+ *
  *  If a zero is returned for the name's length, then there is no pathname
- *  associated with the index.
+ *  associated with the index and the 'pathname' buffer will be unchanged.
  *
- * Return:      Success: The length of path.
+ * Return:  Success:    The length of path
+ *          Failure:    A negative value
  *
  *-------------------------------------------------------------------------
  */
 ssize_t
-H5PLget(unsigned int index, char *pathname/*out*/, size_t size)
+H5PLget(unsigned int index, char *path_name, size_t size)
 {
-    size_t       len = 0;          /* Length of pathname */
-    char        *dl_path = NULL;
-    ssize_t      ret_value = 0;    /* Return value */
+    const char   *path = NULL;      /* path from table */
+    size_t       path_len = 0;      /* Length of path */
+    ssize_t      ret_value = 0;     /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE3("Zs", "Iuxz", index, pathname, size);
+    H5TRACE3("Zs", "Iuxz", index, path_name, size);
 
+    /* Check args */
     if (index >= H5PL_MAX_PATH_NUM)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "index path out of bounds for table")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, (-1), "index path out of bounds for table - can't be more than %u", (H5PL_MAX_PATH_NUM - 1))
 
-    if (H5PL_num_paths_g == 0)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no directories in table")
-    if (NULL == (dl_path = H5PL_paths_g[index]))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "no directory path at index")
-    len = HDstrlen(dl_path);
-    if (pathname) {
-        HDstrncpy(pathname, dl_path, MIN((size_t)(len + 1), size));
-        if ((size_t)len >= size)
-            pathname[size - 1] = '\0';
+    /* Check if the search table is empty */
+    if (H5PL__get_num_paths() == 0)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, (-1), "plugin search path table is empty")
+
+    /* Get the path at the specified index and its length */
+    if (NULL == (path = H5PL__get_path(index)))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, (-1), "no path stored at that index")
+    path_len = HDstrlen(path);
+
+    /* If the path_name is not NULL, copy the path to the buffer */
+    if (path_name) {
+        HDstrncpy(path_name, path, MIN((size_t)(path_len + 1), size));
+        if ((size_t)path_len >= size)
+            path_name[size - 1] = '\0';
     } /* end if */
 
     /* Set return value */
-    ret_value = (ssize_t)len;
+    ret_value = (ssize_t)path_len;
 
 done:
     FUNC_LEAVE_API(ret_value)

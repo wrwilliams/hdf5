@@ -233,9 +233,6 @@ H5PL__init_path_table(void)
     if (NULL == paths)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for path copy")
 
-    /* XXX: Try to minimize this usage */
-    H5PL_EXPAND_ENV_VAR
-
     /* Separate the paths and store them */
     /* XXX: strtok() is not thread-safe */
     next_path = HDstrtok(paths, H5PL_PATH_SEPARATOR);
@@ -473,4 +470,31 @@ H5PL__remove_path(unsigned int index)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__remove_path() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__get_path
+ *
+ * Purpose:     Get a pointer to a path at particular index in the table.
+ *
+ * Return:      Success:    A pointer to a path string stored in the table
+ *              Failure:    NULL
+ *
+ *-------------------------------------------------------------------------
+ */
+const char *
+H5PL__get_path(unsigned int index)
+{
+    char    *ret_value = NULL;    /* Return value */
+
+    FUNC_ENTER_PACKAGE
+
+    /* Insert the path at the requested index */
+    if (index >= H5PL_num_paths_g)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "path index %u is out of range in table", index)
+
+    return H5PL_paths_g[index];
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PL__replace_path() */
 
