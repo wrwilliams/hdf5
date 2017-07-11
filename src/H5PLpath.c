@@ -41,6 +41,9 @@
 /* Local Prototypes */
 /********************/
 
+static herr_t H5PL__insert_at(const char *path, unsigned int index);
+static herr_t H5PL__make_space_at(unsigned int index);
+
 
 /*********************/
 /* Package Variables */
@@ -64,6 +67,91 @@ hbool_t         H5PL_path_found_g = FALSE;
 /*******************/
 /* Local Variables */
 /*******************/
+
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__insert_at()
+ *
+ * Purpose:     Insert a path at a particular index in the path table.
+ *              Does not clobber! Will move existing paths up to make
+ *              room. Use H5PL_remove(index) first if you want to clobber.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5PL__insert_at(const char *path, unsigned int index)
+{
+    char    *path_copy = NULL;      /* copy of path string (for storing) */
+    herr_t  ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_STATIC
+
+    /* Check args - Just assert on package functions */
+    HDassert(path);
+    HDassert(HDstrlen(path));
+
+    /* Is the table full? */
+    if (H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no room in path table to add new path")
+
+    /* Copy the path for storage so the caller can dispose of theirs */
+    if (NULL == (path_copy = H5MM_strdup(path)))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't make internal copy of path")
+
+    /* Clean up Microsoft Windows environment variables in the path string */
+    H5PL_EXPAND_ENV_VAR
+
+    /* If the table entry is in use, make some space */
+    if (H5PL_paths_g[index])
+        if (H5PL__make_space_at(index) < 0)
+            HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "unable to make space in the table for the new entry")
+
+    /* Insert the copy of the search path into the table at the specified index */
+    H5PL_paths_g[index] = path_copy;
+    H5PL_num_paths_g++;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PL__insert_at() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__make_space_at()
+ *
+ * Purpose:     Free up a slot in the path table, moving existing path
+ *              entries as necessary.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5PL__make_space_at(unsigned int index)
+{
+    size_t  u;                      /* iterator */
+    herr_t  ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_STATIC
+
+    /* Check args - Just assert on package functions */
+    HDassert(index < H5PL_MAX_PATH_NUM);
+
+    /* Check if the path table is full */
+    if (H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no room in path table to add new path")
+
+    /* Copy the paths back to make a space  */
+    for (u = H5PL_num_paths_g; u > index; u--)
+        H5PL_paths_g[u] = H5PL_paths_g[u-1];
+
+    H5PL_paths_g[index] = NULL;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PL__make_space_at() */
 
 
 /*-------------------------------------------------------------------------
@@ -194,7 +282,6 @@ H5PL__get_num_paths(void)
 herr_t
 H5PL__append_path(const char *path)
 {
-    char    *path_copy = NULL;      /* copy of path string (for storing) */
     herr_t  ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -203,20 +290,9 @@ H5PL__append_path(const char *path)
     HDassert(path);
     HDassert(HDstrlen(path));
 
-    /* Is the table full? */
-    if (H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no room in path table to add new path")
-
-    /* Copy the path for storage so the caller can dispose of theirs */
-    if (NULL == (path_copy = H5MM_strdup(path)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't make internal copy of path")
-
-    /* XXX: Try to minimize this usage */
-    H5PL_EXPAND_ENV_VAR
-
-    /* Insert the copy of the search path into the table at the current index */
-    H5PL_paths_g[H5PL_num_paths_g] = path_copy;
-    H5PL_num_paths_g++;
+    /* Insert the path at the end of the table */
+    if (H5PL__insert_at(path, (unsigned int)H5PL_num_paths_g) < 0)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINSERT, FAIL, "unable to append search path")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -235,8 +311,6 @@ done:
 herr_t
 H5PL__prepend_path(const char *path)
 {
-    size_t u;                       /* iterator */
-    char    *path_copy = NULL;      /* copy of path string (for storing) */
     herr_t  ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -245,28 +319,13 @@ H5PL__prepend_path(const char *path)
     HDassert(path);
     HDassert(HDstrlen(path));
 
-    /* Is the table full? */
-    if (H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no room in path table to add new path")
-
-    /* Copy the path for storage so the caller can dispose of theirs */
-    if (NULL == (path_copy = H5MM_strdup(path)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't make internal copy of path")
-
-    /* XXX: Try to minimize this usage */
-    H5PL_EXPAND_ENV_VAR
-
-    /* Copy the paths back to make a space at the head */
-    for (u = H5PL_num_paths_g; u > 0; u--)
-        H5PL_paths_g[u] = H5PL_paths_g[u-1];
-
-    /* Insert the copy of the search path into the table at the head */
-    H5PL_paths_g[0] = path_copy;
-    H5PL_num_paths_g++;
+    /* Insert the path at the beginning of the table */
+    if (H5PL__insert_at(path, 0) < 0)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINSERT, FAIL, "unable to prepend search path")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5PL__append_path() */
+} /* end H5PL__prepend_path() */
 
 
 /*-------------------------------------------------------------------------
@@ -308,4 +367,35 @@ H5PL__replace_path(const char *path, unsigned int index)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__replace_path() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__insert_path
+ *
+ * Purpose:     Insert a path at particular index in the table, moving
+ *              any existing paths back to make space.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5PL__insert_path(const char *path, unsigned int index)
+{
+    herr_t  ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_PACKAGE
+
+    /* Check args - Just assert on package functions */
+    HDassert(path);
+    HDassert(HDstrlen(path));
+    HDassert(index < H5PL_MAX_PATH_NUM);
+
+    /* Insert the path at the requested index */
+    if (H5PL__insert_at(path, index) < 0)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINSERT, FAIL, "unable to insert search path")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PL__insert_path() */
 
