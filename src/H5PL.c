@@ -189,15 +189,16 @@ static unsigned int     H5PL_plugin_g = H5PL_ALL_PLUGIN;
 herr_t
 H5PL__init_package(void)
 {
-    char        *preload_path;
+    char        *preload_path = NULL;
 
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Retrieve pathnames from HDF5_PLUGIN_PRELOAD if the user sets it
      * to tell the library to load plugin libraries without search.
+     *
+     * The special symbol "::" means no plugin during data reading.
      */
     if(NULL != (preload_path = HDgetenv("HDF5_PLUGIN_PRELOAD")))
-        /* Special symbol "::" means no plugin during data reading. */
         if(!HDstrcmp(preload_path, H5PL_NO_PLUGIN))
             H5PL_plugin_g = 0;
 
@@ -284,7 +285,7 @@ H5PL_term_package(void)
 herr_t
 H5PLset_loading_state(unsigned int plugin_type)
 {
-    char *preload_path;
+    char *preload_path = NULL;
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
@@ -349,7 +350,7 @@ done:
 const void *
 H5PL_load(H5PL_type_t type, int id)
 {
-    htri_t      found;               /* Whether the plugin was found */
+    htri_t      found = FAIL;           /* Whether the plugin was found */
     const void  *plugin_info = NULL;
     const void  *ret_value = NULL;
 
@@ -416,8 +417,8 @@ done:
 herr_t
 H5PLappend(const char *plugin_path)
 {
-    herr_t ret_value = SUCCEED; /* Return value */
     char        *dl_path = NULL;
+    herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "*s", plugin_path);
@@ -451,9 +452,9 @@ done:
 herr_t
 H5PLprepend(const char *plugin_path)
 {
-    herr_t ret_value = SUCCEED; /* Return value */
     char        *dl_path = NULL;
     unsigned int plindex;
+    herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "*s", plugin_path);
@@ -466,7 +467,7 @@ H5PLprepend(const char *plugin_path)
 
     H5PL_EXPAND_ENV_VAR
 
-    for (plindex = (unsigned int)H5PL_num_paths_g; plindex > 0; plindex--)
+    for(plindex = (unsigned int)H5PL_num_paths_g; plindex > 0; plindex--)
         H5PL_path_table_g[plindex] = H5PL_path_table_g[plindex - 1];
     H5PL_path_table_g[0] = dl_path;
     H5PL_num_paths_g++;
@@ -488,11 +489,12 @@ done:
 herr_t
 H5PLreplace(const char *plugin_path, unsigned int index)
 {
-    herr_t ret_value = SUCCEED; /* Return value */
     char        *dl_path = NULL;
+    herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "*sIu", plugin_path, index);
+
     if(NULL == plugin_path)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "no path provided")
     if(index >= H5PL_MAX_PATH_NUM)
@@ -525,12 +527,13 @@ done:
 herr_t
 H5PLinsert(const char *plugin_path, unsigned int index)
 {
-    herr_t ret_value = SUCCEED; /* Return value */
     char        *dl_path = NULL;
     unsigned int plindex;
+    herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "*sIu", plugin_path, index);
+
     if(H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
         HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "too many directories in path for table")
     if(NULL == plugin_path)
@@ -568,11 +571,12 @@ done:
 herr_t
 H5PLremove(unsigned int index)
 {
-    herr_t ret_value = SUCCEED; /* Return value */
     unsigned int plindex;
+    herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "Iu", index);
+
     if(H5PL_num_paths_g == 0)
         HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no directories in table")
     if(index >= H5PL_MAX_PATH_NUM)
@@ -612,12 +616,13 @@ done:
 ssize_t
 H5PLget(unsigned int index, char *pathname/*out*/, size_t size)
 {
-    ssize_t      ret_value = 0;    /* Return value */
     size_t       len = 0;          /* Length of pathname */
     char        *dl_path = NULL;
+    ssize_t      ret_value = 0;    /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE3("Zs", "Iuxz", index, pathname, size);
+
     if(H5PL_num_paths_g == 0)
         HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no directories in table")
     if(index >= H5PL_MAX_PATH_NUM)
@@ -676,8 +681,8 @@ static herr_t
 H5PL__init_path_table(void)
 {
     char        *dl_path = NULL;
-    char        *origin_dl_path;
-    char        *dir;
+    char        *origin_dl_path = NULL;
+    char        *dir = NULL;
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_STATIC
@@ -737,7 +742,7 @@ H5PL__find(H5PL_type_t plugin_type, int type_id, char *dir, const void **info)
 {
     char           *pathname = NULL;
     DIR            *dirp = NULL;
-    struct dirent  *dp;
+    struct dirent  *dp = NULL;
     htri_t         ret_value = FALSE;
 
     FUNC_ENTER_STATIC
@@ -940,7 +945,7 @@ done:
  *              to see if the one we are looking for is already opened.
  *
  * Return:      TRUE on success,
- *              FALSE on not found,
+ *              FALSE on not found
  *              Negative on failure
  *
  *-------------------------------------------------------------------------
