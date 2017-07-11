@@ -180,6 +180,7 @@ herr_t H5PL__append_path(const char *path);
 herr_t H5PL__prepend_path(const char *path);
 herr_t H5PL__replace_path(const char *path, unsigned int index);
 herr_t H5PL__insert_path(const char *path, unsigned int index);
+herr_t H5PL__remove_path(unsigned int index);
 
 #endif /* _H5PLpkg_H */
 

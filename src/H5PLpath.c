@@ -234,7 +234,7 @@ done:
 herr_t
 H5PL__close_path_table(void)
 {
-    size_t      u;
+    size_t      u;                      /* iterator */
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_PACKAGE_NOERR
@@ -398,4 +398,45 @@ H5PL__insert_path(const char *path, unsigned int index)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__insert_path() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__remove_path
+ *
+ * Purpose:     Remove a path at particular index in the table, freeing
+ *              the path string and moving the paths down to close the gap.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5PL__remove_path(unsigned int index)
+{
+    size_t      u;                  /* iterator */
+    herr_t  ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_PACKAGE
+
+    /* Check args - Just assert on package functions */
+    HDassert(index < H5PL_MAX_PATH_NUM);
+
+    /* Check if the path at that index is set */
+    if (!H5PL_paths_g[index])
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTDELETE, FAIL, "search path at index %u is NULL", index)
+
+    /* Delete the path */
+    H5PL_num_paths_g--;
+    H5PL_paths_g[index] = (char *)H5MM_xfree(H5PL_paths_g[index]);
+
+    /* Shift the paths down to close the gap */
+    for (u = index; u < H5PL_num_paths_g; u++)
+        H5PL_paths_g[u] = H5PL_paths_g[u+1];
+
+    /* Set the (former) last path to NULL */
+    H5PL_paths_g[H5PL_num_paths_g] = NULL;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PL__remove_path() */
 

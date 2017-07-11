@@ -291,24 +291,18 @@ done:
 herr_t
 H5PLremove(unsigned int index)
 {
-    unsigned int plindex;
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "Iu", index);
 
-    if (H5PL_num_paths_g == 0)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no directories in table")
+    /* Check args */
     if (index >= H5PL_MAX_PATH_NUM)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "index path out of bounds for table")
-    if (NULL == H5PL_paths_g[index])
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "no directory path at index")
-    H5PL_paths_g[index] = (char *)H5MM_xfree(H5PL_paths_g[index]);
+        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "index path out of bounds for table - can't be more than %u", (H5PL_MAX_PATH_NUM - 1))
 
-    H5PL_num_paths_g--;
-    for (plindex = index; plindex < (unsigned int)H5PL_num_paths_g; plindex++)
-        H5PL_paths_g[plindex] = H5PL_paths_g[plindex + 1];
-    H5PL_paths_g[H5PL_num_paths_g] = NULL;
+    /* Delete the search path from the path table */
+    if (H5PL__remove_path(index) < 0)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTDELETE, FAIL, "unable to remove search path")
 
 done:
     FUNC_LEAVE_API(ret_value)
