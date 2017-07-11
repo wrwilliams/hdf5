@@ -81,7 +81,7 @@ static herr_t H5PL__replace_at(const char *path, unsigned int index);
 /*****************************/
 
 /* Stored plugin paths to search */
-char           *H5PL_paths_g[H5PL_MAX_PATH_NUM];
+char          **H5PL_paths_g = NULL;
 
 /* The number of stored paths */
 size_t          H5PL_num_paths_g = 0;
@@ -247,6 +247,10 @@ H5PL__init_path_table(void)
 
     FUNC_ENTER_PACKAGE
 
+    /* Allocate memory for the path table */
+    if (NULL == (H5PL_paths_g = (char *)H5MM_calloc((size_t)H5PL_MAX_PATH_NUM * sizeof(char *))))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for path table")
+
     /* Retrieve paths from HDF5_PLUGIN_PATH if the user sets it
      * or from the default paths if it isn't set.
      */
@@ -307,10 +311,15 @@ H5PL__close_path_table(void)
 
     FUNC_ENTER_PACKAGE_NOERR
 
+    /* Free paths */
     for (u = 0; u < H5PL_num_paths_g; u++)
         if (H5PL_paths_g[u])
             H5PL_paths_g[u] = (char *)H5MM_xfree(H5PL_paths_g[u]);
 
+    /* Free path table */
+    H5PL_paths_g = (char *)H5MM_xfree(H5PL_paths_g);
+
+    /* Reset values */
     H5PL_num_paths_g = 0;
     H5PL_path_found_g = FALSE;
 
