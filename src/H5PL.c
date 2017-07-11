@@ -393,7 +393,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5PLsize(unsigned int *listsize /*out*/)
+H5PLsize(unsigned int *listsize)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
