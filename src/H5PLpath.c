@@ -84,9 +84,9 @@ static herr_t H5PL__replace_at(const char *path, unsigned int index);
 char          **H5PL_paths_g = NULL;
 
 /* The number of stored paths */
-size_t          H5PL_num_paths_g = 0;
+unsigned        H5PL_num_paths_g = 0;
 
-/* XXX: ???? */
+/* XXX: Whether the package was initialized or not */
 hbool_t         H5PL_path_found_g = FALSE;
 
 
@@ -157,8 +157,8 @@ done:
 static herr_t
 H5PL__make_space_at(unsigned int index)
 {
-    size_t  u;                      /* iterator */
-    herr_t  ret_value = SUCCEED;    /* Return value */
+    unsigned    u;                      /* iterator */
+    herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_STATIC
 
@@ -248,7 +248,7 @@ H5PL__init_path_table(void)
     FUNC_ENTER_PACKAGE
 
     /* Allocate memory for the path table */
-    if (NULL == (H5PL_paths_g = (char *)H5MM_calloc((size_t)H5PL_MAX_PATH_NUM * sizeof(char *))))
+    if (NULL == (H5PL_paths_g = (char **)H5MM_calloc((size_t)H5PL_MAX_PATH_NUM * sizeof(char *))))
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for path table")
 
     /* Retrieve paths from HDF5_PLUGIN_PATH if the user sets it
@@ -306,7 +306,7 @@ done:
 herr_t
 H5PL__close_path_table(void)
 {
-    size_t      u;                      /* iterator */
+    unsigned    u;                      /* iterator */
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_PACKAGE_NOERR
@@ -317,7 +317,7 @@ H5PL__close_path_table(void)
             H5PL_paths_g[u] = (char *)H5MM_xfree(H5PL_paths_g[u]);
 
     /* Free path table */
-    H5PL_paths_g = (char *)H5MM_xfree(H5PL_paths_g);
+    H5PL_paths_g = (char **)H5MM_xfree(H5PL_paths_g);
 
     /* Reset values */
     H5PL_num_paths_g = 0;
@@ -337,7 +337,7 @@ H5PL__close_path_table(void)
  *              Failture:   Can't fail
  *-------------------------------------------------------------------------
  */
-size_t
+unsigned
 H5PL__get_num_paths(void)
 {
     FUNC_ENTER_PACKAGE_NOERR
@@ -368,7 +368,7 @@ H5PL__append_path(const char *path)
     HDassert(HDstrlen(path));
 
     /* Insert the path at the end of the table */
-    if (H5PL__insert_at(path, (unsigned int)H5PL_num_paths_g) < 0)
+    if (H5PL__insert_at(path, H5PL_num_paths_g) < 0)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINSERT, FAIL, "unable to append search path")
 
 done:
@@ -479,8 +479,8 @@ done:
 herr_t
 H5PL__remove_path(unsigned int index)
 {
-    size_t      u;                  /* iterator */
-    herr_t  ret_value = SUCCEED;    /* Return value */
+    unsigned    u;                      /* iterator */
+    herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_PACKAGE
 

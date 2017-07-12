@@ -394,7 +394,7 @@ H5PLsize(unsigned int *num_paths)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "num_paths parameter cannot be NULL")
 
     /* Get the number of stored plugin paths */
-    *num_paths = (unsigned int)H5PL__get_num_paths();
+    *num_paths = H5PL__get_num_paths();
 
 done:
     FUNC_LEAVE_API(ret_value)

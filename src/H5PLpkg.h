@@ -133,7 +133,7 @@ extern size_t           H5PL_table_alloc_g;
 extern size_t           H5PL_table_used_g;
 extern H5PL_table_t    *H5PL_table_g;
 
-/* XXX: ??? */
+/* XXX: Whether the package was initialized or not */
 extern hbool_t          H5PL_path_found_g;
 
 /* Enable all plugin libraries */
@@ -146,7 +146,7 @@ extern unsigned int     H5PL_plugin_g;
 
 herr_t H5PL__init_path_table(void);
 herr_t H5PL__close_path_table(void);
-size_t H5PL__get_num_paths(void);
+unsigned H5PL__get_num_paths(void);
 herr_t H5PL__append_path(const char *path);
 herr_t H5PL__prepend_path(const char *path);
 herr_t H5PL__replace_path(const char *path, unsigned int index);
