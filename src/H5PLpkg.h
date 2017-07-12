@@ -130,8 +130,16 @@ extern size_t           H5PL_table_alloc_g;
 extern size_t           H5PL_table_used_g;
 extern H5PL_table_t    *H5PL_table_g;
 
-/* Enable all plugin libraries */
-extern unsigned int     H5PL_plugin_g;
+/* Bitmask that controls whether classes of plugins
+ * (e.g.: filters, VOL drivers) can be loaded.
+ */
+extern unsigned int     H5PL_plugin_control_mask_g;
+
+/* This flag will be set to TRUE if the HDF5_PLUGIN_PRELOAD
+ * environment variable was set to H5PL_NO_PLUGIN at
+ * package initialization.
+ */
+extern hbool_t          H5PL_never_allow_plugins_g;
 
 
 /******************************/

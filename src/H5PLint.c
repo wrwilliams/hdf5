@@ -64,8 +64,16 @@ size_t          H5PL_table_alloc_g = 0;
 size_t          H5PL_table_used_g = 0;
 H5PL_table_t   *H5PL_table_g = NULL;
 
-/* Enable all plugin libraries */
-unsigned int    H5PL_plugin_g = H5PL_ALL_PLUGIN;
+/* Bitmask that controls whether classes of plugins
+ * (e.g.: filters, VOL drivers) can be loaded.
+ */
+unsigned int    H5PL_plugin_control_mask_g = H5PL_ALL_PLUGIN;
+
+/* This flag will be set to TRUE if the HDF5_PLUGIN_PRELOAD
+ * environment variable was set to H5PL_NO_PLUGIN at
+ * package initialization.
+ */
+hbool_t         H5PL_never_allow_plugins_g = FALSE;
 
 
 /*******************/
@@ -97,8 +105,10 @@ H5PL__init_package(void)
      * H5PLpublic.h) means we don't want to load plugins.
      */
     if (NULL != (env_var = HDgetenv("HDF5_PLUGIN_PRELOAD")))
-        if (!HDstrcmp(env_var, H5PL_NO_PLUGIN))
-            H5PL_plugin_g = 0;  /* XXX: Use an API call here */
+        if (!HDstrcmp(env_var, H5PL_NO_PLUGIN)) {
+            H5PL_plugin_control_mask_g = 0;
+            H5PL_never_allow_plugins_g = TRUE;
+        }
 
     /* Initialize the location paths for dynamic libraries */
     if (H5PL__init_path_table() < 0)
@@ -181,7 +191,7 @@ H5PL_load(H5PL_type_t type, int id)
 
     switch (type) {
         case H5PL_TYPE_FILTER:
-            if ((H5PL_plugin_g & H5PL_FILTER_PLUGIN) == 0)
+            if ((H5PL_plugin_control_mask_g & H5PL_FILTER_PLUGIN) == 0)
                 HGOTO_ERROR(H5E_PLUGIN, H5E_CANTLOAD, NULL, "required dynamically loaded plugin filter '%d' is not available", id)
             break;
 

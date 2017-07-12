@@ -22,7 +22,6 @@
 /***********/
 #include "H5private.h"      /* Generic Functions            */
 #include "H5Eprivate.h"     /* Error handling               */
-#include "H5MMprivate.h"    /* Memory management            */
 #include "H5PLpkg.h"        /* Plugin                       */
 
 
@@ -62,16 +61,19 @@
  *
  * Purpose:     Control the loading of dynamic plugin types.
  *
- *              This function will not allow plugin types if the pathname
- *              from the HDF5_PLUGIN_PRELOAD environment variable is set to
- *              the special "::" string.
+ *              The plugin_control_mask parameter is a bitfield that controls
+ *              whether certain classes of plugins (e.g.: filters,
+ *              VOL drivers) will be loaded by the library.
  *
  *              plugin bit = 0, will prevent the use of that dynamic plugin type.
  *              plugin bit = 1, will allow the use of that dynamic plugin type.
  *
- *              H5PL_TYPE_FILTER changes just dynamic filters
- *              A H5PL_ALL_PLUGIN will enable all dynamic plugin types
- *              A zero value will disable all dynamic plugin types
+ *              A list of pre-defined masks can be found in H5PLpublic.h.
+ *              Set the mask to 0 to disable all plugins.
+ *
+ *              This function will not allow plugin types if the pathname
+ *              from the HDF5_PLUGIN_PRELOAD environment variable is set to
+ *              the special "::" string.
  *
  * Return:      Success:    Non-negative
  *              Failture:   Negative
@@ -79,29 +81,17 @@
  *-------------------------------------------------------------------------
  */
 herr_t
-H5PLset_loading_state(unsigned int plugin_type)
+H5PLset_loading_state(unsigned int plugin_control_mask)
 {
-    char *preload_path = NULL;
+    char *env_var = NULL;
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE1("e", "Iu", plugin_type);
+    H5TRACE1("e", "Iu", plugin_control_mask);
 
-    /* change the bit value of the requested plugin type(s) */
-    /* XXX: This is not a bitwise operation and clobbers instead of
-     *      setting bits.
-     */
-    H5PL_plugin_g = plugin_type;
-
-    /* check if special ENV variable is set and disable all plugin types.
-     *
-     * NOTE: The special symbol "::" means no plugin during data reading.
-     *
-     * This should be checked at library init, not here.
-     */
-    if (NULL != (preload_path = HDgetenv("HDF5_PLUGIN_PRELOAD")))
-        if (!HDstrcmp(preload_path, H5PL_NO_PLUGIN))
-            H5PL_plugin_g = 0;
+    /* Copy the mask to the global variable */
+    if(!H5PL_never_allow_plugins_g)
+        H5PL_plugin_control_mask_g = plugin_control_mask;
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -111,30 +101,33 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5PLget_loading_state
  *
- * Purpose:     Query state of the loading of dynamic plugin types.
+ * Purpose:     Get the bitmask that controls whether certain classes
+ *              of plugins (e.g.: filters, VOL drivers) will be loaded
+ *              by the library.
  *
- *              This function will return the state of the global flag.
- *
- *  Return:     Zero if all plugin types are disabled
+ *              Zero if all plugin types are disabled
  *              Negative if all plugin types are enabled
  *              Positive if one or more of the plugin types are enabled
+ *
+ * Return:      Success:    Non-negative
+ *              Failture:   Negative
  *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5PLget_loading_state(unsigned int *plugin_type)
+H5PLget_loading_state(unsigned int *plugin_control_mask)
 {
-    herr_t ret_value = SUCCEED; /* Return value */
+    herr_t ret_value = SUCCEED;     /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE1("e", "*Iu", plugin_type);
+    H5TRACE1("e", "*Iu", plugin_control_mask);
 
-    /* XXX: This is a mess */
-    if (plugin_type)
-        *plugin_type = H5PL_plugin_g;
+    if (NULL == plugin_control_mask)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "plugin_control_mask parameter cannot be NULL")
+
+    *plugin_control_mask = H5PL_plugin_control_mask_g;
 
 done:
-    /* XXX: This is egregious abuse of the herr_t type. */
     FUNC_LEAVE_API(ret_value)
 } /* end H5PLget_loading_state() */
 
