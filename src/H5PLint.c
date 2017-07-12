@@ -389,8 +389,16 @@ H5PL__open(H5PL_type_t pl_type, char *libname, int pl_id, const void **pl_info)
 
         /* Return a handle for the function H5PLget_plugin_info in the dynamic library.
          * The plugin library is suppose to define this function.
+         *
+         * NOTE: We turn off -Wpedantic in gcc to quiet a warning about converting
+         *       object pointers to function pointers, which is undefined in ANSI C.
+         *       This is basically unavoidable due to the nature of dlsym() and *is*
+         *       defined in POSIX, so it's fine.
          */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
         if (NULL == (get_plugin_info = (H5PL_get_plugin_info_t)H5PL_GET_LIB_FUNC(handle, "H5PLget_plugin_info"))) {
+#pragma GCC diagnostic pop
             if(H5PL__close(handle) < 0)
                 HGOTO_ERROR(H5E_PLUGIN, H5E_CLOSEERROR, FAIL, "can't close dynamic library")
         } /* end if */
@@ -470,7 +478,13 @@ H5PL__search_table(H5PL_type_t plugin_type, int type_id, const void **info)
                 H5PL_get_plugin_info_t get_plugin_info;
                 const H5Z_class2_t   *plugin_info;
 
+                /* See the other use of H5PL_GET_LIB_FUNC() for an explanation
+                 * for why we disable -Wpedantic here.
+                 */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
                 if (NULL == (get_plugin_info = (H5PL_get_plugin_info_t)H5PL_GET_LIB_FUNC((H5PL_table_g[i]).handle, "H5PLget_plugin_info")))
+#pragma GCC diagnostic pop
                     HGOTO_ERROR(H5E_DATATYPE, H5E_CANTGET, FAIL, "can't get function for H5PLget_plugin_info")
 
                 if (NULL == (plugin_info = (const H5Z_class2_t *)(*get_plugin_info)()))

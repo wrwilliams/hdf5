@@ -40,7 +40,6 @@
 #include "H5Eprivate.h"     /* Error handling               */
 #include "H5MMprivate.h"    /* Memory management            */
 #include "H5PLpkg.h"        /* Plugin                       */
-#include "H5Zprivate.h"     /* Filter pipeline              */
 
 
 /****************/
