@@ -86,9 +86,6 @@ char          **H5PL_paths_g = NULL;
 /* The number of stored paths */
 unsigned        H5PL_num_paths_g = 0;
 
-/* XXX: Whether the package was initialized or not */
-hbool_t         H5PL_path_found_g = FALSE;
-
 
 /*******************/
 /* Local Variables */
@@ -282,9 +279,6 @@ H5PL__init_path_table(void)
         next_path = HDstrtok(NULL, H5PL_PATH_SEPARATOR);
     } /* end while */
 
-    /* XXX: What is this for? */
-    H5PL_path_found_g = TRUE;
-
 done:
     if (paths)
         paths = (char *)H5MM_xfree(paths);
@@ -321,7 +315,6 @@ H5PL__close_path_table(void)
 
     /* Reset values */
     H5PL_num_paths_g = 0;
-    H5PL_path_found_g = FALSE;
 
     FUNC_LEAVE_NOAPI(ret_value)
 

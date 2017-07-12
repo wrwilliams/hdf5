@@ -133,9 +133,6 @@ extern size_t           H5PL_table_alloc_g;
 extern size_t           H5PL_table_used_g;
 extern H5PL_table_t    *H5PL_table_g;
 
-/* XXX: Whether the package was initialized or not */
-extern hbool_t          H5PL_path_found_g;
-
 /* Enable all plugin libraries */
 extern unsigned int     H5PL_plugin_g;
 

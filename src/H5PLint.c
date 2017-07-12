@@ -88,8 +88,9 @@ herr_t
 H5PL__init_package(void)
 {
     char        *env_var = NULL;
+    herr_t      ret_value = SUCCEED;
 
-    FUNC_ENTER_PACKAGE_NOERR
+    FUNC_ENTER_PACKAGE
 
     /* Check the environment variable to determine if the user wants
      * to ignore plugins. The special symbol H5PL_NO_PLUGIN (defined in
@@ -99,7 +100,12 @@ H5PL__init_package(void)
         if (!HDstrcmp(env_var, H5PL_NO_PLUGIN))
             H5PL_plugin_g = 0;  /* XXX: Use an API call here */
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    /* Initialize the location paths for dynamic libraries */
+    if (H5PL__init_path_table() < 0)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINIT, FAIL, "can't initialize search path table")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__init_package() */
 
 
@@ -184,13 +190,6 @@ H5PL_load(H5PL_type_t type, int id)
         default:
             HGOTO_ERROR(H5E_PLUGIN, H5E_CANTLOAD, NULL, "required dynamically loaded plugin '%d' is not valid", id)
     } /* end switch */
-
-    /* Initialize the location paths for dynamic libraries, if they aren't
-     * already set up.
-     */
-    if (FALSE == H5PL_path_found_g)
-        if (H5PL__init_path_table() < 0)
-            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINIT, NULL, "can't initialize search path table")
 
     /* Search in the table of already loaded plugin libraries */
     if((found = H5PL__search_table(type, id, &plugin_info)) < 0)
