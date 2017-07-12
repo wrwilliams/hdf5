@@ -10,9 +10,6 @@
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*
- * Programmer:    Raymond Lu
- *        13 February 2013
- *
  * Purpose:    Tests the plugin module (H5PL)
  */
 
@@ -660,13 +657,10 @@ error:
 /*-------------------------------------------------------------------------
  * Function:    test_groups_with_filters
  *
- * Purpose:    Tests opening group with dynamically loaded filters
+ * Purpose:     Tests opening group with dynamically loaded filters
  *
- * Return:    Success:    0
- *        Failure:    -1
- *
- * Programmer:    Raymond Lu
- *              1 April 2013
+ * Return:      Success:    0
+ *              Failure:    -1
  *
  *-------------------------------------------------------------------------
  */
@@ -957,14 +951,9 @@ error:
 /*-------------------------------------------------------------------------
  * Function:    main
  *
- * Purpose:    Tests the plugin module (H5PL)
+ * Purpose:     Tests the plugin module (H5PL)
  *
- * Return:    Success:    exit(EXIT_SUCCESS)
- *
- *        Failure:    exit(EXIT_FAILURE)
- *
- * Programmer:    Raymond Lu
- *        14 March 2013
+ * Return:      EXIT_SUCCESS/EXIT_FAILURE
  *
  *-------------------------------------------------------------------------
  */
@@ -1070,11 +1059,11 @@ main(void)
     HDprintf("All plugin tests passed.\n");
     h5_cleanup(FILENAME, fapl);
 
-    return 0;
+    HDexit(EXIT_SUCCESS);
 
 error:
     nerrors = MAX(1, nerrors);
     HDprintf("***** %d PLUGIN TEST%s FAILED! *****\n", nerrors, 1 == nerrors ? "" : "S");
-    return 1;
-}
+    HDexit(EXIT_FAILURE);
+} /* end main() */
 
