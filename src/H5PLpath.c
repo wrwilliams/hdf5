@@ -10,6 +10,22 @@
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/*
+ * Purpose: Code to implement a path table which stores plugin search paths.
+ *
+ *          The path table is implemented as a dynamic, global array which
+ *          will grow as new paths are inserted. The capacity of the path
+ *          table never shrinks (though given the low number of paths
+ *          expected and the low likelihood of paths being removed, this
+ *          seems unlikely to be a problem). Inserts and removals rework
+ *          the array so that there are no 'holes' in the in-use part
+ *          of the array.
+ *
+ *          Note that it's basically up to the user to manage the indexes
+ *          when a complicated series of insert, overwrite, and, remove
+ *          operations take place.
+ */
+
 /****************/
 /* Module Setup */
 /****************/
@@ -30,6 +46,12 @@
 /****************/
 /* Local Macros */
 /****************/
+
+/* Initial capacity of the path table */
+#define H5PL_INITIAL_PATH_CAPACITY      16
+
+/* The amount to add to the capacity when the table is full */
+#define H5PL_PATH_CAPACITY_ADD          16
 
 /* This is required to expand Microsoft Windows environment variable strings
  * containing things like %variableName%. The ExpandEnvironmentStrings() API
@@ -86,6 +108,9 @@ char          **H5PL_paths_g = NULL;
 /* The number of stored paths */
 unsigned        H5PL_num_paths_g = 0;
 
+/* The capacity of the path table */
+unsigned        H5PL_path_capacity_g = H5PL_INITIAL_PATH_CAPACITY;
+
 
 /*******************/
 /* Local Variables */
@@ -116,9 +141,19 @@ H5PL__insert_at(const char *path, unsigned int index)
     HDassert(path);
     HDassert(HDstrlen(path));
 
-    /* Is the table full? */
-    if (H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no room in path table to add new path")
+    /* Expand the table if it is full */
+    if (H5PL_num_paths_g == H5PL_path_capacity_g) {
+
+        /* Update the capacity */
+        H5PL_path_capacity_g += H5PL_PATH_CAPACITY_ADD;
+
+        /* Resize the array */
+        if(NULL == (H5PL_paths_g = (char **)H5MM_realloc(H5PL_paths_g, (size_t)H5PL_path_capacity_g * sizeof(char *))))
+            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't expand path table")
+
+        /* Initialize the new memory */
+        HDmemset(H5PL_paths_g + H5PL_num_paths_g, 0, (size_t)H5PL_PATH_CAPACITY_ADD * sizeof(char *));
+    }
 
     /* Copy the path for storage so the caller can dispose of theirs */
     if (NULL == (path_copy = H5MM_strdup(path)))
@@ -157,14 +192,10 @@ H5PL__make_space_at(unsigned int index)
     unsigned    u;                      /* iterator */
     herr_t      ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_STATIC_NOERR
 
     /* Check args - Just assert on package functions */
-    HDassert(index < H5PL_MAX_PATH_NUM);
-
-    /* Check if the path table is full */
-    if (H5PL_num_paths_g == H5PL_MAX_PATH_NUM)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "no room in path table to add new path")
+    HDassert(index < H5PL_path_capacity_g);
 
     /* Copy the paths back to make a space  */
     for (u = H5PL_num_paths_g; u > index; u--)
@@ -172,7 +203,6 @@ H5PL__make_space_at(unsigned int index)
 
     H5PL_paths_g[index] = NULL;
 
-done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__make_space_at() */
 
@@ -245,7 +275,9 @@ H5PL__init_path_table(void)
     FUNC_ENTER_PACKAGE
 
     /* Allocate memory for the path table */
-    if (NULL == (H5PL_paths_g = (char **)H5MM_calloc((size_t)H5PL_MAX_PATH_NUM * sizeof(char *))))
+    H5PL_num_paths_g = 0;
+    H5PL_path_capacity_g = H5PL_INITIAL_PATH_CAPACITY;
+    if (NULL == (H5PL_paths_g = (char **)H5MM_calloc((size_t)H5PL_path_capacity_g * sizeof(char *))))
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for path table")
 
     /* Retrieve paths from HDF5_PLUGIN_PATH if the user sets it
@@ -264,12 +296,6 @@ H5PL__init_path_table(void)
     /* XXX: strtok() is not thread-safe */
     next_path = HDstrtok(paths, H5PL_PATH_SEPARATOR);
     while (next_path) {
-
-        /* The path collection can only hold so many paths, so complain if
-         * there are too many.
-         */
-        if (H5PL_MAX_PATH_NUM == H5PL_num_paths_g)
-            HGOTO_ERROR(H5E_PLUGIN, H5E_NOSPACE, FAIL, "maximum number of plugin search directories stored")
 
         /* Insert the path into the table */
         if (H5PL__append_path(next_path) < 0)
@@ -417,7 +443,7 @@ H5PL__replace_path(const char *path, unsigned int index)
     /* Check args - Just assert on package functions */
     HDassert(path);
     HDassert(HDstrlen(path));
-    HDassert(index < H5PL_MAX_PATH_NUM);
+    HDassert(index < H5PL_path_capacity_g);
 
     /* Insert the path at the requested index */
     if (H5PL__replace_at(path, index) < 0)
@@ -448,7 +474,7 @@ H5PL__insert_path(const char *path, unsigned int index)
     /* Check args - Just assert on package functions */
     HDassert(path);
     HDassert(HDstrlen(path));
-    HDassert(index < H5PL_MAX_PATH_NUM);
+    HDassert(index < H5PL_path_capacity_g);
 
     /* Insert the path at the requested index */
     if (H5PL__insert_at(path, index) < 0)
@@ -478,7 +504,7 @@ H5PL__remove_path(unsigned int index)
     FUNC_ENTER_PACKAGE
 
     /* Check args - Just assert on package functions */
-    HDassert(index < H5PL_MAX_PATH_NUM);
+    HDassert(index < H5PL_path_capacity_g);
 
     /* Check if the path at that index is set */
     if (!H5PL_paths_g[index])
@@ -517,7 +543,7 @@ H5PL__get_path(unsigned int index)
 
     FUNC_ENTER_PACKAGE
 
-    /* Insert the path at the requested index */
+    /* Get the path at the requested index */
     if (index >= H5PL_num_paths_g)
         HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "path index %u is out of range in table", index)
 

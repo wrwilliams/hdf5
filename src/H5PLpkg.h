@@ -33,9 +33,6 @@
 /* Package Private Macros */
 /**************************/
 
-/* Max number of paths supported */
-#define H5PL_MAX_PATH_NUM       16
-
 /* Whether to pre-load pathnames for plugin libraries */
 #define H5PL_DEFAULT_PATH       H5_DEFAULT_PLUGINDIR
 
