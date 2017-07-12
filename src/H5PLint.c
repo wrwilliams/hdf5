@@ -484,8 +484,8 @@ H5PL__search_table(H5PL_type_t plugin_type, int type_id, const void **info)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
                 if (NULL == (get_plugin_info = (H5PL_get_plugin_info_t)H5PL_GET_LIB_FUNC((H5PL_table_g[i]).handle, "H5PLget_plugin_info")))
-#pragma GCC diagnostic pop
                     HGOTO_ERROR(H5E_DATATYPE, H5E_CANTGET, FAIL, "can't get function for H5PLget_plugin_info")
+#pragma GCC diagnostic pop
 
                 if (NULL == (plugin_info = (const H5Z_class2_t *)(*get_plugin_info)()))
                     HGOTO_ERROR(H5E_DATATYPE, H5E_CANTGET, FAIL, "can't get plugin info")
