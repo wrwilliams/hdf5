@@ -123,9 +123,9 @@ H5PL__init_package(void)
             H5PL_never_allow_plugins_g = TRUE;
         }
 
-    /* Initialize the location paths for dynamic libraries */
-    if (H5PL__init_path_table() < 0)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINIT, FAIL, "can't initialize search path table")
+    /* Create the table of search paths for dynamic libraries */
+    if (H5PL__create_path_table() < 0)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINIT, FAIL, "can't create plugin search path table")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

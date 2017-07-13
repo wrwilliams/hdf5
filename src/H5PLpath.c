@@ -252,9 +252,9 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5PL_init_path_table
+ * Function:    H5PL__create_path_table
  *
- * Purpose:     Initialize the collection of paths that will be searched
+ * Purpose:     Create the collection of paths that will be searched
  *              when loading plugins.
  *
  * Return:      SUCCEED/FAIL
@@ -262,7 +262,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5PL__init_path_table(void)
+H5PL__create_path_table(void)
 {
     char        *env_var= NULL;         /* Path string from environment variable */
     char        *paths = NULL;          /* Delimited paths string. Either from the
@@ -309,7 +309,7 @@ done:
         paths = (char *)H5MM_xfree(paths);
 
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5PL__init_path_table() */
+} /* end H5PL__create_path_table() */
 
 
 /*-------------------------------------------------------------------------

@@ -139,7 +139,7 @@ extern hbool_t          H5PL_never_allow_plugins_g;
 
 
 /* Plugin search path calls */
-herr_t H5PL__init_path_table(void);
+herr_t H5PL__create_path_table(void);
 herr_t H5PL__close_path_table(void);
 unsigned H5PL__get_num_paths(void);
 herr_t H5PL__append_path(const char *path);
