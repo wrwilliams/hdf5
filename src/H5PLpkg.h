@@ -134,6 +134,11 @@ extern hbool_t          H5PL_never_allow_plugins_g;
 /* Package Private Prototypes */
 /******************************/
 
+/* Plugin table calls */
+
+
+
+/* Plugin search path calls */
 herr_t H5PL__init_path_table(void);
 herr_t H5PL__close_path_table(void);
 unsigned H5PL__get_num_paths(void);
