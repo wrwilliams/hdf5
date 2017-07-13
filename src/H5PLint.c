@@ -60,9 +60,9 @@ hbool_t H5_PKG_INIT_VAR = FALSE;
 /*****************************/
 
 /* Table for opened plugin libraries */
-size_t          H5PL_table_alloc_g = 0;
-size_t          H5PL_table_used_g = 0;
-H5PL_table_t   *H5PL_table_g = NULL;
+static size_t           H5PL_table_alloc_g = 0;
+static size_t           H5PL_table_used_g = 0;
+static H5PL_table_t    *H5PL_table_g = NULL;
 
 /* Bitmask that controls whether classes of plugins
  * (e.g.: filters, VOL drivers) can be loaded.
@@ -176,7 +176,7 @@ done:
  *              opened libraries then in the designated location paths.
  *
  * Return:      Success:    A pointer to the plugin info
- *              Failture:   NULL
+ *              Failure:    NULL
  *
  *-------------------------------------------------------------------------
  */

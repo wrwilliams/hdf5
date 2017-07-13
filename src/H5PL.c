@@ -83,7 +83,6 @@
 herr_t
 H5PLset_loading_state(unsigned int plugin_control_mask)
 {
-    char *env_var = NULL;
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)

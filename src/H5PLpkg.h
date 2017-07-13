@@ -125,11 +125,6 @@ typedef struct H5PL_table_t {
 
 /* These variables are defined in H5PLint.c */
 
-/* Table for opened plugin libraries */
-extern size_t           H5PL_table_alloc_g;
-extern size_t           H5PL_table_used_g;
-extern H5PL_table_t    *H5PL_table_g;
-
 /* Bitmask that controls whether classes of plugins
  * (e.g.: filters, VOL drivers) can be loaded.
  */
