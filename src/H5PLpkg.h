@@ -111,13 +111,6 @@
 /* Package Private Typedefs */
 /****************************/
 
-/* Type for the list of info for opened plugin libraries */
-typedef struct H5PL_table_t {
-    H5PL_type_t pl_type;            /* plugin type          */
-    int         pl_id;              /* ID for the plugin    */
-    H5PL_HANDLE handle;             /* plugin handle        */
-} H5PL_table_t;
-
 
 /*****************************/
 /* Package Private Variables */
