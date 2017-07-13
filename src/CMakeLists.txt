@@ -518,7 +518,7 @@ set (H5PL_SOURCES
     ${HDF5_SRC_DIR}/H5PL.c
     ${HDF5_SRC_DIR}/H5PLint.c
     ${HDF5_SRC_DIR}/H5PLpath.c
-    ${HDF5_SRC_DIR}/H5PLplugin_table.c
+    ${HDF5_SRC_DIR}/H5PLplugin_cache.c
 )
 
 set (H5PL_HDRS

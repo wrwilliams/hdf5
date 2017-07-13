@@ -148,7 +148,7 @@ H5PL__insert_at(const char *path, unsigned int index)
 
         /* Resize the array */
         if(NULL == (H5PL_paths_g = (char **)H5MM_realloc(H5PL_paths_g, (size_t)H5PL_path_capacity_g * sizeof(char *))))
-            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't expand path table")
+            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "allocating additional memory for path table failed")
 
         /* Initialize the new memory */
         HDmemset(H5PL_paths_g + H5PL_num_paths_g, 0, (size_t)H5PL_PATH_CAPACITY_ADD * sizeof(char *));
@@ -315,7 +315,7 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5PL__close_path_table
  *
- * Purpose:     Initialize the collection of paths that will be searched
+ * Purpose:     Close the collection of paths that will be searched
  *              when loading plugins.
  *
  * Return:      SUCCEED/FAIL

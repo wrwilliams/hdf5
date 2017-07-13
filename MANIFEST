@@ -803,7 +803,7 @@
 ./src/H5PLmodule.h
 ./src/H5PLpath.c
 ./src/H5PLpkg.h
-./src/H5PLplugin_table.c
+./src/H5PLplugin_cache.c
 ./src/H5PLprivate.h
 ./src/H5PLpublic.h
 ./src/H5PLextern.h
