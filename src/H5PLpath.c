@@ -91,6 +91,7 @@
 static herr_t H5PL__insert_at(const char *path, unsigned int index);
 static herr_t H5PL__make_space_at(unsigned int index);
 static herr_t H5PL__replace_at(const char *path, unsigned int index);
+static herr_t H5PL__expand_path_table(void);
 
 /*********************/
 /* Package Variables */
@@ -141,18 +142,9 @@ H5PL__insert_at(const char *path, unsigned int index)
     HDassert(HDstrlen(path));
 
     /* Expand the table if it is full */
-    if (H5PL_num_paths_g == H5PL_path_capacity_g) {
-
-        /* Update the capacity */
-        H5PL_path_capacity_g += H5PL_PATH_CAPACITY_ADD;
-
-        /* Resize the array */
-        if(NULL == (H5PL_paths_g = (char **)H5MM_realloc(H5PL_paths_g, (size_t)H5PL_path_capacity_g * sizeof(char *))))
-            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "allocating additional memory for path table failed")
-
-        /* Initialize the new memory */
-        HDmemset(H5PL_paths_g + H5PL_num_paths_g, 0, (size_t)H5PL_PATH_CAPACITY_ADD * sizeof(char *));
-    }
+    if (H5PL_num_paths_g == H5PL_path_capacity_g)
+        if (H5PL__expand_path_table() < 0)
+            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't expand path table")
 
     /* Copy the path for storage so the caller can dispose of theirs */
     if (NULL == (path_copy = H5MM_strdup(path)))
@@ -370,6 +362,41 @@ H5PL__get_num_paths(void)
     FUNC_LEAVE_NOAPI(H5PL_num_paths_g)
 
 } /* end H5PL__get_num_paths() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__expand_path_table
+ *
+ * Purpose:     Expand the path table when it's full.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5PL__expand_path_table(void)
+{
+    herr_t      ret_value = SUCCEED;
+
+    FUNC_ENTER_STATIC
+
+    /* Update the capacity */
+    H5PL_path_capacity_g += H5PL_PATH_CAPACITY_ADD;
+
+    /* Resize the array */
+    if(NULL == (H5PL_paths_g = (char **)H5MM_realloc(H5PL_paths_g, (size_t)H5PL_path_capacity_g * sizeof(char *))))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "allocating additional memory for path table failed")
+
+    /* Initialize the new memory */
+    HDmemset(H5PL_paths_g + H5PL_num_paths_g, 0, (size_t)H5PL_PATH_CAPACITY_ADD * sizeof(char *));
+
+done:
+    /* Set the path capacity back if there were problems */
+    if (FAIL == ret_value)
+        H5PL_path_capacity_g -= H5PL_PATH_CAPACITY_ADD;
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PL__expand_path_table() */
 
 
 /*-------------------------------------------------------------------------
