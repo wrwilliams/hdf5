@@ -282,7 +282,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5PL__find
+ * Function:    H5PL__find_plugin_in_path
  *
  * Purpose:     Given a path, this function opens the directory and envokes
  *              another function to go through all files to find the right
@@ -297,7 +297,7 @@ done:
  */
 #ifndef H5_HAVE_WIN32_API
 htri_t
-H5PL__find(const H5PL_search_params_t *search_params, const char *dir, const void **info)
+H5PL__find_plugin_in_path(const H5PL_search_params_t *search_params, const char *dir, const void **info)
 {
     char           *pathname = NULL;
     DIR            *dirp = NULL;
@@ -357,10 +357,10 @@ done:
     pathname = (char *)H5MM_xfree(pathname);
 
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5PL__find() */
+} /* end H5PL__find_plugin_in_path() */
 #else /* H5_HAVE_WIN32_API */
 htri_t
-H5PL__find(const H5PL_search_params_t *search_params, const char *dir, const void **info)
+H5PL__find_plugin_in_path(const H5PL_search_params_t *search_params, const char *dir, const void **info)
 {
     WIN32_FIND_DATAA    fdFile;
     HANDLE              hFind;
@@ -408,7 +408,7 @@ done:
         pathname = (char *)H5MM_xfree(pathname);
 
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5PL__find() */
+} /* end H5PL__find_plugin_in_path() */
 #endif /* H5_HAVE_WIN32_API */
 
 
