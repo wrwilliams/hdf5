@@ -323,18 +323,19 @@ done:
  *
  * Purpose:     Query the plugin path at a specified index.
  *
- *  If 'pathname' is non-NULL then up to 'size' bytes will be written into
- *  that buffer and the length of the pathname will be returned.
+ *  If 'path_buf' is non-NULL then up to 'buf_size' bytes will be written into
+ *  that buffer and the length of the path name will be returned.
  *
- *  If 'pathname' is NULL, this function will simply return the number of
- *  characters required to store the pathname, ignoring 'pathname' and 'size'
+ *  If 'path_buf' is NULL, this function will simply return the number of
+ *  characters required to store the path name, ignoring 'path_buf' and
+ *  'buf_size'
  *
- *  If an error occurs then the buffer pointed to by `pathname'
+ *  If an error occurs then the buffer pointed to by 'path_buf'
  *  (NULL or non-NULL) will be unchanged and the function will return a
  *  negative value.
  *
- *  If a zero is returned for the name's length, then there is no pathname
- *  associated with the index and the 'pathname' buffer will be unchanged.
+ *  If a zero is returned for the name's length, then there is no path name
+ *  associated with the index and the 'path_buf' buffer will be unchanged.
  *
  * Return:  Success:    The length of path
  *          Failure:    A negative value
@@ -342,7 +343,7 @@ done:
  *-------------------------------------------------------------------------
  */
 ssize_t
-H5PLget(unsigned int index, char *path_name, size_t size)
+H5PLget(unsigned int index, char *path_buf, size_t buf_size)
 {
     unsigned    num_paths;              /* Current number of stored paths */
     const char *path = NULL;            /* path from table */
@@ -350,7 +351,7 @@ H5PLget(unsigned int index, char *path_name, size_t size)
     ssize_t     ret_value = 0;          /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE3("Zs", "Iu*sz", index, path_name, size);
+    H5TRACE3("Zs", "Iu*sz", index, path_buf, buf_size);
 
     /* Check index */
     num_paths = H5PL__get_num_paths();
@@ -368,11 +369,11 @@ H5PLget(unsigned int index, char *path_name, size_t size)
         HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, (-1), "no path stored at that index")
     path_len = HDstrlen(path);
 
-    /* If the path_name is not NULL, copy the path to the buffer */
-    if (path_name) {
-        HDstrncpy(path_name, path, MIN((size_t)(path_len + 1), size));
-        if ((size_t)path_len >= size)
-            path_name[size - 1] = '\0';
+    /* If the path buffer is not NULL, copy the path to the buffer */
+    if (path_buf) {
+        HDstrncpy(path_buf, path, MIN((size_t)(path_len + 1), buf_size));
+        if ((size_t)path_len >= buf_size)
+            path_buf[buf_size - 1] = '\0';
     } /* end if */
 
     /* Set return value */
