@@ -226,8 +226,10 @@ done:
  * Function:    H5PL_load
  *
  * Purpose:     Given the plugin type and identifier, this function searches
- *              and/or loads a dynamic plugin library first among the already
- *              opened libraries then in the designated location paths.
+ *              for and, if found, loads a dynamic plugin library.
+ *
+ *              The function searches first in the cached plugins and then
+ *              in the paths listed in the path table.
  *
  * Return:      Success:    A pointer to the plugin info
  *              Failure:    NULL
@@ -295,7 +297,7 @@ done:
  */
 #ifndef H5_HAVE_WIN32_API
 htri_t
-H5PL__find(H5PL_type_t plugin_type, int type_id, const char *dir, const void **info)
+H5PL__find(const H5PL_search_params_t *search_params, const char *dir, const void **info)
 {
     char           *pathname = NULL;
     DIR            *dirp = NULL;
@@ -340,7 +342,7 @@ H5PL__find(H5PL_type_t plugin_type, int type_id, const char *dir, const void **i
                 continue;
 
             /* Attempt to open the dynamic library as a filter library */
-            if ((found_in_dir = H5PL__open(plugin_type, pathname, type_id, info)) < 0)
+            if ((found_in_dir = H5PL__open(search_params->type, pathname, search_params->id, info)) < 0)
                 HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "search in directory failed")
             if (found_in_dir)
                 HGOTO_DONE(TRUE)    /* Indicate success */
@@ -358,7 +360,7 @@ done:
 } /* end H5PL__find() */
 #else /* H5_HAVE_WIN32_API */
 htri_t
-H5PL__find(H5PL_type_t plugin_type, int type_id, const char *dir, const void **info)
+H5PL__find(const H5PL_search_params_t *search_params, const char *dir, const void **info)
 {
     WIN32_FIND_DATAA    fdFile;
     HANDLE              hFind;
@@ -391,7 +393,7 @@ H5PL__find(H5PL_type_t plugin_type, int type_id, const char *dir, const void **i
             if (fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
                 continue;
 
-            if ((found_in_dir = H5PL__open(plugin_type, pathname, type_id, info)) < 0)
+            if ((found_in_dir = H5PL__open(search_params->type, pathname, search_params->id, info)) < 0)
                 HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "search in directory failed")
             if (found_in_dir)
                 HGOTO_DONE(TRUE)    /* Indicate success */

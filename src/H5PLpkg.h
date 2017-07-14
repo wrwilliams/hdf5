@@ -139,7 +139,7 @@ herr_t H5PL__get_plugin_control_mask(unsigned int *mask /*out*/);
 herr_t H5PL__set_plugin_control_mask(unsigned int mask);
 
 /* Plugin search and manipulation */
-htri_t H5PL__find(H5PL_type_t plugin_type, int type_id, const char *dir, const void **info);
+htri_t H5PL__find(const H5PL_search_params_t *search_params, const char *dir, const void **info);
 herr_t H5PL__close(H5PL_HANDLE handle);
 
 /* Plugin cache calls */
