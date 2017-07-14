@@ -101,19 +101,19 @@ static herr_t H5PL__replace_at(const char *path, unsigned int index);
 /* Library Private Variables */
 /*****************************/
 
-/* Stored plugin paths to search */
-char          **H5PL_paths_g = NULL;
-
-/* The number of stored paths */
-unsigned        H5PL_num_paths_g = 0;
-
-/* The capacity of the path table */
-unsigned        H5PL_path_capacity_g = H5PL_INITIAL_PATH_CAPACITY;
-
 
 /*******************/
 /* Local Variables */
 /*******************/
+
+/* Stored plugin paths to search */
+static char       **H5PL_paths_g = NULL;
+
+/* The number of stored paths */
+static unsigned     H5PL_num_paths_g = 0;
+
+/* The capacity of the path table */
+static unsigned     H5PL_path_capacity_g = H5PL_INITIAL_PATH_CAPACITY;
 
 
 

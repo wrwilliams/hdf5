@@ -63,6 +63,11 @@ hbool_t H5_PKG_INIT_VAR = FALSE;
 /* Library Private Variables */
 /*****************************/
 
+
+/*******************/
+/* Local Variables */
+/*******************/
+
 /* Bitmask that controls whether classes of plugins
  * (e.g.: filters, VOL drivers) can be loaded.
  */
@@ -74,10 +79,6 @@ static unsigned int     H5PL_plugin_control_mask_g = H5PL_ALL_PLUGIN;
  */
 static hbool_t          H5PL_allow_plugins_g = TRUE;
 
-
-/*******************/
-/* Local Variables */
-/*******************/
 
 
 /*-------------------------------------------------------------------------
