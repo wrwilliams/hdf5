@@ -264,7 +264,7 @@ H5PL_load(H5PL_type_t type, int id)
     search_params.id = id;
 
     /* Search in the table of already loaded plugin libraries */
-    if(H5PL__get_cached_plugin(&search_params, &found, &plugin_info) < 0)
+    if(H5PL__find_plugin_in_cache(&search_params, &found, &plugin_info) < 0)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, NULL, "search in plugin cache  failed")
 
     /* If not found, try iterating through the path table to find an appropriate plugin */

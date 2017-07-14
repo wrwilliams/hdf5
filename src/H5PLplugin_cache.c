@@ -233,9 +233,10 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5PL__get_cached_plugin
+ * Function:    H5PL__find_plugin_in_cache
  *
- * Purpose:     Attempts to get a matching plugin from the cache.
+ * Purpose:     Attempts to find a matching plugin from the cache.
+ *
  *              The 'found' parameter will be set appropriately.
  *
  * Return:      SUCCEED/FAIL
@@ -243,7 +244,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5PL__get_cached_plugin(const H5PL_search_params_t *search_params, hbool_t *found, const void **plugin_info)
+H5PL__find_plugin_in_cache(const H5PL_search_params_t *search_params, hbool_t *found, const void **plugin_info)
 {
     unsigned int    u;                          /* iterator */
     herr_t          ret_value = SUCCEED;
@@ -296,5 +297,5 @@ H5PL__get_cached_plugin(const H5PL_search_params_t *search_params, hbool_t *foun
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5PL__get_cached_plugin() */
+} /* end H5PL__find_plugin_in_cache() */
 
