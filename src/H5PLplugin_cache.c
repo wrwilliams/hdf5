@@ -243,7 +243,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5PL__get_cached_plugin(const H5PL_search_params_t *search_params, hbool_t *found, void **plugin_info)
+H5PL__get_cached_plugin(const H5PL_search_params_t *search_params, hbool_t *found, const void **plugin_info)
 {
     unsigned int    u;                          /* iterator */
     herr_t          ret_value = SUCCEED;

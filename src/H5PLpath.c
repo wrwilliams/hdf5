@@ -585,3 +585,52 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__replace_path() */
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__find_plugin_in_path_table
+ *
+ * Purpose:     Attempts to find a matching plugin in the file system
+ *              using the paths stored in the path table.
+ *.
+ *              The 'found' parameter will be set appropriately.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5PL__find_plugin_in_path_table(const H5PL_search_params_t *search_params, hbool_t *found, const void **plugin_info)
+{
+    unsigned int    u;                          /* iterator */
+    herr_t          ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    /* Check args - Just assert on package functions */
+    HDassert(search_params);
+    HDassert(found);
+    HDassert(plugin_info);
+
+    /* Initialize output parameters */
+    *found = FALSE;
+    *plugin_info = NULL;
+
+    /* Loop over the paths in the table, checking for an appropriate plugin */
+    for (u = 0; u < H5PL_num_paths_g; u++) {
+
+        /* Search for the plugin in this path */
+        if ((*found = H5PL__find(search_params->type, search_params->id, H5PL_paths_g[u], plugin_info)) < 0)
+            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "search in path %s encountered an error", H5PL_paths_g[u])
+
+        /* Break out if found */
+        if (*found) {
+            if (!plugin_info)
+                HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL, "plugin info should not be NULL")
+            break;
+        }
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PL__find_plugin_in_cache_table() */
+

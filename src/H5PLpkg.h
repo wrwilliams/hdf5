@@ -138,7 +138,8 @@ typedef struct H5PL_search_params_t {
 herr_t H5PL__get_plugin_control_mask(unsigned int *mask /*out*/);
 herr_t H5PL__set_plugin_control_mask(unsigned int mask);
 
-/* Function to close plugins */
+/* Plugin search and manipulation */
+htri_t H5PL__find(H5PL_type_t plugin_type, int type_id, const char *dir, const void **info);
 herr_t H5PL__close(H5PL_HANDLE handle);
 
 /* Plugin cache calls */
@@ -146,7 +147,7 @@ herr_t H5PL__create_plugin_cache(void);
 herr_t H5PL__close_plugin_cache(hbool_t *already_closed /*out*/);
 herr_t H5PL__add_plugin(const H5PL_plugin_t *plugin);
 herr_t H5PL__get_cached_plugin(const H5PL_search_params_t *search_params,
-            hbool_t *found /*out*/, void **plugin_info /*out*/);
+            hbool_t *found /*out*/, const void **plugin_info /*out*/);
 
 /* Plugin search path calls */
 herr_t H5PL__create_path_table(void);
@@ -158,6 +159,8 @@ herr_t H5PL__replace_path(const char *path, unsigned int index);
 herr_t H5PL__insert_path(const char *path, unsigned int index);
 herr_t H5PL__remove_path(unsigned int index);
 const char *H5PL__get_path(unsigned int index);
+herr_t H5PL__find_plugin_in_path_table(const H5PL_search_params_t *search_params,
+            hbool_t *found /*out*/, const void **plugin_info /*out*/);
 
 #endif /* _H5PLpkg_H */
 
