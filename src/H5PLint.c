@@ -68,11 +68,11 @@ hbool_t H5_PKG_INIT_VAR = FALSE;
  */
 static unsigned int     H5PL_plugin_control_mask_g = H5PL_ALL_PLUGIN;
 
-/* This flag will be set to TRUE if the HDF5_PLUGIN_PRELOAD
+/* This flag will be set to FALSE if the HDF5_PLUGIN_PRELOAD
  * environment variable was set to H5PL_NO_PLUGIN at
  * package initialization.
  */
-static hbool_t          H5PL_never_allow_plugins_g = FALSE;
+static hbool_t          H5PL_allow_plugins_g = TRUE;
 
 
 /*******************/
@@ -92,16 +92,15 @@ static hbool_t          H5PL_never_allow_plugins_g = FALSE;
 herr_t
 H5PL__get_plugin_control_mask(unsigned int *mask /*out*/)
 {
-    herr_t      ret_value = SUCCEED;
+    herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_PACKAGE_NOERR
 
+    /* Check args - Just assert on package functions */
     HDassert(mask);
 
-    if (H5PL_never_allow_plugins_g)
-        *mask = 0;
-    else
-        *mask = H5PL_plugin_control_mask_g;
+    /* Return the mask */
+    *mask = H5PL_plugin_control_mask_g;
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -120,11 +119,16 @@ H5PL__get_plugin_control_mask(unsigned int *mask /*out*/)
 herr_t
 H5PL__set_plugin_control_mask(unsigned int mask)
 {
-    herr_t      ret_value = SUCCEED;
+    herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    if (!H5PL_never_allow_plugins_g)
+    /* Only allow setting this if plugins have not been disabled.
+     * XXX: Note that we don't consider this an error, but instead
+     *      silently ignore it. We may want to consider this behavior
+     *      more carefully.
+     */
+    if (H5PL_allow_plugins_g)
         H5PL_plugin_control_mask_g = mask;
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -157,7 +161,7 @@ H5PL__init_package(void)
     if (NULL != (env_var = HDgetenv("HDF5_PLUGIN_PRELOAD")))
         if (!HDstrcmp(env_var, H5PL_NO_PLUGIN)) {
             H5PL_plugin_control_mask_g = 0;
-            H5PL_never_allow_plugins_g = TRUE;
+            H5PL_allow_plugins_g = FALSE;
         }
 
     /* Create the table of previously-loaded plugins */
