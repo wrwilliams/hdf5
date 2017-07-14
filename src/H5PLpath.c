@@ -92,6 +92,7 @@ static herr_t H5PL__insert_at(const char *path, unsigned int index);
 static herr_t H5PL__make_space_at(unsigned int index);
 static herr_t H5PL__replace_at(const char *path, unsigned int index);
 static herr_t H5PL__expand_path_table(void);
+static herr_t H5PL__find_plugin_in_path(const H5PL_search_params_t *search_params, hbool_t *found, const char *dir, const void **plugin_info);
 
 /*********************/
 /* Package Variables */
@@ -619,7 +620,7 @@ H5PL__find_plugin_in_path_table(const H5PL_search_params_t *search_params, hbool
     for (u = 0; u < H5PL_num_paths_g; u++) {
 
         /* Search for the plugin in this path */
-        if ((*found = H5PL__find_plugin_in_path(search_params, H5PL_paths_g[u], plugin_info)) < 0)
+        if (H5PL__find_plugin_in_path(search_params, found, H5PL_paths_g[u], plugin_info) < 0)
             HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "search in path %s encountered an error", H5PL_paths_g[u])
 
         /* Break out if found */
@@ -632,5 +633,164 @@ H5PL__find_plugin_in_path_table(const H5PL_search_params_t *search_params, hbool
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5PL__find_plugin_in_cache_table() */
+} /* end H5PL__find_plugin_in_path_table() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__find_plugin_in_path
+ *
+ * Purpose:     Given a path, this function opens the directory and envokes
+ *              another function to go through all files to find the right
+ *              plugin library. Two function definitions are for Unix and
+ *              Windows.
+ *
+ *              The found parameter will be set to TRUE and the info
+ *              parameter will be filled in on success.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+#ifndef H5_HAVE_WIN32_API
+static herr_t
+H5PL__find_plugin_in_path(const H5PL_search_params_t *search_params, hbool_t *found, const char *dir, const void **plugin_info)
+{
+    char           *path = NULL;
+    DIR            *dirp = NULL;            /* Directory stream */
+    struct dirent  *dp = NULL;              /* Directory entry */
+    herr_t         ret_value = SUCCEED;
+
+    FUNC_ENTER_STATIC
+
+    /* Check args - Just assert on package functions */
+    HDassert(search_params);
+    HDassert(found);
+    HDassert(dir);
+    HDassert(plugin_info);
+
+    /* Initialize the found parameter */
+    *found = FALSE;
+
+    /* Open the directory */
+    if (!(dirp = HDopendir(dir)))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_OPENERROR, FAIL, "can't open directory: %s", dir)
+
+    /* Iterate through all entries in the directory */
+    while (NULL != (dp = HDreaddir(dirp))) {
+
+        /* The library we are looking for should be called libxxx.so... on Unix
+         * or libxxx.xxx.dylib on Mac.
+         */
+#ifndef __CYGWIN__
+        if (!HDstrncmp(dp->d_name, "lib", (size_t)3) &&
+                (HDstrstr(dp->d_name, ".so") || HDstrstr(dp->d_name, ".dylib"))) {
+#else
+        if (!HDstrncmp(dp->d_name, "cyg", (size_t)3) &&
+                HDstrstr(dp->d_name, ".dll") ) {
+#endif
+
+            h5_stat_t   my_stat;
+            size_t      len;
+
+            /* Allocate & initialize the path name */
+            len = HDstrlen(dir) + HDstrlen(H5PL_PATH_SEPARATOR) + HDstrlen(dp->d_name) + 1 /*\0*/;
+
+            if (NULL == (path = (char *)H5MM_calloc(len)))
+                HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for path")
+
+            HDsnprintf(path, len, "%s/%s", dir, dp->d_name);
+
+            /* Get info for directory entry */
+            if (HDstat(path, &my_stat) == -1)
+                HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't stat file %s -- error was: %s", path, HDstrerror(errno))
+
+            /* If it is a directory, skip it */
+            if (S_ISDIR(my_stat.st_mode))
+                continue;
+
+            /* attempt to open the dynamic library as a filter library */
+            if (H5PL__open(path, search_params->type, search_params->id, found, plugin_info) < 0)
+                HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "search in directory failed")
+            if (*found)
+                HGOTO_DONE(SUCCEED)
+
+            path = (char *)H5MM_xfree(path);
+        } /* end if */
+    } /* end while */
+
+done:
+    if (dirp)
+        if (HDclosedir(dirp) < 0)
+            HDONE_ERROR(H5E_FILE, H5E_CLOSEERROR, FAIL, "can't close directory: %s", HDstrerror(errno))
+
+    path = (char *)H5MM_xfree(path);
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PL__find_plugin_in_path() */
+#else /* H5_HAVE_WIN32_API */
+static herr_t
+H5PL__find_plugin_in_path(const H5PL_search_params_t *search_params, hbool_t *found, const char *dir, const void **plugin_info)
+{
+    WIN32_FIND_DATAA    fdFile;
+    HANDLE              hFind = INVALID_HANDLE_VALUE;
+    char                *path = NULL;
+    char                service[2048];
+    herr_t              ret_value = SUCCEED;
+
+    FUNC_ENTER_STATIC
+
+    /* Check args - Just assert on package functions */
+    HDassert(search_params);
+    HDassert(found);
+    HDassert(dir);
+    HDassert(plugin_info);
+
+    /* Initialize the found parameter */
+    *found = FALSE;
+
+    /* Specify a file mask. *.* = We want everything! */
+    HDsprintf(service, "%s\\*.dll", dir);
+    if ((hFind = FindFirstFileA(service, &fdFile)) == INVALID_HANDLE_VALUE)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_OPENERROR, FAIL, "can't open directory")
+
+    /* Loop over all the files */
+    do {
+        /* Ignore '.' and '..' */
+        if (HDstrcmp(fdFile.cFileName, ".") != 0 && HDstrcmp(fdFile.cFileName, "..") != 0) {
+
+            /* XXX: Probably just continue here and move the code below over one tab */
+
+            size_t      len;
+
+            /* Allocate & initialize the path name */
+            len = HDstrlen(dir) + HDstrlen(H5PL_PATH_SEPARATOR) + HDstrlen(fdFile.cFileName) + 1;
+
+            if (NULL == (path = (char *)H5MM_calloc(len)))
+                HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't allocate memory for path")
+
+            HDsnprintf(path, len, "%s\\%s", dir, fdFile.cFileName);
+
+            /* Ignore directories */
+            if (fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                continue;
+
+            /* attempt to open the dynamic library as a filter library */
+            if (H5PL__open(path, search_params->type, search_params->id, found, plugin_info) < 0)
+                HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "search in directory failed")
+            if (*found)
+                HGOTO_DONE(SUCCEED)
+
+            path = (char *)H5MM_xfree(path);
+        }
+    } while (FindNextFileA(hFind, &fdFile));
+
+done:
+    if (hFind != INVALID_HANDLE_VALUE)
+        FindClose(hFind);
+    if (path)
+        path = (char *)H5MM_xfree(path);
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PL__find_plugin_in_path() */
+#endif /* H5_HAVE_WIN32_API */
 

@@ -58,7 +58,8 @@
  */
 #ifdef H5_HAVE_WIN32_API
 
-#   define H5PL_PATH_SEPARATOR     ";"
+    /* The path separator on this platform */
+#   define H5PL_PATH_SEPARATOR      ";"
 
     /* Handle for dynamic library */
 #   define H5PL_HANDLE HINSTANCE
@@ -86,6 +87,7 @@
     /* POSIX support */
     /*****************/
 
+    /* The path separator on this platform */
 #   define H5PL_PATH_SEPARATOR     ":"
 
     /* Handle for dynamic library */
@@ -111,13 +113,6 @@
 /* Package Private Typedefs */
 /****************************/
 
-/* Type for the list of info for opened plugin libraries */
-typedef struct H5PL_plugin_t {
-    H5PL_type_t     type;           /* Plugin type          */
-    int             id;             /* ID for the plugin    */
-    H5PL_HANDLE     handle;         /* Plugin handle        */
-} H5PL_plugin_t;
-
 /* Data used to search for plugins */
 typedef struct H5PL_search_params_t {
     H5PL_type_t     type;
@@ -139,15 +134,14 @@ herr_t H5PL__get_plugin_control_mask(unsigned int *mask /*out*/);
 herr_t H5PL__set_plugin_control_mask(unsigned int mask);
 
 /* Plugin search and manipulation */
-htri_t H5PL__find_plugin_in_path(const H5PL_search_params_t *search_params, const char *dir, const void **info);
+herr_t H5PL__open(const char *libname, H5PL_type_t type, int id, hbool_t *success /*out*/, const void **plugin_info /*out*/);
 herr_t H5PL__close(H5PL_HANDLE handle);
 
 /* Plugin cache calls */
 herr_t H5PL__create_plugin_cache(void);
 herr_t H5PL__close_plugin_cache(hbool_t *already_closed /*out*/);
-herr_t H5PL__add_plugin(const H5PL_plugin_t *plugin);
-herr_t H5PL__find_plugin_in_cache(const H5PL_search_params_t *search_params,
-            hbool_t *found /*out*/, const void **plugin_info /*out*/);
+herr_t H5PL__add_plugin(H5PL_type_t type, int id, H5PL_HANDLE handle);
+herr_t H5PL__find_plugin_in_cache(const H5PL_search_params_t *search_params, hbool_t *found /*out*/, const void **plugin_info /*out*/);
 
 /* Plugin search path calls */
 herr_t H5PL__create_path_table(void);
@@ -159,8 +153,7 @@ herr_t H5PL__replace_path(const char *path, unsigned int index);
 herr_t H5PL__insert_path(const char *path, unsigned int index);
 herr_t H5PL__remove_path(unsigned int index);
 const char *H5PL__get_path(unsigned int index);
-herr_t H5PL__find_plugin_in_path_table(const H5PL_search_params_t *search_params,
-            hbool_t *found /*out*/, const void **plugin_info /*out*/);
+herr_t H5PL__find_plugin_in_path_table(const H5PL_search_params_t *search_params, hbool_t *found /*out*/, const void **plugin_info /*out*/);
 
 #endif /* _H5PLpkg_H */
 

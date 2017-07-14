@@ -54,6 +54,13 @@
 /* Local Typedefs */
 /******************/
 
+/* Type for the list of info for opened plugin libraries */
+typedef struct H5PL_plugin_t {
+    H5PL_type_t     type;           /* Plugin type          */
+    int             id;             /* ID for the plugin    */
+    H5PL_HANDLE     handle;         /* Plugin handle        */
+} H5PL_plugin_t;
+
 
 /********************/
 /* Local Prototypes */
@@ -209,14 +216,11 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5PL__add_plugin(const H5PL_plugin_t *plugin)
+H5PL__add_plugin(H5PL_type_t type, int id, H5PL_HANDLE handle)
 {
     herr_t      ret_value = SUCCEED;
 
     FUNC_ENTER_PACKAGE
-
-    /* Check args - Just assert on package functions */
-    HDassert(plugin);
 
     /* Expand the cache if it is too small */
     if (H5PL_num_plugins_g >= H5PL_cache_capacity_g)
@@ -224,7 +228,10 @@ H5PL__add_plugin(const H5PL_plugin_t *plugin)
             HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "can't expand plugin cache")
 
     /* Store the plugin info and bump the # of plugins */
-    H5PL_cache_g[H5PL_num_plugins_g] = *plugin;
+    H5PL_cache_g[H5PL_num_plugins_g].type       = type;
+    H5PL_cache_g[H5PL_num_plugins_g].id         = id;
+    H5PL_cache_g[H5PL_num_plugins_g].handle     = handle;
+
     H5PL_num_plugins_g++;
 
 done:
