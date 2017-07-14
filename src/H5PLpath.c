@@ -308,6 +308,13 @@ done:
     if (paths)
         paths = (char *)H5MM_xfree(paths);
 
+    /* Try to clean up on errors */
+    if (FAIL == ret_value) {
+        if (H5PL_paths_g)
+            H5PL_paths_g = (char **)H5MM_xfree(H5PL_paths_g);
+        H5PL_path_capacity_g = 0;
+    }
+
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__create_path_table() */
 
