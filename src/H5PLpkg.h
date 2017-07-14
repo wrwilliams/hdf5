@@ -129,24 +129,16 @@ typedef struct H5PL_search_params_t {
 /* Package Private Variables */
 /*****************************/
 
-/* These variables are defined in H5PLint.c */
-
-/* Bitmask that controls whether classes of plugins
- * (e.g.: filters, VOL drivers) can be loaded.
- */
-extern unsigned int     H5PL_plugin_control_mask_g;
-
-/* This flag will be set to TRUE if the HDF5_PLUGIN_PRELOAD
- * environment variable was set to H5PL_NO_PLUGIN at
- * package initialization.
- */
-extern hbool_t          H5PL_never_allow_plugins_g;
-
 
 /******************************/
 /* Package Private Prototypes */
 /******************************/
 
+/* Accessors to global variables and flags */
+herr_t H5PL__get_plugin_control_mask(unsigned int *mask /*out*/);
+herr_t H5PL__set_plugin_control_mask(unsigned int mask);
+
+/* Function to close plugins */
 herr_t H5PL__close(H5PL_HANDLE handle);
 
 /* Plugin cache calls */

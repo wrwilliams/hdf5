@@ -66,19 +66,70 @@ hbool_t H5_PKG_INIT_VAR = FALSE;
 /* Bitmask that controls whether classes of plugins
  * (e.g.: filters, VOL drivers) can be loaded.
  */
-unsigned int    H5PL_plugin_control_mask_g = H5PL_ALL_PLUGIN;
+static unsigned int     H5PL_plugin_control_mask_g = H5PL_ALL_PLUGIN;
 
 /* This flag will be set to TRUE if the HDF5_PLUGIN_PRELOAD
  * environment variable was set to H5PL_NO_PLUGIN at
  * package initialization.
  */
-hbool_t         H5PL_never_allow_plugins_g = FALSE;
+static hbool_t          H5PL_never_allow_plugins_g = FALSE;
 
 
 /*******************/
 /* Local Variables */
 /*******************/
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__get_plugin_control_mask
+ *
+ * Purpose:     Gets the internal plugin control mask value.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5PL__get_plugin_control_mask(unsigned int *mask /*out*/)
+{
+    herr_t      ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE_NOERR
+
+    HDassert(mask);
+
+    if (H5PL_never_allow_plugins_g)
+        *mask = 0;
+    else
+        *mask = H5PL_plugin_control_mask_g;
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* end H5PL__get_plugin_control_mask() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__set_plugin_control_mask
+ *
+ * Purpose:     Sets the internal plugin control mask value.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5PL__set_plugin_control_mask(unsigned int mask)
+{
+    herr_t      ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE_NOERR
+
+    if (!H5PL_never_allow_plugins_g)
+        H5PL_plugin_control_mask_g = mask;
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* end H5PL__set_plugin_control_mask() */
 
 
 /*-------------------------------------------------------------------------
@@ -87,8 +138,8 @@ hbool_t         H5PL_never_allow_plugins_g = FALSE;
  * Purpose:     Initialize any package-specific data and call any init
  *              routines for the package.
  *
- * Return:      Success:    Non-negative
- *              Failture:   Negative
+ * Return:      SUCCEED/FAIL
+ *
  *-------------------------------------------------------------------------
  */
 herr_t

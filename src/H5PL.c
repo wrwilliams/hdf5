@@ -83,14 +83,14 @@
 herr_t
 H5PLset_loading_state(unsigned int plugin_control_mask)
 {
-    herr_t ret_value = SUCCEED; /* Return value */
+    herr_t  ret_value = SUCCEED;        /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "Iu", plugin_control_mask);
 
-    /* Copy the mask to the global variable */
-    if(!H5PL_never_allow_plugins_g)
-        H5PL_plugin_control_mask_g = plugin_control_mask;
+    /* Set the plugin control mask */
+    if(H5PL__set_plugin_control_mask(plugin_control_mask) < 0)
+        HGOTO_ERROR(H5E_ARGS, H5E_CANTSET, FAIL, "error setting plugin control mask")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -124,7 +124,9 @@ H5PLget_loading_state(unsigned int *plugin_control_mask)
     if (NULL == plugin_control_mask)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "plugin_control_mask parameter cannot be NULL")
 
-    *plugin_control_mask = H5PL_plugin_control_mask_g;
+    /* Set the plugin control mask */
+    if(H5PL__get_plugin_control_mask(plugin_control_mask) < 0)
+        HGOTO_ERROR(H5E_ARGS, H5E_CANTGET, FAIL, "error getting plugin control mask")
 
 done:
     FUNC_LEAVE_API(ret_value)
