@@ -50,8 +50,10 @@
       ${HDF5_TOOLS_DIR}/testfiles/tname-quot.h5
       ${HDF5_TOOLS_DIR}/testfiles/tname-sp.h5
       ${HDF5_TOOLS_DIR}/testfiles/tnamed_dtype_attr.h5
+      ${HDF5_TOOLS_DIR}/testfiles/test35.nc
       ${HDF5_TOOLS_DIR}/testfiles/tnestedcomp.h5
       ${HDF5_TOOLS_DIR}/testfiles/tnodata.h5
+      ${HDF5_TOOLS_DIR}/testfiles/tnullspace.h5
       ${HDF5_TOOLS_DIR}/testfiles/tobjref.h5
       ${HDF5_TOOLS_DIR}/testfiles/topaque.h5
       ${HDF5_TOOLS_DIR}/testfiles/torderattr.h5
@@ -99,6 +101,7 @@
       ${HDF5_TOOLS_DIR}/testfiles/tempty-ns.h5.xml
       ${HDF5_TOOLS_DIR}/testfiles/tempty-ns-2.h5.xml
       ${HDF5_TOOLS_DIR}/testfiles/tenum.h5.xml
+      ${HDF5_TOOLS_DIR}/testfiles/test35.nc.xml
       ${HDF5_TOOLS_DIR}/testfiles/textlink.h5.xml
       ${HDF5_TOOLS_DIR}/testfiles/tfpformat.h5.xml
       ${HDF5_TOOLS_DIR}/testfiles/tgroup.h5.xml
@@ -115,6 +118,7 @@
       ${HDF5_TOOLS_DIR}/testfiles/tname-sp.h5.xml
       ${HDF5_TOOLS_DIR}/testfiles/tnestedcomp.h5.xml
       ${HDF5_TOOLS_DIR}/testfiles/tnodata.h5.xml
+      ${HDF5_TOOLS_DIR}/testfiles/tnullspace.h5.xml
       ${HDF5_TOOLS_DIR}/testfiles/tobjref.h5.xml
       ${HDF5_TOOLS_DIR}/testfiles/topaque.h5.xml
       ${HDF5_TOOLS_DIR}/testfiles/torderattr1.h5.xml
@@ -258,6 +262,8 @@
           tempty.h5.out.err
           tenum.h5.out
           tenum.h5.out.err
+          test35.nc.out
+          test35.nc.out.err
           textlink.h5.out
           textlink.h5.out.err
           tfpformat.h5.out
@@ -292,6 +298,8 @@
           tnodata.h5.out.err
           tnoname.h5.out
           tnoname.h5.out.err
+          tnullspace.h5.out
+          tnullspace.h5.out.err
           tobjref.h5.out
           tobjref.h5.out.err
           topaque.h5.out
@@ -398,9 +406,7 @@
   ADD_XML_H5_TEST (tsaf.h5 0 tsaf.h5)
   ADD_XML_H5_TEST (tempty.h5 0 tempty.h5)
   ADD_XML_H5_TEST (tnamed_dtype_attr.h5 0 tnamed_dtype_attr.h5)
-  ##Test dataset and attribute of null space.  Commented out:
-  ## wait until the XML schema is updated for null space.
-  ##  ADD_XML_H5_TEST (tnullspace.h5 0 tnulspace.h5)
+  ADD_XML_H5_TEST (tnullspace.h5 0 tnullspace.h5)
   ## So is dataspace with 0 dimension size.
   ##  ADD_XML_H5_TEST (zerodim.h5 0 zerodim.h5)
 
@@ -429,4 +435,7 @@
 
   # tests for floating point user defined printf format
   ADD_XML_H5_TEST (tfpformat.h5 0 -u -m %.7f tfpformat.h5)
+
+  # test for HDFFV-10256 issue
+  ADD_XML_H5_TEST (test35.nc 0 test35.nc)
 
