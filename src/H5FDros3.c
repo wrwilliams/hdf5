@@ -30,7 +30,7 @@
 #include "H5Eprivate.h"     /* Error handling           */
 #include "H5Fprivate.h"     /* File access              */
 #include "H5FDprivate.h"    /* File drivers             */
-#include "H5FDros3.h"       /* Sec2 file driver         */
+#include "H5FDros3.h"       /* ros3 file driver         */
 #include "H5FLprivate.h"    /* Free Lists               */
 #include "H5Iprivate.h"     /* IDs                      */
 #include "H5MMprivate.h"    /* Memory management        */
@@ -50,8 +50,37 @@ static hid_t H5FD_ROS3_g = 0;
  * to zero, 'pos' will be set to H5F_ADDR_UNDEF (as it is when an error
  * occurs), and 'op' will be set to H5F_OP_UNKNOWN.
  */
+
+/***************************************************************************
+ *
+ * structure H5FD_ros3_t
+ *
+ * H5FD_ros3_t is a catchall structure used to store all information needed
+ * to maintain R/O access to a single HDF5 file that has been stored as a
+ * S3 object.  This structure is created when such a file is "opened" and 
+ * discarded when it is "closed"
+ *
+ * The fields of the structure discussed individually below:
+ *
+ * pub: Instance of H5FD_t which contains all fields common to all VFDs.
+ *      It must be the first item in this structure, since at higher levels,
+ *      this structure will be treated as an instance of H5FD_t.
+ *
+ * fa:  Instance of H5FD_ros3_fapl_t containing the S3 configuration data 
+ *      needed to "open" the HDF5 file.
+ *
+ * Jake: Please fill in descriptions of remaining fields.  Note that I 
+ *      have left in the fields from the sec2 driver.  Most of them 
+ *      can be removed.
+ *
+ ***************************************************************************/
 typedef struct H5FD_ros3_t {
-    H5FD_t          pub;    /* public stuff, must be first      */
+    H5FD_t           pub;
+    H5FD_ros3_fapl_t fa;
+
+    /* left over fields from the sec2 driver -- delete or re-purpose as 
+     * appropriate.
+     */
     int             fd;     /* the filesystem file descriptor   */
     haddr_t         eoa;    /* end of allocated region          */
     haddr_t         eof;    /* end of file; current file size   */
@@ -122,6 +151,9 @@ typedef struct H5FD_ros3_t {
 
 /* Prototypes */
 static herr_t H5FD_ros3_term(void);
+static void *H5FD_ros3_fapl_get(H5FD_t *_file);
+static void *H5FD_ros3_fapl_copy(const void *_old_fa);
+static herr_t H5FD_ros3_fapl_free(void *_fa);
 static H5FD_t *H5FD_ros3_open(const char *name, unsigned flags, hid_t fapl_id,
             haddr_t maxaddr);
 static herr_t H5FD_ros3_close(H5FD_t *_file);
@@ -139,6 +171,8 @@ static herr_t H5FD_ros3_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing);
 static herr_t H5FD_ros3_lock(H5FD_t *_file, hbool_t rw);
 static herr_t H5FD_ros3_unlock(H5FD_t *_file);
 
+static herr_t H5FD_ros3_validate_config(const H5FD_ros3_fapl_t * fa);
+
 static const H5FD_class_t H5FD_ros3_g = {
     "ros3",                     /* name                 */
     MAXADDR,                    /* maxaddr              */
@@ -147,10 +181,10 @@ static const H5FD_class_t H5FD_ros3_g = {
     NULL,                       /* sb_size              */
     NULL,                       /* sb_encode            */
     NULL,                       /* sb_decode            */
-    0,                          /* fapl_size            */
-    NULL,                       /* fapl_get             */
-    NULL,                       /* fapl_copy            */
-    NULL,                       /* fapl_free            */
+    sizeof(H5FD_ros3_fapl_t),   /* fapl_size            */
+    H5FD_ros3_fapl_get,         /* fapl_get             */
+    H5FD_ros3_fapl_copy,        /* fapl_copy            */
+    H5FD_ros3_fapl_free,        /* fapl_free            */
     0,                          /* dxpl_size            */
     NULL,                       /* dxpl_copy            */
     NULL,                       /* dxpl_free            */
@@ -266,35 +300,276 @@ H5FD_ros3_term(void)
  * Function:    H5Pset_fapl_ros3
  *
  * Purpose:     Modify the file access property list to use the H5FD_ROS3
- *              driver defined in this source file.  There are no driver
- *              specific properties.
+ *              driver defined in this source file.  All driver specfic 
+ *              properties are passed in as a pointer to a suitably 
+ *              initialized instance of H5FD_ros3_fapl_t
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Robb Matzke
- *              Thursday, February 19, 1998
+ * Programmer:  John Mainzer
+ *              9/10/17
  *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pset_fapl_ros3(hid_t fapl_id)
+H5Pset_fapl_ros3(hid_t fapl_id, H5FD_ros3_fapl_t * fa)
 {
     H5P_genplist_t *plist;      /* Property list pointer */
     herr_t ret_value;
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE1("e", "i", fapl_id);
+    H5TRACE2("e", "i*x", fapl_id, fa);
 
     HDfprintf(stdout, "H5Pset_fapl_ros3() called.\n");
-
+#if 0
+    HDfprintf(stdout, "fa = {%d, %d, \"%s\", \"%s\", \"%s\"}\n",
+              fa->version, (int)(fa->authenticate),
+              fa->aws_region, fa->secret_id, fa->secret_key);
+#endif
     if(NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, \
+                    "not a file access property list")
 
-    ret_value = H5P_set_driver(plist, H5FD_ROS3, NULL);
+    if(SUCCEED != H5FD_ros3_validate_config(fa))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid ros3 config")
+
+    ret_value = H5P_set_driver(plist, H5FD_ROS3, (void *)fa);
 
 done:
+
     FUNC_LEAVE_API(ret_value)
+
 } /* end H5Pset_fapl_ros3() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FD_ros3_validate_config()
+ *
+ * Purpose:     Test to see if the supplied instance of H5FD_ros3_fapl_t
+ *              contains internally consistant data.  Return SUCCEED if so,
+ *              and FAIL otherwise.
+ *
+ *              Note the difference between internally consistant and 
+ *              correct.  As we will have to try to access the target 
+ *              object to determine whether the supplied data is correct,
+ *              we will settle for internal consistancy at this point
+ *
+ * Return:      SUCCEED if instance of H5FD_ros3_fapl_t contains internally 
+ *              consistant data, FAIL otherwise.
+ *
+ * Programmer:  John Mainzer
+ *              9/10/17
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5FD_ros3_validate_config(const H5FD_ros3_fapl_t * fa)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    HDassert(fa);
+
+    if ( fa->version != H5FD__CURR_ROS3_FAPL_T_VERSION ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, \
+                    "Unknown H5FD_ros3_fapl_t version")
+    }
+
+    /* Jake: please add other sanity checks as appropriate */
+
+done:
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* end H5FD_ros3_validate_config() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Pget_fapl_ros3
+ *
+ * Purpose:     Returns information about the ros3 file access property
+ *              list though the function arguments.
+ *
+ * Return:      Success:        Non-negative
+ *
+ *              Failure:        Negative
+ *
+ * Programmer:  John Mainzer
+ *              9/10/17
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_fapl_ros3(hid_t fapl_id, H5FD_ros3_fapl_t *fa_out)
+{
+    H5P_genplist_t            *plist;      /* Property list pointer */
+    const H5FD_ros3_fapl_t    *fa;
+    herr_t      ret_value = SUCCEED;       /* Return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE2("e", "ix", fapl_id, fa_out);
+
+    HDfprintf(stdout, "H5Pget_fapl_ros3() called.\n");
+
+    if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access list")
+
+    if(H5FD_ROS3 != H5P_peek_driver(plist))
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver")
+
+    if(NULL == (fa = (const H5FD_ros3_fapl_t *)H5P_peek_driver_info(plist)))
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "bad VFL driver info")
+
+    if(fa_out == NULL)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "fa_out is NULL")
+
+    /* Copy the ros3 fapl data out */
+    HDmemcpy(fa_out, fa, sizeof(H5FD_ros3_fapl_t));
+
+done:
+
+    FUNC_LEAVE_API(ret_value)
+
+} /* H5Pget_fapl_ros3() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FD_ros3_fapl_get
+ *
+ * Purpose:     Gets a file access property list which could be used to
+ *              create an identical file.
+ *
+ * Return:      Success:        Ptr to new file access property list value.
+ *
+ *              Failure:        NULL
+ *
+ * Programmer:  John Mainzer
+ *              9/8/17
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static void *
+H5FD_ros3_fapl_get(H5FD_t *_file)
+{
+    H5FD_ros3_t       *file = (H5FD_ros3_t*)_file;
+    H5FD_ros3_fapl_t  *fa = NULL;
+    void *ret_value = NULL;     /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    if(NULL == (fa = 
+                (H5FD_ros3_fapl_t *)H5MM_calloc(sizeof(H5FD_ros3_fapl_t))))
+
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+
+    /* Copy the fields of the structure */
+    HDmemcpy(fa, &(file->fa), sizeof(H5FD_ros3_fapl_t));
+
+    /* Set return value */
+    ret_value=fa;
+
+done:
+
+    if(ret_value==NULL) {
+
+        if(fa!=NULL) {
+
+            H5MM_xfree(fa);
+        }
+    } /* end if */
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5FD_ros3_fapl_get() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FD_ros3_fapl_copy
+ *
+ * Purpose:     Copies the ros3-specific file access properties.
+ *
+ * Return:      Success:        Ptr to a new property list
+ *
+ *              Failure:        NULL
+ *
+ * Programmer:  John Mainzer
+ *              9/8/17
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static void *
+H5FD_ros3_fapl_copy(const void *_old_fa)
+{
+    const H5FD_ros3_fapl_t *old_fa = (const H5FD_ros3_fapl_t*)_old_fa;
+    H5FD_ros3_fapl_t *new_fa = NULL;
+    void *ret_value = NULL;     /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    if(NULL == (new_fa = 
+                (H5FD_ros3_fapl_t *)H5MM_malloc(sizeof(H5FD_ros3_fapl_t))))
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+
+    /* Copy the fields of the structure */
+    HDmemcpy(new_fa, old_fa, sizeof(H5FD_ros3_fapl_t));
+
+    /* Set return value */
+    ret_value = new_fa;
+
+done:
+
+    if(ret_value==NULL) {
+        if(new_fa!=NULL)
+            H5MM_xfree(new_fa);
+    } /* end if */
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5FD_ros3_fapl_copy() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FD_ros3_fapl_free
+ *
+ * Purpose:     Frees the ros3-specific file access properties.
+ *
+ *              Note: FUNC enter/exit macros seem to have problems
+ *                    in this case.  After fighting with them for an
+ *                    hour or so (unused variable error with 
+ *                    FUNC_ENTER_NOAPI_NOINIT_NOERR, compile error
+ *                    with FUNC_ENTER_NOAPI_NOINIT_NOERR), I bypassed them.  
+ *
+ *                    Feel free to fix this.
+ *
+ * Return:      SUCCEED (cannot fail)
+ *
+ * Programmer:  John Mainzer
+ *              9/8/17
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5FD_ros3_fapl_free(void *_fa)
+{
+    H5FD_ros3_fapl_t  *fa = (H5FD_ros3_fapl_t*)_fa;
+
+    /* sanity check */ 
+    HDassert(fa);
+
+    H5MM_xfree(fa);
+
+    return(SUCCEED);
+
+} /* H5FD_ros3_fapl_free() */
 
 
 /*-------------------------------------------------------------------------
@@ -518,36 +793,31 @@ done:
  * Purpose:     Set the flags that this VFL driver is capable of supporting.
  *              (listed in H5FDpublic.h)
  *
+ *              Note that since the ROS3 VFD is read only, most flags 
+ *              are irrelevant.
+ *
  * Return:      SUCCEED (Can't fail)
  *
- * Programmer:  Quincey Koziol
- *              Friday, August 25, 2000
+ * Programmer:  John Mainzer
+ *              9/11/17
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_ros3_query(const H5FD_t *_file, unsigned long *flags /* out */)
+H5FD_ros3_query(const H5FD_t H5_ATTR_UNUSED *_file, 
+                unsigned long *flags /* out */)
 {
-    const H5FD_ros3_t	*file = (const H5FD_ros3_t *)_file;    /* ros3 VFD info */
-
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     HDfprintf(stdout, "H5FD_ros3_query() called.\n");
 
     /* Set the VFL feature flags that this driver supports */
     if(flags) {
-        *flags = 0;
-        *flags |= H5FD_FEAT_AGGREGATE_METADATA;     /* OK to aggregate metadata allocations                             */
-        *flags |= H5FD_FEAT_ACCUMULATE_METADATA;    /* OK to accumulate metadata for faster writes                      */
-        *flags |= H5FD_FEAT_DATA_SIEVE;             /* OK to perform data sieving for faster raw data reads & writes    */
-        *flags |= H5FD_FEAT_AGGREGATE_SMALLDATA;    /* OK to aggregate "small" raw data allocations                     */
-        *flags |= H5FD_FEAT_POSIX_COMPAT_HANDLE;    /* get_handle callback returns a POSIX file descriptor              */
-        *flags |= H5FD_FEAT_SUPPORTS_SWMR_IO;       /* VFD supports the single-writer/multiple-readers (SWMR) pattern   */
-        *flags |= H5FD_FEAT_DEFAULT_VFD_COMPATIBLE; /* VFD creates a file which can be opened with the default VFD      */
 
-        /* Check for flags that are set by h5repart */
-        if(file && file->fam_to_ros3)
-            *flags |= H5FD_FEAT_IGNORE_DRVRINFO; /* Ignore the driver info when file is opened (which eliminates it) */
+        *flags = 0;
+
+        *flags |= H5FD_FEAT_DATA_SIEVE;             /* OK to perform data sieving for faster raw data reads & writes    */
+
     } /* end if */
 
     FUNC_LEAVE_NOAPI(SUCCEED)

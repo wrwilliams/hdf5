@@ -26,8 +26,46 @@
 extern "C" {
 #endif
 
+/****************************************************************************
+ *
+ * structure H5FD_s3_config_t
+ *
+ * H5FD_s3_config_t is a public structure that is used to pass S3 
+ * configuration data to the appropriate S3 VFD via the FAPL.  A 
+ * pointer to an instance of this structure is a parameter in the 
+ * H5Pset_s3_config() and H5Pget_s3_config() API calls.
+ *
+ * The fields of the structure are discussed individually below:
+ *  
+ * version: Integer field containing the version number of this version
+ *      of the H5FD_s3_config_t structure.  Any instance of
+ *      H5FD_s3_config_t passed to the above calls must have a known
+ *      version number, or an error will be flagged.
+ *
+ *      This field should be set to H5FD__CURR_ROS3_FAPL_T_VERSION.
+ *
+ * Jake: please document the remaining fields.
+ *
+ ****************************************************************************/
+
+#define H5FD__CURR_ROS3_FAPL_T_VERSION     1
+
+#define H5FD__ROS3_MAX_REGION_LEN         32
+#define H5FD__ROS3_MAX_SECRET_ID_LEN     128
+#define H5FD__ROS3_MAX_SECRET_KEY_LEN    128
+
+typedef struct H5FD_ros3_fapl_t {
+    int32_t version;
+    hbool_t authenticate;
+    char    aws_region[H5FD__ROS3_MAX_REGION_LEN + 1];
+    char    secret_id[H5FD__ROS3_MAX_SECRET_ID_LEN + 1];
+    char    secret_key[H5FD__ROS3_MAX_SECRET_KEY_LEN + 1];
+} H5FD_ros3_fapl_t;
+
+
 H5_DLL hid_t H5FD_ros3_init(void);
-H5_DLL herr_t H5Pset_fapl_ros3(hid_t fapl_id);
+H5_DLL herr_t H5Pget_fapl_ros3(hid_t fapl_id, H5FD_ros3_fapl_t * fa_out);
+H5_DLL herr_t H5Pset_fapl_ros3(hid_t fapl_id, H5FD_ros3_fapl_t * fa);
 
 #ifdef __cplusplus
 }

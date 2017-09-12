@@ -1894,9 +1894,12 @@ error:
  *
  * Purpose:     Tests the file handle interface for the ROS3 driver
  *
- *              The initial version is a copy of test_sec2().  This 
- *              code will have to be revised extensively at the R/O S3 
- *              driver is developed.
+ *              As the ROS3 driver is 1) read only, 2) requires access
+ *              to an S3 server (minio for now), this test is quite
+ *              different from the other tests.
+ *
+ *              For now, test only fapl & flags.  Extend as the 
+ *              work on the VFD continues.
  *
  * Return:      Success:        0
  *              Failure:        -1
@@ -1917,38 +1920,57 @@ test_ros3(void)
     char        filename[1024];             /* filename                     */
     void        *os_file_handle = NULL;     /* OS file handle               */
     hsize_t     file_size;                  /* file size                    */
+    H5FD_ros3_fapl_t test_ros3_fa;
+    H5FD_ros3_fapl_t ros3_fa_0 = 
+    {
+        /* version      = */ H5FD__CURR_ROS3_FAPL_T_VERSION,
+        /* authenticate = */ FALSE,
+        /* aws_region   = */ "", 
+        /* secret_id    = */ "", 
+        /* secret_key   = */ "plugh",
+    };
 
     TESTING("ROS3 file driver");
 
-    /* Set property list and file name for SEC2 driver. */
+    /* Set property list and file name for ROS3 driver. */
     if((fapl_id = H5Pcreate(H5P_FILE_ACCESS)) < 0)
         TEST_ERROR;
-    if(H5Pset_fapl_ros3(fapl_id) < 0)
+
+    if(H5Pset_fapl_ros3(fapl_id, &ros3_fa_0) < 0)
         TEST_ERROR;
+
+    /* verify that the ROS3 FAPL entry is set as expected */
+    if(H5Pget_fapl_ros3(fapl_id, &test_ros3_fa) < 0)
+        TEST_ERROR;
+
+    /* need a macro to compare instances of H5FD_ros3_fapl_t */
+    if((test_ros3_fa.version != ros3_fa_0.version) ||
+       (test_ros3_fa.authenticate != ros3_fa_0.authenticate) ||
+       (strcmp(test_ros3_fa.aws_region, ros3_fa_0.aws_region) != 0) ||
+       (strcmp(test_ros3_fa.secret_id, ros3_fa_0.secret_id) != 0) ||
+       (strcmp(test_ros3_fa.secret_key, ros3_fa_0.secret_key) != 0))
+        TEST_ERROR;
+
     h5_fixname(FILENAME[10], fapl_id, filename, sizeof(filename));
 
     /* Check that the VFD feature flags are correct */
     if ((driver_id = H5Pget_driver(fapl_id)) < 0)
-        TEST_ERROR
+        TEST_ERROR;
+
     if (H5FDdriver_query(driver_id, &driver_flags) < 0)
-        TEST_ERROR
-    if(!(driver_flags & H5FD_FEAT_AGGREGATE_METADATA))      TEST_ERROR
-    if(!(driver_flags & H5FD_FEAT_ACCUMULATE_METADATA))     TEST_ERROR
+        TEST_ERROR;
+
     if(!(driver_flags & H5FD_FEAT_DATA_SIEVE))              TEST_ERROR
-    if(!(driver_flags & H5FD_FEAT_AGGREGATE_SMALLDATA))     TEST_ERROR
-    if(!(driver_flags & H5FD_FEAT_POSIX_COMPAT_HANDLE))     TEST_ERROR
-    if(!(driver_flags & H5FD_FEAT_SUPPORTS_SWMR_IO))        TEST_ERROR
-    if(!(driver_flags & H5FD_FEAT_DEFAULT_VFD_COMPATIBLE))  TEST_ERROR
+
     /* Check for extra flags not accounted for above */
-    if(driver_flags != (H5FD_FEAT_AGGREGATE_METADATA
-                        | H5FD_FEAT_ACCUMULATE_METADATA
-                        | H5FD_FEAT_DATA_SIEVE
-                        | H5FD_FEAT_AGGREGATE_SMALLDATA
-                        | H5FD_FEAT_POSIX_COMPAT_HANDLE
-                        | H5FD_FEAT_SUPPORTS_SWMR_IO
-                        | H5FD_FEAT_DEFAULT_VFD_COMPATIBLE))
+    if(driver_flags != (H5FD_FEAT_DATA_SIEVE))
         TEST_ERROR
 
+    /* can't create analogs of the following tests until the 
+     * ROS3 driver is up and running in a minimal fashion.
+     * Comment them out until we get to them.
+     */
+#if 0 
     if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0)
         TEST_ERROR;
 
@@ -1991,6 +2013,7 @@ test_ros3(void)
     /* Close the fapl */
     if(H5Pclose(fapl_id) < 0)
         TEST_ERROR;
+#endif
 
     PASSED();
     return 0;
