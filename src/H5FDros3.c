@@ -36,6 +36,9 @@
 #include "H5MMprivate.h"    /* Memory management        */
 #include "H5Pprivate.h"     /* Property lists           */
 
+// #include "H5FDs3comms.h"    /* S3 Communications        */
+#include "H5FDs3comms.c"    
+
 /* The driver identification number, initialized at runtime */
 static hid_t H5FD_ROS3_g = 0;
 
@@ -312,7 +315,7 @@ H5FD_ros3_term(void)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pset_fapl_ros3(hid_t fapl_id, H5FD_ros3_fapl_t * fa)
+H5Pset_fapl_ros3(hid_t fapl_id, H5FD_ros3_fapl_t *fa)
 {
     H5P_genplist_t *plist;      /* Property list pointer */
     herr_t ret_value;
@@ -410,7 +413,7 @@ H5Pget_fapl_ros3(hid_t fapl_id, H5FD_ros3_fapl_t *fa_out)
     herr_t      ret_value = SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE2("e", "ix", fapl_id, fa_out);
+    H5TRACE2("e", "i*x", fapl_id, fa_out);
 
     HDfprintf(stdout, "H5Pget_fapl_ros3() called.\n");
 
