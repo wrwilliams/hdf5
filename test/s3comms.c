@@ -22,7 +22,7 @@
 #include "h5test.h"
 #include "H5FDs3comms.h"
 
-/* #define VERBOSE 1L */
+
 
 #define ERROR_IF(condition)                \
 {   if ( (condition) ) {                   \
