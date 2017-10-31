@@ -24,109 +24,345 @@
 
 
 
-#define ERROR_IF(condition)                \
-{   if ( (condition) ) {                   \
-        TEST_ERROR;                        \
-    }                                      \
-}
+#ifndef __js_test__
 
+#define __js_test__ 1L
 
-# if 0
-/* test framework brainstorm
- */
-
-/*
- * #define JSVFY_EXP_ACT 1L
- * JSVFY macros accept args as ( expected, actual[, reason] ) 
- *     (inverted from given    ( actual, expected[, reason] )
- */
-
-/* Jake Smith Verify routine
- * Modeled on existing macros and *Unit experiences.
+/*****************************************************************************
  *
- * Maintain GOTO "error" for single-stop teardown and exit point
- * If a reason is given, print that on error
- * else, try to show the expected/actual discrepancy
+ * FILE-LOCAL TESTING MACROS
  *
- * Operates on numeric types (converted to `long`)
+ * Purpose:
+ *
+ *     1) Upon test failure, goto-jump to single-location teardown in test 
+ *        function. E.g., `error:` (consistency with HDF corpus) or
+ *        `failed:` (reflects purpose).
+ *            >>> using "error", in part because `H5E_BEGIN_TRY` expects it.
+ *     2) Increase clarity and reduce overhead found with `TEST_ERROR`.
+ *        e.g., "if(somefunction(arg, arg2) < 0) TEST_ERROR:"
+ *        requires reading of entire line to know whether this if/call is
+ *        part of the test setup, test operation, or a test unto itself.
+ *     3) Provide testing macros with optional user-supplied failure message;
+ *        if not supplied (NULL), generate comparison output in the spirit of 
+ *        test-driven development. E.g., "expected 5 but was -3"
+ *        User messages clarify test's purpose in code, encouraging description
+ *        without relying on comments.
+ *     4) Configurable expected-actual order in generated comparison strings.
+ *        Some prefer `VERIFY(expected, actual)`, others 
+ *        `VERIFY(actual, expected)`. Provide preprocessor ifdef switch
+ *        to satifsy both parties, assuming one paradigm per test file.
+ *        (One could #undef and redefine the flag through the file as desired,
+ *         but _why_.)
+ *        Provided as courtesy, per consideration for inclusion in the library 
+ *        proper.
+ *
+ *     Macros:
+ * 
+ *         JSVERIFY_EXP_ACT - ifdef flag, configures comparison order
+ *         FAIL_IF          - check condition
+ *         FAIL_UNLESS      - check _not_ condition
+ *         JSVERIFY         - long-int equality check; prints reason/comparison
+ *         JSVERIFY_NOT     - long-int inequality check; prints
+ *         JSVERIY_STR      - string equality check; prints
+ *
+ * Programmer: Jacob Smith
+ *             2017-10-24
+ *
+ *****************************************************************************/
+
+
+/*----------------------------------------------------------------------------
+ *
+ * ifdef flag: JSVERIFY_EXP_ACT
+ * 
+ * JSVERIFY macros accept arguments as (EXPECTED, ACTUAL[, reason]) 
+ *   default, if this is undefined, is (ACTUAL, EXPECTED[, reason])
+ *
+ *----------------------------------------------------------------------------
  */
-#define JSVFY(actual, expected, reason) {                                  \
-    if (VERBOSE_HI) {                                                      \
-        HDprintf("  At line %4d in %s: %ld ",                              \
-                 (int)__LINE__,                                            \
-                 FUNC,                                                     \
-#ifdef JSVFY_EXP_ACT                                                       \
-                 (long)(expected) );                                       \
-#else                                                                      \
-                 (long)(actual) );                                         \
-#endif                                                                     \
-    }                                                                      \
-    if ((actual) != (expected)) {                                          \
-        if (reason != NULL) {                                              \
-             HDprintf("%s\n", (reason));                                   \
-        } else {                                                           \
-             HDprintf("***ERROR***\n  ! Expected %ld\n  ! Actual   %ld\n", \
-#ifdef JSVFY_EXP_ACT                                                       \
-                      (long)(actual), (long)(expected) );                  \
-#else                                                                      \
-                      (long)(expected), (long)(actual) );                  \
-#endif                                                                     \
-        }                                                                  \
-        FAIL_STACK_ERROR                                                   \
-/* { H5_FAILED(); AT(); H5Eprint2(H5E_DEFAULT, stdout); goto error; } */   \
-/* H5Eprint2 prints stack; because it is not cleared after each test  */   \
-/* routine, expected error cases contaminate output                   */   \
-/* >? instead, stay with TEST_ERROR */                                     \
-/* >? clear stack with PASSED() wapper */                                  \
-    }                                                                      \
+#define JSVERIFY_EXP_ACT 1L
+
+
+/*----------------------------------------------------------------------------
+ *
+ * Macro: JSFAILED_AT()
+ *
+ * Purpose:
+ *
+ *     Preface a test failure by printing "*FAILED*" and location to stdout
+ *     Similar to `H5_FAILED(); AT();` from h5test.h
+ *
+ *     *FAILED* at somefile.c:12 in function_name()...
+ *
+ * Programmer: Jacob Smith
+ *             2017-10-24
+ *
+ *----------------------------------------------------------------------------
+ */
+#define JSFAILED_AT() {                                                   \
+    HDprintf("*FAILED* at %s:%d in %s()...\n", __FILE__, __LINE__, FUNC); \
 }
 
-/* as above, but verify that actual != expected
+
+/*----------------------------------------------------------------------------
+ *
+ * Macro: FAIL_IF()
+ *
+ * Purpose:  
+ *
+ *     Make tests more accessible and less cluttered than
+ *         `if (thing == otherthing()) TEST_ERROR` 
+ *         paradigm.
+ *
+ *     The following lines are roughly equivalent:
+ *
+ *         `if (myfunc() < 0) TEST_ERROR;` (as seen elsewhere in HDF tests)
+ *         `FAIL_IF(myfunc() < 0)`
+ *
+ *     Prints a generic "FAILED AT" line to stdout and jumps to `error`,
+ *     similar to `TEST_ERROR` in h5test.h
+ *
+ * Programmer: Jacob Smith
+ *             2017-10-23
+ *
+ *----------------------------------------------------------------------------
  */
-#define JSVFY_NOT(actual, expected, reason) {                              \
-    if (VERBOSE_HI) {                                                      \
-        HDprintf("  At line %4d in %s: %ld ",                              \
-                 (int)__LINE__,                                            \
-                 FUNC,                                                     \
-                 (long)(actual));                                          \
-    }                                                                      \
-    if ((actual) != (expected)) {                                          \
-        if (reason) {                                                      \
-             HDprintf("%s\n", (reason));                                   \
-        } else {                                                           \
-             HDprintf("***ERROR***\n  ! Expected %ld\n  ! Actual   %ld\n", \
-                      (long)(expected), (long)(actual));                   \
-        }                                                                  \
-        FAIL_STACK_ERROR                                                   \
-    }                                                                      \
+#define FAIL_IF(condition) \
+if (condition) {           \
+    JSFAILED_AT()          \
+    goto error;            \
 }
 
-/* compare two strings; fail if they differ
+
+/*----------------------------------------------------------------------------
+ *
+ * Macro: FAIL_UNLESS()
+ *
+ * Purpose:
+ *
+ *     TEST_ERROR wrapper to reduce cognitive overhead from "negative tests",
+ *     e.g., "a != b".
+ *     
+ *     Opposite of FAIL_IF; fails if the given condition is _not_ true.
+ *
+ *     `FAIL_IF( 5 != my_op() )`
+ *     is equivalent to
+ *     `FAIL_UNLESS( 5 == my_op() )`
+ *     However, `JSVERIFY(5, my_op(), "bad return")` may be even clearer.
+ *         (see JSVERIFY)
+ *
+ * Programmer: Jacob Smith
+ *             2017-10-24
+ *
+ *----------------------------------------------------------------------------
  */
-#define JSVFY_STR(actual, expected, reason) {                              \
-    if (VERBOSE_HI) {                                                      \
-        HDprintf("  At line %4d in %s: \"%s\" ",                           \
-                 (int)__LINE__,                                            \
-                 FUNC,                                                     \
-                 (actual));                                                \
-    }                                                                      \
-    if (HDstrcmp((expected), (actual))) {                                  \
-        if (reason) {                                                      \
-             HDprintf("%s\n", (reason));                                   \
-        } else {                                                           \
-             HDprintf("***ERROR***\n"                                      \
-                      "!!! Expected:\n\"%s\"\n"                            \
-                      "!!! Actual:\n\"%s\"\n",                             \
-                      (expected), (actual));                               \
-        }                                                                  \
-        FAIL_STACK_ERROR                                                   \
-    }                                                                      \
+#define FAIL_UNLESS(condition) \
+if (!(condition)) {            \
+    JSFAILED_AT()              \
+    goto error;                \
 }
 
-#endif
-/* test framework brainstorm
+
+/*----------------------------------------------------------------------------
+ *
+ * Macro: JSERR_LONG()
+ *
+ * Purpose:
+ *
+ *     Print an failure message for long-int arguments.
+ *     ERROR-AT printed first.
+ *     If `reason` is given, it is printed on own line and newlined after
+ *     else, prints "expected/actual" aligned on own lines.
+ *
+ *     *FAILED* at myfile.c:488 in somefunc()...
+ *     forest must be made of trees.
+ *
+ *     or
+ *
+ *     *FAILED* at myfile.c:488 in somefunc()...
+ *       ! Expected 425
+ *       ! Actual   3
+ *
+ * Programmer: Jacob Smith
+ *             2017-10-24
+ *
+ *----------------------------------------------------------------------------
+ */
+#define JSERR_LONG(expected, actual, reason) {           \
+    JSFAILED_AT()                                        \
+    if (reason!= NULL) {                                 \
+        HDprintf("%s\n", (reason));                      \
+    } else {                                             \
+        HDprintf("  ! Expected %ld\n  ! Actual   %ld\n", \
+                  (long)(expected), (long)(actual));     \
+    }                                                    \
+}
+
+
+/*----------------------------------------------------------------------------
+ *
+ * Macro: JSERR_STR()
+ *
+ * Purpose:
+ *
+ *     Print an failure message for string arguments.
+ *     ERROR-AT printed first.
+ *     If `reason` is given, it is printed on own line and newlined after
+ *     else, prints "expected/actual" aligned on own lines.
+ *
+ *     *FAILED*  at myfile.c:421 in myfunc()...
+ *     Blue and Red strings don't match!
+ *
+ *     or
+ *
+ *     *FAILED*  at myfile.c:421 in myfunc()...
+ *     !!! Expected:
+ *     this is my expected
+ *     string
+ *     !!! Actual:
+ *     not what I expected at all
+ *
+ * Programmer: Jacob Smith
+ *             2017-10-24
+ *
+ *----------------------------------------------------------------------------
+ */
+#define JSERR_STR(expected, actual, reason) {           \
+    JSFAILED_AT()                                       \
+    if ((reason) != NULL) {                             \
+        HDprintf("%s\n", (reason));                     \
+    } else {                                            \
+        HDprintf("!!! Expected:\n%s\n!!!Actual:\n%s\n", \
+                 (expected), (actual));                 \
+    }                                                   \
+}
+
+
+
+#ifdef JSVERIFY_EXP_ACT
+
+
+/*----------------------------------------------------------------------------
+ *
+ * Macro: JSVERIFY()
+ *
+ * Purpose: 
+ *
+ *     Verify that two long integers are equal.
+ *     If unequal, print failure message 
+ *     (with `reason`, if not NULL; expected/actual if NULL)
+ *     and jump to `error` at end of function
+ *
+ * Programmer: Jacob Smith
+ *             2017-10-24
+ *
+ *----------------------------------------------------------------------------
+ */
+#define JSVERIFY(expected, actual, reason)     \
+if ((long)(actual) != (long)(expected)) {      \
+    JSERR_LONG((expected), (actual), (reason)) \
+    goto error;                                \
+} /* JSVERIFY */
+
+
+/*----------------------------------------------------------------------------
+ *
+ * Macro: JSVERIFY_NOT()
+ *
+ * Purpose: 
+ *
+ *     Verify that two long integers are _not_ equal.
+ *     If equal, print failure message 
+ *     (with `reason`, if not NULL; expected/actual if NULL)
+ *     and jump to `error` at end of function
+ *
+ * Programmer: Jacob Smith
+ *             2017-10-24
+ *
+ *----------------------------------------------------------------------------
+ */
+#define JSVERIFY_NOT(expected, actual, reason) \
+if ((long)(actual) == (long)(expected)) {      \
+    JSERR_LONG((expected), (actual), (reason)) \
+    goto error;                                \
+} /* JSVERIFY_NOT */
+
+
+/*----------------------------------------------------------------------------
+ *
+ * Macro: JSVERIFY_STR()
+ *
+ * Purpose: 
+ *
+ *     Verify that two strings are equal.
+ *     If unequal, print failure message 
+ *     (with `reason`, if not NULL; expected/actual if NULL)
+ *     and jump to `error` at end of function
+ *
+ * Programmer: Jacob Smith
+ *             2017-10-24
+ *
+ *----------------------------------------------------------------------------
+ */
+#define JSVERIFY_STR(expected, actual, reason) \
+if (strcmp((actual), (expected)) != 0) {       \
+    JSERR_STR((expected), (actual), (reason)); \
+    goto error;                                \
+} /* JSVERIFY_STR */
+
+
+#else
+/* JSVERIFY_EXP_ACT not defined 
+ *
+ * Repeats macros above, but with actual/expected parameters reversed.
  */
 
+
+/*----------------------------------------------------------------------------
+ * Macro: JSVERIFY()
+ * See: JSVERIFY documentation above.
+ * Programmer: Jacob Smith
+ *             2017-10-14
+ *----------------------------------------------------------------------------
+ */
+#define JSVERIFY(actual, expected, reason)      \
+if ((long)(actual) != (long)(expected)) {       \
+    JSERR_LONG((expected), (actual), (reason)); \
+    goto error;                                 \
+} /* JSVERIFY */
+
+
+/*----------------------------------------------------------------------------
+ * Macro: JSVERIFY_NOT()
+ * See: JSVERIFY_NOT documentation above.
+ * Programmer: Jacob Smith
+ *             2017-10-14
+ *----------------------------------------------------------------------------
+ */
+#define JSVERIFY_NOT(actual, expected, reason) \
+if ((long)(actual) == (long)(expected)) {      \
+    JSERR_LONG((expected), (actual), (reason)) \
+    goto error;                                \
+} /* JSVERIFY_NOT */
+
+
+/*----------------------------------------------------------------------------
+ * Macro: JSVERIFY_STR()
+ * See: JSVERIFY_STR documentation above.
+ * Programmer: Jacob Smith
+ *             2017-10-14
+ *----------------------------------------------------------------------------
+ */
+#define JSVERIFY_STR(actual, expected, reason) \
+if (strcmp((actual), (expected)) != 0) {       \
+    JSERR_STR((expected), (actual), (reason)); \
+    goto error;                                \
+} /* JSVERIFY_STR */
+
+#endif /* ifdef/else JSVERIFY_EXP_ACT */
+
+
+#endif /* __js_test__ */
 
 
 
@@ -218,8 +454,7 @@ test_macro_format_credential(void)
 
     H5FD_S3COMMS_FORMAT_CREDENTIAL(dest, access, date, region, service);
 
-/*  JSVFY_STR(expected, dest, NULL); */
-    ERROR_IF( strcmp(expected, dest) != 0 );
+    JSVERIFY_STR( expected, dest, NULL )
 
     PASSED();
     return 0;
@@ -349,10 +584,10 @@ test_aws_canonical_request(void)
 
         /* test
          */
-        ERROR_IF( FAIL == 
-                  H5FD_s3comms_aws_canonical_request(cr_dest, sh_dest, hrb) );
-        ERROR_IF( strcmp(sh_dest, C->exp_headers) != 0 );
-        ERROR_IF( strcmp(cr_dest, C->exp_request) != 0 );
+        FAIL_IF( FAIL == 
+                 H5FD_s3comms_aws_canonical_request(cr_dest, sh_dest, hrb) );
+        JSVERIFY_STR( C->exp_headers, sh_dest, NULL )
+        JSVERIFY_STR( C->exp_request, cr_dest, NULL )
 
         /* tear-down
          */
@@ -369,15 +604,15 @@ test_aws_canonical_request(void)
 
      /*  malformed hrb and/or node-list
       */
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_aws_canonical_request(cr_dest, sh_dest, NULL) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_aws_canonical_request(cr_dest, sh_dest, NULL) );
 
     hrb = H5FD_s3comms_hrb_init_request("GET", "/", "HTTP/1.1");
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_aws_canonical_request(NULL, sh_dest, hrb) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_aws_canonical_request(NULL, sh_dest, hrb) );
 
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_aws_canonical_request(cr_dest, NULL, hrb) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_aws_canonical_request(cr_dest, NULL, hrb) );
 
     H5FD_s3comms_hrb_destroy(hrb);
     hrb = NULL;
@@ -462,25 +697,22 @@ test_bytes_to_hex(void)
             out[out_off] = 0;
         }
 
-        ERROR_IF( FAIL == 
-                  H5FD_s3comms_bytes_to_hex(out,
-                                            cases[i].in,
-                                            cases[i].size,
-                                            cases[i].lower) );
+        FAIL_IF( FAIL == 
+                 H5FD_s3comms_bytes_to_hex(out,
+                                           cases[i].in,
+                                           cases[i].size,
+                                           cases[i].lower) );
 
-        if (strcmp(out, cases[i].exp) != 0) {
-            HDfprintf(stdout, "ERROR\n    %s\n != %s\n", out, cases[i].exp);
-            TEST_ERROR;
-        }
+        JSVERIFY_STR(cases[i].exp, out, NULL)
     }
 
     /* dest cannot be null 
      */
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_bytes_to_hex(NULL, 
-                                        (const unsigned char *)"nada", 
-                                        5, 
-                                        FALSE) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_bytes_to_hex(NULL, 
+                                       (const unsigned char *)"nada", 
+                                       5, 
+                                       FALSE) );
 
     PASSED();
     return 0;
@@ -568,18 +800,18 @@ test_hrb_init_request(void)
                                             C->resource,
                                             C->version);
         if (cases[i].ret_null == TRUE) {
-            ERROR_IF( req != NULL );
+            FAIL_IF( req != NULL );
         } else {
-            ERROR_IF( req == NULL );
-            ERROR_IF( req->magic != S3COMMS_HRB_MAGIC );
+            FAIL_IF( req == NULL );
+            FAIL_IF( req->magic != S3COMMS_HRB_MAGIC );
             if (C->verb != NULL) {
-                ERROR_IF( 0 != strcmp(C->verb, req->verb) );
+                JSVERIFY_STR( req->verb, C->verb, NULL )
             }
-            ERROR_IF( 0 != strcmp("HTTP/1.1", req->version) );
-            ERROR_IF( 0 != strcmp(C->resource, req->resource) );
-            ERROR_IF( req->first_header != NULL );
-            ERROR_IF( req->body         != NULL );
-            ERROR_IF( req->body_len     != 0 );
+            JSVERIFY_STR( "HTTP/1.1",  req->version,  NULL )
+            JSVERIFY_STR( C->resource, req->resource, NULL )
+            FAIL_IF( req->first_header != NULL );
+            FAIL_IF( req->body         != NULL );
+            FAIL_IF( req->body_len     != 0 );
         }
 
     } /* for each testcase */
@@ -681,16 +913,9 @@ test_hrb_fl_t(void)
              ? node->next                                        \
              : node->next_lower;                                 \
     }                                                            \
-    ERROR_IF( node != NULL);                                     \
+    FAIL_IF( node != NULL);                                      \
     /* comparison string completed; compare */                   \
-    if (strcmp(expected, str) != 0) {                            \
-        HDfprintf(stdout,                                        \
-                  ">>> expected:\n\"%s\"\n>>> actual:\n\"%s\"\n", \
-                   expected,                                     \
-                   str);                                         \
-        TEST_ERROR;                                              \
-    }                                                            \
-/*     ERROR_IF( 0 != strcmp((expected), str) ); */                   \
+    JSVERIFY_STR( expected, str, NULL )                          \
 }
 
     /************************
@@ -707,13 +932,13 @@ test_hrb_fl_t(void)
     TESTING("test_hrb_fl_t");
 
     /* cannot "unset" a field from an uninstantiated hrb_fl_t */
-    ERROR_IF( NULL != H5FD_s3comms_hrb_fl_set(NULL, "Host", NULL) );
+    FAIL_IF( NULL != H5FD_s3comms_hrb_fl_set(NULL, "Host", NULL) );
 /*  JSVFY(H5FD_s3comms_hrb_fl_set(NULL, "Host", NULL), NULL, 
  *        "cannot 'unset' a field from an uninstantiated hrb_fl_t.\n");
  */
 
     /* NULL field name has no effect */
-    ERROR_IF( NULL != H5FD_s3comms_hrb_fl_set(NULL, NULL, "somevalue") );
+    FAIL_IF( NULL != H5FD_s3comms_hrb_fl_set(NULL, NULL, "somevalue") );
 /* JSVFY(H5FD_s3comms_hrb_fl_set(NULL, NULL, "somevalue"), NULL,
  *       "Cannot create list with NULL name.\n);"
  */
@@ -724,9 +949,9 @@ test_hrb_fl_t(void)
  *        "'next' on uninstantiated list (NULL) is always NULL.\n");
  *  JSVFY(H5FD_s3comms_hrb_fl_next(list, HRB_FL_ORD_SORTED), NULL, NULL);
  */
-    ERROR_IF( list != NULL);
-    ERROR_IF( NULL != H5FD_s3comms_hrb_fl_next(list, HRB_FL_ORD_GIVEN) );
-    ERROR_IF( NULL != H5FD_s3comms_hrb_fl_next(list, HRB_FL_ORD_SORTED) );
+    FAIL_IF( list != NULL);
+    FAIL_IF( NULL != H5FD_s3comms_hrb_fl_next(list, HRB_FL_ORD_GIVEN) );
+    FAIL_IF( NULL != H5FD_s3comms_hrb_fl_next(list, HRB_FL_ORD_SORTED) );
 
     /* insert one element
      */
@@ -734,21 +959,21 @@ test_hrb_fl_t(void)
 /*  JSVFY(list, NULL, NULL);
  *  JSVFY(list->magic, S3COMMS_HRB_FL_MAGIC, NULL);
  */
-    ERROR_IF( list == NULL );
-    ERROR_IF( list->magic != S3COMMS_HRB_FL_MAGIC );
+    FAIL_IF( list == NULL );
+    FAIL_IF( list->magic != S3COMMS_HRB_FL_MAGIC );
     THFT_CAT_CHECK("Host", HRB_FL_ORD_GIVEN, THFT_NAME);
     THFT_CAT_CHECK("Host", HRB_FL_ORD_SORTED, THFT_NAME);
     THFT_CAT_CHECK("mybucket.s3.com", HRB_FL_ORD_SORTED, THFT_VALUE);
     THFT_CAT_CHECK("Host: mybucket.s3.com", HRB_FL_ORD_GIVEN, THFT_CAT);
-    ERROR_IF( NULL != H5FD_s3comms_hrb_fl_next(list, HRB_FL_ORD_GIVEN) );
-    ERROR_IF( NULL != H5FD_s3comms_hrb_fl_next(list, HRB_FL_ORD_SORTED) );
+    FAIL_IF( NULL != H5FD_s3comms_hrb_fl_next(list, HRB_FL_ORD_GIVEN) );
+    FAIL_IF( NULL != H5FD_s3comms_hrb_fl_next(list, HRB_FL_ORD_SORTED) );
 
     /* insert two more elements, one sorted "between" 
      */
     list = H5FD_s3comms_hrb_fl_set(list, "x-amz-date", "20170921");
     list = H5FD_s3comms_hrb_fl_set(list, "Range", "bytes=50-100");
-    ERROR_IF( list == NULL );
-    ERROR_IF( list->magic != S3COMMS_HRB_FL_MAGIC );
+    FAIL_IF( list == NULL );
+    FAIL_IF( list->magic != S3COMMS_HRB_FL_MAGIC );
     THFT_CAT_CHECK("Hostx-amz-dateRange", HRB_FL_ORD_GIVEN, THFT_NAME);
     THFT_CAT_CHECK("HostRangex-amz-date", HRB_FL_ORD_SORTED, THFT_NAME);
     THFT_CAT_CHECK("hostrangex-amz-date", HRB_FL_ORD_SORTED, THFT_LOWERNAME);
@@ -769,19 +994,19 @@ test_hrb_fl_t(void)
     /* add entry "less than" first node
      */
     list = H5FD_s3comms_hrb_fl_set(list, "Access", "always");
-    ERROR_IF( list == NULL );
+    FAIL_IF( list == NULL );
     THFT_CAT_CHECK("Hostx-amz-dateRangeAccess", HRB_FL_ORD_GIVEN, THFT_NAME);
     THFT_CAT_CHECK("AccessHostRangex-amz-date", HRB_FL_ORD_SORTED, THFT_NAME);
     /* demonstrate `H5FD_s3comms_hrb_fl_first()`
      */
     node = H5FD_s3comms_hrb_fl_first(list, HRB_FL_ORD_SORTED);
-    ERROR_IF( strcmp("Access: always", node->cat) != 0 );
+    JSVERIFY_STR( "Access: always", node->cat, NULL )
     node = NULL;
 
     /* modify entry
      */
     list = H5FD_s3comms_hrb_fl_set(list, "x-amz-date", "19411207");
-    ERROR_IF( list == NULL );
+    FAIL_IF( list == NULL );
     THFT_CAT_CHECK("Hostx-amz-dateRangeAccess", HRB_FL_ORD_GIVEN, THFT_NAME);
     THFT_CAT_CHECK( "Access: alwaysHost: mybucket.s3.comRange: bytes=50-100x-amz-date: 19411207",              \
             HRB_FL_ORD_SORTED, \
@@ -790,7 +1015,7 @@ test_hrb_fl_t(void)
     /* add at end again
      */
     list = H5FD_s3comms_hrb_fl_set(list, "x-forbidden", "True");
-    ERROR_IF( list == NULL );
+    FAIL_IF( list == NULL );
     THFT_CAT_CHECK("Hostx-amz-dateRangeAccessx-forbidden", \
                    HRB_FL_ORD_GIVEN,                       \
                    THFT_NAME);
@@ -849,37 +1074,37 @@ test_hrb_fl_t(void)
     list = H5FD_s3comms_hrb_fl_set(list, "Host", NULL);
     THFT_CAT_CHECK("x-amz-dateRange", HRB_FL_ORD_GIVEN,  THFT_NAME);
     THFT_CAT_CHECK("Rangex-amz-date", HRB_FL_ORD_SORTED, THFT_NAME);
-    ERROR_IF( 0 != strcmp(list->name, "Range") );
+    JSVERIFY_STR("Range", list->name, NULL )
 
     /* re-add Host element, and remove sorted Range
      */
     list = H5FD_s3comms_hrb_fl_set(list, "Host", "nah");
     THFT_CAT_CHECK("x-amz-dateRangeHost", HRB_FL_ORD_GIVEN,  THFT_NAME);
     THFT_CAT_CHECK("HostRangex-amz-date", HRB_FL_ORD_SORTED, THFT_NAME);
-    ERROR_IF( 0 != strcmp(list->name, "Range") );
+    JSVERIFY_STR( "Range", list->name, NULL )
     list = H5FD_s3comms_hrb_fl_set(list, "Range", NULL);
     THFT_CAT_CHECK("x-amz-dateHost", HRB_FL_ORD_GIVEN,  THFT_NAME);
     THFT_CAT_CHECK("Hostx-amz-date", HRB_FL_ORD_SORTED, THFT_NAME);
-    ERROR_IF( 0 != strcmp(list->name, "Host") );
+    JSVERIFY_STR( "Host", list->name, NULL )
 
     /* remove Host again; on opposite ends of each list
      */ 
     list = H5FD_s3comms_hrb_fl_set(list, "Host", NULL);
     THFT_CAT_CHECK("x-amz-date", HRB_FL_ORD_GIVEN,  THFT_NAME);
     THFT_CAT_CHECK("x-amz-date", HRB_FL_ORD_SORTED, THFT_NAME);
-    ERROR_IF( 0 != strcmp(list->name, "x-amz-date") );
+    JSVERIFY_STR( "x-amz-date", list->name, NULL )
 
     /* removing absent element has no effect
      */
     list = H5FD_s3comms_hrb_fl_set(list, "Host", NULL);
     THFT_CAT_CHECK("x-amz-date", HRB_FL_ORD_GIVEN,  THFT_NAME);
     THFT_CAT_CHECK("x-amz-date", HRB_FL_ORD_SORTED, THFT_NAME);
-    ERROR_IF( 0 != strcmp(list->name, "x-amz-date") );
+    JSVERIFY_STR( "x-amz-date", list->name, NULL )
 
     /* removing last element returns NULL, but list node lingers
      */
-    ERROR_IF( NULL != H5FD_s3comms_hrb_fl_set(list, "x-amz-date", NULL) );
-    ERROR_IF( list == NULL );
+    FAIL_IF( NULL != H5FD_s3comms_hrb_fl_set(list, "x-amz-date", NULL) );
+    FAIL_IF( list == NULL );
     list = NULL;
 
 
@@ -909,8 +1134,8 @@ test_hrb_fl_t(void)
     THFT_CAT_CHECK("AccessHostRangex-amz-date", HRB_FL_ORD_SORTED, THFT_NAME);
 
     /* destroy eats everything but programmer must reset pointer */
-    ERROR_IF( FAIL == H5FD_s3comms_hrb_fl_destroy(list) );
-    ERROR_IF( list == NULL );
+    FAIL_IF( FAIL == H5FD_s3comms_hrb_fl_destroy(list) );
+    FAIL_IF( list == NULL );
     list = NULL;
 
     
@@ -1018,13 +1243,13 @@ test_HMAC_SHA256(void)
            HDassert(dest != NULL);
         }
 
-        ERROR_IF( cases[i].ret !=
-                  H5FD_s3comms_HMAC_SHA256(
-                          cases[i].key,
-                          cases[i].key_len,
-                          cases[i].msg,
-                          cases[i].msg_len,
-                          dest) );
+        FAIL_IF( cases[i].ret !=
+                 H5FD_s3comms_HMAC_SHA256(
+                         cases[i].key,
+                         cases[i].key_len,
+                         cases[i].msg,
+                         cases[i].msg_len,
+                         dest) );
         if (cases[i].ret == SUCCEED) {
 #ifdef VERBOSE 
 /* if (VERBOSE_HI) {...} */
@@ -1047,7 +1272,7 @@ test_HMAC_SHA256(void)
 #else
             /* simple pass/fail test
              */
-            ERROR_IF( 0 != strncmp(cases[i].exp, dest, strlen(cases[i].exp)) );
+            FAIL_IF( 0 != strncmp(cases[i].exp, dest, strlen(cases[i].exp)) );
 #endif
         }
         free(dest);
@@ -1118,22 +1343,22 @@ test_nlowercase(void)
     for (i = 0; i < n_cases; i++) {
         dest = (char *)malloc(sizeof(char) * 16);
 
-        ERROR_IF( FAIL == 
-                  H5FD_s3comms_nlowercase(dest,
-                                          cases[i].in,
-                                          cases[i].len));
+        FAIL_IF( FAIL == 
+                 H5FD_s3comms_nlowercase(dest,
+                                         cases[i].in,
+                                         cases[i].len));
 
         if (cases[i].len > 0) {
-            ERROR_IF( strncmp(dest, cases[i].exp, cases[i].len) != 0 );
+            FAIL_IF( strncmp(dest, cases[i].exp, cases[i].len) != 0 );
         }
 
         free(dest);
     }
 
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_nlowercase(NULL, 
-                                      cases[i].in, 
-                                      cases[i].len) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_nlowercase(NULL, 
+                                     cases[i].in, 
+                                     cases[i].len) );
 
     PASSED();
     return 0;
@@ -1204,24 +1429,24 @@ test_percent_encode_char(void)
     TESTING("percent encode characters");
 
     for (i = 0; i < n_cases; i++) {
-        ERROR_IF (FAIL == 
-                  H5FD_s3comms_percent_encode_char(
-                          dest, 
-                          (const unsigned char)cases[i].c, 
-                          &dest_len) );
+        FAIL_IF (FAIL == 
+                 H5FD_s3comms_percent_encode_char(
+                         dest, 
+                         (const unsigned char)cases[i].c, 
+                         &dest_len) );
 
-        ERROR_IF( dest_len != cases[i].exp_len ); 
+        FAIL_IF( dest_len != cases[i].exp_len ); 
 
-        ERROR_IF( strncmp(dest, cases[i].exp, dest_len) != 0 ); 
+        FAIL_IF( strncmp(dest, cases[i].exp, dest_len) != 0 ); 
 
-        ERROR_IF( strcmp(dest, cases[i].exp) != 0 );
+        FAIL_IF( strcmp(dest, cases[i].exp) != 0 );
     }
 
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_percent_encode_char(
-                      NULL, 
-                      (const unsigned char)'^', 
-                      &dest_len) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_percent_encode_char(
+                     NULL, 
+                     (const unsigned char)'^', 
+                     &dest_len) );
 
     PASSED();
     return 0;
@@ -1327,13 +1552,13 @@ test_s3r_ops(void)
              secret_id,
              (const unsigned char *)signing_key);
 
-    ERROR_IF( handle == NULL );
-    ERROR_IF( FAIL ==
-              H5FD_s3comms_s3r_read(handle,
-                                    1200699,
-                                    103,
-                                    buffer) );
-    ERROR_IF( 0 != strncmp(buffer,
+    FAIL_IF( handle == NULL );
+    FAIL_IF( FAIL ==
+             H5FD_s3comms_s3r_read(handle,
+                                   1200699,
+                                   103,
+                                   buffer) );
+    FAIL_IF( 0 != strncmp(buffer,
                    "Osr. Sweet lord, if your lordship were at leisure, I should impart\n    a thing to you from his Majesty.",
                    103) );
 
@@ -1343,20 +1568,20 @@ test_s3r_ops(void)
      * DEMONSTRATE RE-USE *
      **********************/
 
-    ERROR_IF( FAIL ==
-              H5FD_s3comms_s3r_read(handle,
-                                    3544662,
-                                    44,
-                                    buffer2) );
-    ERROR_IF( 0 != 
-              strncmp(buffer2,
-                      "Our sport shall be to take what they mistake",
-                      44) );
+    FAIL_IF( FAIL ==
+             H5FD_s3comms_s3r_read(handle,
+                                   3544662,
+                                   44,
+                                   buffer2) );
+    FAIL_IF( 0 != 
+             strncmp(buffer2,
+                     "Our sport shall be to take what they mistake",
+                     44) );
 
     /* stop using this handle now!
      */
-    ERROR_IF ( FAIL == 
-               H5FD_s3comms_s3r_close(handle) );
+    FAIL_IF ( FAIL == 
+              H5FD_s3comms_s3r_close(handle) );
     handle = NULL;
 
 
@@ -1372,7 +1597,7 @@ test_s3r_ops(void)
              secret_id,
              (const unsigned char *)signing_key);
 
-    ERROR_IF( handle != NULL );
+    FAIL_IF( handle != NULL );
 
 
 
@@ -1389,7 +1614,7 @@ test_s3r_ops(void)
              "I_MADE_UP_MY_ID",
              (const unsigned char *)signing_key);
 
-    ERROR_IF( handle != NULL );
+    FAIL_IF( handle != NULL );
 
 
     /* using an invalid signing key
@@ -1401,7 +1626,7 @@ test_s3r_ops(void)
              secret_id,
              (const unsigned char *)EMPTY_SHA256);
 
-    ERROR_IF( handle != NULL );
+    FAIL_IF( handle != NULL );
 
 
 
@@ -1494,17 +1719,17 @@ test_signing_key(void)
                                       SHA256_DIGEST_LENGTH);
     HDassert(key != NULL);
 
-        ERROR_IF( FAIL ==
-                  H5FD_s3comms_signing_key(
-                          key,
-                          cases[i].secret_key,
-                          cases[i].region,
-                          cases[i].when) ); 
+        FAIL_IF( FAIL ==
+                 H5FD_s3comms_signing_key(
+                         key,
+                         cases[i].secret_key,
+                         cases[i].region,
+                         cases[i].when) ); 
 
-        ERROR_IF( 0 !=
-                  strncmp((const char *)cases[i].exp, 
-                          (const char *)key,
-                          SHA256_DIGEST_LENGTH) );
+        FAIL_IF( 0 !=
+                 strncmp((const char *)cases[i].exp, 
+                         (const char *)key,
+                         SHA256_DIGEST_LENGTH) );
 
         free(key);
         key = NULL;
@@ -1519,34 +1744,34 @@ test_signing_key(void)
                                   SHA256_DIGEST_LENGTH);
     HDassert(key != NULL);
 
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_signing_key(
-                      NULL,
-                      cases[0].secret_key,
-                      cases[0].region,
-                      cases[0].when) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_signing_key(
+                     NULL,
+                     cases[0].secret_key,
+                     cases[0].region,
+                     cases[0].when) );
 
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_signing_key(
-                      key,
-                      NULL,
-                      cases[0].region,
-                      cases[0].when) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_signing_key(
+                     key,
+                     NULL,
+                     cases[0].region,
+                     cases[0].when) );
 
 
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_signing_key(
-                      key,
-                      cases[0].secret_key,
-                      NULL,
-                      cases[0].when) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_signing_key(
+                     key,
+                     cases[0].secret_key,
+                     NULL,
+                     cases[0].when) );
 
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_signing_key(
-                      key,
-                      cases[0].secret_key,
-                      cases[0].region,
-                      NULL) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_signing_key(
+                     key,
+                     cases[0].secret_key,
+                     cases[0].region,
+                     NULL) );
 
     free(key);
     key = NULL;
@@ -1602,20 +1827,20 @@ test_tostringtosign(void)
 
     TESTING("s3comms tostringtosign");
 
-    ERROR_IF( FAIL == 
-              H5FD_s3comms_tostringtosign(s2s, canonreq, iso8601now, region) );
+    FAIL_IF( FAIL == 
+             H5FD_s3comms_tostringtosign(s2s, canonreq, iso8601now, region) );
 
-    ERROR_IF(0 !=
-             strcmp(s2s, "AWS4-HMAC-SHA256\n20130524T000000Z\n20130524/us-east-1/s3/aws4_request\n7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972") );
+    JSVERIFY_STR( "AWS4-HMAC-SHA256\n20130524T000000Z\n20130524/us-east-1/s3/aws4_request\n7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972", 
+                 s2s, NULL ) 
 
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_tostringtosign(s2s, NULL, iso8601now, region) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_tostringtosign(s2s, NULL, iso8601now, region) );
 
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_tostringtosign(s2s, canonreq, NULL, region) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_tostringtosign(s2s, canonreq, NULL, region) );
 
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_tostringtosign(s2s, canonreq, iso8601now, NULL) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_tostringtosign(s2s, canonreq, iso8601now, NULL) );
 
 #if 0
 /* not yet supported */
@@ -1706,21 +1931,21 @@ test_trim(void)
         HDassert(str != NULL);
         strncpy(str, cases[i].in, cases[i].in_len);
 
-        ERROR_IF( FAIL == 
-                  H5FD_s3comms_trim(dest, str, cases[i].in_len, &dest_len) );
-        ERROR_IF( dest_len != cases[i].exp_len );
+        FAIL_IF( FAIL == 
+                 H5FD_s3comms_trim(dest, str, cases[i].in_len, &dest_len) );
+        FAIL_IF( dest_len != cases[i].exp_len );
         if (dest_len > 0) {
-           ERROR_IF( strncmp(cases[i].exp, dest, dest_len) != 0 );
+           FAIL_IF( strncmp(cases[i].exp, dest, dest_len) != 0 );
         }
     }
 
-    ERROR_IF( FAIL == H5FD_s3comms_trim(dest, NULL, 3, &dest_len) );
-    ERROR_IF( 0 != dest_len );
+    FAIL_IF( FAIL == H5FD_s3comms_trim(dest, NULL, 3, &dest_len) );
+    FAIL_IF( 0 != dest_len );
     
     str = (char *)malloc(sizeof(char *) * 11);
     HDassert(str != NULL);
     memcpy(str, "some text ", 11); /* string with null terminator */
-    ERROR_IF( FAIL != H5FD_s3comms_trim(NULL, str, 10, &dest_len) );
+    FAIL_IF( FAIL != H5FD_s3comms_trim(NULL, str, 10, &dest_len) );
     free(str);
 
     PASSED();
@@ -1812,16 +2037,16 @@ test_uriencode(void)
         dest = (char *)malloc(sizeof(char) * str_len * 3 + 1);
         HDassert(dest != NULL);
 
-        ERROR_IF( FAIL ==
-                  H5FD_s3comms_uriencode(dest, 
-                                         cases[i].str, 
-                                         str_len,
-                                         cases[i].encode_slash,
-                                         &dest_written) );
+        FAIL_IF( FAIL ==
+                 H5FD_s3comms_uriencode(dest, 
+                                        cases[i].str, 
+                                        str_len,
+                                        cases[i].encode_slash,
+                                        &dest_written) );
 
-        ERROR_IF( dest_written != strlen(cases[i].expected) );
+        FAIL_IF( dest_written != strlen(cases[i].expected) );
 
-        ERROR_IF( strncmp(dest, cases[i].expected, dest_written) != 0 );
+        FAIL_IF( strncmp(dest, cases[i].expected, dest_written) != 0 );
 
         free(dest);
         dest = NULL;
@@ -1836,13 +2061,13 @@ test_uriencode(void)
 
     /* dest cannot be null
      */
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_uriencode(NULL, "word$", 5, false, &dest_written) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_uriencode(NULL, "word$", 5, false, &dest_written) );
 
     /* source string cannot be null
      */
-    ERROR_IF( FAIL != 
-              H5FD_s3comms_uriencode(dest, NULL, 5, false, &dest_written) );
+    FAIL_IF( FAIL != 
+             H5FD_s3comms_uriencode(dest, NULL, 5, false, &dest_written) );
 
     free(dest);
     dest = NULL;
