@@ -248,7 +248,29 @@ typedef struct {
     char          *version;
 } hrb_t;
 
-
+
+/*****************************************************************************
+ *
+ * Container for the elements of a URL
+ * (nominally, http[s] url)
+ *
+ * Pointers to null-terminated strings allocated for this structure (or NULLs).
+ *
+ * If a component is NULL, it is either empty or absent from the URL.
+ *
+ * To reconstruct a URL:
+ * SCHEME "://" HOST [ ":" PORT ] [ "/" PATH ] [ "?" QUERY ]
+ * including bracketed elements if and only if its component is not NULL.
+ *     Exception: if PATH is null and QUERY is not null, '/' should be included
+ *
+ *****************************************************************************/
+typedef struct {
+    char *scheme; /* required */
+    char *host;   /* required */
+    char *port;
+    char *path;
+    char *query;
+} parsed_url_t;
 
 
 /*****************************************************************************
@@ -275,20 +297,7 @@ typedef struct {
  *    "magic" number identifying this structure as unique type.
  *    MUST equal `S3R_MAGIC` to be valid.
  *
- * authorize (unsigned long int) :
- *
- *    Flag whether to compute authorization for requests.
- *    MUST be 0 (do not compute authorization) or 1L (default, do compute).
- *
- *    If 1L, handle MUST have populated...
- *        `host`     - generated from url on Open
- *        `httpverb`
- *        `region`
- *        `resource` - generated from url on Open
- *        `secret_id`
- *        `signing_key`
- *
- * curlcode (CURLcode) : ABSENT
+ * !!ABSENT!! curlcode (CURLcode) :
  *
  *    Store CURLcode output of calls to CURL, useful for making informed
  *    decisions in event of error (anything but CURLE_OK).
@@ -297,18 +306,7 @@ typedef struct {
  *
  *    Pointer to the curl_easy handle generated for the request.
  *
- * host (char *) :
- *
- *    Pointer to NULL-terminated string of host,
- *    e.g., "mybucket.s3.amazon.com".
- *
- *    "virtual-hosted" request should provide bucket name in `host`
- *    (e.g., above), whereas "path-style" request should have bucket name
- *    in `resource` (see `resource`).
- *
- *    Requred to authenticate.
- *
- * httpcode (long int) : ABSENT
+ * !!ABSENT!! httpcode (long int) :
  *
  *    Store HTTP response code (e.g. 404, 200, 206, 500) from "latest"
  *    interaction with server.
@@ -325,14 +323,20 @@ typedef struct {
  *
  *    Default is NULL, resulting in a "GET" request.
  *
- *    Required to authenticate.
+ * purl (parsed_url_t *) :
  *
- * port (unsigned long int) :
+ *    Pointer to structure holding the elements of URL for file open.
  *
- *    Port on host to which to connect. (e.g., 9000L)
- *    Overrides port number (if any) specified in `url`.
- *    Default (0) permits URL-specified (or implementation default) port
- *    to be used (80, probably, for HTTP requests).
+ *    e.g., "http://bucket.aws.com:8080/myfile.dat?q1=v1&q2=v2"
+ *    parsed into...
+ *    {   scheme: "http"
+ *        host:   "bucket.aws.com"
+ *        port:   "8080"
+ *        path:   "myfile.dat"
+ *        query:  "q1=v1&q2=v2"
+ *    }
+ *
+ *    Cannot be NULL during read.
  *
  * region (char *) :
  *
@@ -340,18 +344,6 @@ typedef struct {
  *    e.g., "us-east-1".
  *
  *    Required to authenticate.
- *
- * resource (char *) :
- *
- *    Pointer to NULL-terminated string, giving path to resource on host,
- *    e.g., "/photos/2017/february/chcolate-ice-pickle.jpg".
- *
- *    If using "path"-style requests, bucket name should precede resource key,
- *    e.g., "/mybucket/photos/2017/february/chocolate-ice-pickle.jpg".
- *
- *    `resource` should begin with slash character '/'.
- *
- *    Requred to authenticate.
  *
  * secret_id (char *) :
  *
@@ -369,33 +361,17 @@ typedef struct {
  *
  *    Requred to authenticate.
  *
- * url (char *) :
- *
- *    Pointer to NULL-terminated string indicating exact url to use.
- *    If not NULL, `host`, `port`, `resource` will be ignored.
- *    ?? If not NULL, MUST begin with "http://" or "https://"
- *    >>> as in https://curl.haxx.se/libcurl/c/CURLOPT_URL.html
- *    >>> https://www.ietf.org/rfc/rfc3986.txt
- *    >>> https://somebucket.s3.amazon.com/find/my/file.txt?param=value
- *            above with parameter includes parameter in resource
- *            and will cause NOT-FOUND error, query parameters are not yet 
- *            handled.
- *
  *
  *****************************************************************************/
 typedef struct {
     unsigned long int  magic;
-    unsigned long int  authorize;
     CURL              *curlhandle;
     size_t             filesize;
-    char              *host;
     char              *httpverb;
-    unsigned long int  port;
+    parsed_url_t      *purl;
     char              *region;
-    char              *resource;
     char              *secret_id;
     unsigned char     *signing_key;
-    char              *url;
 } s3r_t;
 
 
@@ -439,7 +415,6 @@ herr_t H5FD_s3comms_s3r_close(s3r_t *handle);
 herr_t H5FD_s3comms_s3r_getsize(s3r_t *handle);
 
 s3r_t * H5FD_s3comms_s3r_open(const char          url[],
-                              unsigned long int   port,
                               const char          region[],
                               const char          id[],
                               const unsigned char signing_key[]);
@@ -466,6 +441,8 @@ herr_t H5FD_s3comms_bytes_to_hex(char                *dest,
                                  size_t               msg_len,
                                  hbool_t              lowercase);
 
+herr_t H5FD_s3comms_free_purl(parsed_url_t *purl);
+
 herr_t H5FD_s3comms_HMAC_SHA256(const unsigned char *key,
                                 size_t               key_len,
                                 const char          *msg,
@@ -475,6 +452,9 @@ herr_t H5FD_s3comms_HMAC_SHA256(const unsigned char *key,
 herr_t H5FD_s3comms_nlowercase(char       *dest,
                                const char *s,
                                size_t      len);
+
+herr_t H5FD_s3comms_parse_url(const char    *str, 
+                              parsed_url_t **purl);
 
 herr_t H5FD_s3comms_percent_encode_char(char               *repr,
                                         const unsigned char c,

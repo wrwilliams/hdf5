@@ -750,6 +750,7 @@ test_hrb_init_request(void)
     struct testcase {
         const char *verb;
         const char *resource;
+        const char *exp_res;
         const char *version;
         hbool_t     ret_null;
     };
@@ -761,26 +762,31 @@ test_hrb_init_request(void)
     struct testcase cases[] = {
         {   "GET",
             "/path/to/some/file",
+            "/path/to/some/file",
             "HTTP/1.1",
             FALSE,
         },
         {   NULL,
+            "/MYPATH/MYFILE.tiff",
             "/MYPATH/MYFILE.tiff",
             "HTTP/1.1",
             FALSE,
         },
         {   "HEAD",
             "/MYPATH/MYFILE.tiff",
+            "/MYPATH/MYFILE.tiff",
             "HTTP/1.1",
             FALSE,
         },
         {   NULL,
+            "MYPATH/MYFILE.tiff",
             "/MYPATH/MYFILE.tiff",
             NULL,
             FALSE,
         },
         {   "GET",
             NULL, /* problem path! */
+            NULL,
             NULL,
             TRUE,
         },
@@ -795,6 +801,7 @@ test_hrb_init_request(void)
     TESTING("hrb_init_request");
 
     for (i = 0; i < ncases; i++) {
+HDprintf("TEST %d", i);
         C = &cases[i];
         req = H5FD_s3comms_hrb_init_request(C->verb,
                                             C->resource,
@@ -808,7 +815,7 @@ test_hrb_init_request(void)
                 JSVERIFY_STR( req->verb, C->verb, NULL )
             }
             JSVERIFY_STR( "HTTP/1.1",  req->version,  NULL )
-            JSVERIFY_STR( C->resource, req->resource, NULL )
+            JSVERIFY_STR( C->exp_res,  req->resource, NULL )
             FAIL_IF( req->first_header != NULL );
             FAIL_IF( req->body         != NULL );
             FAIL_IF( req->body_len     != 0 );
@@ -1372,6 +1379,256 @@ error:
 
 /*---------------------------------------------------------------------------
  *
+ * Function: test_parse_url()
+ *
+ * Programmer: Jacob Smith
+ *             yyyy-MM-DD
+ *
+ *---------------------------------------------------------------------------
+ */
+static herr_t
+test_parse_url(void)
+{
+    /*********************
+     * test-local macros *
+     *********************/
+
+    /*************************
+     * test-local structures *
+     *************************/
+
+    typedef struct {
+        const char *scheme;
+        const char *host;
+        const char *port;
+        const char *path;
+        const char *query;
+    } const_purl_t;
+
+    struct testcase {
+        const char   *url;
+        herr_t        exp_ret; /* expected return;              */
+                               /* if FAIL, `expected` is unused */
+        const_purl_t  expected;
+        const char   *msg;
+    };
+
+    /************************
+     * test-local variables *
+     ************************/
+
+    parsed_url_t   *purl    = NULL;
+    unsigned int    i       = 0;
+    unsigned int    ncases  = 15;
+    struct testcase cases[] = {
+        {   NULL,
+            FAIL,
+            { NULL, NULL, NULL, NULL, NULL },
+            "null url",
+        },
+        {   "",
+            FAIL,
+            { NULL, NULL, NULL, NULL, NULL },
+            "empty url",
+        },
+        {   "ftp://[1000:4000:0002:2010]",
+            SUCCEED,
+            {   "ftp",
+                "[1000:4000:0002:2010]",
+                NULL,
+                NULL,
+                NULL,
+            },
+            "IPv6 ftp and empty path (root)",
+        },
+        {   "ftp://[1000:4000:0002:2010]:2040",
+            SUCCEED,
+            {   "ftp",
+                "[1000:4000:0002:2010]",
+                "2040",
+                NULL,
+                NULL,
+            },
+            "root IPv6 ftp with port",
+        },
+        {   "http://minio.ad.hdfgroup.org:9000/shakespeare/Poe_Raven.txt",
+            SUCCEED,
+            {   "http",
+                "minio.ad.hdfgroup.org",
+                "9000",
+                "shakespeare/Poe_Raven.txt",
+                NULL,
+            },
+            "hdf minio w/out query",
+        },
+        {   "http://hdfgroup.org:00/Poe_Raven.txt?some_params unchecked",
+            SUCCEED,
+            {   "http",
+                "hdfgroup.org",
+                "00",
+                "Poe_Raven.txt",
+                "some_params unchecked",
+            },
+            "with query",
+        },
+        {   "ftp://domain.com/",
+            SUCCEED,
+            {   "ftp",
+                "domain.com",
+                NULL,
+                NULL,
+                NULL,
+            },
+            "explicit root w/out port",
+        },
+        {   "ftp://domain.com:1234/",
+            SUCCEED,
+            {   "ftp",
+                "domain.com",
+                "1234",
+                NULL,
+                NULL,
+            },
+            "explicit root with port",
+        },
+        {   "ftp://domain.com:1234/file?",
+            FAIL,
+            { NULL, NULL, NULL, NULL, NULL, },
+            "empty query is invalid",
+        },
+        {   "ftp://:1234/file",
+            FAIL,
+            { NULL, NULL, NULL, NULL, NULL, },
+            "no host",
+        },
+        {   "h&r block",
+            FAIL,
+            { NULL, NULL, NULL, NULL, NULL, },
+            "no scheme (bad URL)",
+        },
+        {   "http://domain.com?a=b&d=b",
+            SUCCEED,
+            {   "http", 
+                "domain.com", 
+                NULL, 
+                NULL, 
+                "a=b&d=b", 
+            },
+            "QUERY with implict PATH",
+        },
+        {   "http://[5]/path?a=b&d=b",
+            SUCCEED,
+            {   "http", 
+                "[5]", 
+                NULL, 
+                "path", 
+                "a=b&d=b", 
+            },
+            "IPv6 extraction is really dumb",
+        },
+        {   "http://[1234:5678:0910:1112]:port/path",
+            FAIL,
+            { NULL, NULL, NULL, NULL, NULL, },
+            "non-decimal PORT (port)",
+        },
+        {   "http://mydomain.com:01a3/path",
+            FAIL,
+            { NULL, NULL, NULL, NULL, NULL, },
+            "non-decimal PORT (01a3)",
+        },
+    };
+
+
+
+    TESTING("url-parsing functionality");
+
+    /*********
+     * TESTS *
+     *********/
+
+    for (i = 0; i < ncases; i++) {
+        HDassert( purl == NULL );
+
+        FAIL_IF( cases[i].exp_ret !=
+                 H5FD_s3comms_parse_url(cases[i].url, &purl) )
+
+        if (cases[i].exp_ret == FAIL) {
+            /* on FAIL, `purl` should be untouched--remains NULL */
+            FAIL_UNLESS( purl == NULL )
+        } else {
+            /* on SUCCEED, `purl` should be set */
+            FAIL_IF( purl == NULL )
+
+            if (cases[i].expected.scheme != NULL) {
+                FAIL_IF( NULL == purl->scheme )
+                JSVERIFY_STR( cases[i].expected.scheme, 
+                              purl->scheme, 
+                              cases[i].msg )
+            } else {
+                FAIL_UNLESS( NULL == purl->scheme )
+            }
+
+            if (cases[i].expected.host != NULL) {
+                FAIL_IF( NULL == purl->host )
+                JSVERIFY_STR( cases[i].expected.host, 
+                              purl->host, 
+                              cases[i].msg )
+            } else {
+                FAIL_UNLESS( NULL == purl->host )
+            }
+
+            if (cases[i].expected.port != NULL) {
+                FAIL_IF( NULL == purl->port )
+                JSVERIFY_STR( cases[i].expected.port, 
+                              purl->port, 
+                              cases[i].msg )
+            } else {
+                FAIL_UNLESS( NULL == purl->port )
+            }
+
+            if (cases[i].expected.path != NULL) {
+                FAIL_IF( NULL == purl->path )
+                JSVERIFY_STR( cases[i].expected.path, 
+                              purl->path, 
+                              cases[i].msg )
+            } else {
+                FAIL_UNLESS( NULL == purl->path )
+            }
+
+            if (cases[i].expected.query != NULL) {
+                FAIL_IF( NULL == purl->query )
+                JSVERIFY_STR( cases[i].expected.query, 
+                              purl->query, 
+                              cases[i].msg )
+            } else {
+                FAIL_UNLESS( NULL == purl->query )
+            }
+        } /* if parse-url return SUCCEED/FAIL */
+
+        /* per-test cleanup
+         * well-behaved, even if `purl` is NULL 
+         */
+        HDassert( SUCCEED == H5FD_s3comms_free_purl(purl) );
+        purl = NULL;
+
+    } /* for each testcase */
+
+    PASSED();
+    return 0;
+
+error:
+    /***********
+     * cleanup *
+     ***********/
+    (void)H5FD_s3comms_free_purl(purl);
+
+    return -1;
+
+} /* test_parse_url */
+
+
+/*---------------------------------------------------------------------------
+ *
  * Function: test_percent_encode_char()
  *
  * Purpose:
@@ -1494,23 +1751,20 @@ test_s3r_ops(void)
      * test-local variables *
      ************************/
 
-    unsigned long int  port         = 9000;
     const char         region[]     = "us-east-1";
     const char         secret_id[]  = "HDFGROUP0";
     const char         secret_key[] = "HDFGROUP0";
 
     char               buffer[MY_BUFFER_SIZE];
     char               buffer2[MY_BUFFER_SIZE];
-/*    char               poe_buffer[0x100000]; */ /* 2^20 */
     unsigned char      signing_key[SHA256_DIGEST_LENGTH];
 
     struct tm         *now          = NULL;
     char               iso8601now[ISO8601_SIZE];
 
     s3r_t             *handle       = NULL;
+    parsed_url_t      *purl         = NULL;
 
-/*    long int           i            = 0; */
-/*    size_t             filesize     = 0; */
     unsigned int       curl_ready   = 0;
 
 
@@ -1545,9 +1799,9 @@ test_s3r_ops(void)
      * READ RANGE *
      **************/
 
+
     handle = H5FD_s3comms_s3r_open(
-             "http://minio.ad.hdfgroup.org/shakespeare/t8.shakespeare.txt",
-             port,
+             "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
              region,
              secret_id,
              (const unsigned char *)signing_key);
@@ -1591,13 +1845,24 @@ test_s3r_ops(void)
      ***********************/
 
     handle = H5FD_s3comms_s3r_open(
-             "http://minio.ad.hdfgroup.org/shakespeare/missing.csv",
-             port,
+             "http://minio.ad.hdfgroup.org:9000/shakespeare/missing.csv",
              region,
              secret_id,
              (const unsigned char *)signing_key);
 
     FAIL_IF( handle != NULL );
+
+
+
+    /**************************
+     * INACTIVE PORT  ON HOST *
+     **************************/
+
+    FAIL_IF(NULL != H5FD_s3comms_s3r_open(
+             "http://minio.ad.hdfgroup.org:80/shakespeare/t8.shakespeare.txt",
+             region,
+             secret_id,
+             (const unsigned char *)signing_key) )
 
 
 
@@ -1608,8 +1873,7 @@ test_s3r_ops(void)
     /* passed in a bad ID 
      */
     handle = H5FD_s3comms_s3r_open(
-             "http://minio.ad.hdfgroup.org/shakespeare/t8.shakespeare.txt",
-             port,
+             "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
              region,
              "I_MADE_UP_MY_ID",
              (const unsigned char *)signing_key);
@@ -1620,8 +1884,7 @@ test_s3r_ops(void)
     /* using an invalid signing key
      */
     handle = H5FD_s3comms_s3r_open(
-             "http://minio.ad.hdfgroup.org/shakespeare/t8.shakespeare.txt",
-             port,
+             "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
              region,
              secret_id,
              (const unsigned char *)EMPTY_SHA256);
@@ -2119,6 +2382,7 @@ main(void)
     nerrors += test_hrb_fl_t()                < 0 ? 1 : 0;
     nerrors += test_HMAC_SHA256()             < 0 ? 1 : 0;
     nerrors += test_nlowercase()              < 0 ? 1 : 0;
+    nerrors += test_parse_url()               < 0 ? 1 : 0;
     nerrors += test_percent_encode_char()     < 0 ? 1 : 0;
     nerrors += test_signing_key()             < 0 ? 1 : 0;
     nerrors += test_s3r_ops()                 < 0 ? 1 : 0;

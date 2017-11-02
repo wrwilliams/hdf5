@@ -138,25 +138,18 @@ curlwritecallback(char   *ptr,
 herr_t 
 H5FD_s3comms_hrb_fl_destroy(hrb_fl_t_2 *L)
 {
-    hrb_fl_t_2 *ptr       = NULL;
-    herr_t      ret_value = SUCCEED;
+    hrb_fl_t_2 *ptr = NULL;
 
-/* note: always-succeeds nature raises comipler warnings about unused stuff 
- *       re: entry/exit macros
- */
 
-    FUNC_ENTER_NOAPI_NOINIT
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     HDfprintf(stdout, "called H5FD_s3comms_hrb_fl_destroy.\n");
 
     if (L != NULL) {
         HDassert(L->magic = S3COMMS_HRB_FL_MAGIC);
 
-/* performance boost: delete while trafersing forward
- */
-
         /* go the "start" of the sorted list.
-         * more likely to have this as the start anyway?
          */
         while (L->prev_lower != NULL) {
             L = L->prev_lower;
@@ -175,10 +168,9 @@ H5FD_s3comms_hrb_fl_destroy(hrb_fl_t_2 *L)
 
             L = ptr;
         } while (L != NULL);   
-    }
+    } /* if L != NULL */
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE_NOAPI(SUCCEED)
 
 } /* H5FD_s3comms_hrb_fl_destroy */
 
@@ -212,12 +204,7 @@ hrb_fl_t_2 *
 H5FD_s3comms_hrb_fl_first(hrb_fl_t_2      *L, 
                           enum HRB_FL_ORD  ord)
 {
-    hrb_fl_t_2 *ret_value = NULL;
-
-    FUNC_ENTER_NOAPI_NOINIT
-
-/* always-succeeds nature raises comipler warnings about unused stuff 
- */
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     HDfprintf(stdout, "called H5FD_s3comms_hrb_fl_first.\n");
 
@@ -234,10 +221,7 @@ H5FD_s3comms_hrb_fl_first(hrb_fl_t_2      *L,
         }
     }
 
-    ret_value = L;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE_NOAPI(L);
 
 } /* H5FD_s3comms_hrb_fl_first */
 
@@ -284,9 +268,7 @@ hrb_fl_t_2 *
 H5FD_s3comms_hrb_fl_next(hrb_fl_t_2     *L, 
                         enum HRB_FL_ORD  ord)
 {
-    hrb_fl_t_2 *ret_value = NULL;
-
-    FUNC_ENTER_NOAPI_NOINIT
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
 
 /* note: always-succeeds nature raises comipler warnings about unused stuff */
 
@@ -301,10 +283,7 @@ H5FD_s3comms_hrb_fl_next(hrb_fl_t_2     *L,
         }
     }
 
-    ret_value = L;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE_NOAPI(L);
 
 } /* H5FD_s3comms_hrb_fl_next */
 
@@ -893,6 +872,7 @@ H5FD_s3comms_hrb_init_request(const char *_verb,
     size_t  verblen   = 0;
     char   *vrsn      = NULL;
     size_t  vrsnlen   = 0;
+    char   *resource  = NULL;
 
 
 
@@ -931,13 +911,23 @@ H5FD_s3comms_hrb_init_request(const char *_verb,
 
     /* malloc and copy strings for the structure
      */
-    reslen = strlen(_resource) + 1;
-    res = (char *)malloc(sizeof(char) * reslen);
-    if (res == NULL) {
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
-                    "no space for resource string");
-    }
-    strncpy(res, _resource, reslen);
+    if (_resource[0] == '/') {
+        reslen = strlen(_resource) + 1;
+        res = (char *)malloc(sizeof(char) * reslen);
+        if (res == NULL) {
+            HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, NULL,
+                        "no space for resource string");
+        }
+        strncpy(res, _resource, reslen);
+    } else {
+        reslen = strlen(_resource) + 2;
+        res = (char *)malloc(sizeof(char) * reslen);
+        if (res == NULL) {
+            HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, NULL,
+                        "no space for resource string");
+        }
+        sprintf(res, "/%s", _resource);
+    } /* start resource string with '/' */
 
     verblen = strlen(_verb) + 1;
     verb = (char *)malloc(sizeof(char) * verblen);
@@ -1014,6 +1004,9 @@ done:
  *    Rename from `s3r_close()` to `H5FD_s3comms_s3r_close()`.
  *            -- Jacob Smith 2017-10-06
  *
+ *    Change separate host, resource, port info to `parsed_url_t` struct ptr.
+ *            -- Jacob Smith 2017-11-01
+ *
  ****************************************************************************/
 herr_t
 H5FD_s3comms_s3r_close(s3r_t *handle)
@@ -1035,17 +1028,11 @@ H5FD_s3comms_s3r_close(s3r_t *handle)
                     "handle has invalid magic.\n");
     }
 
-
-
     curl_easy_cleanup(handle->curlhandle);
-
-    free(handle->host);
     free(handle->secret_id);
     free(handle->region);
-    free(handle->resource);
     free(handle->signing_key);
-    free(handle->url);
-
+    HDassert(SUCCEED == H5FD_s3comms_free_purl(handle->purl));
     free(handle);
 
 done:
@@ -1267,6 +1254,8 @@ done:
  *    To prevent AWS4 authentication, pass null pointer to `region`, `id`,
  *    and ,`signing_key`.
  *
+ *    Uses `H5FD_s3comms_parse_url()` to validate and parse url input.
+ *
  * Return:
  *
  *    Pointer to new request handle.
@@ -1284,22 +1273,29 @@ done:
  *     Rename from `s3r_open()` to `H5FD_s3comms_s3r_open()`.
  *             -- Jacob Smith 2017-10-06
  *
+ *     Remove port number from signautre.
+ *     Name (`url`) must be complete url with http scheme and optional port
+ *         number in string.
+ *         e.g., "http://bucket.aws.com:9000/myfile.dat?query=param"
+ *     Internal storage of host, resource, and port information moved into
+ *     `parsed_url_t` struct pointer.
+ *             -- Jacob Smith 2017-11-01
+ *
  ****************************************************************************/
 s3r_t *
 H5FD_s3comms_s3r_open(const char          url[],
-                      unsigned long int   port,
                       const char          region[],
                       const char          id[],
                       const unsigned char signing_key[])
 {
-    size_t  tmplen      = 0;
-    CURL   *curlh       = NULL;
-    s3r_t  *h           = NULL;
-    char   *char_ptr    = 0;
-    size_t  hostlen     = 0;
-    size_t  resourcelen = 0;
-
-    s3r_t *ret_value = NULL;
+    size_t        tmplen      = 0;
+    CURL         *curlh       = NULL;
+    s3r_t        *h           = NULL;
+    char         *char_ptr    = 0;
+    size_t        hostlen     = 0;
+    size_t        resourcelen = 0;
+    parsed_url_t *purl        = NULL;
+    s3r_t        *ret_value   = NULL;
 
 
 
@@ -1314,6 +1310,13 @@ H5FD_s3comms_s3r_open(const char          url[],
                     "url cannot be null.\n");
     }
 
+    if (FAIL == H5FD_s3comms_parse_url(url, &purl)) {
+        /* probably a malformed url, but could be internal error */
+        HGOTO_ERROR(H5E_ARGS, H5E_CANTCREATE, NULL,
+                    "unable to create parsed url structure");
+    }
+    HDassert(purl != NULL); /* if above passes, this must be true */
+
     h = (s3r_t *)malloc(sizeof(s3r_t)); /* "h" for handle */
     if (h == NULL) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
@@ -1321,18 +1324,15 @@ H5FD_s3comms_s3r_open(const char          url[],
     }
 
     h->magic        = S3COMMS_S3R_MAGIC;
-    h->authorize    = 0;
+    h->purl         = purl;
     h->filesize     = 0;
-    h->host         = NULL;
-    h->port         = port;
     h->region       = NULL;
-    h->resource     = NULL;
     h->secret_id    = NULL;
     h->signing_key  = NULL;
-    h->url          = NULL;
 
 
 
+#if 0
     /* copy persistent data into structure
      *     optimizaion note: this `length, malloc, check, memcpy` pattern
      *                       appears repeatedly, here and for authetentication
@@ -1345,6 +1345,7 @@ H5FD_s3comms_s3r_open(const char          url[],
                     "could not malloc space for handle url copy.\n");
     }
     memcpy(h->url, url, tmplen);
+#endif
 
 
 
@@ -1368,8 +1369,6 @@ H5FD_s3comms_s3r_open(const char          url[],
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
                         "signing key cannot be null.\n");
         }
-
-        h->authorize = 1L;
 
         tmplen = strlen(region) + 1;
         h->region = (char *)malloc(sizeof(char) * tmplen);
@@ -1395,64 +1394,7 @@ H5FD_s3comms_s3r_open(const char          url[],
                         "could not malloc space for handle key copy.\n");
         }
         memcpy(h->signing_key, signing_key, tmplen);
-
-
-
-        /**************************************
-         * EXTRACT HOST AND RESOURCE FROM URL *
-         **************************************/
-
-        /* authorization Host header and resource path
-         * required by the AWS Canonical Request
-         */
-
-/* Currently omitted from the parsing here is the optional elements of 
- * "query strings" or "query parameters" in the url, e.g.
- *     http://bucket.aws.com/file.txt?max-keys=2&prefix=J
- *                                    ^-----------------^
- *
- * It remains unclear whether their presence will be of any import to
- * the ROS3 VFD
- */
-
-        /* remove leading http[s]://
-         * by trimming string at end of first "//" encountered in the url 
-         */
-        char_ptr = strstr((const char *)url, "//");
-        url = char_ptr + 2;
-
-        /* determine substring lengths
-         * first '/' marks end of host
-         */
-        char_ptr = strstr((const char*)url, "/");
-        if (char_ptr == 0) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
-                        "unable to parse resource from URL"
-                        "--no '/' separator\n%s\n", url);
-        }
-        hostlen = (size_t)(char_ptr - url);
-        resourcelen = strlen(url) - hostlen;
-
-        h->host = (char *)malloc(sizeof(char) * (hostlen + 1));
-        if (h->host == NULL) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
-                        "could not malloc space for handle host copy.\n");
-        }
-        strncpy(h->host,
-                (const char *)url,
-                (hostlen));
-        h->host[hostlen] = 0; /* null-terminate */
-
-        h->resource = (char *)malloc(sizeof(char) * (resourcelen + 1));
-        if (h->resource == NULL) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
-                        "could not malloc space for handle resource copy.\n");
-        }
-        strncpy(h->resource,
-                (const char *)(url + hostlen),
-                (strlen(url) - hostlen + 1));
-        h->resource[resourcelen] = 0;
-    }
+    } /* if authentication information provided */
 
 
 
@@ -1513,31 +1455,19 @@ H5FD_s3comms_s3r_open(const char          url[],
     if ( CURLE_OK != 
         curl_easy_setopt(curlh,
                          CURLOPT_URL,
-                         (const char *)h->url) ) 
+                         url) )
     {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
                     "error while setting CURL option (CURLOPT_URL). "
                     "(placeholder flags)");
     }
 
-    /* if handle->port == 0 (default), curl ignores supplied value
-     * and will make its own semi-informed decision
-     */
-
-    if ( CURLE_OK != 
-        curl_easy_setopt(curlh,
-                         CURLOPT_PORT,
-                         h->port) ) 
-    {
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
-                    "error while setting CURL option (CURLOPT_PORT). "
-                    "(placeholder flags)");
-    }
-
     /*****************
      * for debugging *
      *****************/
-    /* curl_easy_setopt(curlh, CURLOPT_VERBOSE, 1L); */
+#if 0
+    curl_easy_setopt(curlh, CURLOPT_VERBOSE, 1L);
+#endif 
 
     h->curlhandle = curlh;
 
@@ -1586,13 +1516,11 @@ done:
         if (curlh != NULL) {
             curl_easy_cleanup(curlh);
         }
+        HDassert(SUCCEED == H5FD_s3comms_free_purl(purl));
         if (h != NULL) {
-            free(h->host);
             free(h->region);
-            free(h->resource);
             free(h->secret_id);
             free(h->signing_key);
-            free(h->url);
 
             free(h);
         }
@@ -1642,20 +1570,23 @@ done:
  *
  * Changes:
  *
- *    Revise structure to prevent unnecessary hrb_t element creation.
- *    Rename tmprstr -> rangebytesstr to reflect purpose.
- *    Insert needed `free()`s, particularly for `sds`.
- *            -- Jacob Smith 2017-08-23
+ *     Revise structure to prevent unnecessary hrb_t element creation.
+ *     Rename tmprstr -> rangebytesstr to reflect purpose.
+ *     Insert needed `free()`s, particularly for `sds`.
+ *             -- Jacob Smith 2017-08-23
  *
- *    Revise heavily to accept buffer, range as parameters.
- *    Utilize modified s3r_t format.
- *            -- Jacob Smith 2017-08-31
+ *     Revise heavily to accept buffer, range as parameters.
+ *     Utilize modified s3r_t format.
+ *             -- Jacob Smith 2017-08-31
  *
- *    Incorporate into HDF library.
- *    Rename from `s3r_read()` to `H5FD_s3comms_s3r_read()`.
- *    Return `herr_t` succeed/fail instead of S3code.
- *    Update to use revised `hrb_t` and `hrb_fl_t` structures.
- *            -- Jacob Smith 2017-10-06
+ *     Incorporate into HDF library.
+ *     Rename from `s3r_read()` to `H5FD_s3comms_s3r_read()`.
+ *     Return `herr_t` succeed/fail instead of S3code.
+ *     Update to use revised `hrb_t` and `hrb_fl_t` structures.
+ *             -- Jacob Smith 2017-10-06
+ *
+ *     Update to use `parsed_url_t *purl` in handle.
+ *             --Jacob Smith 2017-11-01
  *
  *****************************************************************************/
 herr_t
@@ -1681,6 +1612,8 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
                               * + '\0', with "range;" possibly absent         
                               */
     CURL                  *curlh         = NULL;
+    CURLcode               p_status      = CURLE_OK;
+    long int               httpcode      = 0;
     struct curl_slist     *curlheaders   = NULL;
     hrb_fl_t_2            *headers       = NULL;
     char                  *hstr          = NULL; 
@@ -1719,7 +1652,7 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "handle has bad (null) curlhandle.\n")
     }
-    if (handle->url == NULL) {
+    if (handle->purl == NULL) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "handle has bad (null) url.\n")
     }
@@ -1761,7 +1694,7 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
     if (len > 0) {
         rangebytesstr = (char *)malloc(sizeof(char) * 128);
         if (rangebytesstr == NULL) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+            HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
                         "could not malloc range format string.\n");
         }
         sprintf(rangebytesstr,
@@ -1771,7 +1704,7 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
     } else if (offset > 0) {
         rangebytesstr = (char *)malloc(sizeof(char) * 128);
         if (rangebytesstr == NULL) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+            HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
                         "could not malloc range format string.\n");
         }
         sprintf(rangebytesstr,
@@ -1785,9 +1718,10 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
      * COMPILE REQUEST *
      *******************/
 
-    if (handle->authorize == 0) {
-        /* pass in range directly
-         * no harm if NULL--gets entire file by default
+    if (handle->signing_key == NULL) {
+        /* Do not authenticate.
+         * Pass in range directly...
+         * no harm if NULL--gets entire file by default.
          */
         if (CURLE_OK !=
             curl_easy_setopt(curlh,
@@ -1818,12 +1752,11 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "handle must have non-null httpverb.\n");
         }
-
-        if (handle->host == NULL) {
+        if (handle->purl->host == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "handle must have non-null host.\n");
         }
-        if (handle->resource == NULL) {
+        if (handle->purl->path == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "handle must have non-null resource.\n");
         }
@@ -1838,8 +1771,8 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
  * Create request structure in open()?
  */
 
-       request = H5FD_s3comms_hrb_init_request((const char *)handle->httpverb, 
-                                               (const char *)handle->resource, 
+       request = H5FD_s3comms_hrb_init_request((const char *)handle->httpverb,
+                                               (const char *)handle->purl->path,
                                                "HTTP/1.1");
         if (request == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
@@ -1852,10 +1785,10 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
                         "could not format ISO8601 time.\n");
         }
 
-        // Host is persistent; set with open()
+        // Host is persistent; can be set with open()
         headers = H5FD_s3comms_hrb_fl_set(headers,
                                           "Host", 
-                                          (const char *)handle->host);
+                                          (const char *)handle->purl->host);
         headers = H5FD_s3comms_hrb_fl_set(headers, 
                                           "Range", 
                                           (const char *)rangebytesstr);
@@ -1872,8 +1805,11 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
                         "(placeholder flags)\n");
         }
 #if 0
-/* faster, lower-overhead, less abstracty or interface-respective option 
- */
+    /* explicit fetching of "first header"
+     * Pros: faster, lower-overhead
+     * 
+     * Cons: more difficult to understand, ignores provided interface
+     */
         node = headers;
         while (node->prev_lower != NULL) { node = node->prev_lower; }
         request->first_header = node;
@@ -1965,7 +1901,6 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
             sprintf(hstr, "%s: %s", node->name, node->value);
             curlheaders = curl_slist_append(curlheaders, 
                                             (const char *)hstr);
-            // verify creation/append successful (curlheaders != NULL)
             if (curlheaders == NULL) {
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                             "could not append header to curl slist. "
@@ -2000,7 +1935,7 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
                         "(CURLOPT_HTTPHEADER). (placeholder flags)");
         }
 
-    } /* if authorize */
+    } /* if should authenticate (info provided) */
 
 
 
@@ -2009,7 +1944,14 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
      * PERFORM REQUEST *
      *******************/
 
-    if ( CURLE_OK != curl_easy_perform(curlh) ) {
+    p_status = curl_easy_perform(curlh);
+
+    if ( p_status != CURLE_OK ) {
+/*
+ *      HDassert(CURLE_OK == 
+ *               curl_easy_getinfo(curlh, CURLINFO_RESPONSE_CODE, &httpcode));
+ *      HDprintf("CURL ERROR CODE: %d\nHTTP CODE: %d\n", p_status, httpcode);
+ */
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "problem while performing request. (placeholder flags)\n");
     }
@@ -2288,6 +2230,44 @@ done:
 } /* H5FD_s3comms_bytes_to_hex */
 
 
+/*****************************************************************************
+ *
+ * Function: H5FD_s3comms_free_purl()
+ *
+ * Purpose: 
+ *
+ *     Release resources from a (maybe not-NULL) parsed_url_t pointer.
+ *
+ * Return: 
+ *
+ *     SUCCEED (never fails)
+ *
+ * Programmer: Jacob Smith
+ *             2017-11-01
+ *
+ * Changes: None.
+ *
+ *****************************************************************************/
+herr_t
+H5FD_s3comms_free_purl(parsed_url_t *purl) 
+{
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    HDprintf("called H5FD_s3comms_free_purl.\n");
+
+    if (purl != NULL) {
+        if (purl->scheme != NULL) free(purl->scheme); 
+        if (purl->host   != NULL) free(purl->host);
+        if (purl->port   != NULL) free(purl->port);
+        if (purl->path   != NULL) free(purl->path);
+        if (purl->query  != NULL) free(purl->query);
+        free(purl);
+    }
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+} /* H5FD_s3comms_free_purl */
+
+
 /****************************************************************************
  *
  * Function: H5FD_s3comms_HMAC_SHA256()
@@ -2427,6 +2407,265 @@ done:
     FUNC_LEAVE_NOAPI(ret_value);
 
 } /* H5FD_s3comms_nlowercase */
+
+
+/*****************************************************************************
+ * 
+ * Function: H5FD_s3comms_parse_url()
+ *
+ * Purpose:
+ *
+ *     Parse URL-like string and stuff URL componenets into 
+ *     `parsed_url` structure, if possible.
+ *
+ *     Expects null-terminated string of format:
+ *     SCHEME "://" HOST [":" PORT ] ["/" [ PATH ] ] ["?" QUERY]
+ *     where SCHEME :: "[a-zA-Z/.-]+"
+ *           PORT   :: "[0-9]"
+ *
+ *     Stores resulting structure in argument pointer `purl`, if successful,
+ *     creating and populating new `parsed_url_t` structure pointer.
+ *     Empty or absent elements are NULL in new purl structure.
+ *
+ * Return:
+ *
+ *     SUCCEED : `purl` pointer is populated
+ *     FAIL    : unable to parse, `purl` is unaltered (probably NULL)
+ *
+ * Programmer: Jacob Smith
+ *             2017-10-30
+ *
+ * Changes: None.
+ *
+ *****************************************************************************
+ */
+herr_t
+H5FD_s3comms_parse_url(const char    *str,
+                       parsed_url_t **_purl)
+{
+    parsed_url_t *purl         = NULL; /* pointer to new structure */
+    const char   *tmpstr       = NULL; /* working pointer in string */
+    const char   *curstr       = str;  /* "start" pointer in string */
+    long int      len          = 0;    /* substring length */
+    long int      urllen       = 0;    /* length of passed-in url string */
+    unsigned int  i            = 0;
+    herr_t        ret_value    = FAIL; 
+
+
+
+    FUNC_ENTER_NOAPI_NOINIT;
+
+    HDprintf("called H5FD_s3comms_parse_url.\n");
+
+    if (str == NULL || *str == '\0') {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "invalid url string");
+    }
+
+    urllen = (long int)strlen(str);
+
+    purl = (parsed_url_t *)malloc(sizeof(parsed_url_t));
+    if (purl == NULL) { 
+        HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
+                    "can't allocate space for parsed_url_t");
+    }
+    purl->scheme = NULL;
+    purl->host   = NULL;
+    purl->port   = NULL;
+    purl->path   = NULL;
+    purl->query  = NULL;
+
+
+
+    /* read scheme
+     */
+    tmpstr = strchr(curstr, ':');
+    if (tmpstr == NULL) { 
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "invalid SCHEME consruction: probably not URL");
+    }
+    len = tmpstr - curstr;
+    HDassert((0 <= len) && (len < urllen));
+
+    /* check for restrictions 
+     */
+    for (i = 0; i < len; i++) {
+        /* scheme = [a-zA-Z+-.]+ (terminated by ":") */
+        if (!isalpha(curstr[i]) && 
+             '+' != curstr[i] && 
+             '-' != curstr[i] && 
+             '.' != curstr[i])
+        {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "invalid SCHEME consruction");
+        }
+    }
+    /* copy 
+     */
+    purl->scheme = (char *)malloc(sizeof(char) * (size_t)(len + 1));
+    if (purl->scheme == NULL) { /* cannot malloc */
+        HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
+                    "can't allocate space for SCHEME");
+    }
+    (void)strncpy(purl->scheme, curstr, (size_t)len);
+    purl->scheme[len] = 0;
+    /* convert to lowercase 
+     */
+    for ( i = 0; i < len; i++ ) {
+        purl->scheme[i] = (char)tolower(purl->scheme[i]);
+    }
+
+    /* Skip "://" */
+    tmpstr += 3;
+    curstr = tmpstr;
+
+    /* read host
+     */
+    if (*curstr == '[') {
+        /* IPv6 */
+        while (']' != *tmpstr) {
+            if (tmpstr == 0) { /* end of string reached! */
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                            "reached end of URL: incomplete IPv6 HOST");
+            }
+            tmpstr++;
+        }
+        tmpstr++;
+    } else {
+        while (0 != *tmpstr) {
+            if (':' == *tmpstr || 
+                '/' == *tmpstr || 
+                '?' == *tmpstr) 
+            {
+                break;
+            }
+            tmpstr++;
+        }
+    } /* if IPv4 or IPv6 */
+    len = tmpstr - curstr;
+    if (len == 0) { 
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "HOST substring cannot be empty");
+    } else if (len > urllen) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "problem with length of HOST substring");
+    }
+
+    /* copy host 
+     */
+    purl->host = (char *)malloc(sizeof(char) * (size_t)(len + 1));
+    if (purl->host == NULL) {
+        HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
+                    "can't allocate space for HOST");
+    }
+    (void)strncpy(purl->host, curstr, (size_t)len);
+    purl->host[len] = 0;
+
+
+
+    /* read PORT 
+     */
+    if (':' == *tmpstr) {
+        tmpstr += 1; /* advance past ':' */
+        curstr = tmpstr;
+        while ((0 != *tmpstr) && ('/' != *tmpstr) && ('?' != *tmpstr)) {
+            tmpstr++;
+        }
+        len = tmpstr - curstr;
+        if (len == 0) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "PORT element cannot be empty");
+        } else if (len > urllen) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "problem with length of PORT substring");
+        }
+        for (i = 0; i < len; i ++) {
+            if (!isdigit(curstr[i])) { 
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                            "PORT is not a decimal string"); 
+            }
+        }
+
+        /* copy port 
+         */
+        purl->port = (char *)malloc(sizeof(char) * (size_t)(len + 1));
+        if (purl->port == NULL) { /* cannot malloc */
+                HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
+                            "can't allocate space for PORT");
+        }
+        (void)strncpy(purl->port, curstr, (size_t)len);
+        purl->port[len] = 0;
+    } /* if PORT element */
+
+
+
+    /* read PATH
+     */
+    if ('/' == *tmpstr) {
+        /* advance past '/' */
+        tmpstr += 1;
+        curstr = tmpstr;
+       
+        /* seek end of PATH
+         */
+        while ((0 != *tmpstr) && ('?' != *tmpstr)) {
+            tmpstr++;
+        }
+        len = tmpstr - curstr;
+        if (len > urllen) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "problem with length of PATH substring");
+        }
+        if (len > 0) {
+            purl->path = (char *)malloc(sizeof(char) * (size_t)(len + 1));
+            if (purl->path == NULL) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
+                                "can't allocate space for PATH");
+            } /* cannot malloc path pointer */
+            (void)strncpy(purl->path, curstr, (size_t)len);
+            purl->path[len] = 0;
+        }
+    } /* if PATH element */
+
+
+
+    /* read QUERY
+     */
+    if ('?' == *tmpstr) {
+        tmpstr += 1;
+        curstr = tmpstr;
+        while (0 != *tmpstr) {
+            tmpstr++; 
+        }
+        len = tmpstr - curstr;
+        if (len == 0) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "QUERY cannot be empty");
+        } else if (len > urllen) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "problem with length of QUERY substring");
+        }
+        purl->query = (char *)malloc(sizeof(char) * (size_t)(len + 1));
+        if (purl->query == NULL) {
+            HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
+                        "can't allocate space for QUERY");
+        } /* cannot malloc path pointer */
+        (void)strncpy(purl->query, curstr, (size_t)len);
+        purl->query[len] = 0;
+    } /* if QUERY exists */
+
+
+
+    *_purl = purl;
+    ret_value =  SUCCEED;
+
+done:
+    if (ret_value == FAIL) {
+        H5FD_s3comms_free_purl(purl);
+    }
+    FUNC_LEAVE_NOAPI(ret_value);
+
+} /* H5FD_s3comms_parse_url */
 
 
 /****************************************************************************
