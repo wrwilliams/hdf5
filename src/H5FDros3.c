@@ -670,6 +670,10 @@ H5FD_ros3_open(const char *url,
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "can't get property list")
     }
 
+#if 1
+    HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
+#endif
+
 #if 0
     /* do this number-parsing / validation in s3comms::s3r_open()? */
 
@@ -1025,16 +1029,22 @@ H5FD_ros3_set_eoa(H5FD_t     H5_ATTR_UNUSED *_file,
                   H5FD_mem_t H5_ATTR_UNUSED  type, 
                   haddr_t    H5_ATTR_UNUSED  addr)
 {
+#if 0
     herr_t ret_value = FAIL;
-
     FUNC_ENTER_NOAPI_NOINIT
+#else
+    herr_t ret_value = SUCCEED;
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+#endif
 
     HDfprintf(stdout, "H5FD_ros3_set_eoa() called.\n");
 
+#if 0
     HGOTO_ERROR(H5E_VFL, H5E_UNSUPPORTED, FAIL,
                 "cannot set EoA on read-only S3 file")
 
 done:
+#endif
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FD_ros3_set_eoa() */
 

@@ -1264,7 +1264,9 @@ test_noops_and_autofails(void)
     H5FD_t           *file       = NULL;
     hid_t             dxpl_id    = -1;
     H5P_genplist_t   *dxpl_plist = NULL;
+    haddr_t           filesize   = 0;
     haddr_t           new_eoa    = 5000;
+    haddr_t           big_eoa    = 0xFFFFFFFF;
     H5FD_dxpl_type_t  dxpl_type  = H5FD_RAWDATA_DXPL;
     const char        data[36]   = "The Force shall be with you, always";
     H5FD_ros3_fapl_t  ros3_fa    = {
@@ -1319,6 +1321,8 @@ test_noops_and_autofails(void)
      * TESTS *
      *********/
 
+    /* auto-fail calls to write and truncate
+     */
     H5E_BEGIN_TRY {
         JSVERIFY( FAIL, 
                   H5FDwrite(file, H5FD_MEM_DRAW, dxpl_id, 1000, 35, data),
@@ -1337,13 +1341,31 @@ test_noops_and_autofails(void)
                   "truncate must fail (closing)" )
     } H5E_END_TRY;
 
-    FAIL_IF( new_eoa >= H5FDget_eoa(file, H5FD_MEM_DEFAULT) ) /* santiy-check */
-    H5E_BEGIN_TRY {
-        JSVERIFY( FAIL,
-                  H5FDset_eoa(file, H5FD_MEM_DRAW, new_eoa),
-                  "set_eoa must fail" )
-    } H5E_END_TRY;
 
+
+    /* no-op calls to `set_eoa()`
+     */
+    filesize = H5FDget_eoa(file, H5FD_MEM_DEFAULT);
+    FAIL_IF( new_eoa >= filesize ); /* santiy */
+    FAIL_IF( big_eoa <= filesize ); /* checks */
+
+    JSVERIFY( SUCCEED,
+              H5FDset_eoa(file, H5FD_MEM_DRAW, new_eoa),
+              "resize smaller passes" )
+    JSVERIFY( filesize, 
+              H5FDget_eoa(file, H5FD_MEM_DEFAULT), 
+              "set_eoa(smaller) should have no effect" )
+    JSVERIFY( SUCCEED, 
+              H5FDset_eoa(file, H5FD_MEM_DRAW, big_eoa),
+              "resize larger passes" )
+    JSVERIFY( filesize, 
+              H5FDget_eoa(file, H5FD_MEM_DEFAULT), 
+              "set_eoa(bigger) should have no effect" )
+
+
+
+    /* no-op calls to `lock()` and `unlock()`
+     */
     JSVERIFY( SUCCEED,
               H5FDlock(file, TRUE),
               "lock always succeeds; has no effect" )
@@ -1354,7 +1376,7 @@ test_noops_and_autofails(void)
               H5FDunlock(file),
               NULL )
     /* Lock/unlock with null file or similar error crashes tests.
-     * HDassert in callling heirarchy, `H5FD[un]lock()` and `H5FD_[un]lock()`
+     * HDassert in calling heirarchy, `H5FD[un]lock()` and `H5FD_[un]lock()`
      */
 
 /* IS THERE ANY WAY TO VERIFY THE RESULT (OR, LACK THEREOF) OF [UN]LOCK?
@@ -1536,6 +1558,115 @@ error:
 
 } /* test_cmp */
 
+
+/*---------------------------------------------------------------------------
+ *
+ * Function: test_library_open()
+ *
+ * Purpose: 
+ *
+ * Return:
+ *
+ *     PASSED : 0
+ *     FAILED : 1
+ *
+ * Programmer: Jacob Smith
+ *             yyyy-mm-dd
+ *
+ *---------------------------------------------------------------------------
+ */
+static int
+test_library_open(void)
+{
+    /*********************
+     * test-local macros *
+     *********************/
+
+    /*************************
+     * test-local structures *
+     *************************/
+
+    /************************
+     * test-local variables *
+     ************************/
+
+    hid_t             file       = -1;
+    hbool_t           curl_ready = FALSE;
+    hid_t             fapl_id    = -1;
+    H5FD_ros3_fapl_t  ros3_fa    = {
+        H5FD__CURR_ROS3_FAPL_T_VERSION, /* version       */
+        TRUE,                           /* authenticate  */
+        "us-east-1",                    /* aws_region    */
+        "HDFGROUP0",                    /* secret_id     */
+        "HDFGROUP0",                    /* secret_key    */
+    };
+
+
+    TESTING("open file on s3 through HD5F library");
+
+
+
+    /*********
+     * SETUP *
+     *********/
+
+    FAIL_UNLESS( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) )
+    curl_ready = TRUE;
+
+    fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+    FAIL_IF( 0 > fapl_id )
+    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &ros3_fa), NULL )
+
+
+
+    /*********
+     * TESTS *
+     *********/
+
+    /* THIS IS THE TEST. THIS IS HYOOJ. */
+    file = H5Fopen(
+            "http://minio.ad.hdfgroup.org:9000/shakespeare/t.h5",
+            H5F_ACC_RDONLY,
+            fapl_id);
+    FAIL_IF( file < 0 )
+
+
+
+    /************
+     * TEARDOWN *
+     ************/
+
+    FAIL_IF( FAIL == H5Fclose(file) )
+    file = -1;
+
+    H5Pclose(fapl_id);
+    fapl_id = -1;
+
+    curl_global_cleanup();
+    curl_ready = FALSE;
+
+    PASSED();
+    return 0;
+
+error:
+    /***********
+     * CLEANUP *
+     ***********/
+
+    if (fapl_id >= 0) {
+        H5E_BEGIN_TRY {
+           H5Pclose(fapl_id);
+        } H5E_END_TRY;
+    }
+    if (file > 0)           { H5Fclose(file);       }
+    if (curl_ready == TRUE) { curl_global_cleanup(); }
+
+
+    return 1;
+
+} /* test_library_open */
+
+
 
 
 /*-------------------------------------------------------------------------
@@ -1566,6 +1697,7 @@ main(void)
     nerrors += test_read();
     nerrors += test_noops_and_autofails();
     nerrors += test_cmp();
+    nerrors += test_library_open();
 
     if (nerrors > 0) {
         HDprintf("***** %d ros3 TEST%s FAILED! *****\n",
