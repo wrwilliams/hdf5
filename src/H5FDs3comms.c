@@ -25,6 +25,10 @@
 /* test performance one way or the other? */
 #define GETSIZE_STATIC_BUFFER 1
 
+/*
+#define VERBOSE_CURL 1L
+*/
+
 
 
 /******************/
@@ -872,7 +876,6 @@ H5FD_s3comms_hrb_init_request(const char *_verb,
     size_t  verblen   = 0;
     char   *vrsn      = NULL;
     size_t  vrsnlen   = 0;
-    char   *resource  = NULL;
 
 
 
@@ -1291,9 +1294,6 @@ H5FD_s3comms_s3r_open(const char          url[],
     size_t        tmplen      = 0;
     CURL         *curlh       = NULL;
     s3r_t        *h           = NULL;
-    char         *char_ptr    = 0;
-    size_t        hostlen     = 0;
-    size_t        resourcelen = 0;
     parsed_url_t *purl        = NULL;
     s3r_t        *ret_value   = NULL;
 
@@ -1465,7 +1465,7 @@ H5FD_s3comms_s3r_open(const char          url[],
     /*****************
      * for debugging *
      *****************/
-#if 0
+#ifdef VERBOSE_CURL
     curl_easy_setopt(curlh, CURLOPT_VERBOSE, 1L);
 #endif 
 
@@ -1613,7 +1613,9 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
                               */
     CURL                  *curlh         = NULL;
     CURLcode               p_status      = CURLE_OK;
+#ifdef VERBOSE_CURL
     long int               httpcode      = 0;
+#endif
     struct curl_slist     *curlheaders   = NULL;
     hrb_fl_t_2            *headers       = NULL;
     char                  *hstr          = NULL; 
@@ -1947,11 +1949,11 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
     p_status = curl_easy_perform(curlh);
 
     if ( p_status != CURLE_OK ) {
-/*
- *      HDassert(CURLE_OK == 
- *               curl_easy_getinfo(curlh, CURLINFO_RESPONSE_CODE, &httpcode));
- *      HDprintf("CURL ERROR CODE: %d\nHTTP CODE: %d\n", p_status, httpcode);
- */
+#ifdef VERBOSE_CURL
+        HDassert(CURLE_OK == 
+                 curl_easy_getinfo(curlh, CURLINFO_RESPONSE_CODE, &httpcode));
+        HDprintf("CURL ERROR CODE: %d\nHTTP CODE: %d\n", p_status, httpcode);
+#endif
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "problem while performing request. (placeholder flags)\n");
     }

@@ -44,7 +44,25 @@ extern "C" {
  *
  *      This field should be set to H5FD__CURR_ROS3_FAPL_T_VERSION.
  *
- * Jake: please document the remaining fields.
+ * authenticate:
+ *
+ *     Flag TRUE or FALSE whether or not requests are to be authenticated
+ *     with the AWS4 algorithm. 
+ *     If TRUE, `aws_region`, `secret_id`, and `secret_key` must be populated. 
+ *     If FALSE, those three components are unused and may be NULL.
+ *
+ * aws_region:
+ *
+ *     String identifier of the AWS "region" of the host, e.g. "us-east-1".
+ *     TODO: listing or reference to listing.
+ *
+ * secret_id:
+ *
+ *     Access ID for the resource. (string)
+ *
+ * secret_key:
+ *
+ *     Access key for the id/resource/host/whatever. (string)
  *
  ****************************************************************************/
 
@@ -71,5 +89,6 @@ H5_DLL herr_t H5Pset_fapl_ros3(hid_t fapl_id, H5FD_ros3_fapl_t * fa);
 }
 #endif
 
-#endif
+#endif /* ifndef H5FDros3_H */
+
 
