@@ -14,11 +14,13 @@
 /*
  * Purpose:     
  *
- *     Tests something, we think?
+ *     Verify behavior for Read-Only S3 VFD
+ *     at the VFL (virtual file layer) level.
+ *
+ *     Demonstrates basic use cases and fapl/dxpl interaction.
  *
  * Programmer: Jacob Smith <jake.smith@hdfgroup.org>
  *             2017-10-11
- *
  */
 
 #include "h5test.h"
@@ -61,8 +63,9 @@
  *        to satifsy both parties, assuming one paradigm per test file.
  *        (One could #undef and redefine the flag through the file as desired,
  *         but _why_.)
- *        Provided as courtesy, per consideration for inclusion in the library 
- *        proper.
+ *
+ *     Provided as courtesy, per consideration for inclusion in the library 
+ *     proper.
  *
  *     Macros:
  * 
@@ -382,36 +385,6 @@ if (strcmp((actual), (expected)) != 0) {       \
 #define MAXADDR (((haddr_t)1<<(8*sizeof(HDoff_t)-1))-1)
 
 #if 0
-
-#define KB              1024U
-#define FAMILY_NUMBER   4
-#define FAMILY_SIZE     (1*KB)
-#define FAMILY_SIZE2    (5*KB)
-#define MULTI_SIZE      128
-
-#define CORE_INCREMENT  (4*KB)
-#define CORE_PAGE_SIZE  (1024*KB)
-#define CORE_DSET_NAME  "core dset"
-#define CORE_DSET_DIM1  1024
-#define CORE_DSET_DIM2  32
-
-#define DSET1_NAME   "dset1"
-#define DSET1_DIM1   1024
-#define DSET1_DIM2   32
-#define DSET3_NAME   "dset3"
-
-/* Macros for Direct VFD */
-#ifdef H5_HAVE_DIRECT
-#define MBOUNDARY    512
-#define FBSIZE       (4*KB)
-#define CBSIZE       (8*KB)
-#define THRESHOLD    1
-#define DSET2_NAME   "dset2"
-#define DSET2_DIM    4
-#endif /* H5_HAVE_DIRECT */
-
-#endif
-
 const char *FILENAME[] = {
     "sec2_file",         /*0*/
     "core_file",         /*1*/
@@ -427,7 +400,6 @@ const char *FILENAME[] = {
     NULL
 };
 
-#if 0
 #define LOG_FILENAME "log_ros3_out.log"
 #endif
 
@@ -436,7 +408,7 @@ const char *FILENAME[] = {
 /* ##########################################################################
  # TEST FUNCTION PROTOTYPE
  #
- # FROM TOP: Y9}
+ # FROM TOP: Y10}
  * ##########################################################################
  */
 
@@ -471,18 +443,22 @@ funcname(void)
      * test-local variables *
      ************************/
 
-    TESTING("funcname");
+    TESTING("behavior");
 
     /*********
      * TESTS *
      *********/
+
+    /************
+     * TEARDOWN *
+     ************/
 
     PASSED();
     return 0;
 
 error:
     /***********
-     * cleanup *
+     * CLEANUP *
      ***********/
 
     return 1;
@@ -706,7 +682,7 @@ error:
  *     FAILED : 1
  *
  * Programmer: Jacob Smith
- *             yyyy-mm-dd
+ *             1027-11-03
  *
  *---------------------------------------------------------------------------
  */
@@ -725,11 +701,11 @@ test_vfd_open(void)
      * Uses `H5E_BEGIN_TRY` and `H5E_END_TRY` to mute stack trace from 
      *     expected error during open.
      *
-     * If H5FDopen() does _not_ return NULL with the given arguments,
+     * If `H5FDopen()` does _not_ return NULL with the given arguments,
      *     verication fails and prints FAILED message. (see `JSFAILED_AT()`)
      * If `reason` is not NULL, it is printed after the *FAILED* output.
      *
-     * Uses function-local `H5FD_t *fd` for `H5FDopen()` return.
+     * Uses variable `H5FD_t *fd` for `H5FDopen()` return.
      *
      * Jacob Smith 2017-10-27
      *------------------------------------------------------------------------
@@ -865,6 +841,7 @@ error:
     /***********
      * CLEANUP *
      ***********/
+
     if (fd) { 
         H5FDclose(fd); 
     }
@@ -877,9 +854,9 @@ error:
         curl_global_cleanup();
     }
 
-#undef VFD_OPEN_VERIFY_NULL
-
     return 1;
+
+#undef VFD_OPEN_VERIFY_NULL
 
 } /* test_vfd_open */
 
@@ -1071,7 +1048,7 @@ test_read(void)
               H5P_set(dxpl_plist, H5FD_DXPL_TYPE_NAME, &dxpl_type_raw),
               "problem setting dxpl type" )
 
-    /* verify that dxpl_id reflects type setting
+    /* Verify that dxpl_id reflects type setting.
      * i.e., set was successful.
      */
     {
@@ -1200,8 +1177,6 @@ test_read(void)
         HDfprintf(stdout, "\n\n******* tests successful ******\n");
     }
 
-
-    /* HDprintf("%s\n", buffer);  */
 
 
     /************
@@ -1362,7 +1337,7 @@ test_noops_and_autofails(void)
                   "truncate must fail (closing)" )
     } H5E_END_TRY;
 
-    FAIL_IF( new_eoa >= H5FDget_eoa(file, H5FD_MEM_DEFAULT) )
+    FAIL_IF( new_eoa >= H5FDget_eoa(file, H5FD_MEM_DEFAULT) ) /* santiy-check */
     H5E_BEGIN_TRY {
         JSVERIFY( FAIL,
                   H5FDset_eoa(file, H5FD_MEM_DRAW, new_eoa),
@@ -1443,7 +1418,7 @@ error:
  *     FAILED : 1
  *
  * Programmer: Jacob Smith
- *             yyyy-mm-dd
+ *             2017-11-06
  *
  *---------------------------------------------------------------------------
  */
@@ -1546,6 +1521,7 @@ error:
     /***********
      * CLEANUP *
      ***********/
+
     if (TRUE == curl_ready) { curl_global_cleanup(); }
     if (fd_raven)           { H5FDclose(fd_raven);   }
     if (fd_raven_2)         { H5FDclose(fd_raven_2); }
