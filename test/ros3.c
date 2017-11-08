@@ -599,22 +599,28 @@ test_fapl_config_validation(void)
 
     TESTING("ROS3 fapl configuration validation");
 
+
+
     /*********
-     * tests *
+     * TESTS *
      *********/
 
     for (i = 0; i < ncases; i++) {
 
-        /* per-test setup 
+        /*---------------
+         * per-test setup 
+         *---------------
          */
         case_ptr = &cases_arr[i];
         fapl_id = H5Pcreate(H5P_FILE_ACCESS);
         FAIL_IF( fapl_id < 0 ) /* sanity-check */
 
-        /* Actually test.
+        /*--------------------------------------------------
+         * Actually test.
          * Put this in a TRY because, for unknown reasons,
          * expected failure cases will print the error stack
          * before continuing to pass.
+         *--------------------------------------------------
          */
         H5E_BEGIN_TRY {
             /* `H5FD_ros3_validate_config(...)` is static/private 
@@ -642,9 +648,11 @@ test_fapl_config_validation(void)
             JSVERIFY_STR( config.secret_key, fa_fetch.secret_key, NULL )
         }
 
-        /* per-test sanitation/teardown
+        /*-----------------------------
+         * per-test sanitation/teardown
+         *-----------------------------
          */
-        H5Pclose(fapl_id);
+        HDassert( SUCCEED == H5Pclose(fapl_id) );
         fapl_id = -1;
 
     } /* for each test case */
@@ -654,18 +662,126 @@ test_fapl_config_validation(void)
 
 error:
     /***********
-     * cleanup *
+     * CLEANUP *
      ***********/
 
     if (fapl_id < 0) {
         H5E_BEGIN_TRY {
-            H5Pclose(fapl_id);
+            (void)H5Pclose(fapl_id);
         } H5E_END_TRY;
     }
     return 1;
 
 } /* test_fapl_config_validation */
 
+
+/*-------------------------------------------------------------------------
+ *
+ * Function:    test_ros3_fapl()
+ *
+ * Purpose:     Tests the file handle interface for the ROS3 driver
+ *
+ *              As the ROS3 driver is 1) read only, 2) requires access
+ *              to an S3 server (minio for now), this test is quite
+ *              different from the other tests.
+ *
+ *              For now, test only fapl & flags.  Extend as the 
+ *              work on the VFD continues.
+ *
+ * Return:      Success:        0
+ *              Failure:        1
+ *
+ * Programmer:  John Mainzer
+ *              7/12/17
+ *
+ *-------------------------------------------------------------------------
+ */
+static int
+test_ros3_fapl(void)
+{
+    /************************
+     * test-local variables *
+     ************************/
+
+#if 0
+    hid_t             fid            = -1;  /* file ID                      */
+#endif
+    hid_t             fapl_id        = -1;  /* file access property list ID */
+#if 0
+    hid_t             fapl_id_out    = -1;  /* from H5Fget_access_plist     */
+#endif
+    hid_t             driver_id      = -1;  /* ID for this VFD              */
+    unsigned long     driver_flags   =  0;  /* VFD feature flags            */
+/*
+    char              filename[1024];
+    void             *os_file_handle = NULL;
+    hsize_t           file_size;
+    H5FD_ros3_fapl_t  test_ros3_fa;
+*/
+#if 0
+    H5FD_t           *fd_struct_ptr  = NULL;
+    hid_t             some_dxpl_id   = H5P_DEFAULT;
+    char              dest_buf[1024];
+    //TODO? zero dest_buf
+    haddr_t           offset         = 5432; /* numeric? */
+    size_t            read_len       = 128;
+    H5FD_mem_t        memtype; /* TODO */
+    unsigned          someflags      = 0; /* TODO */
+#endif
+    H5FD_ros3_fapl_t  ros3_fa_0      = {
+        H5FD__CURR_ROS3_FAPL_T_VERSION, /* version       */
+        FALSE,                          /* authenticate  */
+        "",                             /* aws_region    */
+        "",                             /* secret_id     */
+        "plugh",                        /* secret_key    */
+    };
+
+
+
+    TESTING("ROS3 fapl ");
+
+    /* Set property list and file name for ROS3 driver. 
+     */
+    fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+    FAIL_IF( fapl_id < 0 ) /* sanity-check */
+
+    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &ros3_fa_0), NULL )
+
+    /****************
+     * Check that the VFD feature flags are correct
+     * SPEC MAY CHANGE 
+     ******************/
+
+    driver_id = H5Pget_driver(fapl_id);
+    FAIL_IF( driver_id < 0 )
+
+    FAIL_IF( H5FDdriver_query(driver_id, &driver_flags) < 0 )
+
+    /* bit(s) in `driver_flags` must align with H5FD_FEAT_DATA_SIEVE
+     */
+    /* FAIL_IF( !(driver_flags & H5FD_FEAT_DATA_SIEVE) ) */
+    JSVERIFY_NOT( 0, (driver_flags & H5FD_FEAT_DATA_SIEVE), 
+                  "bit(s) in `driver_flags` must align with "
+                  "H5FD_FEAT_DATA_SIEVE" )
+
+    JSVERIFY( H5FD_FEAT_DATA_SIEVE, driver_flags,
+              "H5FD_FEAT_DATA_SIEVE should be the only supported flag")
+
+    PASSED();
+    return 0;
+
+error:
+    H5E_BEGIN_TRY {
+        (void)H5Pclose(fapl_id);
+#if 0
+        (void)H5Pclose(fapl_id_out);
+        (void)H5Fclose(fid);
+#endif
+    } H5E_END_TRY;
+
+    return 1;
+
+} /* test_ros3_fapl() */
 
 
 /*---------------------------------------------------------------------------
@@ -825,10 +941,10 @@ test_vfd_open(void)
      * TEARDOWN *
      ************/
 
-    H5FDclose(fd);
+    HDassert( SUCCEED == H5FDclose(fd) );
     fd = NULL;
 
-    H5Pclose(fapl_id);
+    HDassert( SUCCEED == H5Pclose(fapl_id) );
     fapl_id = -1;
 
     curl_global_cleanup();
@@ -843,11 +959,11 @@ error:
      ***********/
 
     if (fd) { 
-        H5FDclose(fd); 
+        (void)H5FDclose(fd); 
     }
     if (fapl_id >= 0) {
         H5E_BEGIN_TRY {
-            H5Pclose(fapl_id);
+            (void)H5Pclose(fapl_id);
         } H5E_END_TRY;
     }
     if (curl_ready == TRUE) {
@@ -861,108 +977,145 @@ error:
 } /* test_vfd_open */
 
 
-/*-------------------------------------------------------------------------
+/*---------------------------------------------------------------------------
  *
- * Function:    test_ros3_fapl()
+ * Function: test_eof_eoa()
  *
- * Purpose:     Tests the file handle interface for the ROS3 driver
+ * Purpose: 
  *
- *              As the ROS3 driver is 1) read only, 2) requires access
- *              to an S3 server (minio for now), this test is quite
- *              different from the other tests.
+ *     Demonstrate behavior of get_eof, get_eoa, and set_eoa.
  *
- *              For now, test only fapl & flags.  Extend as the 
- *              work on the VFD continues.
+ * Return:
  *
- * Return:      Success:        0
- *              Failure:        1
+ *     PASSED : 0
+ *     FAILED : 1
  *
- * Programmer:  John Mainzer
- *              7/12/17
+ * Programmer: Jacob Smith
+ *             yyyy-mm-dd
  *
- *-------------------------------------------------------------------------
+ *---------------------------------------------------------------------------
  */
 static int
-test_ros3_fapl(void)
+test_eof_eoa(void)
 {
+    /*********************
+     * test-local macros *
+     *********************/
+
+    /*************************
+     * test-local structures *
+     *************************/
+
     /************************
      * test-local variables *
      ************************/
 
-    hid_t             fid            = -1;  /* file ID                      */
-    hid_t             fapl_id        = -1;  /* file access property list ID */
-    hid_t             fapl_id_out    = -1;  /* from H5Fget_access_plist     */
-    hid_t             driver_id      = -1;  /* ID for this VFD              */
-    unsigned long     driver_flags   =  0;  /* VFD feature flags            */
-/*
-    char              filename[1024];
-    void             *os_file_handle = NULL;
-    hsize_t           file_size;
-    H5FD_ros3_fapl_t  test_ros3_fa;
-*/
-#if 0
-    H5FD_t           *fd_struct_ptr  = NULL;
-    hid_t             some_dxpl_id   = H5P_DEFAULT;
-    char              dest_buf[1024];
-    //TODO? zero dest_buf
-    haddr_t           offset         = 5432; /* numeric? */
-    size_t            read_len       = 128;
-    H5FD_mem_t        memtype; /* TODO */
-    unsigned          someflags      = 0; /* TODO */
-#endif
-    H5FD_ros3_fapl_t  ros3_fa_0      = {
-        H5FD__CURR_ROS3_FAPL_T_VERSION, /* version       */
-        FALSE,                          /* authenticate  */
-        "",                             /* aws_region    */
-        "",                             /* secret_id     */
-        "plugh",                        /* secret_key    */
+    H5FD_t           *fd_shakespeare  = NULL;
+    hbool_t           curl_ready = FALSE;
+    hid_t             fapl_id    = -1;
+    H5FD_ros3_fapl_t  ros3_fa    = {
+        H5FD__CURR_ROS3_FAPL_T_VERSION, /* version      */
+        TRUE,                           /* authenticate */
+        "us-east-1",                    /* aws_region   */
+        "HDFGROUP0",                    /* secret_id    */
+        "HDFGROUP0",                    /* secret_key   */
     };
 
 
 
-    TESTING("ROS3 fapl ");
+    TESTING("ROS3 eof/eoa gets and sets");
 
-    /* Set property list and file name for ROS3 driver. 
-     */
+    /*********
+     * SETUP *
+     *********/
+    
+    FAIL_UNLESS( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) )
+    curl_ready = TRUE;
+
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
-    FAIL_IF( fapl_id < 0 ) /* sanity-check */
+    FAIL_IF( 0 > fapl_id )
+    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &ros3_fa), NULL )
 
-    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &ros3_fa_0), NULL )
+    fd_shakespeare = H5FDopen(
+            "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
+             H5F_ACC_RDONLY,
+             fapl_id,
+             HADDR_UNDEF);
+    FAIL_IF( NULL == fd_shakespeare )
 
-    /****************
-     * Check that the VFD feature flags are correct
-     * SPEC MAY CHANGE 
-     ******************/
 
-    driver_id = H5Pget_driver(fapl_id);
-    FAIL_IF( driver_id < 0 )
 
-    FAIL_IF( H5FDdriver_query(driver_id, &driver_flags) < 0 )
+    /*********
+     * TESTS *
+     *********/
 
-    /* bit(s) in `driver_flags` must align with H5FD_FEAT_DATA_SIEVE
+    /* verify as found
      */
-    /* FAIL_IF( !(driver_flags & H5FD_FEAT_DATA_SIEVE) ) */
-    JSVERIFY_NOT( 0, (driver_flags & H5FD_FEAT_DATA_SIEVE), 
-                  "bit(s) in `driver_flags` must align with "
-                  "H5FD_FEAT_DATA_SIEVE" )
+    JSVERIFY( 5458199, H5FDget_eof(fd_shakespeare, H5FD_MEM_DEFAULT), NULL )
+    JSVERIFY( H5FDget_eof(fd_shakespeare, H5FD_MEM_DEFAULT),
+              H5FDget_eof(fd_shakespeare, H5FD_MEM_DRAW),
+              "mismatch between DEFAULT and RAW memory types" )
+    JSVERIFY( 0,
+              H5FDget_eoa(fd_shakespeare, H5FD_MEM_DEFAULT), 
+              "EoA should be unset by H5FDopen" )
 
-    JSVERIFY( H5FD_FEAT_DATA_SIEVE, driver_flags,
-              "H5FD_FEAT_DATA_SIEVE should be the only supported flag")
+    /* set EoA below EoF
+     */
+    JSVERIFY( SUCCEED, 
+              H5FDset_eoa(fd_shakespeare, H5FD_MEM_DEFAULT, 44442202), 
+              "unable to set EoA (lower)" )
+    JSVERIFY( 5458199, 
+              H5FDget_eof(fd_shakespeare, H5FD_MEM_DEFAULT), 
+              "EoF changed" )
+    JSVERIFY( 44442202, 
+              H5FDget_eoa(fd_shakespeare, H5FD_MEM_DEFAULT), 
+              "EoA unchanged" )
+
+    /* set EoA above EoF
+     */
+    JSVERIFY( SUCCEED, 
+              H5FDset_eoa(fd_shakespeare, H5FD_MEM_DEFAULT, 6789012), 
+              "unable to set EoA (higher)" )
+    JSVERIFY( 5458199, 
+              H5FDget_eof(fd_shakespeare, H5FD_MEM_DEFAULT), 
+              "EoF changed" )
+    JSVERIFY( 6789012, 
+              H5FDget_eoa(fd_shakespeare, H5FD_MEM_DEFAULT), 
+              "EoA unchanged" )
+
+
+
+    /************
+     * TEARDOWN *
+     ************/
+
+    HDassert( SUCCEED == H5FDclose(fd_shakespeare) );
+
+    HDassert( SUCCEED == H5Pclose(fapl_id) );
+    fapl_id = -1;
+
+    curl_global_cleanup();
+    curl_ready = FALSE;
 
     PASSED();
     return 0;
 
 error:
-    H5E_BEGIN_TRY {
-        H5Pclose(fapl_id);
-        H5Pclose(fapl_id_out);
-        H5Fclose(fid);
-    } H5E_END_TRY;
+    /***********
+     * CLEANUP *
+     ***********/
+
+    if (fd_shakespeare)     { (void)H5FDclose(fd_shakespeare); }
+    if (TRUE == curl_ready) { curl_global_cleanup(); }
+    if (fapl_id >= 0) { 
+        H5E_BEGIN_TRY {
+            (void)H5Pclose(fapl_id);
+        } H5E_END_TRY;
+    }
 
     return 1;
 
-} /* test_ros3_fapl() */
-
+} /* test_eof_eoa */
 
 
 /*---------------------------------------------------------------------------
@@ -1096,13 +1249,38 @@ test_read(void)
      *********/
 
     JSVERIFY( 5458199, H5FDget_eof(file_shakespeare, H5FD_MEM_DEFAULT), NULL )
-    JSVERIFY( 5458199, H5FDget_eoa(file_shakespeare, H5FD_MEM_DEFAULT), NULL )
+
+    JSVERIFY( 0, H5FDget_eoa(file_shakespeare, H5FD_MEM_DEFAULT), 
+              "EoA should remain unset by H5FDopen" )
+
+
+
+    if (show_progress) {
+        HDfprintf(stdout, "\n\n******* read fail (address overflow ) ******\n");
+    }
+
+    H5E_BEGIN_TRY { /* mute stack trace on expected failure */
+        JSVERIFY( FAIL,
+                  H5FDread(file_shakespeare, 
+                       H5FD_MEM_DRAW, 
+                       dxpl_id,
+                       1200699,
+                       102,
+                       buffer),
+                  "address beyond EoA (0) results in read failure/error" )
+    } H5E_END_TRY;
 
 
 
     if (show_progress) {
         HDfprintf(stdout, "\n\n******* first read ******\n");
     }
+
+    JSVERIFY( SUCCEED, 
+              H5FDset_eoa(file_shakespeare, 
+                          H5FD_MEM_DEFAULT, 
+                          H5FDget_eof(file_shakespeare, H5FD_MEM_DEFAULT) ),
+              "unable to set EoA" )
 
     JSVERIFY( SUCCEED, 
               H5FDread(file_shakespeare, 
@@ -1124,6 +1302,12 @@ test_read(void)
     if (show_progress) {
         HDfprintf(stdout, "\n\n******* second read ******\n");
     }
+
+    JSVERIFY( SUCCEED, 
+              H5FDset_eoa(file_raven, 
+                          H5FD_MEM_DEFAULT, 
+                          H5FDget_eof(file_raven, H5FD_MEM_DEFAULT) ),
+              "unable to set EoA" )
 
     JSVERIFY( SUCCEED,
               H5FDread(file_raven,
@@ -1183,16 +1367,16 @@ test_read(void)
      * TEARDOWN *
      ************/
 
-    H5FDclose(file_raven);
+    HDassert( SUCCEED == H5FDclose(file_raven) );
     file_raven = NULL;
 
-    H5FDclose(file_shakespeare);
+    HDassert( SUCCEED == H5FDclose(file_shakespeare) );
     file_shakespeare = NULL;
 
-    H5Pclose(fapl_id);
+    HDassert( SUCCEED == H5Pclose(fapl_id) );
     fapl_id = -1;
 
-    H5Pclose(dxpl_id);
+    HDassert( SUCCEED == H5Pclose(dxpl_id) );
     dxpl_id = -1;
 
     curl_global_cleanup();
@@ -1206,17 +1390,17 @@ error:
      * CLEANUP *
      ***********/
 
-    if (file_raven)         { H5FDclose(file_raven);       }
-    if (file_shakespeare)   { H5FDclose(file_shakespeare); }
-    if (curl_ready == TRUE) { curl_global_cleanup();       }
+    if (file_raven)         { (void)H5FDclose(file_raven);       }
+    if (file_shakespeare)   { (void)H5FDclose(file_shakespeare); }
+    if (curl_ready == TRUE) { curl_global_cleanup();             }
     if (fapl_id >= 0) {
         H5E_BEGIN_TRY {
-           H5Pclose(fapl_id);
+           (void)H5Pclose(fapl_id);
         } H5E_END_TRY;
     }
     if (dxpl_id >= 0) {
         H5E_BEGIN_TRY {
-           H5Pclose(dxpl_id);
+           (void)H5Pclose(dxpl_id);
         } H5E_END_TRY;
     }
 
@@ -1264,9 +1448,6 @@ test_noops_and_autofails(void)
     H5FD_t           *file       = NULL;
     hid_t             dxpl_id    = -1;
     H5P_genplist_t   *dxpl_plist = NULL;
-    haddr_t           filesize   = 0;
-    haddr_t           new_eoa    = 5000;
-    haddr_t           big_eoa    = 0xFFFFFFFF;
     H5FD_dxpl_type_t  dxpl_type  = H5FD_RAWDATA_DXPL;
     const char        data[36]   = "The Force shall be with you, always";
     H5FD_ros3_fapl_t  ros3_fa    = {
@@ -1343,27 +1524,6 @@ test_noops_and_autofails(void)
 
 
 
-    /* no-op calls to `set_eoa()`
-     */
-    filesize = H5FDget_eoa(file, H5FD_MEM_DEFAULT);
-    FAIL_IF( new_eoa >= filesize ); /* santiy */
-    FAIL_IF( big_eoa <= filesize ); /* checks */
-
-    JSVERIFY( SUCCEED,
-              H5FDset_eoa(file, H5FD_MEM_DRAW, new_eoa),
-              "resize smaller passes" )
-    JSVERIFY( filesize, 
-              H5FDget_eoa(file, H5FD_MEM_DEFAULT), 
-              "set_eoa(smaller) should have no effect" )
-    JSVERIFY( SUCCEED, 
-              H5FDset_eoa(file, H5FD_MEM_DRAW, big_eoa),
-              "resize larger passes" )
-    JSVERIFY( filesize, 
-              H5FDget_eoa(file, H5FD_MEM_DEFAULT), 
-              "set_eoa(bigger) should have no effect" )
-
-
-
     /* no-op calls to `lock()` and `unlock()`
      */
     JSVERIFY( SUCCEED,
@@ -1388,13 +1548,13 @@ test_noops_and_autofails(void)
      * TEARDOWN *
      ************/
 
-    H5FDclose(file);
+    HDassert( SUCCEED == H5FDclose(file) );
     file = NULL;
 
-    H5Pclose(dxpl_id);
+    HDassert( SUCCEED == H5Pclose(dxpl_id) );
     dxpl_id = -1;
 
-    H5Pclose(fapl_id);
+    HDassert( SUCCEED == H5Pclose(fapl_id) );
     fapl_id = -1;
 
     curl_global_cleanup();
@@ -1410,15 +1570,15 @@ error:
 
     if (fapl_id >= 0) {
         H5E_BEGIN_TRY {
-           H5Pclose(fapl_id);
+           (void)H5Pclose(fapl_id);
         } H5E_END_TRY;
     }
     if (dxpl_id >= 0) {
         H5E_BEGIN_TRY {
-           H5Pclose(dxpl_id);
+           (void)H5Pclose(dxpl_id);
         } H5E_END_TRY;
     }
-    if (file)               { H5FDclose(file);       }
+    if (file)               { (void)H5FDclose(file); }
     if (curl_ready == TRUE) { curl_global_cleanup(); }
 
     return 1;
@@ -1526,11 +1686,11 @@ test_cmp(void)
      * TEARDOWN *
      ************/
 
-    H5FDclose(fd_raven);
-    H5FDclose(fd_shakes);
-    H5FDclose(fd_raven_2); 
+    HDassert( SUCCEED == H5FDclose(fd_raven) );
+    HDassert( SUCCEED == H5FDclose(fd_shakes) );
+    HDassert( SUCCEED == H5FDclose(fd_raven_2) ); 
 
-    H5Pclose(fapl_id);
+    HDassert( SUCCEED == H5Pclose(fapl_id) );
     fapl_id = -1;
 
     curl_global_cleanup();
@@ -1544,13 +1704,13 @@ error:
      * CLEANUP *
      ***********/
 
+    if (fd_raven)           { (void)H5FDclose(fd_raven);   }
+    if (fd_raven_2)         { (void)H5FDclose(fd_raven_2); }
+    if (fd_shakes)          { (void)H5FDclose(fd_shakes);  }
     if (TRUE == curl_ready) { curl_global_cleanup(); }
-    if (fd_raven)           { H5FDclose(fd_raven);   }
-    if (fd_raven_2)         { H5FDclose(fd_raven_2); }
-    if (fd_shakes)          { H5FDclose(fd_shakes);  }
     if (fapl_id >= 0) { 
         H5E_BEGIN_TRY {
-            H5Pclose(fapl_id);
+            (void)H5Pclose(fapl_id);
         } H5E_END_TRY;
     }
 
@@ -1565,13 +1725,15 @@ error:
  *
  * Purpose: 
  *
+ *     Demonstrate S3 file-open through H5F API.
+ *
  * Return:
  *
  *     PASSED : 0
  *     FAILED : 1
  *
  * Programmer: Jacob Smith
- *             yyyy-mm-dd
+ *             2017-11-07
  *
  *---------------------------------------------------------------------------
  */
@@ -1623,7 +1785,7 @@ test_library_open(void)
      * TESTS *
      *********/
 
-    /* THIS IS THE TEST. THIS IS HYOOJ. */
+    /* THIS IS THE TEST. THIS IS YUGE. */
     file = H5Fopen(
             "http://minio.ad.hdfgroup.org:9000/shakespeare/t.h5",
             H5F_ACC_RDONLY,
@@ -1636,10 +1798,10 @@ test_library_open(void)
      * TEARDOWN *
      ************/
 
-    FAIL_IF( FAIL == H5Fclose(file) )
+    HDassert( SUCCEED == H5Fclose(file) );
     file = -1;
 
-    H5Pclose(fapl_id);
+    HDassert( SUCCEED == H5Pclose(fapl_id) );
     fapl_id = -1;
 
     curl_global_cleanup();
@@ -1655,10 +1817,10 @@ error:
 
     if (fapl_id >= 0) {
         H5E_BEGIN_TRY {
-           H5Pclose(fapl_id);
+           (void)H5Pclose(fapl_id);
         } H5E_END_TRY;
     }
-    if (file > 0)           { H5Fclose(file);       }
+    if (file > 0)           { (void)H5Fclose(file);  }
     if (curl_ready == TRUE) { curl_global_cleanup(); }
 
 
@@ -1692,8 +1854,9 @@ main(void)
     HDprintf("Testing ros3 VFD functionality.\n");
 
     nerrors += test_fapl_config_validation();
-    nerrors += test_vfd_open();
     nerrors += test_ros3_fapl();
+    nerrors += test_vfd_open();
+    nerrors += test_eof_eoa();
     nerrors += test_read();
     nerrors += test_noops_and_autofails();
     nerrors += test_cmp();

@@ -76,8 +76,9 @@ static hid_t H5FD_ROS3_g = 0;
  *
  ***************************************************************************/
 typedef struct H5FD_ros3_t {
-    H5FD_t           pub;
-    H5FD_ros3_fapl_t fa;
+    H5FD_t            pub;
+    H5FD_ros3_fapl_t  fa;
+    haddr_t           eoa;
     s3r_t            *s3r_handle;
 
 #if 0
@@ -989,18 +990,14 @@ static haddr_t
 H5FD_ros3_get_eoa(const H5FD_t                *_file, 
                   H5FD_mem_t   H5_ATTR_UNUSED  type)
 {
-    const H5FD_ros3_t	*file = (const H5FD_ros3_t *)_file;
+    const H5FD_ros3_t *file = (const H5FD_ros3_t *)_file;
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     HDfprintf(stdout, "H5FD_ros3_get_eoa() called.\n");
-/* size_t file->handle->filesize  ==> haddr_t ret_value */
 
-#if 0
     FUNC_LEAVE_NOAPI(file->eoa)
-#else
-    FUNC_LEAVE_NOAPI(file->s3r_handle->filesize)
-#endif
+
 } /* end H5FD_ros3_get_eoa() */
 
 
@@ -1025,27 +1022,19 @@ H5FD_ros3_get_eoa(const H5FD_t                *_file,
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_ros3_set_eoa(H5FD_t     H5_ATTR_UNUSED *_file, 
+H5FD_ros3_set_eoa(H5FD_t                    *_file, 
                   H5FD_mem_t H5_ATTR_UNUSED  type, 
-                  haddr_t    H5_ATTR_UNUSED  addr)
+                  haddr_t                    addr)
 {
-#if 0
-    herr_t ret_value = FAIL;
-    FUNC_ENTER_NOAPI_NOINIT
-#else
-    herr_t ret_value = SUCCEED;
+    H5FD_ros3_t *file = (H5FD_ros3_t *)_file;
+
     FUNC_ENTER_NOAPI_NOINIT_NOERR
-#endif
 
     HDfprintf(stdout, "H5FD_ros3_set_eoa() called.\n");
 
-#if 0
-    HGOTO_ERROR(H5E_VFL, H5E_UNSUPPORTED, FAIL,
-                "cannot set EoA on read-only S3 file")
+    file->eoa = addr;
 
-done:
-#endif
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5FD_ros3_set_eoa() */
 
 
