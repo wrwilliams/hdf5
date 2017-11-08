@@ -991,7 +991,7 @@ error:
  *     FAILED : 1
  *
  * Programmer: Jacob Smith
- *             yyyy-mm-dd
+ *             2017-11-08
  *
  *---------------------------------------------------------------------------
  */
@@ -1721,7 +1721,7 @@ error:
 
 /*---------------------------------------------------------------------------
  *
- * Function: test_library_open()
+ * Function: test_H5F_integration()
  *
  * Purpose: 
  *
@@ -1738,7 +1738,7 @@ error:
  *---------------------------------------------------------------------------
  */
 static int
-test_library_open(void)
+test_H5F_integration(void)
 {
     /*********************
      * test-local macros *
@@ -1764,7 +1764,7 @@ test_library_open(void)
     };
 
 
-    TESTING("open file on s3 through HD5F library");
+    TESTING("S3 file access through HD5F library (H5F API)");
 
 
 
@@ -1785,7 +1785,31 @@ test_library_open(void)
      * TESTS *
      *********/
 
-    /* THIS IS THE TEST. THIS IS YUGE. */
+    /* Read-Write access is not allowed with this file driver.
+     */
+    H5E_BEGIN_TRY {
+        FAIL_IF( 0 <= H5Fopen(
+                      "http://minio.ad.hdfgroup.org:9000/shakespeare/t.h5",
+                      H5F_ACC_RDWR,
+                      fapl_id) )
+    } H5E_END_TRY;
+
+    /* H5Fcreate() is not allowed with this file driver.
+     *
+     * I'm not exactly sure why this passed without modification, but it did
+     *     -- JS
+     */
+    H5E_BEGIN_TRY {
+        FAIL_IF( 0 <= H5Fcreate(
+                      "http://minio.ad.hdfgroup.org:9000/shakespeare/nope.h5",
+                      H5F_ACC_RDONLY,
+                      H5P_DEFAULT,
+                      fapl_id) )
+    } H5E_END_TRY;
+    
+
+    /* Successful read.
+     */
     file = H5Fopen(
             "http://minio.ad.hdfgroup.org:9000/shakespeare/t.h5",
             H5F_ACC_RDONLY,
@@ -1826,7 +1850,7 @@ error:
 
     return 1;
 
-} /* test_library_open */
+} /* test_H5F_integration */
 
 
 
@@ -1860,7 +1884,7 @@ main(void)
     nerrors += test_read();
     nerrors += test_noops_and_autofails();
     nerrors += test_cmp();
-    nerrors += test_library_open();
+    nerrors += test_H5F_integration();
 
     if (nerrors > 0) {
         HDprintf("***** %d ros3 TEST%s FAILED! *****\n",
