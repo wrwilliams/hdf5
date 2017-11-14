@@ -784,6 +784,378 @@ error:
 } /* test_ros3_fapl() */
 
 
+/*----------------------------------------------------------------------------
+ *
+ * Function: test_file_access_factory()
+ *
+ * Purpose:
+ *
+ *     Specify routine to programmaticaly populate ROS3 fapl entries.
+ *
+ * Return 
+ *
+ *     PASSED : 0
+ *     FAILED : 1
+ *
+ * Programmer: Jacob Smith
+ *             2017-11-13
+ *
+ * Changes: None
+ *
+ *----------------------------------------------------------------------------
+ */
+static int
+test_file_access_factory(void)
+{
+    /*********************
+     * test-local macros *
+     *********************/
+
+    /*************************
+     * test-local structures *
+     *************************/
+
+    /************************
+     * test-local variables *
+     ************************/
+
+    hbool_t show_progress = TRUE;
+
+
+
+    TESTING("programmatic fapl population");
+
+    HDassert(5 != H5FD__CURR_ROS3_FAPL_T_VERSION);
+
+
+
+    /*********
+     * TESTS *
+     *********/
+
+    /* NULL fapl config pointer fails
+     */
+    {
+        const char *values[] = {"x", "y", "z"};
+
+        if (show_progress) { HDprintf("NULL fapl pointer\n"); }
+
+        JSVERIFY( FAIL, H5FD_ros3_fill_fa(NULL, values), 
+                  "fapl pointer cannot be null" )
+    }
+
+
+
+    /* NULL values pointer yields default fapl
+     */
+    {
+        H5FD_ros3_fapl_t fa = {5, TRUE, "u", "v", "w"};
+
+        if (show_progress) { HDprintf("NULL values pointer\n"); }
+
+        JSVERIFY( SUCCEED, H5FD_ros3_fill_fa(&fa, NULL), 
+                  "NULL values pointer yields \"default\" fapl" )
+        JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa.version, NULL )
+        JSVERIFY( FALSE, fa.authenticate, NULL )
+        JSVERIFY_STR( "", fa.aws_region, NULL )
+        JSVERIFY_STR( "", fa.secret_id,  NULL )
+        JSVERIFY_STR( "", fa.secret_key, NULL )
+    }
+
+
+
+    /* all-empty values 
+     * yields default fapl
+     */
+    {
+        H5FD_ros3_fapl_t fa = {5, TRUE, "u", "v", "w"};
+        const char *values[] = {"", "", ""};
+
+        if (show_progress) { HDprintf("all empty values\n"); }
+
+        JSVERIFY( SUCCEED, H5FD_ros3_fill_fa(&fa, values), 
+                  "empty values yields \"default\" fapl" )
+        JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa.version, NULL )
+        JSVERIFY( FALSE, fa.authenticate, NULL )
+        JSVERIFY_STR( "", fa.aws_region, NULL )
+        JSVERIFY_STR( "", fa.secret_id,  NULL )
+        JSVERIFY_STR( "", fa.secret_key, NULL )
+    }
+
+    
+
+    /* successfully set fapl with values 
+     * excess value is ignored
+     */
+    {
+        H5FD_ros3_fapl_t fa = {5, FALSE, "a", "b", "c"};
+        const char *values[] = {"x", "y", "z", "a"};
+
+        if (show_progress) { HDprintf("successful full set\n"); }
+
+
+        JSVERIFY( SUCCEED, H5FD_ros3_fill_fa(&fa, values), 
+                  "four values" )
+        JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa.version, NULL )
+        JSVERIFY( TRUE, fa.authenticate, NULL )
+        JSVERIFY_STR( "x", fa.aws_region, NULL )
+        JSVERIFY_STR( "y", fa.secret_id, NULL )
+        JSVERIFY_STR( "z", fa.secret_key,  NULL )
+    }
+
+
+
+    /* NULL region
+     * yeilds default fapl
+     */
+    {
+        H5FD_ros3_fapl_t fa = {5, FALSE, "a", "b", "c"};
+        const char *values[] = {NULL, "y", "z", NULL};
+
+        if (show_progress) { HDprintf("NULL region\n"); }
+
+        JSVERIFY( FAIL, H5FD_ros3_fill_fa(&fa, values), 
+                  "could not fill fapl" )
+        JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa.version, NULL )
+        JSVERIFY( FALSE, fa.authenticate, NULL )
+        JSVERIFY_STR( "", fa.aws_region, NULL )
+        JSVERIFY_STR( "", fa.secret_id, NULL )
+        JSVERIFY_STR( "", fa.secret_key,  NULL )
+    }
+
+
+
+    /* empty region
+     * yeilds default fapl
+     */
+    {
+        H5FD_ros3_fapl_t fa = {5, FALSE, "a", "b", "c"};
+        const char *values[] = {"", "y", "z", NULL};
+
+        if (show_progress) { HDprintf("empty region; non-empty id, key\n"); }
+
+        JSVERIFY( FAIL, H5FD_ros3_fill_fa(&fa, values), 
+                  "could not fill fapl" )
+        JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa.version, NULL )
+        JSVERIFY( FALSE, fa.authenticate, NULL )
+        JSVERIFY_STR( "", fa.aws_region, NULL )
+        JSVERIFY_STR( "", fa.secret_id, NULL )
+        JSVERIFY_STR( "", fa.secret_key,  NULL )
+    }
+ 
+
+
+    /* region overflow
+     * yeilds default fapl
+     */
+    {
+        H5FD_ros3_fapl_t fa = {5, FALSE, "a", "b", "c"};
+        const char *values[] = {
+            "somewhere_over_the_rainbow_not_too_high_there_is_another_rainbow_bounding_some_darkened_sky", 
+            "y", 
+            "z"};
+
+        if (show_progress) { HDprintf("region overflow\n"); }
+
+        FAIL_IF( strlen(values[0]) <= H5FD__ROS3_MAX_REGION_LEN )
+
+        JSVERIFY( FAIL, H5FD_ros3_fill_fa(&fa, values), 
+                  "could not fill fapl" )
+        JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa.version, NULL )
+        JSVERIFY( FALSE, fa.authenticate, NULL )
+        JSVERIFY_STR( "", fa.aws_region, NULL )
+        JSVERIFY_STR( "", fa.secret_id, NULL )
+        JSVERIFY_STR( "", fa.secret_key,  NULL )
+    }
+
+
+    /* NULL id
+     * yields default fapl
+     */
+    {
+        H5FD_ros3_fapl_t fa = {5, FALSE, "a", "b", "c"};
+        const char *values[] = {"x", NULL, "z", NULL};
+
+        if (show_progress) { HDprintf("NULL id\n"); }
+
+        JSVERIFY( FAIL, H5FD_ros3_fill_fa(&fa, values), 
+                  "could not fill fapl" )
+        JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa.version, NULL )
+        JSVERIFY( FALSE, fa.authenticate, NULL )
+        JSVERIFY_STR( "", fa.aws_region, NULL )
+        JSVERIFY_STR( "", fa.secret_id, NULL )
+        JSVERIFY_STR( "", fa.secret_key,  NULL )
+    }
+
+
+
+    /* empty id (non-empty region, key)
+     * yeilds default fapl
+     */
+    {
+        H5FD_ros3_fapl_t fa = {5, FALSE, "a", "b", "c"};
+        const char *values[] = {"x", "", "z", NULL};
+
+        if (show_progress) { HDprintf("empty id; non-empty region and key\n"); }
+
+        JSVERIFY( FAIL, H5FD_ros3_fill_fa(&fa, values), 
+                  "could not fill fapl" )
+        JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa.version, NULL )
+        JSVERIFY( FALSE, fa.authenticate, NULL )
+        JSVERIFY_STR( "", fa.aws_region, NULL )
+        JSVERIFY_STR( "", fa.secret_id, NULL )
+        JSVERIFY_STR( "", fa.secret_key,  NULL )
+    }
+ 
+
+
+    /* id overflow
+     * partial set: region
+     */
+    {
+        H5FD_ros3_fapl_t fa = {5, FALSE, "a", "b", "c"};
+        const char *values[] = {
+            "x",
+            "Why is it necessary to solve the problem? What benefits will you receive by solving the problem? What is the unknown? What is it you don' tyet undesrtand? What is the information you have? What isn't the problem? Is the information insufficient, redundant, or contradictory? Should you draw a diagram or figure of the problem? What are the boundaries of the problem? Can you separate the various parts of the problem?",
+            "z"};
+
+        if (show_progress) { HDprintf("id overflow\n"); }
+
+        FAIL_IF( strlen(values[1]) <= H5FD__ROS3_MAX_SECRET_ID_LEN )
+
+        JSVERIFY( FAIL, H5FD_ros3_fill_fa(&fa, values), 
+                  "could not fill fapl" )
+        JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa.version, NULL )
+        JSVERIFY( FALSE, fa.authenticate, NULL )
+        JSVERIFY_STR( "x", fa.aws_region, NULL )
+        JSVERIFY_STR( "", fa.secret_id, NULL )
+        JSVERIFY_STR( "", fa.secret_key,  NULL )
+    }
+
+
+
+    /* NULL key
+     * yields default fapl
+     */
+    {
+        H5FD_ros3_fapl_t fa = {5, FALSE, "a", "b", "c"};
+        const char *values[] = {"x", "y", NULL, NULL};
+
+        if (show_progress) { HDprintf("NULL key\n"); }
+
+        JSVERIFY( FAIL, H5FD_ros3_fill_fa(&fa, values), 
+                  "could not fill fapl" )
+        JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa.version, NULL )
+        JSVERIFY( FALSE, fa.authenticate, NULL )
+        JSVERIFY_STR( "", fa.aws_region, NULL )
+        JSVERIFY_STR( "", fa.secret_id, NULL )
+        JSVERIFY_STR( "", fa.secret_key,  NULL )
+    }
+
+
+
+    /* empty key (non-empty region, id)
+     * yeilds authenticating fapl
+     */
+    {
+        H5FD_ros3_fapl_t fa = {5, FALSE, "a", "b", "c"};
+        const char *values[] = {"x", "y", "", NULL};
+
+        if (show_progress) { HDprintf("empty key; non-empty region and id\n"); }
+
+        JSVERIFY( SUCCEED, H5FD_ros3_fill_fa(&fa, values), 
+                  "could not fill fapl" )
+        JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa.version, NULL )
+        JSVERIFY( TRUE, fa.authenticate, NULL )
+        JSVERIFY_STR( "x", fa.aws_region, NULL )
+        JSVERIFY_STR( "y", fa.secret_id, NULL )
+        JSVERIFY_STR( "", fa.secret_key,  NULL )
+    }
+ 
+
+
+    /* empty key, region (non-empty id)
+     * yeilds authenticating fapl
+     */
+    {
+        H5FD_ros3_fapl_t fa = {5, FALSE, "a", "b", "c"};
+        const char *values[] = {"", "y", "", NULL};
+
+        if (show_progress) { HDprintf("empty key and region; non-empty id\n"); }
+
+        JSVERIFY( FAIL, H5FD_ros3_fill_fa(&fa, values), 
+                  "could not fill fapl" )
+        JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa.version, NULL )
+        JSVERIFY( FALSE, fa.authenticate, NULL )
+        JSVERIFY_STR( "", fa.aws_region, NULL )
+        JSVERIFY_STR( "", fa.secret_id, NULL )
+        JSVERIFY_STR( "", fa.secret_key,  NULL )
+    }
+ 
+
+
+    /* empty key, id (non-empty region)
+     * yeilds authenticating fapl
+     */
+    {
+        H5FD_ros3_fapl_t fa = {5, FALSE, "a", "b", "c"};
+        const char *values[] = {"x", "", "", NULL};
+
+        if (show_progress) { HDprintf("empty key and id; non-empty region\n"); }
+
+        JSVERIFY( FAIL, H5FD_ros3_fill_fa(&fa, values), 
+                  "could not fill fapl" )
+        JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa.version, NULL )
+        JSVERIFY( FALSE, fa.authenticate, NULL )
+        JSVERIFY_STR( "", fa.aws_region, NULL )
+        JSVERIFY_STR( "", fa.secret_id, NULL )
+        JSVERIFY_STR( "", fa.secret_key,  NULL )
+    }
+ 
+
+
+    /* key overflow
+     * partial set: region, id
+     */
+    {
+        H5FD_ros3_fapl_t fa = {5, FALSE, "a", "b", "c"};
+        const char *values[] = {
+            "x",
+            "y",
+            "Why is it necessary to solve the problem? What benefits will you receive by solving the problem? What is the unknown? What is it you don' tyet undesrtand? What is the information you have? What isn't the problem? Is the information insufficient, redundant, or contradictory? Should you draw a diagram or figure of the problem? What are the boundaries of the problem? Can you separate the various parts of the problem?"};
+
+        if (show_progress) { HDprintf("key overflow\n"); }
+
+        FAIL_IF( strlen(values[2]) <= H5FD__ROS3_MAX_SECRET_KEY_LEN )
+
+        JSVERIFY( FAIL, H5FD_ros3_fill_fa(&fa, values), 
+                  "could not fill fapl" )
+        JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa.version, NULL )
+        JSVERIFY( FALSE, fa.authenticate, NULL )
+        JSVERIFY_STR( "x", fa.aws_region, NULL )
+        JSVERIFY_STR( "y", fa.secret_id, NULL )
+        JSVERIFY_STR( "", fa.secret_key,  NULL )
+    }
+
+
+
+    /************
+     * TEARDOWN *
+     ************/
+
+    PASSED();
+    return 0;
+
+error:
+    /***********
+     * CLEANUP *
+     ***********/
+
+    return 1;
+
+} /* test_file_access_factory() */
+
+
 /*---------------------------------------------------------------------------
  *
  * Function: test_vfd_open()
@@ -1879,6 +2251,7 @@ main(void)
 
     nerrors += test_fapl_config_validation();
     nerrors += test_ros3_fapl();
+    nerrors += test_file_access_factory();
     nerrors += test_vfd_open();
     nerrors += test_eof_eoa();
     nerrors += test_read();

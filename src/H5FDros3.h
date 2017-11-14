@@ -85,6 +85,9 @@ H5_DLL hid_t H5FD_ros3_init(void);
 H5_DLL herr_t H5Pget_fapl_ros3(hid_t fapl_id, H5FD_ros3_fapl_t * fa_out);
 H5_DLL herr_t H5Pset_fapl_ros3(hid_t fapl_id, H5FD_ros3_fapl_t * fa);
 
+/* put this here for now? */
+herr_t H5FD_ros3_fill_fa(H5FD_ros3_fapl_t *fa, const char **values);
+
 #ifdef __cplusplus
 }
 #endif
