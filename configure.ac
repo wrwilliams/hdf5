@@ -3382,6 +3382,7 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  testpar/Makefile
                  tools/Makefile
                  tools/lib/Makefile
+                 tools/libtest/Makefile 
                  tools/src/Makefile
                  tools/src/h5dump/Makefile
                  tools/src/h5import/Makefile

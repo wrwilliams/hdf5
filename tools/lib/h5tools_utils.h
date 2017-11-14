@@ -123,6 +123,7 @@ H5TOOLS_DLLVAR unsigned h5tools_nCols;               /*max number of columns for
 H5TOOLS_DLL void     indentation(unsigned);
 H5TOOLS_DLL void     print_version(const char *progname);
 H5TOOLS_DLL void     parallel_print(const char* format, ... );
+H5TOOLS_DLL herr_t   parse_nple(const char *start, int sep, char **cpy_out, unsigned *nelems, char ***ptrs_out);
 H5TOOLS_DLL void     error_msg(const char *fmt, ...);
 H5TOOLS_DLL void     warn_msg(const char *fmt, ...);
 H5TOOLS_DLL void     help_ref_msg(FILE *output);

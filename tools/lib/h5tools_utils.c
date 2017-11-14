@@ -350,6 +350,225 @@ get_option(int argc, const char **argv, const char *opts, const struct long_opti
 }
 
 
+/*****************************************************************************
+ *
+ * Function: parse_tuple()
+ *
+ * Purpose:
+ *
+ *     Create array of pointers to strings, identified as elements in a tuple
+ *     of arbitrary length separated by provided character.
+ *     ("tuple" because "nple" looks strange)
+ *
+ *     * Receives pointer to start of tuple sequence string, '('.
+ *     * Attempts to separate elements by token-character `sep`.
+ *         * If the separator character is preceded by a backslash '\',
+ *           the backslash is deleted and the separator is included in the
+ *           element string as any other character.
+ *     * To end an element with a backslash, escape the backslash, e.g.
+ *       "(myelem\\,otherelem) -> {"myelem\", "otherelem"}
+ *     * In all other cases, a backslash appearing not as part of "\\" or
+ *       "\<sep>" digraph will be included berbatim.
+ *     * Last two characters in the string MUST be ")\0".
+ *
+ *     * Generates a copy of the input string `start`, (src..")\0"), replacing 
+ *       separators and close-paren with null charaters.
+ *         * This string is allocated at runtime and should be freed when done.
+ *     * Generates array of char pointers, and directs start of each element 
+ *       (each pointer) into this copy.
+ *         * Each tuple element points to the start of its string (substring) 
+ *           and ends with a null terminator.
+ *         * This array is allocated at runtime and should be freed when done.
+ *     * Reallocates and expands elements array during parsing.
+ *         * Initially allocated for 2 (plus one null entry), and grows by
+ *           powers of 2.
+ *     * The final 'slot' in the element array (elements[nelements], e.g.)
+ *       always points to NULL.
+ *     * The number of elements found and stored are passed out through pointer
+ *       to unsigned, `nelems`.
+ *
+ * Return:
+ *
+ *     FAIL    If malformed--does not look like a tuple "(...)"
+ *             or major error was encountered while parsing.
+ *     or        
+ *     SUCCEED String looks properly formed "(...)" and no major errors.
+ *
+ *             Stores number of elements through pointer `nelems`.
+ *             Stores list of pointers to char (first char in each element 
+ *                 string) through pointer `ptrs_out`.
+ *                 NOTE: `ptrs_out[nelems] == NULL` should be true.
+ *                 NOTE: list is malloc'd by function, and should be freed
+ *                       when done.
+ *             Stores "source string" for element pointers through `cpy_out`.
+ *                 NOTE: Each element substring is null-terminated.
+ *                 NOTE: There may be extra characters after the last element 
+ *                           (past its null terminator), but is guaranteed to
+ *                           be null-terminated.
+ *                 NOTE: `cpy_out` string is malloc'd by function, 
+ *                       and should be freed when done.
+ *
+ * Programmer: Jacob Smith
+ *             2017-11-10
+ *
+ * Changes: None.
+ *
+ *****************************************************************************
+ */
+herr_t
+parse_tuple(const char   *start,
+           int           sep,
+           char        **cpy_out,
+           unsigned     *nelems,
+           char       ***ptrs_out)
+{
+    char      *elem_ptr    = start;
+    char      *dest_ptr    = NULL;
+    unsigned   elems_count = 0;
+    char     **elems       = NULL; /* more like *elems[], but complier... */
+    char     **elems_re    = NULL; /* temporary pointer, for realloc */
+    char      *cpy         = NULL;
+    herr_t     ret_value   = SUCCEED;
+    unsigned   init_slots  = 2;
+
+
+
+    /*****************
+     * SANITY-CHECKS *
+     *****************/
+
+    elem_ptr = start;
+
+    /* must start with "(" */
+    if (*elem_ptr != '(') {
+        ret_value = FAIL;
+        goto done;
+    }
+
+    /* must end with ")" */
+    while (*elem_ptr != '\0') { elem_ptr++; }
+    elem_ptr--; /* back up to ultimate non-null char */
+    if (*elem_ptr != ')') {
+        ret_value = FAIL;
+        goto done;
+    }
+
+
+
+    /***********
+     * PREPARE *
+     ***********/
+
+    /* create list
+     */
+    elems = (char **)malloc(sizeof(char *) * (init_slots + 1));
+    if (elems == NULL) { ret_value = FAIL; goto done; } /* CANTALLOC */
+
+    /* create destination string 
+     */
+    start++; /* advance past opening paren '(' */
+    cpy = (char *)malloc(sizeof(char) * (strlen(start))); /* no +1; less '(' */
+    if (cpy == NULL) { ret_value = FAIL; goto done; } /* CANTALLOC */
+
+    /* set pointers
+     */
+    dest_ptr = cpy; /* start writing copy here */
+    elem_ptr = cpy; /* first element starts here */
+    elems[elems_count++] = elem_ptr; /* set first element pointer into list */
+
+
+
+    /*********
+     * PARSE *
+     *********/
+
+    while (*start != '\0') {
+        /* For each character in the source string...
+         */
+        if (*start == '\\') {
+            /* Possibly an escape digraph.
+             */
+            if ((*(start + 1) == '\\') ||
+                (*(start + 1) == sep) )
+            {
+                /* Valid escape digraph of "\\" or "\<sep>".
+                 */
+                start++; /* advance past escape char '\' */
+                *(dest_ptr++) = *(start++); /* Copy subsequent char  */
+                                            /* and advance pointers. */
+            } else {
+               /* Not an accepted escape digraph.
+                * Copy backslash character.
+                */
+                *(dest_ptr++) = *(start++);
+            }
+        } else if (*start == sep) {
+            /* Non-escaped separator.
+             * Terminate elements substring in copy, record element, advance.
+             * Expand elements list if appropriate.
+             */
+            *(dest_ptr++) = 0; /* Null-terminate elem substring in copy */
+                               /* and advance pointer.                  */
+            start++; /* Advance src pointer past separator. */
+            elem_ptr = dest_ptr; /* Element pointer points to start of first */
+                                 /* character after null sep in copy.        */
+            elems[elems_count++] = elem_ptr; /* Set elem pointer in list */
+                                             /* and increment count.     */
+
+            /* Expand elements list, if necessary.
+             */
+            if (elems_count == init_slots) {
+                init_slots *= 2;
+                elems_re = (char **)realloc(elems, sizeof(char *) * \
+                                                   (init_slots + 1));
+                if (elems_re == NULL) {
+                    /* CANTREALLOC */
+                    ret_value = FAIL;
+                    goto done;
+                }
+                elems = elems_re;
+            }
+        } else if (*start == ')' && *(start + 1) == '\0') {
+            /* Found terminal, non-escaped close-paren. Last element.
+             * Write null terminator to copy.
+             * Advance source pointer to gently break from loop.
+             * Requred to prevent ")" from always being added to last element.
+             */
+            start++;
+        } else {
+            /* Copy character into destination. Advance pointers.
+             */
+            *(dest_ptr++) = *(start++);
+        }
+    }
+    *dest_ptr = '\0'; /* Null-terminate destination string. */
+    elems[elems_count] = NULL; /* Null-terminate elements list. */
+
+
+
+    /********************
+     * PASS BACK VALUES *
+     ********************/
+
+    *ptrs_out = elems;
+    *nelems   = elems_count;
+    *cpy_out  = cpy;
+
+done:
+    if (ret_value == FAIL) {
+        /* CLEANUP */
+        if (cpy)   free(cpy);
+        if (elems) free(elems);
+    }
+
+    return ret_value;
+
+} /* parse_tuple */
+
+
+
+
+
 /*-------------------------------------------------------------------------
  * Function:    indentation
  *
