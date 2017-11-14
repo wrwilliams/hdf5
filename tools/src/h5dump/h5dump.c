@@ -23,6 +23,8 @@ const char          *outfname=NULL;
 static int           doxml = 0;
 static int           useschema = 1;
 static const char   *xml_dtd_uri = NULL;
+static char        **s3_cred = NULL; /* values for s3 authorization */
+static char         *s3_cred_string = NULL; /* "source string" for elements */
 
 /* module-scoped variables for XML option */
 #define DEFAULT_XSD     "http://www.hdfgroup.org/HDF5/XML/schema/HDF5-File.xsd"
@@ -188,6 +190,7 @@ static struct long_options l_opts[] = {
     { "any_path", require_arg, 'N' },
     { "vds-view-first-missing", no_arg, 'v' },
     { "vds-gap-size", require_arg, 'G' },
+    { "s3_cred", require_arg, '$' },
     { NULL, 0, '\0' }
 };
 
@@ -1279,6 +1282,32 @@ end_collect:
             hand = NULL;
             h5tools_setstatus(EXIT_SUCCESS);
             goto done;
+        case '$': 
+            /* s3 credential */
+            {
+                unsigned nelems = 0;
+                if ( FAIL == 
+                     parse_tuple(opt_arg, ',', 
+                                 &s3_cred_string, &nelems, &s3_cred))
+                {
+                    error_msg("unable to parse malformed s3 credentials\n");
+                    usage(h5tools_getprogname());
+                    free_handler(hand, argc);
+                    hand= NULL;
+                    h5tools_setstatus(EXIT_FAILURE);
+                    goto done;
+                } /* unable to parse */
+
+                if (nelems != 3) {
+                    error_msg("s3 credentials expects 3 elements\n");
+                    usage(h5tools_getprogname());
+                    free_handler(hand, argc);
+                    hand= NULL;
+                    h5tools_setstatus(EXIT_FAILURE);
+                    goto done;
+                } /* credentials count != 3 */
+            } /* s3 credential block */
+            break;
         case '?':
         default:
             usage(h5tools_getprogname());
@@ -1440,7 +1469,57 @@ main(int argc, const char *argv[])
     while(opt_ind < argc) {
         fname = HDstrdup(argv[opt_ind++]);
 
+#if 1
+        /* if the driver is "ros3", we take a much more explicit tack 
+         * to open the target file (now assumed to be a URL
+         */
+        if (!strcmp(driver, "ros3")) {
+            H5FD_ros3_fapl_t fa;
+            hid_t            fapl_id = -1;
+
+            /* create fapl config from (optional) command-line argument
+             */
+            if (FAIL == H5FD_ros3_fill_fa(&fa, (const char **)s3_cred)) {
+                error_msg("unable to generate ros3 fapl config");
+                h5tools_setstatus(EXIT_FAILURE);
+                goto done;
+            }
+
+            /* create fapl entry
+             */
+            fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+            if (fapl_id < 0) {
+                error_msg("unable to create ros3 fapl");
+                h5tools_setstatus(EXIT_FAILURE);
+                goto done;
+            }
+            
+            /* set fapl from config
+             */
+            if (FAIL == H5Pset_fapl_ros3(fapl_id, &fa)) {
+                error_msg("unable to set ros3 fapl");
+                h5tools_setstatus(EXIT_FAILURE);
+                goto done;
+            }
+
+            fid = H5Fopen(fname, H5F_ACC_RDONLY, fapl_id);
+
+            /* release fapl entry, regardless of open success 
+             */
+            if (FAIL == H5Pclose(fapl_id)) {
+                error_msg("problem while trying to free ros3 fapl");
+                h5tools_setstatus(EXIT_FAILURE);
+                goto done;
+            }
+
+        } else { 
+            /* if not "ros3" driver 
+             */
+            fid = h5tools_fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT, driver, NULL, 0);
+        }
+#else
         fid = h5tools_fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT, driver, NULL, 0);
+#endif
 
         if (fid < 0) {
             error_msg("unable to open file \"%s\"\n", fname);
@@ -1633,6 +1712,14 @@ done:
         HDfree(fname);
         fname = NULL;
     }
+    if (s3_cred) {
+        HDfree(s3_cred);
+        s3_cred = NULL;
+    }
+    if (s3_cred_string) {
+        HDfree(s3_cred_string);
+        s3_cred_string = NULL;
+    }
 
     if(hand)
         free_handler(hand, argc);
@@ -1643,6 +1730,8 @@ done:
 
     leave(h5tools_getstatus());
 }
+
+#if 0 /* NOT USED. USAGE LIES ABOUT TRYING ALL DRIVERS? */
 
 /*-------------------------------------------------------------------------
  * Function:    h5_fileaccess
@@ -1763,6 +1852,7 @@ h5_fileaccess(void)
 
     return fapl;
 }
+#endif
 
 
 /*-------------------------------------------------------------------------
@@ -1809,4 +1899,5 @@ add_prefix(char **prfx, size_t *prfx_len, const char *name)
     /* Append object name to prefix */
     HDstrcat(HDstrcat(*prfx, "/"), name);
 } /* end add_prefix */
+
 
