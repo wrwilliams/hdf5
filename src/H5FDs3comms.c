@@ -26,7 +26,7 @@
 #define GETSIZE_STATIC_BUFFER 1
 
 /*
-#define VERBOSE_CURL 1L
+#define VERBOSE_CURL
 */
 
 
@@ -1613,9 +1613,6 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
                               */
     CURL                  *curlh         = NULL;
     CURLcode               p_status      = CURLE_OK;
-#ifdef VERBOSE_CURL
-    long int               httpcode      = 0;
-#endif
     struct curl_slist     *curlheaders   = NULL;
     hrb_fl_t_2            *headers       = NULL;
     char                  *hstr          = NULL; 
@@ -1945,18 +1942,37 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
     /*******************
      * PERFORM REQUEST *
      *******************/
+#ifdef VERBOSE_CURL
+    {
+        long int httpcode = 0;
+        char     curlerrbuf[CURL_ERROR_SIZE];
+        curlerrbuf[0] = '\0';
 
+        HDassert(CURLE_OK == 
+                 curl_easy_setopt(curlh, CURLOPT_ERRORBUFFER, curlerrbuf));
+
+        p_status = curl_easy_perform(curlh);
+
+        if (p_status != CURLE_OK) {
+            HDassert(CURLE_OK ==
+                 curl_easy_getinfo(curlh, CURLINFO_RESPONSE_CODE, &httpcode));
+            HDprintf("CURL ERROR CODE: %d\nHTTP CODE: %d\n", 
+                     p_status, httpcode);
+            HDprintf("%s\n", curl_easy_strerror(p_status));
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "problem while performing request. (placeholder flags)\n");
+        }
+        HDassert(CURLE_OK == 
+                 curl_easy_setopt(curlh, CURLOPT_ERRORBUFFER, NULL));
+    } /* VERBOSE block, for curlerrbuf buffer */
+#else
     p_status = curl_easy_perform(curlh);
 
-    if ( p_status != CURLE_OK ) {
-#ifdef VERBOSE_CURL
-        HDassert(CURLE_OK == 
-                 curl_easy_getinfo(curlh, CURLINFO_RESPONSE_CODE, &httpcode));
-        HDprintf("CURL ERROR CODE: %d\nHTTP CODE: %d\n", p_status, httpcode);
-#endif
+    if (p_status != CURLE_OK) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "problem while performing request. (placeholder flags)\n");
     }
+#endif
 
 /* preserved for archival purposes
  *

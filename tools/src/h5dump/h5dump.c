@@ -1473,11 +1473,13 @@ main(int argc, const char *argv[])
         /* if the driver is "ros3", we take a much more explicit tack 
          * to open the target file (now assumed to be a URL
          */
-        if (!strcmp(driver, "ros3")) {
+        if (driver != NULL && !strcmp(driver, "ros3")) {
             H5FD_ros3_fapl_t fa;
             hid_t            fapl_id = -1;
 
             /* create fapl config from (optional) command-line argument
+             * `s3_cred` may be NULL (not provided), in which case the default
+             * ros3 fapl is returned.
              */
             if (FAIL == H5FD_ros3_fill_fa(&fa, (const char **)s3_cred)) {
                 error_msg("unable to generate ros3 fapl config");
@@ -1494,7 +1496,7 @@ main(int argc, const char *argv[])
                 goto done;
             }
             
-            /* set fapl from config
+            /* set fapl entry from config
              */
             if (FAIL == H5Pset_fapl_ros3(fapl_id, &fa)) {
                 error_msg("unable to set ros3 fapl");
