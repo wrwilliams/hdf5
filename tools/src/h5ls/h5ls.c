@@ -2603,6 +2603,13 @@ main(int argc, const char *argv[])
     const char *preferred_driver = NULL;
     int err_exit = 0;
 
+
+    H5FD_ros3_fapl_t   ros3_fa;
+    hid_t              ros3_fapl_id = -1;
+    char              *s3_cred_src  = NULL;
+    char             **s3_cred      = NULL;
+    
+
     h5tools_setprogname(PROGRAMNAME);
     h5tools_setstatus(EXIT_SUCCESS);
 
@@ -2616,6 +2623,151 @@ main(int argc, const char *argv[])
 
     /* Default output width */
     width_g = get_width();
+
+#if 0
+/* restating the argument-parting component of this tool as would be compatible
+ * with "argtable" <http://www.argtable.org/>
+ *
+ * Benefits:
+ *     * uniformity of useage-message printing
+ *     * bypasses "all args must go through short-arg"
+ *     * includes file (positional?) arguments as "just another argument" 
+ *       in parsing
+ *     * integer parsing built into argument parser
+ *         * not a separate step (strtol, e.g.) for programmer
+ *     * allows for "abbreviated" flags, but will have side-effect of 
+ *       cluttering usage syntax message
+ *         * imo, this is not necessarily a bad thing --JS
+ *
+ * Detractors:
+ *     * accessing argument values somewhat more tedious/unclear
+ *         * `somearg->count > 0` vs `someglobal == TRUE` (set during parsing)
+ *     * less explicit control over usage/syntax message
+ *         * unable to label groupings of arguments, as in h5dump
+ *
+ */
+
+/* these can be file globals */
+    struct arg_lit  *help, *errstak, *address, *data, *symlink, *ndangle, 
+    struct arg_lit  *full, *group, *label, *recurse *ascii, *machine;
+    struct arg_lit  *verbose, *version, *hexdump, *dep_ext, *dep_err;
+    struct arg_int  *width;
+    struct arg_str  *vfd;
+    struct arg_file *targets;
+    struct arg_end  *endarg;
+
+    void *argtable[] {
+        help    = arg_lit0("h,?", "help", 
+                           "Show help message and exit."),
+        version = arg_lit0("V", "version", 
+                           "Print version number and exit."),
+        verbose = arg_lit0("v", "verbose", 
+                           "Generate verbose output."),
+        recurse = arg_lit0("r", "recursive",
+                           "List all groups recursively, avoiding cycles."),
+        full    = arg_lit0("f", "full",
+                           "Print full path names. (default: base names only)"),
+        group   = arg_lit0("g", "group",
+                           "Show information about a group."),
+                   arg_rem("Default: shows group's contents."),
+        label   = arg_lit0("l", "label",
+                           "Label members of compount datasets."),
+        data    = arg_lit0("d", "data",
+                           "Print value of datasets."),
+        symlink = arg_lit0(NULL, "follow-symlinks",
+                           "Follow \"soft\" and external hard links."),
+                   arg_rem("If _not_ enabled, prints value of symbolic link"),
+                   arg_rem("with no informatin regarding the target object"),
+                   arg_rem("and does not determine whether the link is a"),
+                   arg_rem("dangling link."),
+        ndangle = arg_lit0(NULL, "no-dangling-links",
+                           "Error and exit if a symbolic link does not"),
+                   arg_rem("resolve to an existing object"),
+                   arg_rem("(dataset, group, or named datatype)."),
+                   arg_rem("Requires follow-symlinks option."),
+        ascii   = arg_lit0("s", "string",
+                           "Print 1-byte integer datasets as ASCII."),
+        width   = arg_int0("w", "width", "<width>",
+                           "Set number of columns for output. (default: 80)"),
+        errstak = arg_lit0(NULL, "enable-error-stack",
+                           "Print HDF5 error stack messages as they occur."),
+        vfd     = arg_str0(NULL, "vfd", "<driver>", 
+                           "Name of preferred Virtual File Driver."),
+                   arg_rem("e.g., \"sec2\""),
+        hexdump = arg_lit0("x", "hexdump",
+                           "Show raw data in hexadecimal format."),
+        machine = arg_lit0("S", "simple",
+                           "Output in \"machine-readable\" format.");
+        address = arg_lit0("a", "address",
+                           "Print raw data address."),
+                   arg_rem("Requires verbose option. (-v | --verbose)"),
+                   arg_rem("  Contiguous dataset shows offset of raw data."),
+                   arg_rem("  Chunked dataset lists offset of each chunk."),
+                   arg_rem("  No effect with non-dataset objects."),
+        dep_ext = arg_lit0("E", "external"
+                           "(deprecated)   Follow external links."),
+                   arg_rem("Use --follow-symlinks"),
+        dep_err = arg_lit0("e", "errors",
+                           "(deprecated)   Show all HDF5 error reporting."),
+                   arg_rem("Use --enable-error-stack"),
+        targets = arg_filen(NULL, NULL, "<file>", 1, 100,
+                           "Input files. FILE [ \"/\" OBJECT ]"),
+                   arg_rem("100 or fewer."),
+                   arg_rem("Each target consists of an HDF5 file name,"
+                   arg_rem("optionally followed by a slash and an object"),
+                   arg_rem("name within the file."),
+                   arg_rem("If no object is specified, then the content of"),
+                   arg_rem("the root group are displayed."),
+                   arg_rem("The file name may include a printf(3C) integer"),
+                   arg_rem("format to open a file family (e.g., \"\%05d\")."),
+        endarg  = arg_end(20),
+    };
+
+    if (arg_nullcheck(argtable) != 0) {
+        /* error */
+    }
+
+    nerrors = arg_parse(argc, argv, argtable);
+
+    if (help->count > 0) {
+        /* show usage and exit */
+    }
+
+    if (version->count > 0) {
+        /* print version and exit */
+    }
+
+    if (nerrors > 0) {
+        /* parsing error; display details and exit (failure) */
+    }
+
+    /* Would replace the global args as they stand with argtable's struct.
+     * As before, would check for incompatible arguments/flags.
+     */
+    if (!is_valid_args()) {
+        /* error */
+    }
+
+    if (errstak->count == 0) {
+        /* disable error stack */
+        H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
+    }
+
+/* This is further brainstorming, unrelated to argtable thought experiment.
+ * Substitute for/with the loop over file names
+ */
+    enum H5LS_STATUS status = H5LS_OK;
+    status = run_h5ls_on_files();
+    if (status != H5LS_OK) {
+        /* error */
+    }
+
+    /* when done, clean up */
+    arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
+
+#endif
+
+
 
     /* Switches come before non-switch arguments */
     for(argno = 1; argno < argc && '-' == argv[argno][0]; argno++) {
@@ -2698,6 +2850,30 @@ main(int argc, const char *argv[])
             if(0 == width_g)
                 no_line_wrap_g = TRUE;
             else if(width_g < 0 || *rest) {
+                usage();
+                leave(EXIT_FAILURE);
+            }
+        } else if (!HDstrncmp(argv[argno], "--s3-cred=", (size_t)10)) {
+            unsigned nelems = 0;
+            char     *start = NULL;
+            /* try to parse s3 credentials tuple 
+             */
+            start = strchr(argv[argno], '=');
+            if (start == NULL) {
+                usage();
+                leave(EXIT_FAILURE);
+            }
+            start++;
+            if (FAIL == 
+                parse_tuple((const char *)start, ',', 
+                            &s3_cred_src, &nelems, &s3_cred))
+            {
+                usage();
+                leave(EXIT_FAILURE);
+            }
+            /* sanity-check tuple count
+             */
+            if (nelems != 3) {
                 usage();
                 leave(EXIT_FAILURE);
             }
@@ -2818,7 +2994,32 @@ main(int argc, const char *argv[])
         file = -1;
 
         while(fname && *fname) {
-            file = h5tools_fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT, preferred_driver, drivername, sizeof drivername);
+            if (preferred_driver && !HDstrcmp(preferred_driver, "ros3")) {
+                /* try to create fapl config 
+                 */
+                if (FAIL == 
+                    H5FD_ros3_fill_fa(&ros3_fa, (const char **)s3_cred))
+                {
+                    usage();
+                    leave(EXIT_FAILURE);
+                }
+                /* try to create fapl entry
+                 */
+                ros3_fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+                if (ros3_fapl_id < 0) {
+                    usage();
+                    leave(EXIT_FAILURE);
+                }
+                /* try to set fapl entry from config
+                 */
+                if (FAIL == H5Pset_fapl_ros3(ros3_fapl_id, &ros3_fa)) {
+                    usage();
+                    leave(EXIT_FAILURE);
+                }
+                file = H5Fopen(fname, H5F_ACC_RDONLY, ros3_fapl_id);
+            } else {
+                file = h5tools_fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT, preferred_driver, drivername, sizeof drivername);
+            }
 
             if(file >= 0) {
                 if(verbose_g)
@@ -2930,6 +3131,12 @@ main(int argc, const char *argv[])
         if (no_dangling_link_g && iter.symlink_list->dangle_link)
             err_exit = 1;
     } /* end while */
+
+    if (ros3_fapl_id >= 0) {
+        if (FAIL == H5Pclose(ros3_fapl_id)) {
+            leave(EXIT_FAILURE);
+        }
+    }
 
     if (err_exit)
         leave(EXIT_FAILURE);
