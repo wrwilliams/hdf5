@@ -25,9 +25,9 @@
 /* test performance one way or the other? */
 #define GETSIZE_STATIC_BUFFER 1
 
-/*
+
 #define VERBOSE_CURL
-*/
+
 
 
 
@@ -1667,7 +1667,7 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
     if (dest != NULL) {
         sds = (struct s3r_datastruct *)malloc(sizeof(struct s3r_datastruct));
         if (sds == NULL) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+            HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
                         "could not malloc destination datastructure.\n");
         }
 
@@ -1678,7 +1678,7 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
                              CURLOPT_WRITEDATA,
                              sds) )
         {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+            HGOTO_ERROR(H5E_ARGS, H5E_UNITIALIZED, FAIL,
                         "error while setting CURL option (CURLOPT_WRITEDATA). "
                         "(placeholder flags)");
         }
@@ -1719,18 +1719,25 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
 
     if (handle->signing_key == NULL) {
         /* Do not authenticate.
-         * Pass in range directly...
-         * no harm if NULL--gets entire file by default.
          */
-        if (CURLE_OK !=
-            curl_easy_setopt(curlh,
-                             CURLOPT_RANGE,
-                             rangebytesstr) )
-        {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "error while setting CURL option (CURLOPT_RANGE). "
-                        "(placeholder flags)");
-        }
+        if (rangebytesstr != NULL) {
+            /* Pass in range directly
+             */
+            char *bytesrange_ptr = NULL; /* pointer past "bytes=" portion */
+            bytesrange_ptr = strchr(rangebytesstr, '=');
+            HDassert(bytesrange_ptr != NULL);
+            bytesrange_ptr++; /* move to first char past '=' */
+            HDassert(bytesrange_ptr != NULL);
+
+            if (CURLE_OK !=
+                curl_easy_setopt(curlh,
+                                 CURLOPT_RANGE,
+                                 bytesrange_ptr) )
+            {
+                HGOTO_ERROR(H5E_VFL, H5E_UNITIALIZED, FAIL,
+                        "error while setting CURL option (CURLOPT_RANGE). ");
+            } /* curl setopt failed */
+        } /* if rangebytesstr is defined */
     } else {
 
         /**** VERIFY INFORMATION EXISTS ****/
@@ -1959,8 +1966,8 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
             HDprintf("CURL ERROR CODE: %d\nHTTP CODE: %d\n", 
                      p_status, httpcode);
             HDprintf("%s\n", curl_easy_strerror(p_status));
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "problem while performing request. (placeholder flags)\n");
+            HGOTO_ERROR(H5E_VFL, H5E_CANTOPENFILE, FAIL,
+                    "problem while performing request.\n");
         }
         HDassert(CURLE_OK == 
                  curl_easy_setopt(curlh, CURLOPT_ERRORBUFFER, NULL));
@@ -1969,8 +1976,8 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
     p_status = curl_easy_perform(curlh);
 
     if (p_status != CURLE_OK) {
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "problem while performing request. (placeholder flags)\n");
+        HGOTO_ERROR(H5E_VFL, H5E_CANTOPENFILE, FAIL,
+                    "problem while performing request.\n");
     }
 #endif
 
