@@ -25,9 +25,9 @@
 /* test performance one way or the other? */
 #define GETSIZE_STATIC_BUFFER 1
 
-
+/*
 #define VERBOSE_CURL
-
+*/
 
 
 
@@ -1678,7 +1678,7 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
                              CURLOPT_WRITEDATA,
                              sds) )
         {
-            HGOTO_ERROR(H5E_ARGS, H5E_UNITIALIZED, FAIL,
+            HGOTO_ERROR(H5E_ARGS, H5E_UNINITIALIZED, FAIL,
                         "error while setting CURL option (CURLOPT_WRITEDATA). "
                         "(placeholder flags)");
         }
@@ -1727,14 +1727,14 @@ H5FD_s3comms_s3r_read(s3r_t *handle,
             bytesrange_ptr = strchr(rangebytesstr, '=');
             HDassert(bytesrange_ptr != NULL);
             bytesrange_ptr++; /* move to first char past '=' */
-            HDassert(bytesrange_ptr != NULL);
+            HDassert(*bytesrange_ptr != '\0');
 
             if (CURLE_OK !=
                 curl_easy_setopt(curlh,
                                  CURLOPT_RANGE,
                                  bytesrange_ptr) )
             {
-                HGOTO_ERROR(H5E_VFL, H5E_UNITIALIZED, FAIL,
+                HGOTO_ERROR(H5E_VFL, H5E_UNINITIALIZED, FAIL,
                         "error while setting CURL option (CURLOPT_RANGE). ");
             } /* curl setopt failed */
         } /* if rangebytesstr is defined */
