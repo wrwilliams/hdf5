@@ -244,6 +244,10 @@ usage(const char *prog)
     PRINTVALSTREAM(rawoutstream, "     -b B, --binary=B     Binary file output, of form B\n");
     PRINTVALSTREAM(rawoutstream, "     -O F, --ddl=F        Output ddl text into file F\n");
     PRINTVALSTREAM(rawoutstream, "                          Use blank(empty) filename F to suppress ddl display\n");
+    PRINTVALSTREAM(rawoutstream, "     --s3-cred=<cred>     Supply S3 authentication information to \"ros3\" vfd.\n");
+    PRINTVALSTREAM(rawoutstream, "                          <cred> :: \"(<aws-region>,<access-id>,<access-key>)\"\n");
+    PRINTVALSTREAM(rawoutstream, "                          If absent or <cred> -> \"(,,)\", no authentication.\n");
+    PRINTVALSTREAM(rawoutstream, "                          Has no effect is filedriver is not `ros3'.\n");
     PRINTVALSTREAM(rawoutstream, "--------------- Object Options ---------------\n");
     PRINTVALSTREAM(rawoutstream, "     -a P, --attribute=P  Print the specified attribute\n");
     PRINTVALSTREAM(rawoutstream, "                          If an attribute name contains a slash (/), escape the\n");
@@ -1481,10 +1485,21 @@ main(int argc, const char *argv[])
              * `s3_cred` may be NULL (not provided), in which case the default
              * ros3 fapl is returned.
              */
-            if (FAIL == H5FD_ros3_fill_fa(&fa, (const char **)s3_cred)) {
-                error_msg("unable to generate ros3 fapl config");
-                h5tools_setstatus(EXIT_FAILURE);
-                goto done;
+            if (s3_cred == NULL) {
+                if (FAIL == H5FD_ros3_fill_fa(&fa, NULL)) {
+                    error_msg("unable to generate ros3 fapl config");
+                    h5tools_setstatus(EXIT_FAILURE);
+                    goto done;
+                }
+            } else {
+                char const *ccred[3] = { (const char *)s3_cred[0],
+                                         (const char *)s3_cred[1],
+                                         (const char *)s3_cred[2] };
+                if (FAIL == H5FD_ros3_fill_fa(&fa, ccred)) {
+                    error_msg("unable to generate ros3 fapl config");
+                    h5tools_setstatus(EXIT_FAILURE);
+                    goto done;
+                }
             }
 
             /* create fapl entry
