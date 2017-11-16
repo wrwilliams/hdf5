@@ -298,10 +298,10 @@ static void usage(const char *prog)
      HDfprintf(stdout, "                           than 0.  The default threshold is 10.\n");
      HDfprintf(stdout, "     -s, --freespace       Print free space information\n");
      HDfprintf(stdout, "     -S, --summary         Print summary of file space information\n");
-    HDfprintf(stdout, "      -w <cred>, --s3-cred=<cred>\n");
-    HDfprintf(stdout, "                            Access file on S3, using provided credential\n");
-    HDfprintf(stdout, "                            <cred> :: (region,id,key)\n");
-    HDfprintf(stdout, "                            If <cred> == \"(,,)\", no authentication is used.\n");
+    HDfprintf(stdout,  "     -w <cred>, --s3-cred=<cred>\n");
+    HDfprintf(stdout,  "                           Access file on S3, using provided credential\n");
+    HDfprintf(stdout,  "                           <cred> :: (region,id,key)\n");
+    HDfprintf(stdout,  "                           If <cred> == \"(,,)\", no authentication is used.\n");
 }
 
 
