@@ -118,6 +118,10 @@ typedef struct iter_t {
 } iter_t;
 
 
+static hbool_t          use_ros3 = FALSE;
+static H5FD_ros3_fapl_t ros3_fa_g; /* fapl configuration */
+                                   /* used by ros3 file driver */
+
 static int        display_all = TRUE;
 
 /* Enable the printing of selected statistics */
@@ -146,7 +150,7 @@ struct handler_t {
     char **obj;
 };
 
-static const char *s_opts ="Aa:Ddm:FfhGgl:sSTO:V";
+static const char *s_opts ="Aa:Ddm:FfhGgl:sSTO:Vw:";
 /* e.g. "filemetadata" has to precede "file"; "groupmetadata" has to precede "group" etc. */
 static struct long_options l_opts[] = {
     {"help", no_arg, 'h'},
@@ -245,6 +249,7 @@ static struct long_options l_opts[] = {
     { "summ", no_arg, 'S' },
     { "sum", no_arg, 'S' },
     { "su", no_arg, 'S' },
+    { "s3-cred", require_arg, 'w' },
     { NULL, 0, '\0' }
 };
 
@@ -293,6 +298,10 @@ static void usage(const char *prog)
      HDfprintf(stdout, "                           than 0.  The default threshold is 10.\n");
      HDfprintf(stdout, "     -s, --freespace       Print free space information\n");
      HDfprintf(stdout, "     -S, --summary         Print summary of file space information\n");
+    HDfprintf(stdout, "      -w <cred>, --s3-cred=<cred>\n");
+    HDfprintf(stdout, "                            Access file on S3, using provided credential\n");
+    HDfprintf(stdout, "                            <cred> :: (region,id,key)\n");
+    HDfprintf(stdout, "                            If <cred> == \"(,,)\", no authentication is used.\n");
 }
 
 
@@ -1001,6 +1010,33 @@ parse_command_line(int argc, const char *argv[], struct handler_t **hand_ret)
                         error_msg("unable to allocate memory for object name\n");
                         goto error;
                     } /* end if */
+                break;
+
+            case 'w':
+                {
+                    char *cred_str  = NULL;
+                    unsigned nelems = 0;
+                    char **cred     = NULL;
+
+                    if (FAIL == parse_tuple((const char *)opt_arg, ',',
+                                            &cred_str, &nelems, &cred)) {
+                        error_msg("unable to parse s3 credential");
+                        goto error;
+                    }
+                    if (nelems != 3) {
+                        error_msg("s3 credential must have three elements\n");
+                        goto error;
+                    }
+                    if (FAIL == 
+                        H5FD_ros3_fill_fa(&ros3_fa_g, (const char **)cred))
+                    {
+                        error_msg("unable to set ros3 fapl config");
+                        goto error;
+                    }
+                    HDfree(cred);
+                    HDfree(cred_str);
+                } /* parse s3-cred block */
+                use_ros3 = TRUE;
                 break;
 
             default:
@@ -1729,7 +1765,27 @@ main(int argc, const char *argv[])
 
         printf("Filename: %s\n", fname);
 
-        fid = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+        if (use_ros3) {
+            hid_t fapl_id = -1;
+
+            fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+            if (fapl_id < 0) {
+                error_msg("unable to create fapl\n");
+                goto done;
+            }
+            if (FAIL == H5Pset_fapl_ros3(fapl_id, &ros3_fa_g)) {
+                H5Pclose(fapl_id);
+                error_msg("unable to set fapl entry\n");
+                goto done;
+            }
+            fid = H5Fopen(fname, H5F_ACC_RDONLY, fapl_id);
+            if (FAIL == H5Pclose(fapl_id)) {
+                error_msg("unable to close fapl entry\n");
+                goto done;
+            }
+        } else {
+            fid = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+        }
         if(fid < 0) {
             error_msg("unable to open file \"%s\"\n", fname);
             h5tools_setstatus(EXIT_FAILURE);
