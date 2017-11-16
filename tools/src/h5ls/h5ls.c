@@ -216,6 +216,10 @@ usage (void)
     PRINTVALSTREAM(rawoutstream, "   -V, --version   Print version number and exit\n");
     PRINTVALSTREAM(rawoutstream, "   --vfd=DRIVER    Use the specified virtual file driver\n");
     PRINTVALSTREAM(rawoutstream, "   -x, --hexdump   Show raw data in hexadecimal format\n");
+    PRINTVALSTREAM(rawoutstream, "   --s3-cred=C     Supply S3 authentication information to \"ros3\" vfd.\n");
+    PRINTVALSTREAM(rawoutstream, "                   Accepts tuple of \"(<aws-region>,<access-id>,<access-key>)\".\n");
+    PRINTVALSTREAM(rawoutstream, "                   If absent or C->\"(,,)\", defaults to no-authentication.\n");
+    PRINTVALSTREAM(rawoutstream, "                   Has no effect if vfd flag not set to \"ros3\".\n");
     PRINTVALSTREAM(rawoutstream, "\n");
     PRINTVALSTREAM(rawoutstream, "  file/OBJECT\n");
     PRINTVALSTREAM(rawoutstream, "    Each object consists of an HDF5 file name optionally followed by a\n");
@@ -2604,10 +2608,7 @@ main(int argc, const char *argv[])
     int err_exit = 0;
 
 
-    H5FD_ros3_fapl_t   ros3_fa;
     hid_t              ros3_fapl_id = -1;
-    char              *s3_cred_src  = NULL;
-    char             **s3_cred      = NULL;
     
 
     h5tools_setprogname(PROGRAMNAME);
@@ -2854,8 +2855,12 @@ main(int argc, const char *argv[])
                 leave(EXIT_FAILURE);
             }
         } else if (!HDstrncmp(argv[argno], "--s3-cred=", (size_t)10)) {
-            unsigned nelems = 0;
-            char     *start = NULL;
+            unsigned           nelems      = 0;
+            char              *start       = NULL;
+            char              *s3cred_src = NULL;
+            char             **s3cred     = NULL;
+            char const        *ccred[3];
+            H5FD_ros3_fapl_t   ros3_fa;
             /* try to parse s3 credentials tuple 
              */
             start = strchr(argv[argno], '=');
@@ -2866,7 +2871,7 @@ main(int argc, const char *argv[])
             start++;
             if (FAIL == 
                 parse_tuple((const char *)start, ',', 
-                            &s3_cred_src, &nelems, &s3_cred))
+                            &s3cred_src, &nelems, &s3cred))
             {
                 usage();
                 leave(EXIT_FAILURE);
@@ -2874,6 +2879,24 @@ main(int argc, const char *argv[])
             /* sanity-check tuple count
              */
             if (nelems != 3) {
+                usage();
+                leave(EXIT_FAILURE);
+            }
+            ccred[0] = (const char *)s3cred[0];
+            ccred[1] = (const char *)s3cred[1];
+            ccred[2] = (const char *)s3cred[2];
+            if (FAIL == H5FD_ros3_fill_fa(&ros3_fa, ccred)) {
+                usage();
+                leave(EXIT_FAILURE);
+            }
+            HDfree(s3cred);
+            HDfree(s3cred_src);
+            ros3_fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+            if (ros3_fapl_id < 0) {
+                usage();
+                leave(EXIT_FAILURE);
+            }
+            if (FAIL == H5Pset_fapl_ros3(ros3_fapl_id, &ros3_fa)) {
                 usage();
                 leave(EXIT_FAILURE);
             }
@@ -2995,27 +3018,29 @@ main(int argc, const char *argv[])
 
         while(fname && *fname) {
             if (preferred_driver && !HDstrcmp(preferred_driver, "ros3")) {
-                /* try to create fapl config 
+                /* use ROS3 
                  */
-                if (FAIL == 
-                    H5FD_ros3_fill_fa(&ros3_fa, (const char **)s3_cred))
-                {
-                    usage();
-                    leave(EXIT_FAILURE);
-                }
-                /* try to create fapl entry
-                 */
-                ros3_fapl_id = H5Pcreate(H5P_FILE_ACCESS);
                 if (ros3_fapl_id < 0) {
-                    usage();
-                    leave(EXIT_FAILURE);
-                }
-                /* try to set fapl entry from config
-                 */
-                if (FAIL == H5Pset_fapl_ros3(ros3_fapl_id, &ros3_fa)) {
-                    usage();
-                    leave(EXIT_FAILURE);
-                }
+                    /* s3 credential not provided 
+                     * try default (no authentication )
+                     */
+
+                    H5FD_ros3_fapl_t ros3_fa;
+
+                    if (FAIL == H5FD_ros3_fill_fa(&ros3_fa, NULL)) {
+                        usage();
+                        leave(EXIT_FAILURE);
+                    }
+                    ros3_fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+                    if (ros3_fapl_id  < 0) {
+                        usage();
+                        leave(EXIT_FAILURE);
+                    }
+                    if (FAIL == H5Pset_fapl_ros3(ros3_fapl_id, &ros3_fa)) {
+                        usage();
+                        leave(EXIT_FAILURE);
+                    }
+                } /* if no s3-credential */
                 file = H5Fopen(fname, H5F_ACC_RDONLY, ros3_fapl_id);
             } else {
                 file = h5tools_fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT, preferred_driver, drivername, sizeof drivername);
