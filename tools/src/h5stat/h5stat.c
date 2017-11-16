@@ -1014,9 +1014,10 @@ parse_command_line(int argc, const char *argv[], struct handler_t **hand_ret)
 
             case 'w':
                 {
-                    char *cred_str  = NULL;
-                    unsigned nelems = 0;
-                    char **cred     = NULL;
+                    char        *cred_str = NULL;
+                    unsigned     nelems   = 0;
+                    char       **cred     = NULL;
+                    char const  *ccred[3];
 
                     if (FAIL == parse_tuple((const char *)opt_arg, ',',
                                             &cred_str, &nelems, &cred)) {
@@ -1027,8 +1028,11 @@ parse_command_line(int argc, const char *argv[], struct handler_t **hand_ret)
                         error_msg("s3 credential must have three elements\n");
                         goto error;
                     }
+                    ccred[0] = (const char *)cred[0];
+                    ccred[1] = (const char *)cred[1];
+                    ccred[2] = (const char *)cred[2];
                     if (FAIL == 
-                        H5FD_ros3_fill_fa(&ros3_fa_g, (const char **)cred))
+                        H5FD_ros3_fill_fa(&ros3_fa_g, ccred))
                     {
                         error_msg("unable to set ros3 fapl config");
                         goto error;
