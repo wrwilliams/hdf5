@@ -1212,16 +1212,25 @@ int
 h5tools_populate_ros3_fapl(H5FD_ros3_fapl_t  *fa, 
                            const char       **values)
 {
-    int ret_value = 1;
+    int show_progress = 0; /* set to 1 for debugging */
+    int ret_value     = 1; /* 1 for success, 0 for failure           */
+                           /* e.g.? if (!populate()) { then failed } */
+
+    if (show_progress) {
+        HDprintf("called h5tools_populate_ros3_fapl\n");
+    }
 
     if (fa == NULL) {
-        /* HDprintf("null pointer to fapl_t\n"); */
+        if (show_progress) {
+            HDprintf("  ERROR: null pointer to fapl_t\n");
+        }
         ret_value = 0; 
         goto done;
     }
 
-    /* preset with default values
-     */
+    if (show_progress) {
+        HDprintf("  preset fapl with default values\n");
+    }
     fa->version       = H5FD__CURR_ROS3_FAPL_T_VERSION;
     fa->authenticate  = FALSE;
     *(fa->aws_region) = '\0';
@@ -1232,20 +1241,23 @@ h5tools_populate_ros3_fapl(H5FD_ros3_fapl_t  *fa,
      */
     if (values != NULL) {
         if (values[0] == NULL) {
-            /* HDprintf("aws_region value cannot be NULL\n"); */
-            /* aws_region value cannot be NULL */
+            if (show_progress) {
+                HDprintf("  ERROR: aws_region value cannot be NULL\n");
+            }
             ret_value = 0; 
             goto done;
         }
         if (values[1] == NULL) {
-            /* HDprintf("secret_id value cannot be NULL\n"); */
-            /* secret_id value cannot be NULL */
+            if (show_progress) {
+                HDprintf("  ERROR: secret_id value cannot be NULL\n");
+            }
             ret_value = 0; 
             goto done;
         }
         if (values[2] == NULL) {
-            /* HDprintf("secret_key value cannot be NULL\n"); */
-            /* secret_key value cannot be NULL */
+            if (show_progress) {
+                HDprintf("  ERROR: secret_key value cannot be NULL\n");
+            }
             ret_value = 0; 
             goto done;
         }
@@ -1257,48 +1269,64 @@ h5tools_populate_ros3_fapl(H5FD_ros3_fapl_t  *fa,
             *values[1] != '\0')
         {
             if (strlen(values[0]) > H5FD__ROS3_MAX_REGION_LEN) {
-                /* HDprintf("aws_region value too long\n"); */
-                /* aws_region value too long */
+                if (show_progress) {
+                    HDprintf("  ERROR: aws_region value too long\n");
+                }
                 ret_value = 0; 
                 goto done;
             }
             HDmemcpy(fa->aws_region,                     values[0],
                      (strlen(values[0]) + 1));
+            if (show_progress) {
+                HDprintf("  aws_region set\n");
+            }
 
 
             if (strlen(values[1]) > H5FD__ROS3_MAX_REGION_LEN) {
-                /* HDprintf("secret_id value too long\n"); */
-                /* secret_id value too long */
+                if (show_progress) {
+                    HDprintf("  ERROR: secret_id value too long\n");
+                }
                 ret_value = 0; 
                 goto done;
             }
             HDmemcpy(fa->secret_id,
                      values[1],
                      (strlen(values[1]) + 1));
+            if (show_progress) {
+                HDprintf("  secret_id set\n");
+            }
 
             if (strlen(values[2]) > H5FD__ROS3_MAX_REGION_LEN) {
-                /* HDprintf("secret_key value too long\n"); */
-                /* secret_key value too long */
+                if (show_progress) {
+                    HDprintf("  ERROR: secret_key value too long\n");
+                }
                 ret_value = 0; 
                 goto done;
             }
             HDmemcpy(fa->secret_key,
                      values[2],
                      (strlen(values[2]) + 1));
+            if (show_progress) {
+                HDprintf("  secret_key set\n");
+            }
 
             fa->authenticate = TRUE;
+            if (show_progress) {
+                HDprintf("  set to authenticate\n");
+            }
 
-        }  else if (*values[0] != '\0' ||
-                    *values[1] != '\0' ||
-                    *values[2] != '\0')
+        } else if (*values[0] != '\0' ||
+                   *values[1] != '\0' ||
+                   *values[2] != '\0')
         {
-            /* HDprintf("invalid assortment of empty/non-empty values\n"); */
-            /* invalid assortment of empty/non-empty values */
+            if (show_progress) {
+                HDprintf(
+                    "  ERROR: invalid assortment of empty/non-empty values\n"
+                );
+            }
             ret_value = 0; 
             goto done;
-
         }
-
     } /* values != NULL */
 
 done:
