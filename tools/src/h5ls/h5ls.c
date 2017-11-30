@@ -2885,7 +2885,7 @@ main(int argc, const char *argv[])
             ccred[0] = (const char *)s3cred[0];
             ccred[1] = (const char *)s3cred[1];
             ccred[2] = (const char *)s3cred[2];
-            if (FAIL == H5FD_ros3_fill_fa(&ros3_fa, ccred)) {
+            if (0 == h5tools_populate_ros3_fapl(&ros3_fa, ccred)) {
                 usage();
                 leave(EXIT_FAILURE);
             }
@@ -3027,7 +3027,7 @@ main(int argc, const char *argv[])
 
                     H5FD_ros3_fapl_t ros3_fa;
 
-                    if (FAIL == H5FD_ros3_fill_fa(&ros3_fa, NULL)) {
+                    if (0 == h5tools_populate_ros3_fapl(&ros3_fa, NULL)) {
                         usage();
                         leave(EXIT_FAILURE);
                     }

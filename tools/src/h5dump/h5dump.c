@@ -1486,7 +1486,7 @@ main(int argc, const char *argv[])
              * ros3 fapl is returned.
              */
             if (s3_cred == NULL) {
-                if (FAIL == H5FD_ros3_fill_fa(&fa, NULL)) {
+                if (0 == h5tools_populate_ros3_fapl(&fa, NULL)) {
                     error_msg("unable to generate ros3 fapl config");
                     h5tools_setstatus(EXIT_FAILURE);
                     goto done;
@@ -1495,7 +1495,7 @@ main(int argc, const char *argv[])
                 char const *ccred[3] = { (const char *)s3_cred[0],
                                          (const char *)s3_cred[1],
                                          (const char *)s3_cred[2] };
-                if (FAIL == H5FD_ros3_fill_fa(&fa, ccred)) {
+                if (0 == h5tools_populate_ros3_fapl(&fa, ccred)) {
                     error_msg("unable to generate ros3 fapl config");
                     h5tools_setstatus(EXIT_FAILURE);
                     goto done;

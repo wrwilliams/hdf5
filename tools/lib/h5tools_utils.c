@@ -20,6 +20,7 @@
 #include "h5tools_utils.h"
 #include "H5private.h"
 #include "h5trav.h"
+#include "H5FDros3.h"
 
 /* global variables */
 unsigned h5tools_nCols = 80;
@@ -1142,4 +1143,167 @@ int h5tools_getenv_update_hyperslab_bufsize(void)
 error:
     return (-1);
 }
+
+
+/*----------------------------------------------------------------------------
+ *
+ * Function: h5tools_populate_ros3_fapl()
+ *
+ * Purpose:
+ *
+ *     Set the values of a ROS3 fapl configuration object.
+ *
+ *     If the values pointer is NULL, sets fapl target `fa` to a default 
+ *     (valid, current-version, non-authenticating) fapl config.
+ *
+ *     If `values` pointer is _not_ NULL, expects `values` to contain at least
+ *     three non-null pointers to null-terminated strings, corresponding to:
+ *     {   aws_region,
+ *         secret_id,
+ *         secret_key,
+ *     }
+ *     If all three strings are empty (""), the default fapl will be default.
+ *     Both aws_region and secret_id values must be both empty or both 
+ *         populated. If 
+ *     Only secret_key is allowed to be empty (the empty string, "").
+ *     All values are checked against overflow as defined in the ros3 vfd
+ *     header file; if a value overruns the permitted space, FAIL is returned
+ *     and the function aborts without resetting the fapl to values initially
+ *     present.
+ *
+ * Return:
+ *
+ *     0 (failure) if...
+ *         * NULL fapl pointer: (NULL, {...} )
+ *         * Warning: In all cases below, fapl will be set as "default" 
+ *                    before error occurs.
+ *         * NULL value strings: (&fa, {NULL?, NULL? NULL?, ...})
+ *         * Incomplete fapl info:
+ *             * empty region, non-empty id, key either way
+ *                 * (&fa, {"", "...", "?"})
+ *             * empty id, non-empty region, key either way
+ *                 * (&fa, {"...", "", "?"})
+ *             * "non-empty key and either id or region empty
+ *                 * (&fa, {"",    "",    "...")
+ *                 * (&fa, {"",    "...", "...")
+ *                 * (&fa, {"...", "",    "...")
+ *             * Any string would overflow allowed space in fapl definition.
+ *     or
+ *     1 (success)     
+ *         * Sets components in fapl_t pointer, copying strings as appropriate.
+ *         * "Default" fapl (valid version, authenticate->False, empty strings)
+ *             * `values` pointer is NULL
+ *                 * (&fa, NULL)
+ *             * first three strings in `values` are empty ("")
+ *                 * (&fa, {"", "", "", ...}
+ *         * Authenticating fapl
+ *             * region, id, and optional key provided
+ *                 * (&fa, {"...", "...", ""})
+ *                 * (&fa, {"...", "...", "..."})
+ *
+ * Programmer: Jacob Smith
+ *             2017-11-13
+ *
+ * Changes: None.
+ *
+ *----------------------------------------------------------------------------
+ */
+int
+h5tools_populate_ros3_fapl(H5FD_ros3_fapl_t  *fa, 
+                           const char       **values)
+{
+    int ret_value = 1;
+
+    if (fa == NULL) {
+        /* HDprintf("null pointer to fapl_t\n"); */
+        ret_value = 0; 
+        goto done;
+    }
+
+    /* preset with default values
+     */
+    fa->version       = H5FD__CURR_ROS3_FAPL_T_VERSION;
+    fa->authenticate  = FALSE;
+    *(fa->aws_region) = '\0';
+    *(fa->secret_id)  = '\0';
+    *(fa->secret_key) = '\0';
+
+    /* sanity-check supplied values 
+     */
+    if (values != NULL) {
+        if (values[0] == NULL) {
+            /* HDprintf("aws_region value cannot be NULL\n"); */
+            /* aws_region value cannot be NULL */
+            ret_value = 0; 
+            goto done;
+        }
+        if (values[1] == NULL) {
+            /* HDprintf("secret_id value cannot be NULL\n"); */
+            /* secret_id value cannot be NULL */
+            ret_value = 0; 
+            goto done;
+        }
+        if (values[2] == NULL) {
+            /* HDprintf("secret_key value cannot be NULL\n"); */
+            /* secret_key value cannot be NULL */
+            ret_value = 0; 
+            goto done;
+        }
+
+        /* if region and ID are supplied (key optional), write to fapl...
+         * fail if value would overflow
+         */
+        if (*values[0] != '\0' &&
+            *values[1] != '\0')
+        {
+            if (strlen(values[0]) > H5FD__ROS3_MAX_REGION_LEN) {
+                /* HDprintf("aws_region value too long\n"); */
+                /* aws_region value too long */
+                ret_value = 0; 
+                goto done;
+            }
+            HDmemcpy(fa->aws_region,                     values[0],
+                     (strlen(values[0]) + 1));
+
+
+            if (strlen(values[1]) > H5FD__ROS3_MAX_REGION_LEN) {
+                /* HDprintf("secret_id value too long\n"); */
+                /* secret_id value too long */
+                ret_value = 0; 
+                goto done;
+            }
+            HDmemcpy(fa->secret_id,
+                     values[1],
+                     (strlen(values[1]) + 1));
+
+            if (strlen(values[2]) > H5FD__ROS3_MAX_REGION_LEN) {
+                /* HDprintf("secret_key value too long\n"); */
+                /* secret_key value too long */
+                ret_value = 0; 
+                goto done;
+            }
+            HDmemcpy(fa->secret_key,
+                     values[2],
+                     (strlen(values[2]) + 1));
+
+            fa->authenticate = TRUE;
+
+        }  else if (*values[0] != '\0' ||
+                    *values[1] != '\0' ||
+                    *values[2] != '\0')
+        {
+            /* HDprintf("invalid assortment of empty/non-empty values\n"); */
+            /* invalid assortment of empty/non-empty values */
+            ret_value = 0; 
+            goto done;
+
+        }
+
+    } /* values != NULL */
+
+done:
+    return ret_value;
+
+} /* h5tools_populate_ros3_fapl */
+
 

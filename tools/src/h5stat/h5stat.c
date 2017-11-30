@@ -1031,8 +1031,8 @@ parse_command_line(int argc, const char *argv[], struct handler_t **hand_ret)
                     ccred[0] = (const char *)cred[0];
                     ccred[1] = (const char *)cred[1];
                     ccred[2] = (const char *)cred[2];
-                    if (FAIL == 
-                        H5FD_ros3_fill_fa(&ros3_fa_g, ccred))
+                    if (0 == 
+                        h5tools_populate_ros3_fapl(&ros3_fa_g, ccred))
                     {
                         error_msg("unable to set ros3 fapl config");
                         goto error;
