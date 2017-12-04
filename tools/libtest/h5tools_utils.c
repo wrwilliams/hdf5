@@ -510,9 +510,23 @@ test_parse_tuple(void)
             5,
             {"", "a1", "", "a4", ""},
         },
+        {   "nested tuples with different separators",
+            "((4,e,a);(6,2,a))",
+            ';',
+            SUCCEED,
+            2,
+            {"(4,e,a)","(6,2,a)"},
+        },
+        {   "nested tuples with same separators",
+            "((4,e,a),(6,2,a))",
+            ',',
+            SUCCEED,
+            6,
+            {"(4","e","a)","(6","2","a)"},
+        },
     };
     struct testcase   tc;
-    unsigned          n_tests       = 11;
+    unsigned          n_tests       = 13;
     unsigned          i             = 0;
     unsigned          count         = 0;
     unsigned          elem_i        = 0;
@@ -541,7 +555,7 @@ test_parse_tuple(void)
         HDassert(cpy == NULL);
         tc = cases[i];
         if (show_progress == TRUE) {
-            printf("testing %s...\n", tc.test_msg);
+            printf("testing %d: %s...\n", i, tc.test_msg);
         }
 
         /* VERIFY
