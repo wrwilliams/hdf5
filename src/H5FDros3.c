@@ -21,58 +21,71 @@
  *     Uses "s3comms" utility layer to interface with the S3 REST API.
  */
 
-#include "H5FDdrvr_module.h" /* This source code file is part of the H5FD driver module */
-
+/* This source code file is part of the H5FD driver module */
+#include "H5FDdrvr_module.h"
 
 #include "H5private.h"      /* Generic Functions        */
 #include "H5Eprivate.h"     /* Error handling           */
-#include "H5Fprivate.h"     /* File access              */
 #include "H5FDprivate.h"    /* File drivers             */
 #include "H5FDros3.h"       /* ros3 file driver         */
 #include "H5FLprivate.h"    /* Free Lists               */
 #include "H5Iprivate.h"     /* IDs                      */
 #include "H5MMprivate.h"    /* Memory management        */
-#include "H5Pprivate.h"     /* Property lists           */
 
-// #include "H5FDs3comms.h"    /* S3 Communications        */
+#if 0
+#include "H5FDs3comms.h"    /* S3 Communications        */
+/* REVIEW: make .h-only work */
+#else
 #include "H5FDs3comms.c"    
+#endif
+
+/* toggle function call prints: 1 turns on
+ */
+#define ROS3_DEBUG 0
 
 /* The driver identification number, initialized at runtime */
 static hid_t H5FD_ROS3_g = 0;
 
-/* The description of a file belonging to this driver. The 'eoa' and 'eof'
- * determine the amount of hdf5 address space in use and the high-water mark
- * of the file (the current size of the underlying filesystem file). The
- * 'pos' value is used to eliminate file position updates when they would be a
- * no-op. Unfortunately we've found systems that use separate file position
- * indicators for reading and writing so the lseek can only be eliminated if
- * the current operation is the same as the previous operation.  When opening
- * a file the 'eof' will be set to the current file size, `eoa' will be set
- * to zero, 'pos' will be set to H5F_ADDR_UNDEF (as it is when an error
- * occurs), and 'op' will be set to H5F_OP_UNKNOWN.
- */
-
 /***************************************************************************
  *
- * structure H5FD_ros3_t
+ * Structure: H5FD_ros3_t
  *
- * H5FD_ros3_t is a catchall structure used to store all information needed
- * to maintain R/O access to a single HDF5 file that has been stored as a
- * S3 object.  This structure is created when such a file is "opened" and 
- * discarded when it is "closed"
+ * Purpose:
  *
- * The fields of the structure discussed individually below:
+ *     H5FD_ros3_t is a structure used to store all information needed to 
+ *     maintain R/O access to a single HDF5 file that has been stored as a
+ *     S3 object.  This structure is created when such a file is "opened" and 
+ *     discarded when it is "closed".
  *
- * pub: Instance of H5FD_t which contains all fields common to all VFDs.
- *      It must be the first item in this structure, since at higher levels,
- *      this structure will be treated as an instance of H5FD_t.
+ *     Presents an S3 object as a file to the HDF5 library.
  *
- * fa:  Instance of H5FD_ros3_fapl_t containing the S3 configuration data 
- *      needed to "open" the HDF5 file.
  *
- * Jake: Please fill in descriptions of remaining fields.  Note that I 
- *      have left in the fields from the sec2 driver.  Most of them 
- *      can be removed.
+ *
+ * `pub` (H5FD_t)
+ *
+ *     Instance of H5FD_t which contains all fields common to all VFDs.
+ *     It must be the first item in this structure, since at higher levels,
+ *     this structure will be treated as an instance of H5FD_t.
+ *
+ * `fa` (H5FD_ros3_fapl_t)
+ *
+ *     Instance of H5FD_ros3_fapl_t containing the S3 configuration data 
+ *     needed to "open" the HDF5 file.
+ *
+ * `eoa` (haddr_t)
+ *
+ *     End of addressed space in file. After open, it should always
+ *     equal the file size.
+ *
+ * `s3r_handle` (s3r_t *)
+ *     
+ *     Instance of S3 Request handle associated with the target resource.
+ *     Responsible for communicating with remote host and presenting file 
+ *     contents as indistinguishable from a file on the local filesystem.
+ *
+ *
+ *
+ * Programmer: Jacob Smith
  *
  ***************************************************************************/
 typedef struct H5FD_ros3_t {
@@ -80,56 +93,6 @@ typedef struct H5FD_ros3_t {
     H5FD_ros3_fapl_t  fa;
     haddr_t           eoa;
     s3r_t            *s3r_handle;
-
-#if 0
-    /* left over fields from the sec2 driver -- delete or re-purpose as 
-     * appropriate.
-     */
-    int             fd;     /* the filesystem file descriptor   */
-    haddr_t         eoa;    /* end of allocated region          */
-    haddr_t         eof;    /* end of file; current file size   */
-    haddr_t         pos;    /* current file I/O position        */
-    H5FD_file_op_t  op;     /* last operation                   */
-    char            filename[H5FD_MAX_FILENAME_LEN];    /* Copy of file name from open operation */
-#ifndef H5_HAVE_WIN32_API
-    /* On most systems the combination of device and i-node number uniquely
-     * identify a file.  Note that Cygwin, MinGW and other Windows POSIX
-     * environments have the stat function (which fakes inodes)
-     * and will use the 'device + inodes' scheme as opposed to the
-     * Windows code further below.
-     */
-    dev_t           device;     /* file device number   */
-    ino_t           inode;      /* file i-node number   */
-#else
-    /* Files in windows are uniquely identified by the volume serial
-     * number and the file index (both low and high parts).
-     *
-     * There are caveats where these numbers can change, especially
-     * on FAT file systems.  On NTFS, however, a file should keep
-     * those numbers the same until renamed or deleted (though you
-     * can use ReplaceFile() on NTFS to keep the numbers the same
-     * while renaming).
-     *
-     * See the MSDN "BY_HANDLE_FILE_INFORMATION Structure" entry for
-     * more information.
-     *
-     * http://msdn.microsoft.com/en-us/library/aa363788(v=VS.85).aspx
-     */
-    DWORD           nFileIndexLow;
-    DWORD           nFileIndexHigh;
-    DWORD           dwVolumeSerialNumber;
-    
-    HANDLE          hFile;      /* Native windows file handle */
-#endif  /* H5_HAVE_WIN32_API */
-
-    /* Information from properties set by 'h5repart' tool
-     *
-     * Whether to eliminate the family driver info and convert this file to
-     * a single file.
-     */
-    hbool_t         fam_to_ros3;
-#endif /* remaindered sec2 stuff */
-
 } H5FD_ros3_t;
 
 /*
@@ -140,21 +103,9 @@ typedef struct H5FD_ros3_t {
  *                  is too large to be represented by the second argument
  *                  of the file seek function.
  *
- * SIZE_OVERFLOW:   Checks whether a buffer size of type `hsize_t' is too
- *                  large to be represented by the `size_t' type.
- *
- * REGION_OVERFLOW: Checks whether an address and size pair describe data
- *                  which can be addressed entirely by the second
- *                  argument of the file seek function.
  */
 #define MAXADDR (((haddr_t)1<<(8*sizeof(HDoff_t)-1))-1)
 #define ADDR_OVERFLOW(A)    (HADDR_UNDEF==(A) || ((A) & ~(haddr_t)MAXADDR))
-#if 0
-#define SIZE_OVERFLOW(Z)    ((Z) & ~(hsize_t)MAXADDR)
-#define REGION_OVERFLOW(A,Z)    (ADDR_OVERFLOW(A) || SIZE_OVERFLOW(Z) ||    \
-                                 HADDR_UNDEF==(A)+(Z) ||                    \
-                                (HDoff_t)((A)+(Z))<(HDoff_t)(A))
-#endif
 
 /* Prototypes */
 static herr_t  H5FD_ros3_term(void);
@@ -227,6 +178,9 @@ H5FL_DEFINE_STATIC(H5FD_ros3_t);
  *
  * Return:      Non-negative on success/Negative on failure
  *
+ * Changes:     Rename as appropriate for ros3 vfd.
+ *              Jacob Smith 2017
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -243,6 +197,7 @@ H5FD__init_package(void)
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
+
 } /* H5FD__init_package() */
 
 
@@ -258,6 +213,9 @@ done:
  * Programmer:  Robb Matzke
  *              Thursday, July 29, 1999
  *
+ * Changes:     Rename as appropriate for ros3 vfd.
+ *              Jacob Smith 2017
+ *
  *-------------------------------------------------------------------------
  */
 hid_t
@@ -267,7 +225,9 @@ H5FD_ros3_init(void)
 
     FUNC_ENTER_NOAPI(FAIL)
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5FD_ros3_init() called.\n");
+#endif
 
     if (H5I_VFL != H5I_get_type(H5FD_ROS3_g))
         H5FD_ROS3_g = H5FD_register(&H5FD_ros3_g, sizeof(H5FD_class_t), FALSE);
@@ -277,6 +237,7 @@ H5FD_ros3_init(void)
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
+
 } /* end H5FD_ros3_init() */
 
 
@@ -290,6 +251,9 @@ done:
  * Programmer:  Quincey Koziol
  *              Friday, Jan 30, 2004
  *
+ * Changes:     Rename as appropriate for ros3 vfd.
+ *              Jacob Smith 2017
+ *
  *---------------------------------------------------------------------------
  */
 static herr_t
@@ -297,7 +261,9 @@ H5FD_ros3_term(void)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5FD_ros3_term() called.\n");
+#endif
 
     /* Reset VFL ID */
     H5FD_ROS3_g = 0;
@@ -333,14 +299,12 @@ H5Pset_fapl_ros3(hid_t             fapl_id,
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "i*x", fapl_id, fa);
 
-    /* HDassert(fa) */ /* fa cannot be null? */
+    HDassert(fa); /* fa cannot be null? */
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5Pset_fapl_ros3() called.\n");
-#if 0
-    HDfprintf(stdout, "fa = {%d, %d, \"%s\", \"%s\", \"%s\"}\n",
-              fa->version, (int)(fa->authenticate),
-              fa->aws_region, fa->secret_id, fa->secret_key);
 #endif
+
     plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS);
     if (plist == NULL) { 
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, \
@@ -374,7 +338,7 @@ done:
  * Return:      SUCCEED if instance of H5FD_ros3_fapl_t contains internally 
  *              consistant data, FAIL otherwise.
  *
- * Programmer:  John Mainzer
+ * Programmer:  Jacob Smith
  *              9/10/17
  *
  * Changes:     Add checks for authenticate flag requring populated
@@ -409,7 +373,6 @@ H5FD_ros3_validate_config(const H5FD_ros3_fapl_t * fa)
     }
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 
 } /* H5FD_ros3_validate_config() */
@@ -443,7 +406,9 @@ H5Pget_fapl_ros3(hid_t             fapl_id,
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "i*x", fapl_id, fa_out);
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5Pget_fapl_ros3() called.\n");
+#endif
 
     plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS);
     if (plist == NULL) {
@@ -594,167 +559,6 @@ H5FD_ros3_fapl_free(void *_fa)
 } /* H5FD_ros3_fapl_free() */
 
 
-/*****************************************************************************
- *
- * Function: H5FD_ros3_fill_fa()
- *
- * Purpose:
- *
- *     Set the values of a ROS3 fapl configuration object.
- *
- *     If the values pointer is NULL, sets fapl target `fa` to a default 
- *     (valid, current-version, non-authenticating) fapl config.
- *
- *     If `values` pointer is _not_ NULL, expects `values` to contain at least
- *     three non-null pointers to null-terminated strings, corresponding to:
- *     {   aws_region,
- *         secret_id,
- *         secret_key,
- *     }
- *     If all three strings are empty (""), the default fapl will be default.
- *     Both aws_region and secret_id values must be both empty or both 
- *         populated. If 
- *     Only secret_key is allowed to be empty (the empty string, "").
- *     All values are checked against overflow as defined in the ros3 vfd
- *     header file; if a value overruns the permitted space, FAIL is returned
- *     and the function aborts without resetting the fapl to values initially
- *     present.
- *
- * Return:
- *
- *     FAIL If: * NULL fapl pointer: (NULL, {...} )
- *              * Warning: In all cases below, fapl will be set as "default" 
- *                         before error occurs.
- *              * NULL value strings: (&fa, {NULL?, NULL? NULL?, ...})
- *              * Incomplete fapl info:
- *                  * empty region, non-empty id, key either way
- *                      * (&fa, {"", "...", "?"})
- *                  * empty id, non-empty region, key either way
- *                      * (&fa, {"...", "", "?"})
- *                  * "non-empty key and either id or region empty
- *                      * (&fa, {"",    "",    "...")
- *                      * (&fa, {"",    "...", "...")
- *                      * (&fa, {"...", "",    "...")
- *              * Any string would overflow allowed space in fapl definition.
- *     or
- *     SUCCEED
- *         * Sets components in fapl_t pointer, copying strings as appropriate.
- *         * "Default" fapl (valid version, authenticate->False, empty strings)
- *             * `values` pointer is NULL
- *                 * (&fa, NULL)
- *             * first three strings in `values` are empty ("")
- *                 * (&fa, {"", "", "", ...}
- *         * Authenticating fapl
- *             * region, id, and optional key provided
- *                 * (&fa, {"...", "...", ""})
- *                 * (&fa, {"...", "...", "..."})
- *
- * Programmer: Jacob Smith
- *             2017-11-13
- *
- * Changes: None.
- *
- *****************************************************************************
- */
-herr_t
-H5FD_ros3_fill_fa(H5FD_ros3_fapl_t  *fa, 
-                  const char       **values)
-{
-    herr_t ret_value = SUCCEED;
-
-
-
-    FUNC_ENTER_NOAPI_NOINIT
-
-    HDprintf("H5FD_ros3_fill_fa() called.\n");
-
-
-
-    if (fa == NULL) {
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "fapl pointer cannot be null");
-    }
-
-
-
-    /* preset with default values
-     */
-    fa->version       = H5FD__CURR_ROS3_FAPL_T_VERSION;
-    fa->authenticate  = FALSE;
-    *(fa->aws_region) = '\0';
-    *(fa->secret_id)  = '\0';
-    *(fa->secret_key) = '\0';
-
-
-
-    if (values != NULL) {
-        /* sanity-check supplied values 
-         */
-        if (values[0] == NULL) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "aws_region value cannot be NULL");
-        }
-        if (values[1] == NULL) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "secret_id value cannot be NULL");
-        }
-        if (values[2] == NULL) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "secret_key value cannot be NULL");
-        }
-
-        /* if all three values are supplied, write to fapl
-         * fail if value would overflow
-         */
-        if (*values[0] != '\0' &&
-            *values[1] != '\0')
-        {
-            if (strlen(values[0]) > H5FD__ROS3_MAX_REGION_LEN) {
-                HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL,
-                            "aws_region value too long");
-            }
-            HDmemcpy(fa->aws_region,
-                     values[0],
-                     (strlen(values[0]) + 1));
-
-            
-            if (strlen(values[1]) > H5FD__ROS3_MAX_REGION_LEN) {
-                HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL,
-                            "secret_id value too long");
-            }
-            HDmemcpy(fa->secret_id,
-                     values[1],
-                     (strlen(values[1]) + 1));
-
-            if (strlen(values[2]) > H5FD__ROS3_MAX_REGION_LEN) {
-                HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL,
-                            "secret_key value too long");
-            }
-            HDmemcpy(fa->secret_key,
-                     values[2],
-                     (strlen(values[2]) + 1));
-
-            fa->authenticate = TRUE;
-
-        }  else if (*values[0] != '\0' || 
-                    *values[1] != '\0' || 
-                    *values[2] != '\0')
-        {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "invalid assortment of empty/non-empty values")
-        }
-
-
-    } /* values != NULL */
-
-
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-
-} /* H5FD_ros3_fill_fa */
-
-
 /*-------------------------------------------------------------------------
  *
  * Function: H5FD_ros3_open()
@@ -806,7 +610,9 @@ H5FD_ros3_open(const char *url,
 
     FUNC_ENTER_NOAPI_NOINIT
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5FD_ros3_open() called.\n");
+#endif
 
     /* Sanity check on file offsets */
     HDcompile_assert(sizeof(HDoff_t) >= sizeof(size_t));
@@ -832,27 +638,10 @@ H5FD_ros3_open(const char *url,
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "can't get property list")
     }
 
-#if 1
+/* TODO: curl_global_cleanup once and only once per global init */
+/* TODO: move this global init away from here... to where is open question */
+/* TODO: coordinate curl global cleanup--it is not thread-safe */
     HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
-#endif
-
-#if 0
-    /* do this number-parsing / validation in s3comms::s3r_open()? */
-
-    if (FAIL == H5FD_s3comms_parse_url(_name, &purl) ) {
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
-                    "unable to parse name URL");
-    }
-    HDassert(purl != NULL);
-
-    errno = 0;
-    port = strtoul(purl->port, NULL, 10);
-    if (errno == ERANGE) { /* set in event of error by `strtoul` */
-        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, NULL, 
-                    "unable to convert port string to number");
-    }
-    /* `name` not yet initialized */
-#endif
 
     /* open file; procedure depends on whether or not the fapl instructs to
      * authenticate requests or not.
@@ -881,9 +670,9 @@ H5FD_ros3_open(const char *url,
     } /* if/else should authenticate */
 
     if (handle == NULL) {
-        /* If we want to check CURL's say on the matter, this is the place
-         * to do it, but would need to make a few minor changes to s3comms
-         * `s3r_t`, and `s3r_read()`.
+        /* If we want to check CURL's say on the matter in a controlled
+         * fashion, this is the place to do it, but would need to make a 
+         * few minor changes to s3comms `s3r_t` and `s3r_read()`.
          */ 
         HGOTO_ERROR(H5E_VFL, H5E_CANTOPENFILE, NULL, "could not open");
     }
@@ -900,7 +689,6 @@ H5FD_ros3_open(const char *url,
 
     ret_value = (H5FD_t*)file;
 
-
 done:
     if (plist) { 
         free(plist); 
@@ -915,6 +703,7 @@ done:
     } /* if null return value (error) */
 
     FUNC_LEAVE_NOAPI(ret_value)
+
 } /* H5FD_ros3_open() */
 
 
@@ -945,7 +734,9 @@ H5FD_ros3_close(H5FD_t *_file)
 
     FUNC_ENTER_NOAPI_NOINIT
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5FD_ros3_close() called.\n");
+#endif
 
     /* Sanity checks 
      */
@@ -955,7 +746,7 @@ H5FD_ros3_close(H5FD_t *_file)
     /* Close the underlying request handle 
      */
     if (FAIL == H5FD_s3comms_s3r_close(file->s3r_handle)) {
-        HGOTO_ERROR(H5E_ERROR, H5E_ERROR, FAIL, 
+        HGOTO_ERROR(H5E_VFL, H5E_CANTCLOSEFILE, FAIL, 
                     "unable to close S3 request handle")
     }
 
@@ -965,6 +756,7 @@ H5FD_ros3_close(H5FD_t *_file)
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
+
 } /* end H5FD_ros3_close() */
 
 
@@ -980,25 +772,26 @@ done:
  *     Uses the parsed url structure to compare, as though doing `strcmp` on
  *     the url strings used to open the file.
  *
- * Return:
- *      
- *     0 (if urls are equivalent between files)
- *     -1 or 1 else.
- *
  *     `strcmp`, element-by-element, of scheme, host, port, path, and query
  *     parameters in files' S3 Requests's `purl` parsed url structure.
  *
- *     Scheme and Host are guaranteed present, and `strcmp`'d
- *     If equivalent (value of 0), attempts to compare ports:
- *         if both present, `strcmp` port number-string
- *         if one absent, set cmp value to 1 if `f1` has, -1 if `f2` has
- *         if both absent, does not modify cmp value
- *     If equivalent, attempts to compare paths
- *         using same apprach as with port.
- *     If equivalent, attempts to compare query strings
- *         using same approach as with port.
+ *     - Scheme and Host are guaranteed present, and `strcmp`'d
+ *     - If equivalent (value of 0), attempts to compare ports:
+ *         - if both `f1` and `f2` have `port`, `strcmp` port number-strings
+ *         - if one absent, set cmp value to 1 if `f1` has, -1 if `f2` has
+ *         - if both absent, does not modify cmp value
+ *     - If equivalent, attempts to compare paths using same apprach as with
+ *       port.
+ *     - If equivalent, attempts to compare query strings using same approach
+ *       as with port.
+ *     - If equivalent, attempts to compare `fa.aws_region`
+ *     - If equivalent, attempts to compare `fa.secret_id`
+ *     - If equivalent, attempts to compare `fa.secret_key`
  *
- *     Finally, constrain range to -1 .. 1.
+ * Return:
+ *      
+ *     - Equivalent:      0
+ *     - Not Equivalent: -1 or 1, following algorithm outlined above.
  *
  * Programmer: Jacob Smith
  *             2017-11-06
@@ -1019,7 +812,9 @@ H5FD_ros3_cmp(const H5FD_t *_f1,
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5FD_ros3_cmp() called.\n");
+#endif
 
     HDassert(f1->s3r_handle);
     HDassert(f2->s3r_handle);
@@ -1033,14 +828,15 @@ H5FD_ros3_cmp(const H5FD_t *_f1,
     HDassert(purl1->host);
     HDassert(purl2->host);
 
-
-
+    /* URL: SCHEME */
     ret_value = strcmp(purl1->scheme, purl2->scheme);
 
+    /* URL: HOST */
     if (0 == ret_value) {
         ret_value = strcmp(purl1->host, purl2->host);
     }
 
+    /* URL: PORT */
     if (0 == ret_value) {
         if (purl1->port && purl2->port) {
 	    ret_value = strcmp(purl1->port, purl2->port);
@@ -1051,6 +847,7 @@ H5FD_ros3_cmp(const H5FD_t *_f1,
         }
     }
 
+    /* URL: PATH */
     if (0 == ret_value) {
         if (purl1->path && purl2->path) {
 	    ret_value = strcmp(purl1->path, purl2->path);
@@ -1061,6 +858,7 @@ H5FD_ros3_cmp(const H5FD_t *_f1,
         }
     }
 
+    /* URL: QUERY */
     if (0 == ret_value) {
         if (purl1->query && purl2->query) {
 	    ret_value = strcmp(purl1->query, purl2->query);
@@ -1071,15 +869,46 @@ H5FD_ros3_cmp(const H5FD_t *_f1,
         }
     }
 
-    /* constrain to -1, 0, 1--makes testing much easier
-     */
-    if (ret_value < 0) {
-        ret_value = -1;
-    } else if (ret_value > 0) {
-        ret_value = 1;
+    /* FAPL: AWS_REGION */
+    if (0 == ret_value) {
+        if (f1->fa.aws_region && f2->fa.aws_region) {
+	    ret_value = strcmp(f1->fa.aws_region, f2->fa.aws_region);
+        } else if (f1->fa.aws_region && !f2->fa.aws_region) {
+            ret_value = 1;
+        } else if (f2->fa.aws_region && !f1->fa.aws_region) {
+            ret_value = -1;
+        }
     }
 
+    /* FAPL: SECRET_ID */
+    if (0 == ret_value) {
+        if (f1->fa.secret_id && f2->fa.secret_id) {
+	    ret_value = strcmp(f1->fa.secret_id, f2->fa.secret_id);
+        } else if (f1->fa.secret_id && !f2->fa.secret_id) {
+            ret_value = 1;
+        } else if (f2->fa.secret_id && !f1->fa.secret_id) {
+            ret_value = -1;
+        }
+    }
+
+    /* FAPL: SECRET_KEY */
+    if (0 == ret_value) {
+        if (f1->fa.secret_key && f2->fa.secret_key) {
+	    ret_value = strcmp(f1->fa.secret_key, f2->fa.secret_key);
+        } else if (f1->fa.secret_key && !f2->fa.secret_key) {
+            ret_value = 1;
+        } else if (f2->fa.aws_region && !f1->fa.aws_region) {
+            ret_value = -1;
+        }
+    }
+
+    /* constrain to -1, 0, 1--makes testing much easier
+     */
+    ret_value = (ret_value < 0) ? -1 : ret_value;
+    ret_value = (ret_value > 0) ?  1 : ret_value;
+
     FUNC_LEAVE_NOAPI(ret_value)
+
 } /* H5FD_ros3_cmp() */
 
 
@@ -1108,21 +937,19 @@ H5FD_ros3_query(const H5FD_t H5_ATTR_UNUSED *_file,
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5FD_ros3_query() called.\n");
+#endif
 
     /* Set the VFL feature flags that this driver supports */
     if (flags) {
-#if 0
-
         *flags = 0;
-
-        *flags |= H5FD_FEAT_DATA_SIEVE;             /* OK to perform data sieving for faster raw data reads & writes    */
-#else /* 0 | k == k */
-        *flags = H5FD_FEAT_DATA_SIEVE;
-#endif
+        /* OK to perform data sieving for faster raw data reads & writes */
+        *flags |= H5FD_FEAT_DATA_SIEVE; 
     } /* end if */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
+
 } /* H5FD_ros3_query() */
 
 
@@ -1155,7 +982,9 @@ H5FD_ros3_get_eoa(const H5FD_t                *_file,
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5FD_ros3_get_eoa() called.\n");
+#endif
 
     FUNC_LEAVE_NOAPI(file->eoa)
 
@@ -1173,7 +1002,7 @@ H5FD_ros3_get_eoa(const H5FD_t                *_file,
  *
  * Return:
  *
- *      FAIL (not possible with read-only S3)
+ *      SUCCEED  (can't fail)
  *
  * Programmer: Jacob Smith
  *             2017-11-03
@@ -1191,11 +1020,14 @@ H5FD_ros3_set_eoa(H5FD_t                    *_file,
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5FD_ros3_set_eoa() called.\n");
+#endif
 
     file->eoa = addr;
 
     FUNC_LEAVE_NOAPI(SUCCEED)
+
 } /* H5FD_ros3_set_eoa() */
 
 
@@ -1211,8 +1043,8 @@ H5FD_ros3_set_eoa(H5FD_t                    *_file,
  *
  * Return:
  *
- *     End of file address, the first address past the end of the 
- *     "file", either the filesystem file or the HDF5 file.
+ *     EOF: the first address past the end of the "file", either the 
+ *     filesystem file or the HDF5 file.
  *
  * Programmer: Jacob Smith
  *             2017-11-02
@@ -1223,14 +1055,16 @@ static haddr_t
 H5FD_ros3_get_eof(const H5FD_t                *_file, 
                   H5FD_mem_t   H5_ATTR_UNUSED  type)
 {
-    const H5FD_ros3_t   *file = (const H5FD_ros3_t *)_file;
+    const H5FD_ros3_t *file = (const H5FD_ros3_t *)_file;
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5FD_ros3_get_eof() called.\n");
+#endif
 
-/* size_t file->handle->filesize  ==> haddr_t ret_value */
     FUNC_LEAVE_NOAPI(file->s3r_handle->filesize)
+
 } /* end H5FD_ros3_get_eof() */
 
 
@@ -1263,7 +1097,9 @@ H5FD_ros3_get_handle(H5FD_t                *_file,
 
     FUNC_ENTER_NOAPI_NOINIT
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5FD_ros3_get_handle() called.\n");
+#endif
 
     if(!file_handle)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "file handle not valid")
@@ -1272,6 +1108,7 @@ H5FD_ros3_get_handle(H5FD_t                *_file,
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
+
 } /* end H5FD_ros3_get_handle() */
 
 
@@ -1286,9 +1123,9 @@ done:
  *
  * Return:
  *
- *     Success:    SUCCEED. Result is stored in caller-supplied
- *                          buffer BUF.
- *     Failure:    FAIL, Contents of buffer BUF are undefined.
+ *     Success:    SUCCEED - Result is stored in caller-supplied
+ *                           buffer BUF.
+ *     Failure:    FAIL    - Contents of buffer BUF are undefined.
  *
  * Programmer: Jacob Smith
  *             2017-11-??
@@ -1310,7 +1147,9 @@ H5FD_ros3_read(H5FD_t                    *_file,
 
     FUNC_ENTER_NOAPI_NOINIT
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5FD_ros3_read() called.\n");
+#endif
 
     HDassert(file);
     HDassert(file->s3r_handle);
@@ -1322,12 +1161,12 @@ H5FD_ros3_read(H5FD_t                    *_file,
     }
 
     if (FAIL == H5FD_s3comms_s3r_read(file->s3r_handle, addr, size, buf) ) {
-/* possibly revise s3r_handle to hold last CURLcode and http response code? */
         HGOTO_ERROR(H5E_VFL, H5E_READERROR, FAIL, "unable to execute read")
     }
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
+
 } /* end H5FD_ros3_read() */
 
 
@@ -1359,11 +1198,13 @@ H5FD_ros3_write(H5FD_t     H5_ATTR_UNUSED *_file,
                 size_t     H5_ATTR_UNUSED  size, 
                 const void H5_ATTR_UNUSED *buf)
 {
-    herr_t          ret_value   = FAIL;
+    herr_t ret_value = FAIL;
 
     FUNC_ENTER_NOAPI_NOINIT
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5FD_ros3_write() called.\n");
+#endif
 
     HGOTO_ERROR(H5E_VFL, H5E_UNSUPPORTED, FAIL,
                 "cannot write to read-only file.")
@@ -1405,13 +1246,16 @@ H5FD_ros3_truncate(H5FD_t  H5_ATTR_UNUSED *_file,
 
     FUNC_ENTER_NOAPI_NOINIT
 
+#if ROS3_DEBUG > 0
     HDfprintf(stdout, "H5FD_ros3_truncate() called.\n");
+#endif
 
     HGOTO_ERROR(H5E_VFL, H5E_UNSUPPORTED, FAIL,
                 "cannot truncate read-only file.")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
+
 } /* end H5FD_ros3_truncate() */
 
 
@@ -1443,8 +1287,8 @@ H5FD_ros3_lock(H5FD_t  H5_ATTR_UNUSED *_file,
                hbool_t H5_ATTR_UNUSED  rw)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
-
     FUNC_LEAVE_NOAPI(SUCCEED)
+
 } /* end H5FD_ros3_lock() */
 
 
@@ -1472,8 +1316,8 @@ static herr_t
 H5FD_ros3_unlock(H5FD_t H5_ATTR_UNUSED *_file)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
-
     FUNC_LEAVE_NOAPI(SUCCEED)
+
 } /* end H5FD_ros3_unlock() */
 
 
