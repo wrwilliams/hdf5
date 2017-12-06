@@ -578,7 +578,7 @@ typedef struct {
  * DECLARATION OF HTTP FIELD LIST ROUTINES *
  *******************************************/
 
-herr_t H5FD_s3comms_hrb_node_destroy(hrb_node_t *L);
+herr_t H5FD_s3comms_hrb_node_destroy(hrb_node_t **L);
 
 hrb_node_t * H5FD_s3comms_hrb_node_first(hrb_node_t        *L,
                                          enum HRB_NODE_ORD  ord);
@@ -594,7 +594,7 @@ hrb_node_t * H5FD_s3comms_hrb_node_set(hrb_node_t *L,
  * DECLARATION OF HTTP REQUEST|RESPONSE BUFFER ROUTINES *
  ********************************************************/
 
-herr_t H5FD_s3comms_hrb_destroy(hrb_t *buf);
+herr_t H5FD_s3comms_hrb_destroy(hrb_t **buf);
 
 hrb_t * H5FD_s3comms_hrb_init_request(const char *verb,
                                       const char *resource,

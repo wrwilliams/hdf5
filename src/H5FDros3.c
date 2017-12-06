@@ -31,13 +31,7 @@
 #include "H5FLprivate.h"    /* Free Lists               */
 #include "H5Iprivate.h"     /* IDs                      */
 #include "H5MMprivate.h"    /* Memory management        */
-
-#if 0
 #include "H5FDs3comms.h"    /* S3 Communications        */
-/* REVIEW: make .h-only work */
-#else
-#include "H5FDs3comms.c"    
-#endif
 
 /* toggle function call prints: 1 turns on
  */

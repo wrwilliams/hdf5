@@ -24,10 +24,6 @@
 
 
 
-#ifndef __js_test__
-
-#define __js_test__ 1L
-
 /*****************************************************************************
  *
  * FILE-LOCAL TESTING MACROS
@@ -63,7 +59,7 @@
  *         FAIL_UNLESS()    - check _not_ condition
  *         JSVERIFY()       - long-int equality check; prints reason/comparison
  *         JSVERIFY_NOT()   - long-int inequality check; prints
- *         JSVERIY_STR()    - string equality check; prints
+ *         JSVERIFY_STR()   - string equality check; prints
  *
  * Programmer: Jacob Smith
  *             2017-10-24
@@ -237,9 +233,9 @@ if (!(condition)) {            \
     }                                                   \
 }
 
-
-
 #ifdef JSVERIFY_EXP_ACT
+/* VERIFY rountines with paramter order (<expected>, <actual> [, <msg> ])
+ */
 
 
 /*----------------------------------------------------------------------------
@@ -264,6 +260,7 @@ if ((long)(actual) != (long)(expected)) {      \
     goto error;                                \
 } /* JSVERIFY */
 
+#if 0 /* UNUSED */
 
 /*----------------------------------------------------------------------------
  *
@@ -286,6 +283,7 @@ if ((long)(actual) == (long)(expected)) {      \
     JSERR_LONG((expected), (actual), (reason)) \
     goto error;                                \
 } /* JSVERIFY_NOT */
+#endif /* JSVERIFY_NOT unused */
 
 
 /*----------------------------------------------------------------------------
@@ -331,6 +329,7 @@ if ((long)(actual) != (long)(expected)) {       \
     goto error;                                 \
 } /* JSVERIFY */
 
+#if 0 /* UNUSED */
 
 /*----------------------------------------------------------------------------
  * Macro: JSVERIFY_NOT()
@@ -344,6 +343,7 @@ if ((long)(actual) == (long)(expected)) {      \
     JSERR_LONG((expected), (actual), (reason)) \
     goto error;                                \
 } /* JSVERIFY_NOT */
+#endif /* JSVERIFY_NOT unused */
 
 
 /*----------------------------------------------------------------------------
@@ -362,61 +362,6 @@ if (strcmp((actual), (expected)) != 0) {       \
 #endif /* ifdef/else JSVERIFY_EXP_ACT */
 
 
-#endif /* __js_test__ */
-
-
-
-#if 0
-/* ##########################################################################
- *
- * TEST PROTOTYPE. from top: Y9}
- *
- * ##########################################################################
- */
-
-/*---------------------------------------------------------------------------
- *
- * Function: funcname()
- *
- * Programmer: Jacob Smith
- *             yyyy-MM-DD
- *
- *---------------------------------------------------------------------------
- */
-static herr_t
-funcname(void)
-{
-    /*********************
-     * test-local macros *
-     *********************/
-
-    /*************************
-     * test-local structures *
-     *************************/
-
-    /************************
-     * test-local variables *
-     ************************/
-
-    TESTING("funcname");
-
-    /*********
-     * TESTS *
-     *********/
-
-    PASSED();
-    return 0;
-
-error:
-    /***********
-     * cleanup *
-     ***********/
-
-    return -1;
-
-} /* funcname */
-
-#endif
 
 
 /*---------------------------------------------------------------------------
@@ -556,14 +501,14 @@ test_aws_canonical_request(void)
         for (j = 0; j < 256; j++) { cr_dest[j] = 0; } /* zero request buffer */
         for (j = 0; j <  64; j++) { sh_dest[j] = 0; } /* zero headers buffer */
 
-        /* prepare objects
+        /* create HTTP request object with given verb, resource/path
          */
         hrb = H5FD_s3comms_hrb_init_request(C->verb, 
                                             C->resource, 
                                             "HTTP/1.1");
         HDassert(hrb->body == NULL);
 
-        /* add headers to list 
+        /* Create headers list from test case input
          */
         for (j = 0; j < C->listsize; j++) {
             node = H5FD_s3comms_hrb_node_set(node, 
@@ -571,25 +516,26 @@ test_aws_canonical_request(void)
                                              C->list[j].value);
         }
 
-        /* get first node (sorted)
+        /* get first node (sorted) from headers list, set as "first" node
+         * in request object
          */
         node = H5FD_s3comms_hrb_node_first(node, HRB_NODE_ORD_SORTED);
-
         hrb->first_header = node;
 
         /* test
          */
-        FAIL_IF( FAIL == 
-                 H5FD_s3comms_aws_canonical_request(cr_dest, sh_dest, hrb) );
+        JSVERIFY( SUCCEED,
+                  H5FD_s3comms_aws_canonical_request(cr_dest, sh_dest, hrb),
+                  "unable to compose canonical request" )
         JSVERIFY_STR( C->exp_headers, sh_dest, NULL )
         JSVERIFY_STR( C->exp_request, cr_dest, NULL )
 
         /* tear-down
          */
-        H5FD_s3comms_hrb_node_destroy(node);
-        node = NULL;
-        H5FD_s3comms_hrb_destroy(hrb);
-        hrb = NULL;        
+        HDassert( SUCCEED == H5FD_s3comms_hrb_node_destroy(&node));
+        HDassert(NULL == node);
+        HDassert( SUCCEED == H5FD_s3comms_hrb_destroy(&hrb));
+        HDassert(NULL == hrb);
 
     } /* for each test case */
 
@@ -599,26 +545,26 @@ test_aws_canonical_request(void)
 
      /*  malformed hrb and/or node-list
       */
-    FAIL_IF( FAIL != 
-             H5FD_s3comms_aws_canonical_request(cr_dest, sh_dest, NULL) );
+    JSVERIFY( FAIL, H5FD_s3comms_aws_canonical_request(cr_dest, sh_dest, NULL),
+              "http request object cannot be null" )
 
     hrb = H5FD_s3comms_hrb_init_request("GET", "/", "HTTP/1.1");
-    FAIL_IF( FAIL != 
-             H5FD_s3comms_aws_canonical_request(NULL, sh_dest, hrb) );
+    JSVERIFY( FAIL, H5FD_s3comms_aws_canonical_request(NULL, sh_dest, hrb),
+              "canonical request destination cannot be NULL" )
 
-    FAIL_IF( FAIL != 
-             H5FD_s3comms_aws_canonical_request(cr_dest, NULL, hrb) );
+    JSVERIFY( FAIL, H5FD_s3comms_aws_canonical_request(cr_dest, NULL, hrb),
+              "signed headers destination cannot be null" )
 
-    H5FD_s3comms_hrb_destroy(hrb);
-    hrb = NULL;
+    HDassert( SUCCEED == H5FD_s3comms_hrb_destroy(&hrb) );
+    HDassert(NULL == hrb);
 
     PASSED();
     return 0;
 
 error:
 
-    if (node != NULL) { H5FD_s3comms_hrb_node_destroy(node); }
-    if (hrb  != NULL) { H5FD_s3comms_hrb_destroy(hrb); }
+    if (node != NULL) { (void)H5FD_s3comms_hrb_node_destroy(&node); }
+    if (hrb  != NULL) { (void)H5FD_s3comms_hrb_destroy(&hrb); }
 
     return -1;
 
@@ -692,22 +638,25 @@ test_bytes_to_hex(void)
             out[out_off] = 0;
         }
 
-        FAIL_IF( FAIL == 
-                 H5FD_s3comms_bytes_to_hex(out,
-                                           cases[i].in,
-                                           cases[i].size,
-                                           cases[i].lower) );
+        JSVERIFY( SUCCEED,
+                  H5FD_s3comms_bytes_to_hex(out,
+                                            cases[i].in,
+                                            cases[i].size,
+                                            cases[i].lower),
+                  NULL )
 
         JSVERIFY_STR(cases[i].exp, out, NULL)
     }
 
     /* dest cannot be null 
      */
-    FAIL_IF( FAIL != 
-             H5FD_s3comms_bytes_to_hex(NULL, 
-                                       (const unsigned char *)"nada", 
-                                       5, 
-                                       FALSE) );
+    JSVERIFY( FAIL, 
+              H5FD_s3comms_bytes_to_hex(
+                      NULL, 
+                      (const unsigned char *)"nada", 
+                      5, 
+                      FALSE),
+               "destination cannot be null" )
 
     PASSED();
     return 0;
@@ -743,6 +692,7 @@ test_hrb_init_request(void)
      *************************/
 
     struct testcase {
+        const char  msg[64];
         const char *verb;
         const char *resource;
         const char *exp_res;
@@ -755,32 +705,37 @@ test_hrb_init_request(void)
      ************************/
 
     struct testcase cases[] = {
-        {   "GET",
+        {   "get HTTP request just as we provided",
+            "GET",
             "/path/to/some/file",
             "/path/to/some/file",
             "HTTP/1.1",
             FALSE,
         },
-        {   NULL,
+        {   "null verb substitues to GET",
+            NULL,
             "/MYPATH/MYFILE.tiff",
             "/MYPATH/MYFILE.tiff",
             "HTTP/1.1",
             FALSE,
         },
-        {   "HEAD",
+        {   "demonstrate non-GET verb",
+            "HEAD",
             "/MYPATH/MYFILE.tiff",
             "/MYPATH/MYFILE.tiff",
             "HTTP/1.1",
             FALSE,
         },
-        {   NULL,
+        {   "slash prepented to resource path, if necessary",
+            NULL,
             "MYPATH/MYFILE.tiff",
             "/MYPATH/MYFILE.tiff",
             NULL,
             FALSE,
         },
-        {   "GET",
-            NULL, /* problem path! */
+        {   "null resource path causes problem",
+            "GET",
+            NULL,
             NULL,
             NULL,
             TRUE,
@@ -804,17 +759,20 @@ test_hrb_init_request(void)
             FAIL_IF( req != NULL );
         } else {
             FAIL_IF( req == NULL );
-            FAIL_IF( req->magic != S3COMMS_HRB_MAGIC );
-            if (C->verb != NULL) {
+            JSVERIFY( S3COMMS_HRB_MAGIC, req->magic, NULL )
+            if (C->verb == NULL) {
+                JSVERIFY_STR( "GET", req->verb, NULL )
+            } else {
                 JSVERIFY_STR( req->verb, C->verb, NULL )
             }
             JSVERIFY_STR( "HTTP/1.1",  req->version,  NULL )
             JSVERIFY_STR( C->exp_res,  req->resource, NULL )
             FAIL_IF( req->first_header != NULL );
             FAIL_IF( req->body         != NULL );
-            FAIL_IF( req->body_len     != 0 );
-            JSVERIFY( SUCCEED, H5FD_s3comms_hrb_destroy(req), 
+            JSVERIFY( 0, req->body_len, NULL )
+            JSVERIFY( SUCCEED, H5FD_s3comms_hrb_destroy(&req), 
                       "unable to destroy hrb_t" )
+            FAIL_IF( NULL != req ); /* should annull pointer as well as free */
         }
 
     } /* for each testcase */
@@ -823,7 +781,7 @@ test_hrb_init_request(void)
     return 0;
 
 error:
-    H5FD_s3comms_hrb_destroy(req);
+    (void)H5FD_s3comms_hrb_destroy(&req);
 
     return -1;
 
@@ -844,6 +802,16 @@ error:
  *         `H5FD_s3comms_hrb_node_next()`
  *         `H5FD_s3comms_hrb_node_destroy()`
  *
+ *     - An initial node is created by calling set() with a NULL list/note and
+ *       non-null field and value strings.
+ *     - To this node, additional nodes may be attached (or removed or modified)
+ *       with additional set() calls _on any node in the list_.
+ *     - first() and next() provide abstract means to navigate through the list.
+ *     - To eliminate a list, one may:
+ *         - call destroy() on any note that is part of the list.
+ *         - call set() for each node in the list with a field name that is
+ *           a member and NULL for the value.
+ *
  * Programmer: Jacob Smith
  *             2017-09-22
  *
@@ -855,16 +823,18 @@ test_hrb_node_t(void)
     /*********************
      * test-local macros *
      *********************/
+/* 
+ * THNT_* := Test Hrb Node Type
+ */
+#define THNT_STR_LEN 256 /* 0x100 */
 
-#define THFT_STR_LEN 256 /* 0x100 */
-
-#define THFT_NAME      1
-#define THFT_VALUE     2
-#define THFT_CAT       3
-#define THFT_LOWERNAME 4
+#define THNT_NAME      1
+#define THNT_VALUE     2
+#define THNT_CAT       3
+#define THNT_LOWERNAME 4
 
 /*
- * THFT_CAT_CHECK := [T]est [H]rb [F]ield] [T]ype con[CAT]enation [CHECK]
+ * THNT_CAT_CHECK := THNT conCATenation CHECK
  *
  * with inputs: 
  *     `expected` - a given concatenated output 
@@ -881,44 +851,41 @@ test_hrb_node_t(void)
  * check against the expected
  * error if mismatch with expected.
  */
-#define THFT_CAT_CHECK(expected, ord_enum, selector)             \
-{   for (i = 0; i < THFT_STR_LEN; i++) {                         \
-        str[i] = 0; /* zero destination string (THFT_STR_LEN) */ \
-    }                                                            \
-    /* working node at start of list, per ord_enum */            \
-    /* node = H5FD_s3comms_hrb_node_first(list, ord_enum); */    \
-    node = list;                                                 \
-    if (ord_enum == HRB_NODE_ORD_GIVEN) {                        \
-        while (node->prev != NULL) node = node->prev;            \
-    } else {                                                     \
-        while (node->prev_lower != NULL) node = node->prev_lower; \
-    }                                                            \
-    while (node != NULL) { /* stract which strings to str */     \
-        switch(selector) {                                       \
-            case THFT_NAME :                                     \
-                strcat(str, node->name);                         \
-                break;                                           \
-            case THFT_VALUE :                                    \
-                strcat(str, node->value);                        \
-                break;                                           \
-            case THFT_CAT :                                      \
-                strcat(str, node->cat);                          \
-                break;                                           \
-            case THFT_LOWERNAME :                                \
-                strcat(str, node->lowername);                    \
-                break;                                           \
-            default :                                            \
-                break;                                           \
-        }                                                        \
-        /* advance to next node, according to order enum */      \
-/*         node = H5FD_s3comms_hrb_node_next(node, (ord_enum)); */ \
-        node = ((ord_enum) == HRB_NODE_ORD_GIVEN)                \
-             ? node->next                                        \
-             : node->next_lower;                                 \
-    }                                                            \
-    FAIL_IF( node != NULL);                                      \
-    /* comparison string completed; compare */                   \
-    JSVERIFY_STR( expected, str, NULL )                          \
+#define THNT_CAT_CHECK(expected, ord_enum, selector)                    \
+{   for (i = 0; i < THNT_STR_LEN; i++) {                                \
+        str[i] = 0; /* zero comparison string */                        \
+    }                                                                   \
+    /* working node at start of list, per ord_enum */                   \
+    /* node = H5FD_s3comms_hrb_node_first(list, ord_enum); */           \
+    node = list;                                                        \
+    if (ord_enum == HRB_NODE_ORD_GIVEN) {                               \
+        while (node->prev != NULL) node = node->prev;                   \
+    } else {                                                            \
+        while (node->prev_lower != NULL) node = node->prev_lower;       \
+    }                                                                   \
+    while (node != NULL) { /* stract which strings to str */            \
+        switch(selector) {                                              \
+            case THNT_NAME :                                            \
+                strcat(str, node->name);                                \
+                break;                                                  \
+            case THNT_VALUE :                                           \
+                strcat(str, node->value);                               \
+                break;                                                  \
+            case THNT_CAT :                                             \
+                strcat(str, node->cat);                                 \
+                break;                                                  \
+            case THNT_LOWERNAME :                                       \
+                strcat(str, node->lowername);                           \
+                break;                                                  \
+            default :                                                   \
+                break;                                                  \
+        }                                                               \
+        /* advance to next node, according to order enum */             \
+        node = H5FD_s3comms_hrb_node_next(node, (ord_enum));            \
+    }                                                                   \
+    FAIL_IF( node != NULL);                                             \
+    /* comparison string completed; compare */                          \
+    JSVERIFY_STR( expected, str, NULL )                                 \
 }
 
     /************************
@@ -928,7 +895,7 @@ test_hrb_node_t(void)
     size_t      i    = 0;          /* working variable for macro */
     hrb_node_t *list = NULL;       /* list node we are working with */
     hrb_node_t *node = NULL;       /* working variable for macro */
-    char        str[THFT_STR_LEN]; /* working buffer to test against */
+    char        str[THNT_STR_LEN]; /* working buffer to test against */
 
 
 
@@ -936,23 +903,11 @@ test_hrb_node_t(void)
 
     /* cannot "unset" a field from an uninstantiated hrb_node_t */
     FAIL_IF( NULL != H5FD_s3comms_hrb_node_set(NULL, "Host", NULL) );
-/*  JSVFY(H5FD_s3comms_hrb_node_set(NULL, "Host", NULL), NULL, 
- *        "cannot 'unset' a field from an uninstantiated hrb_node_t.\n");
- *  ^ lacks ability to compare pointers. preserve for now.
- */
 
     /* NULL field name has no effect */
     FAIL_IF( NULL != H5FD_s3comms_hrb_node_set(NULL, NULL, "somevalue") );
-/* JSVFY(H5FD_s3comms_hrb_node_set(NULL, NULL, "somevalue"), NULL,
- *       "Cannot create list with NULL name.\n);"
- */
 
     /* looking for 'next' on an uninstantiated hrb_node_t returns NULL */
-/*  JSVFY(list, NULL, NULL);
- *  JSVFY(H5FD_s3comms_hrb_node_next(list, HRB_NODE_ORD_GIVEN), NULL, 
- *        "'next' on uninstantiated list (NULL) is always NULL.\n");
- *  JSVFY(H5FD_s3comms_hrb_node_next(list, HRB_NODE_ORD_SORTED), NULL, NULL);
- */
     FAIL_IF( list != NULL);
     FAIL_IF( NULL != H5FD_s3comms_hrb_node_next(list, HRB_NODE_ORD_GIVEN) );
     FAIL_IF( NULL != H5FD_s3comms_hrb_node_next(list, HRB_NODE_ORD_SORTED) );
@@ -960,15 +915,12 @@ test_hrb_node_t(void)
     /* insert one element
      */
     list = H5FD_s3comms_hrb_node_set(NULL, "Host", "mybucket.s3.com");
-/*  JSVFY(list, NULL, NULL);
- *  JSVFY(list->magic, S3COMMS_HRB_NODE_MAGIC, NULL);
- */
     FAIL_IF( list == NULL );
-    FAIL_IF( list->magic != S3COMMS_HRB_NODE_MAGIC );
-    THFT_CAT_CHECK("Host", HRB_NODE_ORD_GIVEN, THFT_NAME);
-    THFT_CAT_CHECK("Host", HRB_NODE_ORD_SORTED, THFT_NAME);
-    THFT_CAT_CHECK("mybucket.s3.com", HRB_NODE_ORD_SORTED, THFT_VALUE);
-    THFT_CAT_CHECK("Host: mybucket.s3.com", HRB_NODE_ORD_GIVEN, THFT_CAT);
+    JSVERIFY( S3COMMS_HRB_NODE_MAGIC, list->magic, NULL )
+    THNT_CAT_CHECK("Host", HRB_NODE_ORD_GIVEN, THNT_NAME);
+    THNT_CAT_CHECK("Host", HRB_NODE_ORD_SORTED, THNT_NAME);
+    THNT_CAT_CHECK("mybucket.s3.com", HRB_NODE_ORD_SORTED, THNT_VALUE);
+    THNT_CAT_CHECK("Host: mybucket.s3.com", HRB_NODE_ORD_GIVEN, THNT_CAT);
     FAIL_IF( NULL != H5FD_s3comms_hrb_node_next(list, HRB_NODE_ORD_GIVEN) );
     FAIL_IF( NULL != H5FD_s3comms_hrb_node_next(list, HRB_NODE_ORD_SORTED) );
 
@@ -977,30 +929,30 @@ test_hrb_node_t(void)
     list = H5FD_s3comms_hrb_node_set(list, "x-amz-date", "20170921");
     list = H5FD_s3comms_hrb_node_set(list, "Range", "bytes=50-100");
     FAIL_IF( list == NULL );
-    FAIL_IF( list->magic != S3COMMS_HRB_NODE_MAGIC );
-    THFT_CAT_CHECK("Hostx-amz-dateRange", HRB_NODE_ORD_GIVEN, THFT_NAME);
-    THFT_CAT_CHECK("HostRangex-amz-date", HRB_NODE_ORD_SORTED, THFT_NAME);
-    THFT_CAT_CHECK("hostrangex-amz-date", HRB_NODE_ORD_SORTED, THFT_LOWERNAME);
+    JSVERIFY( S3COMMS_HRB_NODE_MAGIC, list->magic, NULL )
+    THNT_CAT_CHECK("Hostx-amz-dateRange", HRB_NODE_ORD_GIVEN, THNT_NAME);
+    THNT_CAT_CHECK("HostRangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
+    THNT_CAT_CHECK("hostrangex-amz-date", HRB_NODE_ORD_SORTED, THNT_LOWERNAME);
 
-    THFT_CAT_CHECK(                                \
+    THNT_CAT_CHECK(                                \
             "mybucket.s3.combytes=50-10020170921", \
             HRB_NODE_ORD_SORTED,                   \
-            THFT_VALUE);
-    THFT_CAT_CHECK(                                                         \
+            THNT_VALUE);
+    THNT_CAT_CHECK(                                                         \
             "Host: mybucket.s3.comRange: bytes=50-100x-amz-date: 20170921", \
             HRB_NODE_ORD_SORTED,                                            \
-            THFT_CAT);
-    THFT_CAT_CHECK(                                                         \
+            THNT_CAT);
+    THNT_CAT_CHECK(                                                         \
             "Host: mybucket.s3.comx-amz-date: 20170921Range: bytes=50-100", \
             HRB_NODE_ORD_GIVEN,                                             \
-            THFT_CAT);
+            THNT_CAT);
 
     /* add entry "less than" first node
      */
     list = H5FD_s3comms_hrb_node_set(list, "Access", "always");
     FAIL_IF( list == NULL );
-    THFT_CAT_CHECK("Hostx-amz-dateRangeAccess", HRB_NODE_ORD_GIVEN, THFT_NAME);
-    THFT_CAT_CHECK("AccessHostRangex-amz-date", HRB_NODE_ORD_SORTED, THFT_NAME);
+    THNT_CAT_CHECK("Hostx-amz-dateRangeAccess", HRB_NODE_ORD_GIVEN, THNT_NAME);
+    THNT_CAT_CHECK("AccessHostRangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
     /* demonstrate `H5FD_s3comms_hrb_node_first()`
      */
     node = H5FD_s3comms_hrb_node_first(list, HRB_NODE_ORD_SORTED);
@@ -1011,44 +963,44 @@ test_hrb_node_t(void)
      */
     list = H5FD_s3comms_hrb_node_set(list, "x-amz-date", "19411207");
     FAIL_IF( list == NULL );
-    THFT_CAT_CHECK("Hostx-amz-dateRangeAccess", HRB_NODE_ORD_GIVEN, THFT_NAME);
-    THFT_CAT_CHECK( \
+    THNT_CAT_CHECK("Hostx-amz-dateRangeAccess", HRB_NODE_ORD_GIVEN, THNT_NAME);
+    THNT_CAT_CHECK( \
  "Access: alwaysHost: mybucket.s3.comRange: bytes=50-100x-amz-date: 19411207",\
             HRB_NODE_ORD_SORTED, \
-            THFT_CAT);
+            THNT_CAT);
 
     /* add at end again
      */
     list = H5FD_s3comms_hrb_node_set(list, "x-forbidden", "True");
     FAIL_IF( list == NULL );
-    THFT_CAT_CHECK("Hostx-amz-dateRangeAccessx-forbidden", \
+    THNT_CAT_CHECK("Hostx-amz-dateRangeAccessx-forbidden", \
                    HRB_NODE_ORD_GIVEN,                     \
-                   THFT_NAME);
-    THFT_CAT_CHECK("AccessHostRangex-amz-datex-forbidden", \
+                   THNT_NAME);
+    THNT_CAT_CHECK("AccessHostRangex-amz-datex-forbidden", \
                    HRB_NODE_ORD_SORTED,                    \
-                   THFT_NAME);
-    THFT_CAT_CHECK("accesshostrangex-amz-datex-forbidden", \
+                   THNT_NAME);
+    THNT_CAT_CHECK("accesshostrangex-amz-datex-forbidden", \
                    HRB_NODE_ORD_SORTED,                    \
-                   THFT_LOWERNAME);
-    THFT_CAT_CHECK("alwaysmybucket.s3.combytes=50-10019411207True", \
+                   THNT_LOWERNAME);
+    THNT_CAT_CHECK("alwaysmybucket.s3.combytes=50-10019411207True", \
                    HRB_NODE_ORD_SORTED,                             \
-                   THFT_VALUE);
+                   THNT_VALUE);
 
     /* modify and case-change entry
      */
     list = H5FD_s3comms_hrb_node_set(list, "hoST", "none");
-    THFT_CAT_CHECK("hoSTx-amz-dateRangeAccessx-forbidden", \
+    THNT_CAT_CHECK("hoSTx-amz-dateRangeAccessx-forbidden", \
                    HRB_NODE_ORD_GIVEN,                     \
-                   THFT_NAME);
-    THFT_CAT_CHECK("AccesshoSTRangex-amz-datex-forbidden", \
+                   THNT_NAME);
+    THNT_CAT_CHECK("AccesshoSTRangex-amz-datex-forbidden", \
                    HRB_NODE_ORD_SORTED,                    \
-                   THFT_NAME);
-    THFT_CAT_CHECK("accesshostrangex-amz-datex-forbidden", \
+                   THNT_NAME);
+    THNT_CAT_CHECK("accesshostrangex-amz-datex-forbidden", \
                    HRB_NODE_ORD_SORTED,                    \
-                   THFT_LOWERNAME);
-    THFT_CAT_CHECK("alwaysnonebytes=50-10019411207True", \
+                   THNT_LOWERNAME);
+    THNT_CAT_CHECK("alwaysnonebytes=50-10019411207True", \
                    HRB_NODE_ORD_SORTED,                  \
-                   THFT_VALUE);
+                   THNT_VALUE);
 
     /* AT THIS TIME:
      *
@@ -1063,55 +1015,54 @@ test_hrb_node_t(void)
     /* remove last node of both lists
      */
     list = H5FD_s3comms_hrb_node_set(list, "x-forbidden", NULL);
-    THFT_CAT_CHECK("hoSTx-amz-dateRangeAccess", HRB_NODE_ORD_GIVEN,  THFT_NAME);
-    THFT_CAT_CHECK("AccesshoSTRangex-amz-date", HRB_NODE_ORD_SORTED, THFT_NAME);
+    THNT_CAT_CHECK("hoSTx-amz-dateRangeAccess", HRB_NODE_ORD_GIVEN,  THNT_NAME);
+    THNT_CAT_CHECK("AccesshoSTRangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
 
     /* remove first node of sorted 
      */
     list = H5FD_s3comms_hrb_node_set(list, "ACCESS", NULL);
     JSVERIFY_STR("hoST", list->name, NULL)
-    THFT_CAT_CHECK("hoSTRangex-amz-date", HRB_NODE_ORD_SORTED, THFT_NAME);
-    THFT_CAT_CHECK("hoSTx-amz-dateRange", HRB_NODE_ORD_GIVEN,  THFT_NAME);
+    THNT_CAT_CHECK("hoSTRangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
+    THNT_CAT_CHECK("hoSTx-amz-dateRange", HRB_NODE_ORD_GIVEN,  THNT_NAME);
 
     /* remove first node of both; changes `list` pointer 
      * to first non null of previous sorted or next sorted 
      *     (in this case, next)
      */
     list = H5FD_s3comms_hrb_node_set(list, "Host", NULL);
-    THFT_CAT_CHECK("x-amz-dateRange", HRB_NODE_ORD_GIVEN,  THFT_NAME);
-    THFT_CAT_CHECK("Rangex-amz-date", HRB_NODE_ORD_SORTED, THFT_NAME);
+    THNT_CAT_CHECK("x-amz-dateRange", HRB_NODE_ORD_GIVEN,  THNT_NAME);
+    THNT_CAT_CHECK("Rangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
     JSVERIFY_STR("Range", list->name, NULL )
 
     /* re-add Host element, and remove sorted Range
      */
     list = H5FD_s3comms_hrb_node_set(list, "Host", "nah");
-    THFT_CAT_CHECK("x-amz-dateRangeHost", HRB_NODE_ORD_GIVEN,  THFT_NAME);
-    THFT_CAT_CHECK("HostRangex-amz-date", HRB_NODE_ORD_SORTED, THFT_NAME);
+    THNT_CAT_CHECK("x-amz-dateRangeHost", HRB_NODE_ORD_GIVEN,  THNT_NAME);
+    THNT_CAT_CHECK("HostRangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
     JSVERIFY_STR( "Range", list->name, NULL )
     list = H5FD_s3comms_hrb_node_set(list, "Range", NULL);
-    THFT_CAT_CHECK("x-amz-dateHost", HRB_NODE_ORD_GIVEN,  THFT_NAME);
-    THFT_CAT_CHECK("Hostx-amz-date", HRB_NODE_ORD_SORTED, THFT_NAME);
+    THNT_CAT_CHECK("x-amz-dateHost", HRB_NODE_ORD_GIVEN,  THNT_NAME);
+    THNT_CAT_CHECK("Hostx-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
     JSVERIFY_STR( "Host", list->name, NULL )
 
     /* remove Host again; on opposite ends of each list
      */ 
     list = H5FD_s3comms_hrb_node_set(list, "Host", NULL);
-    THFT_CAT_CHECK("x-amz-date", HRB_NODE_ORD_GIVEN,  THFT_NAME);
-    THFT_CAT_CHECK("x-amz-date", HRB_NODE_ORD_SORTED, THFT_NAME);
+    THNT_CAT_CHECK("x-amz-date", HRB_NODE_ORD_GIVEN,  THNT_NAME);
+    THNT_CAT_CHECK("x-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
     JSVERIFY_STR( "x-amz-date", list->name, NULL )
 
     /* removing absent element has no effect
      */
     list = H5FD_s3comms_hrb_node_set(list, "Host", NULL);
-    THFT_CAT_CHECK("x-amz-date", HRB_NODE_ORD_GIVEN,  THFT_NAME);
-    THFT_CAT_CHECK("x-amz-date", HRB_NODE_ORD_SORTED, THFT_NAME);
+    THNT_CAT_CHECK("x-amz-date", HRB_NODE_ORD_GIVEN,  THNT_NAME);
+    THNT_CAT_CHECK("x-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
     JSVERIFY_STR( "x-amz-date", list->name, NULL )
 
-    /* removing last element returns NULL, but list node lingers
+    /* removing last element returns NULL; no more elements/nodes in list
      */
-    FAIL_UNLESS( NULL == H5FD_s3comms_hrb_node_set(list, "x-amz-date", NULL) );
-    FAIL_IF( list == NULL ); /* not null, but has been freed */
-    list = NULL;
+    list = H5FD_s3comms_hrb_node_set(list, "x-amz-date", NULL);
+    FAIL_IF( list != NULL )
 
     HDassert( node == NULL );
 
@@ -1128,8 +1079,8 @@ test_hrb_node_t(void)
     list = H5FD_s3comms_hrb_node_set(list, "Range", "bytes=1024-");
 
     /* verify list */
-    THFT_CAT_CHECK("HostAccessx-amz-dateRange", HRB_NODE_ORD_GIVEN, THFT_NAME);
-    THFT_CAT_CHECK("AccessHostRangex-amz-date", HRB_NODE_ORD_SORTED, THFT_NAME);
+    THNT_CAT_CHECK("HostAccessx-amz-dateRange", HRB_NODE_ORD_GIVEN, THNT_NAME);
+    THNT_CAT_CHECK("AccessHostRangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
     HDassert( node == NULL );
 
     /* change pointer; demonstrate can destroy from anywhere in list */
@@ -1138,14 +1089,13 @@ test_hrb_node_t(void)
     JSVERIFY_STR( "x-amz-date", list->name, NULL);
 
     /* re-verify list */
-    THFT_CAT_CHECK("HostAccessx-amz-dateRange", HRB_NODE_ORD_GIVEN, THFT_NAME);
-    THFT_CAT_CHECK("AccessHostRangex-amz-date", HRB_NODE_ORD_SORTED, THFT_NAME);
+    THNT_CAT_CHECK("HostAccessx-amz-dateRange", HRB_NODE_ORD_GIVEN, THNT_NAME);
+    THNT_CAT_CHECK("AccessHostRangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
 
     /* destroy eats everything but programmer must reset pointer */
-    JSVERIFY( SUCCEED, H5FD_s3comms_hrb_node_destroy(list), 
+    JSVERIFY( SUCCEED, H5FD_s3comms_hrb_node_destroy(&list), 
               "unable to destroy");
-    FAIL_IF( list == NULL ); /* not-null, but _has_ been freed */
-    list = NULL;
+    FAIL_IF( list != NULL );
     HDassert( node == NULL );
 
     /**********
@@ -1156,21 +1106,20 @@ test_hrb_node_t(void)
     return 0;
 
 error:
-    /* this is how to dispose of a list in one go
-     */
     if (list != NULL) {
-        HDassert( SUCCEED == H5FD_s3comms_hrb_node_destroy(list) );
+        HDassert( SUCCEED == H5FD_s3comms_hrb_node_destroy(&list) );
+        HDassert( list == NULL );
     }
     HDassert( node == NULL );
 
     return -1;
 
-#undef THFT_STR_LEN
-#undef THFT_CAT
-#undef THFT_LOWERNAME
-#undef THFT_NAME
-#undef THFT_VALUE
-#undef THFT_CAT_CHECK
+#undef THNT_STR_LEN
+#undef THNT_CAT
+#undef THNT_LOWERNAME
+#undef THNT_NAME
+#undef THNT_VALUE
+#undef THNT_CAT_CHECK
 
 } /* test_hrb_node_t */
 
@@ -1266,7 +1215,6 @@ test_HMAC_SHA256(void)
                   cases[i].msg );
         if (cases[i].ret == SUCCEED) {
 #ifdef VERBOSE 
-/* if (VERBOSE_HI) {...} */
             if (0 != 
                 strncmp(cases[i].exp, 
                         dest, 
@@ -1325,27 +1273,30 @@ test_nlowercase(void)
      *************************/
 
     struct testcase {
-        const char *exp;
         const char *in;
         size_t      len;
+        const char *exp;
     };
 
     /************************
      * test-local variables *
      ************************/
 
+    /* any character after in exp on or after exp[len] is undefined.
+     * in this test, kept as the null character for simplicity.
+     */
     struct testcase cases[] = {
-        {   "hallel",
-            "HALlEluJAh",
+        {   "HALlEluJAh",
             6,
+            "hallel",
         },
         {   "all\0 lower",
-            "all\0 lower",
             10,
+            "all\0 lower",
         },
-        {   "nothing really matters",
-            "to meeeeeee",
+        {   "to meeeeeee",
             0,
+            "",
         },
     };
     char *dest    = NULL;
@@ -1374,7 +1325,7 @@ test_nlowercase(void)
               H5FD_s3comms_nlowercase(NULL, 
                                       cases[i].in, 
                                       cases[i].len),
-              NULL )
+              "null distination should fail" )
 
     PASSED();
     return 0;
@@ -1558,8 +1509,9 @@ test_parse_url(void)
     for (i = 0; i < ncases; i++) {
         HDassert( purl == NULL );
 
-        FAIL_IF( cases[i].exp_ret !=
-                 H5FD_s3comms_parse_url(cases[i].url, &purl) )
+        JSVERIFY( cases[i].exp_ret,
+                  H5FD_s3comms_parse_url(cases[i].url, &purl),
+                  cases[i].msg )
 
         if (cases[i].exp_ret == FAIL) {
             /* on FAIL, `purl` should be untouched--remains NULL */
@@ -1671,24 +1623,25 @@ test_percent_encode_char(void)
      * test-local variables *
      ************************/
 
-    struct testcase cases[6] = {
+    struct testcase cases[] = {
         {'$', "%24", 3}, /* u+0024 dollar sign */
         {' ', "%20", 3}, /* u+0020 space */
         {'^', "%5E", 3}, /* u+0094 carat */
         {'/', "%2F", 3}, /* u+002f solidus (forward slash) */
-/*        {??, "%C5%8C", 6},*/ 
-/* u+014c Latin Capital Letter O with Macron
- * Not included because it is multibyte "wide" character that poses issues
- * both in the underlying function and in being written in this file.        
- */
-        {'¢', "%C2%A2", 6}, /* u+00a2 cent sign */
+        /* {??, "%C5%8C", 6},*/ /* u+014c Latin Capital Letter O with Macron */
+        /* Not included because it is multibyte "wide" character that poses  */
+        /* issues both in the underlying function and in being written in    */
+        /* this file.                                                        */
+        /* {'¢', "%C2%A2", 6}, */ /* u+00a2 cent sign */
+        /* above works, but complains about wide character overflow      */
+        /* Elide for now, until it is determined (a) unnecessary or      */
+        /* (b) requiring signature change to accommodate wide characters */
         {'\0', "%00", 3}, /* u+0000 null */
     };
-
     char   dest[13];
     size_t dest_len = 0;
     int    i        = 0;
-    int    n_cases  = 6;
+    int    n_cases  = 5;
 
 
 
@@ -1787,7 +1740,6 @@ test_s3r_ops(void)
 
     /* It is desired to have means available to verify that signing_key
      * was set successfully and to an expected value.
-     * This means is not yet in hand.
      */
     HDassert(SUCCEED ==
              H5FD_s3comms_signing_key(signing_key, 
@@ -1806,34 +1758,39 @@ test_s3r_ops(void)
              (const unsigned char *)signing_key);
 
     FAIL_IF( handle == NULL );
-    FAIL_IF( FAIL ==
-             H5FD_s3comms_s3r_read(handle,
-                                   (haddr_t)1200699,
-                                   (size_t)103,
-                                   buffer) );
-    FAIL_IF( 0 != strncmp(buffer,
-                   "Osr. Sweet lord, if your lordship were at leisure, "  \
-                   "I should impart\n    a thing to you from his Majesty.",
-                   103) );
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_s3r_read(handle,
+                                    (haddr_t)1200699,
+                                    (size_t)103,
+                                    buffer),
+              NULL )
+    JSVERIFY( 0,
+              strncmp(buffer,
+                      "Osr. Sweet lord, if your lordship were at leisure, "  \
+                      "I should impart\n    a thing to you from his Majesty.",
+                      103),
+              buffer )
 
     /**********************
      * DEMONSTRATE RE-USE *
      **********************/
 
-    FAIL_IF( FAIL ==
-             H5FD_s3comms_s3r_read(handle,
-                                   (haddr_t)3544662,
-                                   (size_t)44,
-                                   buffer2) );
-    FAIL_IF( 0 != 
-             strncmp(buffer2,
-                     "Our sport shall be to take what they mistake",
-                     44) );
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_s3r_read(handle,
+                                    (haddr_t)3544662,
+                                    (size_t)44,
+                                    buffer2),
+              NULL )
+    JSVERIFY( 0, strncmp(buffer2,
+                         "Our sport shall be to take what they mistake",
+                         44),
+              buffer2 );
 
     /* stop using this handle now!
      */
-    FAIL_IF ( FAIL == 
-              H5FD_s3comms_s3r_close(handle) );
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_s3r_close(handle),
+              "unable to close file" )
     handle = NULL;
 
     /***********************
@@ -1971,17 +1928,19 @@ test_signing_key(void)
                                       SHA256_DIGEST_LENGTH);
     HDassert(key != NULL);
 
-        FAIL_IF( FAIL ==
-                 H5FD_s3comms_signing_key(
-                         key,
-                         cases[i].secret_key,
-                         cases[i].region,
-                         cases[i].when) ); 
+        JSVERIFY( SUCCEED,
+                  H5FD_s3comms_signing_key(
+                          key,
+                          cases[i].secret_key,
+                          cases[i].region,
+                          cases[i].when),
+                  NULL )
 
-        FAIL_IF( 0 !=
-                 strncmp((const char *)cases[i].exp, 
-                         (const char *)key,
-                         SHA256_DIGEST_LENGTH) );
+        JSVERIFY( 0,
+                  strncmp((const char *)cases[i].exp, 
+                          (const char *)key,
+                          SHA256_DIGEST_LENGTH),
+                   cases[i].exp )
 
         free(key);
         key = NULL;
@@ -1996,34 +1955,37 @@ test_signing_key(void)
                                   SHA256_DIGEST_LENGTH);
     HDassert(key != NULL);
 
-    FAIL_IF( FAIL != 
-             H5FD_s3comms_signing_key(
-                     NULL,
-                     cases[0].secret_key,
-                     cases[0].region,
-                     cases[0].when) );
+    JSVERIFY( FAIL,
+              H5FD_s3comms_signing_key(
+                      NULL,
+                      cases[0].secret_key,
+                      cases[0].region,
+                      cases[0].when),
+              "destination cannot be NULL" )
 
-    FAIL_IF( FAIL != 
-             H5FD_s3comms_signing_key(
-                     key,
-                     NULL,
-                     cases[0].region,
-                     cases[0].when) );
+    JSVERIFY( FAIL,
+              H5FD_s3comms_signing_key(
+                      key,
+                      NULL,
+                      cases[0].region,
+                      cases[0].when),
+              "secret key cannot be NULL" )
 
+    JSVERIFY( FAIL,
+              H5FD_s3comms_signing_key(
+                      key,
+                      cases[0].secret_key,
+                      NULL,
+                      cases[0].when),
+              "aws region cannot be NULL" )
 
-    FAIL_IF( FAIL != 
-             H5FD_s3comms_signing_key(
-                     key,
-                     cases[0].secret_key,
-                     NULL,
-                     cases[0].when) );
-
-    FAIL_IF( FAIL != 
-             H5FD_s3comms_signing_key(
-                     key,
-                     cases[0].secret_key,
-                     cases[0].region,
-                     NULL) );
+    JSVERIFY( FAIL,
+              H5FD_s3comms_signing_key(
+                      key,
+                      cases[0].secret_key,
+                      cases[0].region,
+                      NULL),
+              "time string cannot be NULL" )
 
     free(key);
     key = NULL;
@@ -2079,27 +2041,24 @@ test_tostringtosign(void)
 
     TESTING("s3comms tostringtosign");
 
-    FAIL_IF( FAIL == 
-             H5FD_s3comms_tostringtosign(s2s, canonreq, iso8601now, region) );
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_tostringtosign(s2s, canonreq, iso8601now, region),
+              "unable to create string to sign" )
 
     JSVERIFY_STR( "AWS4-HMAC-SHA256\n20130524T000000Z\n20130524/us-east-1/s3/aws4_request\n7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972", 
                  s2s, NULL ) 
 
-    FAIL_IF( FAIL != 
-             H5FD_s3comms_tostringtosign(s2s, NULL, iso8601now, region) );
+    JSVERIFY( FAIL,
+              H5FD_s3comms_tostringtosign(s2s, NULL, iso8601now, region),
+              "canonical request string cannot be NULL" )
 
-    FAIL_IF( FAIL != 
-             H5FD_s3comms_tostringtosign(s2s, canonreq, NULL, region) );
+    JSVERIFY( FAIL,
+              H5FD_s3comms_tostringtosign(s2s, canonreq, NULL, region),
+              "time string cannot be NULL" )
 
-    FAIL_IF( FAIL != 
-             H5FD_s3comms_tostringtosign(s2s, canonreq, iso8601now, NULL) );
-
-#if 0
-/* not yet supported */
-/* not recognized as ISO8601 time format */
-    if (FAIL != H5FD_s3comms_tostringtosign(dest, canonreq, "Tue, 21 Dec 2017", region)) 
-        TEST_ERROR;
-#endif
+    JSVERIFY( FAIL,
+              H5FD_s3comms_tostringtosign(s2s, canonreq, iso8601now, NULL),
+              "aws region cannot be NULL" )
 
     PASSED();
     return 0;
@@ -2183,21 +2142,25 @@ test_trim(void)
         HDassert(str != NULL);
         strncpy(str, cases[i].in, cases[i].in_len);
 
-        FAIL_IF( FAIL == 
-                 H5FD_s3comms_trim(dest, str, cases[i].in_len, &dest_len) );
-        FAIL_IF( dest_len != cases[i].exp_len );
+        JSVERIFY( SUCCEED,
+                  H5FD_s3comms_trim(dest, str, cases[i].in_len, &dest_len),
+                  NULL )
+        JSVERIFY( cases[i].exp_len, dest_len, cases[i].in )
         if (dest_len > 0) {
-           FAIL_IF( strncmp(cases[i].exp, dest, dest_len) != 0 );
+           JSVERIFY( 0, strncmp(cases[i].exp, dest, dest_len),
+                     cases[i].exp )
         }
     }
 
-    FAIL_IF( FAIL == H5FD_s3comms_trim(dest, NULL, 3, &dest_len) );
-    FAIL_IF( 0 != dest_len );
+    JSVERIFY( SUCCEED, H5FD_s3comms_trim(dest, NULL, 3, &dest_len),
+              "should not fail when trimming a null string" );
+    JSVERIFY( 0, dest_len, "trimming NULL string writes 0 characters" )
     
     str = (char *)malloc(sizeof(char *) * 11);
     HDassert(str != NULL);
     memcpy(str, "some text ", 11); /* string with null terminator */
-    FAIL_IF( FAIL != H5FD_s3comms_trim(NULL, str, 10, &dest_len) );
+    JSVERIFY( FAIL, H5FD_s3comms_trim(NULL, str, 10, &dest_len),
+              "destination for trim cannot be NULL" );
     free(str);
 
     PASSED();
@@ -2289,16 +2252,17 @@ test_uriencode(void)
         dest = (char *)malloc(sizeof(char) * str_len * 3 + 1);
         HDassert(dest != NULL);
 
-        FAIL_IF( FAIL ==
-                 H5FD_s3comms_uriencode(dest, 
-                                        cases[i].str, 
-                                        str_len,
-                                        cases[i].encode_slash,
-                                        &dest_written) );
+        JSVERIFY( SUCCEED,
+                  H5FD_s3comms_uriencode(dest, 
+                                         cases[i].str, 
+                                         str_len,
+                                         cases[i].encode_slash,
+                                         &dest_written),
+                  NULL );
 
-        FAIL_IF( dest_written != strlen(cases[i].expected) );
-
-        FAIL_IF( strncmp(dest, cases[i].expected, dest_written) != 0 );
+        JSVERIFY( strlen(cases[i].expected), dest_written, NULL )
+        JSVERIFY( 0, strncmp(dest, cases[i].expected, dest_written),
+                  cases[i].expected );
 
         free(dest);
         dest = NULL;
@@ -2311,15 +2275,12 @@ test_uriencode(void)
     dest = (char *)malloc(sizeof(char) * 15);
     HDassert(dest != NULL);
 
-    /* dest cannot be null
-     */
-    FAIL_IF( FAIL != 
-             H5FD_s3comms_uriencode(NULL, "word$", 5, false, &dest_written) );
-
-    /* source string cannot be null
-     */
-    FAIL_IF( FAIL != 
-             H5FD_s3comms_uriencode(dest, NULL, 5, false, &dest_written) );
+    JSVERIFY( FAIL,
+              H5FD_s3comms_uriencode(NULL, "word$", 5, false, &dest_written),
+              "destination cannot be NULL" );
+    JSVERIFY( FAIL,
+              H5FD_s3comms_uriencode(dest, NULL, 5, false, &dest_written),
+              "source string cannot be NULL" );
 
     free(dest);
     dest = NULL;

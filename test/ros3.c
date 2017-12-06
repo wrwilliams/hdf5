@@ -26,17 +26,13 @@
 #include "h5test.h"
 
 #include "H5ACprivate.h" /* for dxpl creation */
-#include "H5FDprivate.h"
-#include "H5FDs3comms.h"
-#include "H5Iprivate.h" /* for dxpl creation */
-#include "H5Pprivate.h" /* for dxpl creation */
+#include "H5FDprivate.h" /* Virtual File Driver utilities */
+#include "H5Iprivate.h"  /* for dxpl creation */
+#include "H5Pprivate.h"  /* for dxpl creation */
+#include "H5FDros3.h"    /* this file driver's utilities */
+#include <curl/curl.h>   /* for CURL global init/cleanup */
 
-#include <curl/curl.h> /* for global init/cleanup */
 
-
-#ifndef __js_test__
-
-#define __js_test__ 1L
 
 /*****************************************************************************
  *
@@ -70,11 +66,11 @@
  *     Macros:
  * 
  *         JSVERIFY_EXP_ACT - ifdef flag, configures comparison order
- *         FAIL_IF          - check condition
- *         FAIL_UNLESS      - check _not_ condition
- *         JSVERIFY         - long-int equality check; prints reason/comparison
- *         JSVERIFY_NOT     - long-int inequality check; prints
- *         JSVERIY_STR      - string equality check; prints
+ *         FAIL_IF()        - check condition
+ *         FAIL_UNLESS()    - check _not_ condition
+ *         JSVERIFY()       - long-int equality check; prints reason/comparison
+ *         JSVERIFY_NOT()   - long-int inequality check; prints
+ *         JSVERIFY_STR()   - string equality check; prints
  *
  * Programmer: Jacob Smith
  *             2017-10-24
@@ -170,7 +166,7 @@ if (condition) {           \
 #define FAIL_UNLESS(condition) \
 if (!(condition)) {            \
     JSFAILED_AT()              \
-    goto error;               \
+    goto error;                \
 }
 
 
@@ -372,10 +368,6 @@ if (strcmp((actual), (expected)) != 0) {       \
 
 #endif /* ifdef/else JSVERIFY_EXP_ACT */
 
-#endif /* __js_test__ */
-
-
-
 /********************************
  * OTHER MACROS AND DEFINITIONS *
  ********************************/
@@ -383,89 +375,6 @@ if (strcmp((actual), (expected)) != 0) {       \
 /* copied from src/ros3.c 
  */
 #define MAXADDR (((haddr_t)1<<(8*sizeof(HDoff_t)-1))-1)
-
-#if 0
-const char *FILENAME[] = {
-    "sec2_file",         /*0*/
-    "core_file",         /*1*/
-    "family_file",       /*2*/
-    "new_family_v16_",   /*3*/
-    "multi_file",        /*4*/
-    "direct_file",       /*5*/
-    "log_file",          /*6*/
-    "stdio_file",        /*7*/
-    "windows_file",      /*8*/
-    "new_multi_file_v16",/*9*/
-    "ro_s3_file6",       /*10*/
-    NULL
-};
-
-#define LOG_FILENAME "log_ros3_out.log"
-#endif
-
-
-#if 0
-/* ##########################################################################
- # TEST FUNCTION PROTOTYPE
- #
- # FROM TOP: Y10}
- * ##########################################################################
- */
-
-/*---------------------------------------------------------------------------
- *
- * Function: funcname()
- *
- * Purpose: 
- *
- * Return:
- *
- *     PASSED : 0
- *     FAILED : 1
- *
- * Programmer: Jacob Smith
- *             yyyy-mm-dd
- *
- *---------------------------------------------------------------------------
- */
-static int
-funcname(void)
-{
-    /*********************
-     * test-local macros *
-     *********************/
-
-    /*************************
-     * test-local structures *
-     *************************/
-
-    /************************
-     * test-local variables *
-     ************************/
-
-    TESTING("behavior");
-
-    /*********
-     * TESTS *
-     *********/
-
-    /************
-     * TEARDOWN *
-     ************/
-
-    PASSED();
-    return 0;
-
-error:
-    /***********
-     * CLEANUP *
-     ***********/
-
-    return 1;
-
-} /* funcname */
-
-#endif
 
 
 /*---------------------------------------------------------------------------
@@ -615,12 +524,10 @@ test_fapl_config_validation(void)
         fapl_id = H5Pcreate(H5P_FILE_ACCESS);
         FAIL_IF( fapl_id < 0 ) /* sanity-check */
 
-        /*--------------------------------------------------
+        /*-----------------------------------
          * Actually test.
-         * Put this in a TRY because, for unknown reasons,
-         * expected failure cases will print the error stack
-         * before continuing to pass.
-         *--------------------------------------------------
+         * Mute stack trace in failure cases.
+         *-----------------------------------
          */
         H5E_BEGIN_TRY {
             /* `H5FD_ros3_validate_config(...)` is static/private 
@@ -637,7 +544,9 @@ test_fapl_config_validation(void)
          */
         if (success == SUCCEED) {
             config = case_ptr->config;
-            FAIL_IF( FAIL == H5Pget_fapl_ros3(fapl_id, &fa_fetch) )
+            JSVERIFY( SUCCEED,
+                      H5Pget_fapl_ros3(fapl_id, &fa_fetch),
+                      "unable to get fapl" )
             /* or,  ( H5Pget_fapl_ros3(...) < 0 )  */
 
             JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa_fetch.version, NULL )
@@ -694,6 +603,9 @@ error:
  * Programmer:  John Mainzer
  *              7/12/17
  *
+ * Changes:     Test only fapl and flags.
+ *              Jacob Smith 2017
+ *
  *-------------------------------------------------------------------------
  */
 static int
@@ -703,31 +615,9 @@ test_ros3_fapl(void)
      * test-local variables *
      ************************/
 
-#if 0
-    hid_t             fid            = -1;  /* file ID                      */
-#endif
     hid_t             fapl_id        = -1;  /* file access property list ID */
-#if 0
-    hid_t             fapl_id_out    = -1;  /* from H5Fget_access_plist     */
-#endif
     hid_t             driver_id      = -1;  /* ID for this VFD              */
     unsigned long     driver_flags   =  0;  /* VFD feature flags            */
-/*
-    char              filename[1024];
-    void             *os_file_handle = NULL;
-    hsize_t           file_size;
-    H5FD_ros3_fapl_t  test_ros3_fa;
-*/
-#if 0
-    H5FD_t           *fd_struct_ptr  = NULL;
-    hid_t             some_dxpl_id   = H5P_DEFAULT;
-    char              dest_buf[1024];
-    //TODO? zero dest_buf
-    haddr_t           offset         = 5432; /* numeric? */
-    size_t            read_len       = 128;
-    H5FD_mem_t        memtype; /* TODO */
-    unsigned          someflags      = 0; /* TODO */
-#endif
     H5FD_ros3_fapl_t  ros3_fa_0      = {
         H5FD__CURR_ROS3_FAPL_T_VERSION, /* version       */
         FALSE,                          /* authenticate  */
@@ -773,10 +663,6 @@ test_ros3_fapl(void)
 error:
     H5E_BEGIN_TRY {
         (void)H5Pclose(fapl_id);
-#if 0
-        (void)H5Pclose(fapl_id_out);
-        (void)H5Fclose(fid);
-#endif
     } H5E_END_TRY;
 
     return 1;
@@ -812,16 +698,16 @@ test_vfd_open(void)
     /*------------------------------------------------------------------------
      * VFD_OPEN_VERIFY_NULL()
      *
-     * Wrapper to clarify tests where H5FDopen() should fail with given 
-     *     arguments: returns NULL.
-     * Uses `H5E_BEGIN_TRY` and `H5E_END_TRY` to mute stack trace from 
-     *     expected error during open.
+     * - Wrapper to clarify tests where H5FDopen() should fail with given 
+     *   arguments: returns NULL.
+     * - Uses `H5E_BEGIN_TRY` and `H5E_END_TRY` to mute stack trace from 
+     *   expected error during open.
      *
-     * If `H5FDopen()` does _not_ return NULL with the given arguments,
-     *     verication fails and prints FAILED message. (see `JSFAILED_AT()`)
-     * If `reason` is not NULL, it is printed after the *FAILED* output.
+     * - If `H5FDopen()` does _not_ return NULL with the given arguments,
+     *   verication fails and prints FAILED message. (see `JSFAILED_AT()`)
+     * - If `reason` is not NULL, it is printed after the *FAILED* output.
      *
-     * Uses variable `H5FD_t *fd` for `H5FDopen()` return.
+     * Uses variable `H5FD_t *fd` for `H5FDopen()` return value.
      *
      * Jacob Smith 2017-10-27
      *------------------------------------------------------------------------
@@ -864,12 +750,7 @@ test_vfd_open(void)
      * FAIL_UNLESS instead of HDassert, because other tests might be run
      * even if this one cannot
      */
-#if 0 /*  compile warning type mismatch in macro: long::CURLcode */
-    JSVERIFY( CURLE_OK, curl_global_init(CURL_GLOBAL_DEFAULT),
-              "curl global init failed (sanity check)" )
-#else
     FAIL_UNLESS( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT))
-#endif
 
     curl_ready = TRUE;
 
@@ -889,9 +770,8 @@ test_vfd_open(void)
             "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
              H5F_ACC_RDONLY, H5P_DEFAULT, MAXADDR )
 
-    /* make fapl one of our ros3 fapls; sanity-check
-     */
-    FAIL_IF( FAIL == H5Pset_fapl_ros3(fapl_id, &ros3_fa) )
+    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &ros3_fa),
+              "(sanity check) unable to set fapl" )
 
     /* filename must be valid
      */
@@ -900,7 +780,10 @@ test_vfd_open(void)
     VFD_OPEN_VERIFY_NULL( "filename cannot be empty", 
             "", H5F_ACC_RDONLY, fapl_id, MAXADDR )
 
-    /* TODO: file with given URL/URI does not exist? */
+    /* File must exist at given URL/URI */
+    VFD_OPEN_VERIFY_NULL( "file must exist",
+            "http://minio.ad.hdfgroup.org:9000/shakespeare/nonexistent.txt",
+            H5F_ACC_RDWR, fapl_id, MAXADDR )
 
     /* only supported flag is "Read-Only"
      */
@@ -934,8 +817,6 @@ test_vfd_open(void)
      * JSVERIFY_NOT( NULL,  fd, "this open should succeed!" )
      */
     FAIL_IF( NULL == fd ) 
-
-
 
     /************
      * TEARDOWN *
@@ -1043,8 +924,6 @@ test_eof_eoa(void)
              HADDR_UNDEF);
     FAIL_IF( NULL == fd_shakespeare )
 
-
-
     /*********
      * TESTS *
      *********/
@@ -1082,8 +961,6 @@ test_eof_eoa(void)
     JSVERIFY( 6789012, 
               H5FDget_eoa(fd_shakespeare, H5FD_MEM_DEFAULT), 
               "EoA unchanged" )
-
-
 
     /************
      * TEARDOWN *
@@ -1168,9 +1045,8 @@ test_read(void)
     };
 
 
+
     TESTING("ROS3 VFD read/range-gets");
-
-
 
     /*********
      * SETUP *
@@ -1240,9 +1116,7 @@ test_read(void)
             MAXADDR);
     FAIL_IF( NULL == file_shakespeare )
 
-    for (i = 0; i < 256; i++) { buffer[i] = 0; }
-
-
+    for (i = 0; i < 256; i++) { buffer[i] = 0; } /* zero buffer contents */
 
     /*********
      * TESTS *
@@ -1252,8 +1126,6 @@ test_read(void)
 
     JSVERIFY( 0, H5FDget_eoa(file_shakespeare, H5FD_MEM_DEFAULT), 
               "EoA should remain unset by H5FDopen" )
-
-
 
     if (show_progress) {
         HDfprintf(stdout, "\n\n******* read fail (address overflow ) ******\n");
@@ -1269,8 +1141,6 @@ test_read(void)
                        buffer),
                   "address beyond EoA (0) results in read failure/error" )
     } H5E_END_TRY;
-
-
 
     if (show_progress) {
         HDfprintf(stdout, "\n\n******* first read ******\n");
@@ -1297,8 +1167,6 @@ test_read(void)
 
     for (i = 0; i < 256; i++) { buffer[i] = 0; }
 
-
-
     if (show_progress) {
         HDfprintf(stdout, "\n\n******* second read ******\n");
     }
@@ -1321,8 +1189,6 @@ test_read(void)
 
     for (i = 0; i < 256; i++) { buffer[i] = 0; }
 
-
-
     if (show_progress) {
         HDfprintf(stdout, "\n\n******* addr past eoa ******\n");
     }
@@ -1337,8 +1203,6 @@ test_read(void)
                            buffer),
                    "reading with addr past eoa/eof should fail" )
     } H5E_END_TRY;
-
-
 
     if (show_progress) {
         HDfprintf(stdout, "\n\n******* addr+size past eoa ******\n");
@@ -1360,8 +1224,6 @@ test_read(void)
     if (show_progress) {
         HDfprintf(stdout, "\n\n******* tests successful ******\n");
     }
-
-
 
     /************
      * TEARDOWN *
@@ -1462,8 +1324,6 @@ test_noops_and_autofails(void)
 
     TESTING("ROS3 VFD always-fail and no-op routines");
 
-
-
     /*********
      * SETUP *
      *********/
@@ -1485,7 +1345,9 @@ test_noops_and_autofails(void)
     FAIL_IF( dxpl_id < 0 )
     dxpl_plist = (H5P_genplist_t *)H5I_object(dxpl_id);
     FAIL_IF( NULL == dxpl_plist )
-    FAIL_IF( FAIL == H5P_set(dxpl_plist, H5FD_DXPL_TYPE_NAME, &dxpl_type) )
+    JSVERIFY( SUCCEED,
+              H5P_set(dxpl_plist, H5FD_DXPL_TYPE_NAME, &dxpl_type),
+              "unable to set dxpl" )
 
     /* open file
      */
@@ -1495,8 +1357,6 @@ test_noops_and_autofails(void)
             fapl_id,
             HADDR_UNDEF);
     FAIL_IF( NULL == file )
-
-
 
     /*********
      * TESTS *
@@ -1522,8 +1382,6 @@ test_noops_and_autofails(void)
                   "truncate must fail (closing)" )
     } H5E_END_TRY;
 
-
-
     /* no-op calls to `lock()` and `unlock()`
      */
     JSVERIFY( SUCCEED,
@@ -1538,11 +1396,6 @@ test_noops_and_autofails(void)
     /* Lock/unlock with null file or similar error crashes tests.
      * HDassert in calling heirarchy, `H5FD[un]lock()` and `H5FD_[un]lock()`
      */
-
-/* IS THERE ANY WAY TO VERIFY THE RESULT (OR, LACK THEREOF) OF [UN]LOCK?
- */
-
-
 
     /************
      * TEARDOWN *
@@ -1636,8 +1489,6 @@ test_cmp(void)
 
     TESTING("ROS3 cmp (comparison)");
 
-
-
     /*********
      * SETUP *
      *********/
@@ -1658,9 +1509,9 @@ test_cmp(void)
 
     fd_shakes = H5FDopen(
             "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
-             H5F_ACC_RDONLY,
-             fapl_id,
-             HADDR_UNDEF);
+            H5F_ACC_RDONLY,
+            fapl_id,
+            HADDR_UNDEF);
     FAIL_IF( NULL == fd_shakes )
 
     fd_raven_2 = H5FDopen(
@@ -1670,8 +1521,6 @@ test_cmp(void)
             HADDR_UNDEF);
     FAIL_IF( NULL == fd_raven_2 )
 
-
-
     /*********
      * TESTS *
      *********/
@@ -1679,8 +1528,6 @@ test_cmp(void)
     JSVERIFY(  0, H5FDcmp(fd_raven,  fd_raven_2), NULL )
     JSVERIFY( -1, H5FDcmp(fd_raven,  fd_shakes),  NULL )
     JSVERIFY(  1, H5FDcmp(fd_shakes, fd_raven_2), NULL )
-
-
 
     /************
      * TEARDOWN *
@@ -1764,9 +1611,8 @@ test_H5F_integration(void)
     };
 
 
+
     TESTING("S3 file access through HD5F library (H5F API)");
-
-
 
     /*********
      * SETUP *
@@ -1778,8 +1624,6 @@ test_H5F_integration(void)
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
     FAIL_IF( 0 > fapl_id )
     JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &ros3_fa), NULL )
-
-
 
     /*********
      * TESTS *
@@ -1795,9 +1639,6 @@ test_H5F_integration(void)
     } H5E_END_TRY;
 
     /* H5Fcreate() is not allowed with this file driver.
-     *
-     * I'm not exactly sure why this passed without modification, but it did
-     *     -- JS
      */
     H5E_BEGIN_TRY {
         FAIL_IF( 0 <= H5Fcreate(
@@ -1807,16 +1648,13 @@ test_H5F_integration(void)
                       fapl_id) )
     } H5E_END_TRY;
     
-
-    /* Successful read.
+    /* Successful open.
      */
     file = H5Fopen(
             "http://minio.ad.hdfgroup.org:9000/shakespeare/t.h5",
             H5F_ACC_RDONLY,
             fapl_id);
     FAIL_IF( file < 0 )
-
-
 
     /************
      * TEARDOWN *
@@ -1847,7 +1685,6 @@ error:
     if (file > 0)           { (void)H5Fclose(file);  }
     if (curl_ready == TRUE) { curl_global_cleanup(); }
 
-
     return 1;
 
 } /* test_H5F_integration */
@@ -1856,6 +1693,7 @@ error:
 
 
 /*-------------------------------------------------------------------------
+ *
  * Function:    main
  *
  * Purpose:     Tests the basic features of Virtual File Drivers

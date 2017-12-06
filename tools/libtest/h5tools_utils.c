@@ -84,11 +84,11 @@
  *     Macros:
  * 
  *         JSVERIFY_EXP_ACT - ifdef flag, configures comparison order
- *         FAIL_IF          - check condition
- *         FAIL_UNLESS      - check _not_ condition
- *         JSVERIFY         - long-int equality check; prints reason/comparison
- *         JSVERIFY_NOT     - long-int inequality check; prints
- *         JSVERIY_STR      - string equality check; prints
+ *         FAIL_IF()        - check condition
+ *         FAIL_UNLESS()    - check _not_ condition
+ *         JSVERIFY()       - long-int equality check; prints reason/comparison
+ *         JSVERIFY_NOT()   - long-int inequality check; prints
+ *         JSVERIFY_STR()   - string equality check; prints
  *
  * Programmer: Jacob Smith
  *             2017-10-24
