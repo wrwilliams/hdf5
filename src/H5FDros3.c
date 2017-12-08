@@ -37,6 +37,76 @@
  */
 #define ROS3_DEBUG 0
 
+/* toggle stats collection
+ */
+#define ROS3_STATS 0
+
+#if ROS3_STATS
+
+/* TODO: mechanism to redirect stats output to file(s) */
+
+/* 2,1,10,16 -> "overflow" at 64MB for a single read */
+#define ROS3_STATS_BASE         2
+#define ROS3_STATS_INTERVAL     1
+#define ROS3_STATS_START_POWER 10
+#define ROS3_STATS_BIN_COUNT   16
+/* first "bin" (bin[0]) spans size of 0 to
+ * ROS3_STATS_BASE^ROS3_STATS_BIN_START_POWER - 1 bytes
+ * And subsequent bins start at
+ * ROS3_STATS_BASE^(ROS3_STATS_BIN_START_POWER + interval)
+ * incrementing interval as appropriate
+ *
+ * BASE, INTERVAL, START_POWER
+ * 2,    1,        10
+ * bin0    0 <= size < 1024 (2^(10))
+ * bin1 1024 <= size < 2048 (2^(10+1))
+ * bin2 2048 <= size < 4096 (2^(10+2))
+ * ...
+ *
+ * 10, 3, 1    
+ * bin0     0 <= size <       10 (10^(1))
+ * bin1    10 <= size <    10000 (10^(1+3))
+ * bin2 10000 <= size < 10000000 (10^(1+6))
+ * ...
+ *
+ * Overflow bin starts at (BASE ^ (START_POWER + (INTERVAL + BIN_COUNT)))
+ * 2,1,10,20
+ * overflow bin starts at 2^(10+(1*20)) -> 2^30 -> 1GB
+ */
+
+
+/*
+ * Given a "bin index" and a destination (unsigned long long), find the value
+ * of the start of the next bin-- *`out_ptr` - 1 -> max size for bin `bin_i` 
+ * Stores result at `out_ptr`, naturally.
+ */
+#define ROS3_STATS_POW(bin_i, out_ptr) {                       \
+    unsigned long long donotshadowresult = 1;                  \
+    unsigned           donotshadowindex  = 0;                  \
+    for (donotshadowindex = 0;                                 \
+         donotshadowindex < (((bin_i) * ROS3_STATS_INTERVAL) + \
+                              ROS3_STATS_START_POWER);         \
+         donotshadowindex++)                                   \
+    {                                                          \
+        donotshadowresult *= ROS3_STATS_BASE;                  \
+    }                                                          \
+    *(out_ptr) = donotshadowresult;                            \
+}
+
+/* stats collection structure */
+typedef struct {
+    double             time;  /* total time spent reading in this bin */
+    unsigned long long bytes; /* total number of bytes read in this bin */
+    unsigned long long count; /* total reads in this bin */
+    unsigned long long min;   /* smallest read in this bin (size) */
+    unsigned long long max;   /* largest read in this bin (size) */
+    double             avg;   /* average size of reads in this bin (size) */
+} ros3_statsbin;
+
+#endif /* ROS3_STATS */
+
+
+
 /* The driver identification number, initialized at runtime */
 static hid_t H5FD_ROS3_g = 0;
 
@@ -87,6 +157,18 @@ typedef struct H5FD_ros3_t {
     H5FD_ros3_fapl_t  fa;
     haddr_t           eoa;
     s3r_t            *s3r_handle;
+#if ROS3_STATS
+    /* If collectin stats, set up "bins" for raw and non-raw reads
+     * Arrays each for our standard bins (up to COUNT),
+     * and an overflow bin for each as well
+     *
+     * Each bin should be reset upon open.
+     */
+    ros3_statsbin    meta[ROS3_STATS_BIN_COUNT];
+    ros3_statsbin    raw[ROS3_STATS_BIN_COUNT];
+    ros3_statsbin    over_meta; /* for all reads that "overflow" max bin size */
+    ros3_statsbin    over_raw;
+#endif
 } H5FD_ros3_t;
 
 /*
@@ -219,7 +301,7 @@ H5FD_ros3_init(void)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_init() called.\n");
 #endif
 
@@ -255,7 +337,7 @@ H5FD_ros3_term(void)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_term() called.\n");
 #endif
 
@@ -295,7 +377,7 @@ H5Pset_fapl_ros3(hid_t             fapl_id,
 
     HDassert(fa); /* fa cannot be null? */
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5Pset_fapl_ros3() called.\n");
 #endif
 
@@ -400,7 +482,7 @@ H5Pget_fapl_ros3(hid_t             fapl_id,
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "i*x", fapl_id, fa_out);
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5Pget_fapl_ros3() called.\n");
 #endif
 
@@ -552,6 +634,87 @@ H5FD_ros3_fapl_free(void *_fa)
 
 } /* H5FD_ros3_fapl_free() */
 
+#if ROS3_STATS
+
+/*----------------------------------------------------------------------------
+ *
+ * Function: ros3_reset_stats()
+ *
+ * Purpose:
+ *
+ *     Reset the stats collection elements in this virtual file structure.
+ *
+ *     Clears any set data in stats bins; initializes/zeroes values.
+ *
+ * Return:
+ *
+ *     - SUCCESS: `SUCCEED`
+ *     - FAILURE: `FAIL`
+ *         - Occurs if the file is invalid somehow
+ *
+ * Programmer: Jacob Smith
+ *             2017-12-08
+ *
+ * Changes: None.
+ *
+ *----------------------------------------------------------------------------
+ */
+static herr_t
+ros3_reset_stats(H5FD_ros3_t *file)
+{
+    unsigned i         = 0;
+    herr_t   ret_value = SUCCEED;
+
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+#if ROS3_DEBUG
+    HDprintf("ros3_reset_stats() called\n");
+#endif
+
+    if (file == NULL) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "file was null");
+    }
+
+    for (i = 0; i < ROS3_STATS_BIN_COUNT; i++) {
+        file->raw[i].time     = 0.0;
+        file->raw[i].bytes    = 0;
+        file->raw[i].count    = 0;
+        file->raw[i].min      = 1000000000;
+        file->raw[i].max      = 0;
+        file->raw[i].avg      = 0.0;
+
+        file->meta[i].time    = 0.0;
+        file->meta[i].bytes   = 0;
+        file->meta[i].count   = 0;
+        file->meta[i].min     = 1000000000;
+        file->meta[i].max     = 0;
+        file->meta[i].avg     = 0.0;
+    }
+
+    file->over_raw.time       = 0.0;
+    file->over_raw.bytes      = 0;
+    file->over_raw.count      = 0;
+    file->over_raw.min        = 1000000000;
+    file->over_raw.max        = 0;
+    file->over_raw.avg        = 0.0;
+
+    file->over_meta.time      = 0.0;
+    file->over_meta.bytes     = 0;
+    file->over_meta.count     = 0;
+    file->over_meta.min       = 1000000000;
+    file->over_meta.max       = 0;
+    file->over_meta.avg       = 0.0;
+
+
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
+
+} /* ros3_reset_stats */
+#endif /* ROS3_STATS */
+
 
 /*-------------------------------------------------------------------------
  *
@@ -592,19 +755,19 @@ H5FD_ros3_open(const char *url,
                hid_t       fapl_id, 
                haddr_t     maxaddr)
 {
-    H5FD_ros3_t      *file     = NULL;
-    struct tm        *now      = NULL;
+    H5FD_ros3_t      *file      = NULL;
+    struct tm        *now       = NULL;
     char              iso8601now[ISO8601_SIZE];
     unsigned char     signing_key[SHA256_DIGEST_LENGTH];
-    s3r_t            *handle   = NULL;
-    H5FD_ros3_fapl_t *plist    = NULL;
-    H5FD_t          *ret_value = NULL;
+    s3r_t            *handle    = NULL;
+    H5FD_ros3_fapl_t *plist     = NULL;
+    H5FD_t           *ret_value = NULL;
 
 
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_open() called.\n");
 #endif
 
@@ -612,7 +775,7 @@ H5FD_ros3_open(const char *url,
     HDcompile_assert(sizeof(HDoff_t) >= sizeof(size_t));
 
     /* Check arguments */
-    if(!url || !*url) /* assert name != NULL && name[0] != 0 */
+    if(!url || !*url)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid file name")
     if(0 == maxaddr || HADDR_UNDEF == maxaddr)
         HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "bogus maxaddr")
@@ -635,6 +798,7 @@ H5FD_ros3_open(const char *url,
 /* TODO: curl_global_cleanup once and only once per global init */
 /* TODO: move this global init away from here... to where is open question */
 /* TODO: coordinate curl global cleanup--it is not thread-safe */
+/* TODO: interim: global cleanup on open error? */
     HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
 
     /* open file; procedure depends on whether or not the fapl instructs to
@@ -681,6 +845,10 @@ H5FD_ros3_open(const char *url,
 
     file->s3r_handle = handle;
 
+#if ROS3_STATS
+     HDassert( SUCCEED == ros3_reset_stats(file) );
+#endif /* ROS3_STATS */
+
     ret_value = (H5FD_t*)file;
 
 done:
@@ -699,6 +867,293 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 
 } /* H5FD_ros3_open() */
+
+#if ROS3_STATS
+
+/*----------------------------------------------------------------------------
+ *
+ * Function: ros3_fprint_stats()
+ *
+ * Purpose:
+ * 
+ *     Tabulate and pretty-print statistics for this virtual file.
+ *
+ *     Should be called upon file close.
+ *
+ *     TODO: currently just prints to STDOUT
+ *
+ *     Shows number of reads and bytes read, broken down by
+ *     "raw" (H5FD_MEM_DRAW)
+ *     or "meta" (any other flag)
+ *
+ *     If any reads were done, prints out two tables:
+ *
+ *     1. overview of reads done by raw or meta flags, with
+ *         - min (smallest size read)
+ *         - average of size read
+ *             - k,M,G suffixes by powers of 2^10
+ *         - max (largest size read)
+ *     2. tabulation of "bins", sepraring reads into exponentially-larger
+ *        ranges of size.
+ *         - in each row is for reads in a certain bytes range (up to number)
+ *           with colums for number of reads, number of bytes read, and
+ *           average size of all reads in that size range.
+ *     
+ *     Bin ranges can be modified with pound-defines at the top of this file.
+ *
+ *     Bins without any reads in their bounds are not printed.
+ *
+ *     An "overflow" bin is also present, to catch "big" reads.
+ *
+ *     Output for all bins (and range ceiling and average size report) 
+ *     is segregated by power of 1024
+ *     thus 40.177k -> 41080.
+ *
+ * Return:
+ *
+ *     - SUCCESS: `SUCCEED`
+ *     - FAILURE: `FAIL`
+ *         - occurs if the file passed in is invalid
+ *         - TODO: if stream is invalid? how can we check this?
+ *
+ * Programmer: Jacob Smith
+ *
+ * Changes: None.
+ *
+ *----------------------------------------------------------------------------
+ */
+static herr_t
+ros3_fprint_stats(FILE              *stream,
+                  const H5FD_ros3_t *file)
+{
+    herr_t        ret_value    = SUCCEED;
+    parsed_url_t *purl         = NULL;
+    unsigned      i            = 0;
+    double        time_meta    = 0.0; /* total time */
+    double        time_raw     = 0.0;
+    unsigned long count_meta   = 0; /* total count */
+    unsigned long count_raw    = 0;
+    double        average_meta = 0.0; /* average size of all reads */
+    double        average_raw  = 0.0;
+    unsigned long long min_meta = 1000000000; /* size; all reads */
+    unsigned long long min_raw  = 1000000000;
+    unsigned long long max_meta = 0;
+    unsigned long long max_raw  = 0;
+    unsigned long long bytes_raw  = 0;
+    unsigned long long bytes_meta = 0;
+    double re_dub = 0.0;
+    unsigned           suffix_i   = 0;
+    char               suffixes[] = { ' ', 'K', 'M', 'G', 'T', 'P'};
+
+
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    if (stream == NULL) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "file stream cannot be null" );
+    }
+    if (file == NULL) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "file cannot be null");
+    }
+    if (file->s3r_handle == NULL) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "s3 request handle cannot be null");
+    }
+    if (file->s3r_handle->purl == NULL) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "parsed url structure cannot be null");
+    }
+    purl = file->s3r_handle->purl;
+
+    /******************
+     * PRINT FILENAME *
+     ******************/
+
+    HDfprintf(stream, "stats for %s://%s", purl->scheme, purl->host);
+    if (purl->port != NULL && purl->port[0] != '\0')
+        HDfprintf(stream, ":%s", purl->port);
+    if (purl->query != NULL && purl->query[0] != '\0') {
+        if (purl->path != NULL && purl->path[0] != '\0')
+            HDfprintf(stream, "/%s", purl->path);
+        else
+            HDfprintf(stream, "/");
+        HDfprintf(stream, "?%s", purl->query);
+    } else if (purl->path != NULL && purl->path[0] != '\0') {
+        HDfprintf(stream, "/%s", purl->path);
+    }
+    HDfprintf(stream, "\n\n");
+
+    /***************
+     * PRINT STATS *
+     ***************/
+
+    /*******************
+     * AGGREGATE STATS *
+     *******************/
+
+    for (i = 0; i < ROS3_STATS_BIN_COUNT; i++) {
+        const ros3_statsbin *r = &file->raw[i];
+        const ros3_statsbin *m = &file->meta[i];
+
+        if (m->min < min_meta)  min_meta = m->min;
+        if (r->min < min_raw)   min_raw  = r->min;
+        if (m->max > max_meta)  max_meta = m->max;
+        if (r->max > max_raw)   max_raw  = r->max;
+
+        if (count_raw + r->count > 0) {
+            average_raw = ((average_raw * (double)count_raw) + \
+                           (r->avg * (double)r->count)) / \
+                          (double)(count_raw + r->count);
+        }
+        if (count_meta + m->count > 0) {
+            average_meta = ((average_meta * (double)count_meta) + \
+                            (m->avg * (double)m->count)) / \
+                           (double)(count_meta + m->count);
+        }
+        count_raw  += r->count;
+        count_meta += m->count;
+        time_raw   += r->time;
+        time_meta  += m->time;
+        bytes_raw  += r->bytes;
+        bytes_meta += m->bytes;
+    }
+    if (file->over_raw.count > 0) {
+        const ros3_statsbin *r = &file->over_raw;
+        average_raw = ((average_raw * (double)count_raw) + \
+                       (r->avg * (double)r->count)) / \
+                      (double)(count_raw + r->count);
+        count_raw += r->count;
+        time_raw  += r->time;
+        max_raw    = r->max;
+        bytes_raw += r->bytes;
+    }
+    if (file->over_meta.count > 0) {
+        const ros3_statsbin *m = &file->over_meta;
+        average_meta = ((average_meta * (double)count_meta) + \
+                        (m->avg * (double)m->count)) / \
+                       (double)(count_meta + m->count);
+        count_meta += m->count;
+        time_meta  += m->time;
+        max_meta    = m->max;
+        bytes_meta += m->bytes;
+    }
+
+    HDfprintf(stream, "TOTAL READS: %llu  (%llu meta, %llu raw)\n",
+              count_raw + count_meta, count_meta, count_raw);
+    HDfprintf(stream, "TOTAL BYTES: %llu  (%llu meta, %llu raw)\n",
+              bytes_raw + bytes_meta, bytes_meta, bytes_raw);
+
+    if (count_raw + count_meta == 0) 
+        goto done;
+
+    HDfprintf(stream, "SIZES      min     avg           max\n");
+    if (count_meta > 0) {
+        for (suffix_i = 0; average_meta >= 1024.0; suffix_i++) 
+            average_meta /= 1024.0;
+        HDassert(suffix_i < sizeof(suffixes));
+        HDfprintf(stream, "    meta  %4llu %7.3lf%c %12llu\n",
+                  min_meta, average_meta, suffixes[suffix_i], max_meta);
+    }
+    if (count_raw > 0) {
+        for (suffix_i = 0; average_raw >= 1024.0; suffix_i++) 
+            average_raw /= 1024.0;
+        HDassert(suffix_i < sizeof(suffixes));
+        HDfprintf(stream, "    raw   %4llu %7.3lf%c %12llu\n",
+                  min_raw, average_raw, suffixes[suffix_i], max_raw);
+    }
+
+    /******************************
+     * PRINT INDIVIDUAL BIN STATS *
+     ******************************/
+
+    HDfprintf(stream, 
+        "BINS       # of reads     total bytes     average size\n");
+    HDfprintf(stream, 
+        "up-to      meta   raw    meta      raw    meta     raw\n");
+
+    for (i = 0; i <= ROS3_STATS_BIN_COUNT; i++) {
+        const ros3_statsbin *m;
+        const ros3_statsbin *r;
+        unsigned long long range_end = 0;
+        char bm_suffix = ' '; /* bytes-meta */
+        double bm_val = 0.0;
+        char br_suffix = ' '; /* bytes-raw */
+        double br_val = 0.0;
+        char am_suffix = ' '; /* avg-meta */
+        double am_val = 0.0;
+        char ar_suffix = ' '; /* avg-raw */
+        double ar_val = 0.0;
+
+        if (i == ROS3_STATS_BIN_COUNT) {
+            m = &file->over_meta;
+            r = &file->over_raw;
+        } else {
+            m = &file->meta[i];
+            r = &file->raw[i];
+        }
+
+        if (r->count == 0 && m->count == 0) 
+            continue;
+
+        ROS3_STATS_POW(i, &range_end);
+
+        if (i == ROS3_STATS_BIN_COUNT) {
+            ROS3_STATS_POW(i-1, &range_end);
+            HDfprintf(stream, ">");
+        } else {
+            HDfprintf(stream, " ");
+        }
+
+        bm_val = (double)m->bytes;
+        for (suffix_i = 0; bm_val >= 1024.0; suffix_i++) {
+            bm_val /= 1024.0;
+        }
+        HDassert(suffix_i < sizeof(suffixes));
+        bm_suffix = suffixes[suffix_i];
+
+        br_val = (double)r->bytes;
+        for (suffix_i = 0; br_val >= 1024.0; suffix_i++) {
+            br_val /= 1024.0;
+        }
+        HDassert(suffix_i < sizeof(suffixes));
+        br_suffix = suffixes[suffix_i];
+
+        am_val = (double)m->avg;
+        for (suffix_i = 0; am_val >= 1024.0; suffix_i++) {
+            am_val /= 1024.0;
+        }
+        HDassert(suffix_i < sizeof(suffixes));
+        am_suffix = suffixes[suffix_i];
+
+        ar_val = (double)r->avg;
+        for (suffix_i = 0; ar_val >= 1024.0; suffix_i++) {
+            ar_val /= 1024.0;
+        }
+        HDassert(suffix_i < sizeof(suffixes));
+        ar_suffix = suffixes[suffix_i];
+
+        re_dub = (double)range_end;
+        for (suffix_i = 0; re_dub >= 1024.0; suffix_i++) {
+            re_dub /= 1024.0;
+        }
+        HDassert(suffix_i < sizeof(suffixes));
+
+        HDfprintf(stream, "%7.3f%c %5d %5d %7.3f%c %7.3f%c %7.3f%c %7.3f%c\n",
+                  re_dub, suffixes[suffix_i],
+                  m->count, r->count,
+                  bm_val, bm_suffix, br_val, br_suffix,
+                  am_val, am_suffix, ar_val, ar_suffix);
+
+        fflush(stream);
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
+    
+} /* ros3_fprint_stats */
+#endif /* ROS3_STATS */
 
 
 /*-------------------------------------------------------------------------
@@ -726,9 +1181,11 @@ H5FD_ros3_close(H5FD_t *_file)
     H5FD_ros3_t *file      = (H5FD_ros3_t *)_file;
     herr_t       ret_value = SUCCEED;
 
+
+
     FUNC_ENTER_NOAPI_NOINIT
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_close() called.\n");
 #endif
 
@@ -744,9 +1201,15 @@ H5FD_ros3_close(H5FD_t *_file)
                     "unable to close S3 request handle")
     }
 
+#if ROS3_STATS
+    HDassert( SUCCEED == ros3_fprint_stats(stdout, file) );
+#endif /* ROS3_STATS */
+
     /* Release the file info 
      */
     file = H5FL_FREE(H5FD_ros3_t, file);
+
+    curl_global_cleanup();
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -806,7 +1269,7 @@ H5FD_ros3_cmp(const H5FD_t *_f1,
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_cmp() called.\n");
 #endif
 
@@ -931,7 +1394,7 @@ H5FD_ros3_query(const H5FD_t H5_ATTR_UNUSED *_file,
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_query() called.\n");
 #endif
 
@@ -976,7 +1439,7 @@ H5FD_ros3_get_eoa(const H5FD_t                *_file,
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_get_eoa() called.\n");
 #endif
 
@@ -1014,7 +1477,7 @@ H5FD_ros3_set_eoa(H5FD_t                    *_file,
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_set_eoa() called.\n");
 #endif
 
@@ -1053,7 +1516,7 @@ H5FD_ros3_get_eof(const H5FD_t                *_file,
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_get_eof() called.\n");
 #endif
 
@@ -1091,7 +1554,7 @@ H5FD_ros3_get_handle(H5FD_t                *_file,
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_get_handle() called.\n");
 #endif
 
@@ -1138,10 +1601,23 @@ H5FD_ros3_read(H5FD_t                    *_file,
 {
     H5FD_ros3_t *file      = (H5FD_ros3_t *)_file;
     herr_t       ret_value = SUCCEED;                  /* Return value */
+#if ROS3_STATS
+    /* working variables for storing stats */
+    ros3_statsbin *bin  = NULL;
+    unsigned       kb_i = 1; /* starting power of two to check for stats */
+                                /* bin. size will always(?) be > 0          */
+#if CLOCKS_PER_SEC > 0
+    clock_t      t0        = 0;
+    clock_t      t1        = 0;
+    double       elapsed   = 0;
+    unsigned long long pow = 0;
+#endif
+#endif /* ROS3_STATS */
+    
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_read() called.\n");
 #endif
 
@@ -1154,9 +1630,74 @@ H5FD_ros3_read(H5FD_t                    *_file,
         HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "range exceeds file address")
     }
 
+    /* If logging, get pre-read timestamp
+     */
+#if ROS3_STATS
+#if CLOCKS_PER_SEC > 0
+    t0 = clock();
+#endif
+#endif /* ROS3_STATS */
+
     if (FAIL == H5FD_s3comms_s3r_read(file->s3r_handle, addr, size, buf) ) {
         HGOTO_ERROR(H5E_VFL, H5E_READERROR, FAIL, "unable to execute read")
     }
+
+#if ROS3_STATS
+
+#if CLOCKS_PER_SEC > 0
+    t1 = clock();
+    /* calculate elapsed time, store in t1 */
+    if (t1 < t0) {
+        /* time "wrapped around" */
+        /* do math */
+        HGOTO_ERROR(H5E_ERROR, H5E_OVERFLOW, FAIL,
+                    "clock() wrapped around; math to resolve TODO\n")
+    } else {
+        t1 -= t0; /* t1 is delta time */
+    }
+    elapsed = ((double)t1) / CLOCKS_PER_SEC;
+#endif
+
+    /* Find which "bin" this read fits in. Can be "overflow" bin.
+     */
+    kb_i = 0;
+    pow = 0;
+    do {
+        ROS3_STATS_POW(kb_i, &pow)
+        kb_i++;
+    } while ((unsigned long long)size >= pow);
+    kb_i--; /* back off to last valid index */
+
+    if (kb_i >= ROS3_STATS_BIN_COUNT) {
+        bin = (type == H5FD_MEM_DRAW)
+            ? &file->over_raw
+            : &file->over_meta;
+    } else {
+        bin = (type == H5FD_MEM_DRAW) 
+            ? &file->raw[kb_i] 
+            : &file->meta[kb_i];
+    }
+
+    /* Store collected stats in appropriate bin 
+     */
+#if CLOCKS_PER_SEC > 0
+    bin->time += elapsed;
+#endif
+    if (bin->count == 0) {
+        bin->min = size;
+        bin->max = size;
+        bin->avg = (double)size;
+    } else {
+        if (size < bin->min) { bin->min = size; }
+        if (size > bin->max) { bin->max = size; }
+        bin->avg = ((double)size + bin->avg * (double)bin->count) / \
+                   (double)(bin->count + 1);
+    }
+    bin->count++;
+    bin->bytes += (unsigned long long)size;
+
+#endif /* ROS3_STATS */
+
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1196,7 +1737,7 @@ H5FD_ros3_write(H5FD_t     H5_ATTR_UNUSED *_file,
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_write() called.\n");
 #endif
 
@@ -1240,7 +1781,7 @@ H5FD_ros3_truncate(H5FD_t  H5_ATTR_UNUSED *_file,
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if ROS3_DEBUG > 0
+#if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_truncate() called.\n");
 #endif
 
