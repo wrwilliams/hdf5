@@ -438,6 +438,11 @@ typedef struct {
  *
  *
  *
+ * `magic` (unsigned long)
+ *
+ *     Structure identification and validation identifier.
+ *     Identifies as `parsed_url_t` type.
+ *
  * `scheme` (char *)
  *
  *     String representing which protocol is to be expected.
@@ -473,12 +478,14 @@ typedef struct {
  *----------------------------------------------------------------------------
  */
 typedef struct {
-    char *scheme; /* required */
-    char *host;   /* required */
-    char *port;
-    char *path;
-    char *query;
+    unsigned long  magic;
+    char          *scheme; /* required */
+    char          *host;   /* required */
+    char          *port;
+    char          *path;
+    char          *query;
 } parsed_url_t;
+#define S3COMMS_PARSED_URL_MAGIC 0x21D0DFUL
 
 
 /*----------------------------------------------------------------------------

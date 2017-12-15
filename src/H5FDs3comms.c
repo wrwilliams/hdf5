@@ -199,7 +199,7 @@ H5FD_s3comms_hrb_node_destroy(hrb_node_t **_L)
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_hrb_node_destroy.\n");
 #endif
 
@@ -217,11 +217,13 @@ H5FD_s3comms_hrb_node_destroy(hrb_node_t **_L)
          */
         do { 
             ptr = L->next_lower;
+            HDassert(L->magic = S3COMMS_HRB_NODE_MAGIC);
 
             H5MM_xfree(L->name);
             H5MM_xfree(L->value);
             H5MM_xfree(L->cat);
             H5MM_xfree(L->lowername);
+            L->magic = (unsigned long)(~S3COMMS_HRB_NODE_MAGIC);
             H5MM_xfree(L);
 
             L = ptr;
@@ -268,7 +270,7 @@ H5FD_s3comms_hrb_node_first(hrb_node_t        *L,
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_hrb_node_first.\n");
 #endif
 
@@ -336,16 +338,16 @@ H5FD_s3comms_hrb_node_next(hrb_node_t        *L,
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_hrb_node_next.\n");
 #endif
 
     if (L != NULL) {
         HDassert(L->magic == S3COMMS_HRB_NODE_MAGIC);
-       if (ord == HRB_NODE_ORD_SORTED) {
-           L = L->next_lower;
-       } else {
-           L = L->next;
+        if (ord == HRB_NODE_ORD_SORTED) {
+            L = L->next_lower;
+        } else {
+            L = L->next;
         }
     }
 
@@ -460,7 +462,7 @@ H5FD_s3comms_hrb_node_set(hrb_node_t *L,
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_hrb_node_set.\n");
 #endif
 
@@ -551,7 +553,6 @@ H5FD_s3comms_hrb_node_set(hrb_node_t *L,
              * CREATE NEW OBJECT AND LIST *
              ******************************/
 
-            new_node->magic      = S3COMMS_HRB_NODE_MAGIC;
             new_node->cat        = nvcat;
             new_node->name       = namecpy;
             new_node->lowername  = lowername;
@@ -563,6 +564,7 @@ H5FD_s3comms_hrb_node_set(hrb_node_t *L,
     } else {
         /* L is not NULL; look for insertion point and remove/modify/insert 
          */
+        HDassert(L->magic == S3COMMS_HRB_NODE_MAGIC);
         ptr = L;
 
         /********************************
@@ -581,6 +583,8 @@ H5FD_s3comms_hrb_node_set(hrb_node_t *L,
             if (strcmp(lowername, ptr->lowername) == 0) {
                 /* lowername match with this node 
                  */
+
+                HDassert(ptr->magic == S3COMMS_HRB_NODE_MAGIC);
 
                 if (value == NULL) {
     
@@ -625,6 +629,8 @@ H5FD_s3comms_hrb_node_set(hrb_node_t *L,
                     H5MM_xfree(ptr->lowername);
                     H5MM_xfree(ptr->name);
                     H5MM_xfree(ptr->value);
+                    HDassert(ptr->magic == S3COMMS_HRB_NODE_MAGIC);
+                    ptr->magic = (unsigned long)(~S3COMMS_HRB_NODE_MAGIC);
                     H5MM_xfree(ptr);
 
                     H5MM_xfree(lowername); lowername = NULL;
@@ -641,14 +647,22 @@ H5FD_s3comms_hrb_node_set(hrb_node_t *L,
                      * MODIFY *
                      **********/
 
-                    /* release previous strings, and set new ones
+                    /* release previous strings and set new ones
                      */
-                    H5MM_xfree(ptr->cat);   ptr->cat   = nvcat;
-                    H5MM_xfree(ptr->name);  ptr->name  = namecpy;
-                    H5MM_xfree(ptr->value); ptr->value = valuecpy;
+                    H5MM_xfree(ptr->cat);
+                    ptr->cat   = nvcat;
+                    H5MM_xfree(ptr->name);
+                    ptr->name  = namecpy;
+                    H5MM_xfree(ptr->value);
+                    ptr->value = valuecpy;
 
-                    H5MM_xfree(lowername);  lowername = NULL;
-                    H5MM_xfree(new_node);   new_node  = NULL;
+                    H5MM_xfree(lowername); /* release duplicate identity str */
+                    lowername = NULL;
+
+                    HDassert(new_node->magic == S3COMMS_HRB_NODE_MAGIC);
+                    new_node->magic = (unsigned long)(~S3COMMS_HRB_NODE_MAGIC);
+                    H5MM_xfree(new_node);
+                    new_node  = NULL;
                 
                     is_looking = FALSE; /* stop looking for where to act */
                 }
@@ -672,7 +686,6 @@ H5FD_s3comms_hrb_node_set(hrb_node_t *L,
                          * INSERT at FIRST of sorted *
                          *****************************/
 
-                        new_node->magic     = S3COMMS_HRB_NODE_MAGIC;
                         new_node->cat       = nvcat;
                         new_node->lowername = lowername;
                         new_node->name      = namecpy;
@@ -706,6 +719,8 @@ H5FD_s3comms_hrb_node_set(hrb_node_t *L,
                          * free resources and return
                          */
                          H5MM_xfree(lowername);
+                         new_node->magic = \
+                                 (unsigned long)(~S3COMMS_HRB_NODE_MAGIC);
                          H5MM_xfree(new_node);
                     } else {
 
@@ -713,7 +728,6 @@ H5FD_s3comms_hrb_node_set(hrb_node_t *L,
                          * INSERT BETWEEN *
                          ******************/
 
-                        new_node->magic     = S3COMMS_HRB_NODE_MAGIC;
                         new_node->cat       = nvcat;
                         new_node->lowername = lowername;
                         new_node->name      = namecpy;
@@ -764,15 +778,15 @@ H5FD_s3comms_hrb_node_set(hrb_node_t *L,
                         /* nothing in insert
                          * free resources and return
                          */
-                         H5MM_xfree(lowername);
-                         H5MM_xfree(new_node);
+                        H5MM_xfree(lowername);
+                        new_node->magic = S3COMMS_HRB_NODE_MAGIC;
+                        H5MM_xfree(new_node);
                     } else {
 
                         /***************************
                          * INSERT at END of sorted *
                          ***************************/
 
-                        new_node->magic     = S3COMMS_HRB_NODE_MAGIC;
                         new_node->cat       = nvcat;
                         new_node->lowername = lowername;
                         new_node->name      = namecpy;
@@ -822,7 +836,11 @@ done:
         if (namecpy   != NULL) H5MM_xfree(namecpy);
         if (lowername != NULL) H5MM_xfree(lowername);
         if (valuecpy  != NULL) H5MM_xfree(valuecpy);
-        if (new_node  != NULL) H5MM_xfree(new_node);
+        if (new_node  != NULL) {
+            HDassert(new_node->magic = S3COMMS_HRB_NODE_MAGIC);
+            new_node->magic = (unsigned long)~S3COMMS_HRB_NODE_MAGIC;
+            H5MM_xfree(new_node);
+        }
     }
 
     FUNC_LEAVE_NOAPI(ret_value);
@@ -889,7 +907,7 @@ H5FD_s3comms_hrb_destroy(hrb_t **_buf)
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_hrb_destroy.\n");
 #endif
 
@@ -980,7 +998,7 @@ H5FD_s3comms_hrb_init_request(const char *_verb,
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_hrb_init_request.\n");
 #endif
 
@@ -1130,7 +1148,7 @@ H5FD_s3comms_s3r_close(s3r_t *handle)
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_s3r_close.\n");
 #endif
 
@@ -1215,7 +1233,7 @@ H5FD_s3comms_s3r_getsize(s3r_t *handle)
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_s3r_getsize.\n");
 #endif
 
@@ -1419,7 +1437,7 @@ H5FD_s3comms_s3r_open(const char          url[],
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_s3r_open.\n");
 #endif
 
@@ -1436,6 +1454,7 @@ H5FD_s3comms_s3r_open(const char          url[],
                     "unable to create parsed url structure");
     }
     HDassert(purl != NULL); /* if above passes, this must be true */
+    HDassert(purl->magic == S3COMMS_PARSED_URL_MAGIC);
 
     h = (s3r_t *)H5MM_malloc(sizeof(s3r_t));
     if (h == NULL) {
@@ -1694,22 +1713,25 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_s3r_read.\n");
 #endif
 
-    /*************************************
-     * ABSLUTELY NECESSARY SANITY-CHECKS *
-     *************************************/
+    /**************************************
+     * ABSOLUTELY NECESSARY SANITY-CHECKS *
+     **************************************/
 
     if (handle == NULL) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "handle cannot be null.\n");
     }
+    HDassert(handle->magic == S3COMMS_S3R_MAGIC);
+/*
     if (handle->magic != S3COMMS_S3R_MAGIC) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "handle has invalid magic.\n");
     }
+*/
     if (handle->curlhandle == NULL) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "handle has bad (null) curlhandle.\n")
@@ -1718,6 +1740,7 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "handle has bad (null) url.\n")
     }
+    HDassert(handle->purl->magic == S3COMMS_PARSED_URL_MAGIC);
 
     curlh = handle->curlhandle;
 
@@ -1869,6 +1892,7 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "could not allocate hrb_t request.\n");
         }
+        HDassert(request->magic == S3COMMS_HRB_MAGIC);
 
         now = gmnow();
         if ( ISO8601NOW(iso8601now, now) != (ISO8601_SIZE - 1)) {
@@ -1879,12 +1903,33 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
         headers = H5FD_s3comms_hrb_node_set(headers,
                                             "Host", 
                                             (const char *)handle->purl->host);
+        if (headers == NULL) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "problem building headers list. "
+                        "(placeholder flags)\n");
+        }
+        HDassert(headers->magic == S3COMMS_HRB_NODE_MAGIC);
+
         headers = H5FD_s3comms_hrb_node_set(headers, 
                                             "Range", 
                                             (const char *)rangebytesstr);
+        if (headers == NULL) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "problem building headers list. "
+                        "(placeholder flags)\n");
+        }
+        HDassert(headers->magic == S3COMMS_HRB_NODE_MAGIC);
+
         headers = H5FD_s3comms_hrb_node_set(headers, 
                                             "x-amz-content-sha256", 
                                             (const char *)EMPTY_SHA256);
+        if (headers == NULL) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "problem building headers list. "
+                        "(placeholder flags)\n");
+        }
+        HDassert(headers->magic == S3COMMS_HRB_NODE_MAGIC);
+
         headers = H5FD_s3comms_hrb_node_set(headers, 
                                             "x-amz-date", 
                                             (const char *)iso8601now);
@@ -1894,6 +1939,8 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
                         "problem building headers list. "
                         "(placeholder flags)\n");
         }
+        HDassert(headers->magic == S3COMMS_HRB_NODE_MAGIC);
+
         request->first_header = H5FD_s3comms_hrb_node_first(headers, 
                                                           HRB_NODE_ORD_SORTED);
 
@@ -1950,14 +1997,14 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
         headers = H5FD_s3comms_hrb_node_set(headers, 
                                             "Authorization", 
                                             (const char *)authorization);
-
-        /* update hrb's "first header" pointer
-         */
         if (headers == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "problem building headers list. "
                         "(placeholder flags)\n");
         }
+
+        /* update hrb's "first header" pointer
+         */
         request->first_header = H5FD_s3comms_hrb_node_first(headers, 
                                                           HRB_NODE_ORD_SORTED);
 
@@ -1965,6 +2012,7 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
 
         node = request->first_header;
         while (node != NULL) {
+            HDassert(node->magic == S3COMMS_HRB_NODE_MAGIC);
             curlheaders = curl_slist_append(curlheaders, 
                                             (const char *)node->cat);
             if (curlheaders == NULL) {
@@ -2175,7 +2223,7 @@ H5FD_s3comms_aws_canonical_request(char  *canonical_request_dest,
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_aws_canonical_request.\n");
 #endif
 
@@ -2215,6 +2263,8 @@ H5FD_s3comms_aws_canonical_request(char  *canonical_request_dest,
     node = http_request->first_header; /* assumed at first sorted */
     while (node != NULL) {
         size_t join_len  = 0; /* string len of joined header-value */
+
+        HDassert(node->magic == S3COMMS_HRB_NODE_MAGIC);
 
         len = strlen(node->lowername);
         join_len = strlen(node->value) + len + 2; /* +2 <- ":\n" */
@@ -2316,7 +2366,7 @@ H5FD_s3comms_bytes_to_hex(char                *dest,
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_bytes_to_hex.\n");
 #endif
 
@@ -2369,16 +2419,18 @@ H5FD_s3comms_free_purl(parsed_url_t *purl)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDprintf("called H5FD_s3comms_free_purl.\n");
 #endif
 
     if (purl != NULL) {
+        HDassert(purl->magic == S3COMMS_PARSED_URL_MAGIC);
         if (purl->scheme != NULL) H5MM_xfree(purl->scheme); 
         if (purl->host   != NULL) H5MM_xfree(purl->host);
         if (purl->port   != NULL) H5MM_xfree(purl->port);
         if (purl->path   != NULL) H5MM_xfree(purl->path);
         if (purl->query  != NULL) H5MM_xfree(purl->query);
+        purl->magic = (unsigned long)(~S3COMMS_PARSED_URL_MAGIC);
         H5MM_xfree(purl);
     }
 
@@ -2443,7 +2495,7 @@ H5FD_s3comms_HMAC_SHA256(const unsigned char *key,
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_HMAC_SHA256.\n");
 #endif
 
@@ -2513,7 +2565,7 @@ H5FD_s3comms_nlowercase(char       *dest,
 
     FUNC_ENTER_NOAPI_NOINIT 
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_nlowercase.\n");
 #endif
 
@@ -2585,7 +2637,7 @@ H5FD_s3comms_parse_url(const char    *str,
 
     FUNC_ENTER_NOAPI_NOINIT;
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDprintf("called H5FD_s3comms_parse_url.\n");
 #endif
 
@@ -2601,6 +2653,7 @@ H5FD_s3comms_parse_url(const char    *str,
         HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
                     "can't allocate space for parsed_url_t");
     }
+    purl->magic  = S3COMMS_PARSED_URL_MAGIC;
     purl->scheme = NULL;
     purl->host   = NULL;
     purl->port   = NULL;
@@ -2858,7 +2911,7 @@ H5FD_s3comms_percent_encode_char(char                *repr,
     unsigned int        stack[4]   = {0, 0, 0, 0};
     unsigned int        stack_size = 0;
     herr_t              ret_value  = SUCCEED;
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     unsigned char       s[2]       = {c, 0}; 
     unsigned char       hex[3]     = {0, 0, 0};
 #endif
@@ -2867,7 +2920,7 @@ H5FD_s3comms_percent_encode_char(char                *repr,
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_percent_encode_char.\n");
 #endif
 
@@ -2875,7 +2928,7 @@ H5FD_s3comms_percent_encode_char(char                *repr,
        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no destination `repr`.\n")
     }
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     H5FD_s3comms_bytes_to_hex((char *)hex, s, 1, FALSE);
     HDfprintf(stdout, "    CHAR: \'%s\'\n", s);
     HDfprintf(stdout, "    CHAR-HEX: \"%s\"\n", hex);
@@ -2885,7 +2938,7 @@ H5FD_s3comms_percent_encode_char(char                *repr,
         /* character represented in a single "byte"
          * and single percent-code
          */
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
         HDfprintf(stdout, "    SINGLE-BYTE\n");
 #endif
         *repr_len = 3;
@@ -2893,7 +2946,7 @@ H5FD_s3comms_percent_encode_char(char                *repr,
     } else {
         /* multi-byte, multi-percent representation
          */
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
         HDfprintf(stdout, "    MULTI-BYTE\n");
 #endif
         stack_size = 0;
@@ -2913,7 +2966,7 @@ H5FD_s3comms_percent_encode_char(char                *repr,
          * to be put into UTF-8 byte fields
          */
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
         HDfprintf(stdout, "    STACK:\n    {\n");
         for (i = 0; i < stack_size; i++) {
             H5FD_s3comms_bytes_to_hex((char *)hex, 
@@ -3025,7 +3078,7 @@ H5FD_s3comms_signing_key(unsigned char *md,
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_signing_key.\n");
 #endif
 
@@ -3164,7 +3217,7 @@ H5FD_s3comms_tostringtosign(char       *dest,
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_tostringtosign.\n");
 #endif
 
@@ -3285,7 +3338,7 @@ H5FD_s3comms_trim(char   *dest,
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_trim.\n");
 #endif
 
@@ -3401,7 +3454,7 @@ H5FD_s3comms_uriencode(char       *dest,
 
     FUNC_ENTER_NOAPI_NOINIT
 
-#if S3COMMS_DEBUG > 0
+#if S3COMMS_DEBUG
     HDfprintf(stdout, "H5FD_s3comms_uriencode called.\n");
 #endif
 
