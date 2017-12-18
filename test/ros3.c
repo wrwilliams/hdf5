@@ -750,8 +750,7 @@ test_vfd_open(void)
      * FAIL_UNLESS instead of HDassert, because other tests might be run
      * even if this one cannot
      */
-    FAIL_UNLESS( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT))
-
+    HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
     curl_ready = TRUE;
 
     /*********
@@ -910,7 +909,7 @@ test_eof_eoa(void)
      * SETUP *
      *********/
     
-    FAIL_UNLESS( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) )
+    HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
     curl_ready = TRUE;
 
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
@@ -1054,7 +1053,7 @@ test_read(void)
 
     /* initialize CURL
      */
-    FAIL_UNLESS( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) )
+    HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
     curl_ready = TRUE;
 
     /* create ROS3 fapl 
@@ -1330,7 +1329,7 @@ test_noops_and_autofails(void)
 
     /* prepare CURL 
      */
-    FAIL_UNLESS( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) )
+    HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
     curl_ready = TRUE;
 
     /* create ROS3 fapl 
@@ -1493,7 +1492,7 @@ test_cmp(void)
      * SETUP *
      *********/
 
-    FAIL_UNLESS( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) )
+    HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
     curl_ready = TRUE;
 
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
@@ -1618,7 +1617,7 @@ test_H5F_integration(void)
      * SETUP *
      *********/
 
-    FAIL_UNLESS( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) )
+    HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
     curl_ready = TRUE;
 
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);

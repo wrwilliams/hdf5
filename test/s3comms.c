@@ -1170,7 +1170,7 @@ test_HMAC_SHA256(void)
             "AWS4-HMAC-SHA256\n20130524T000000Z\n20130524/us-east-1/s3/aws4_request\n7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972",
             strlen("AWS4-HMAC-SHA256\n20130524T000000Z\n20130524/us-east-1/s3/aws4_request\n7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972"),
             "f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41",
-            SHA256_DIGEST_LENGTH * 2,
+            SHA256_DIGEST_LENGTH * 2 + 1, /* +1 for null terminator */
         },
         {   SUCCEED,
             {'J','e','f','e'},
@@ -1178,7 +1178,7 @@ test_HMAC_SHA256(void)
             "what do ya want for nothing?",
             28,
             "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843",
-            SHA256_DIGEST_LENGTH * 2,
+            SHA256_DIGEST_LENGTH * 2 + 1,
         },
         {    FAIL,
              "DOESN'T MATTER",
@@ -1721,7 +1721,7 @@ test_s3r_ops(void)
     struct tm     *now          = NULL;
     char           iso8601now[ISO8601_SIZE];
     s3r_t         *handle       = NULL;
-    unsigned int   curl_ready   = 0;
+    hbool_t        curl_ready   = FALSE;
 
 
 
@@ -1732,7 +1732,7 @@ test_s3r_ops(void)
      ***************/
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
-    curl_ready++;
+    curl_ready = TRUE;
 
     now = gmnow();
     HDassert(now != NULL);
@@ -1842,10 +1842,10 @@ test_s3r_ops(void)
     /*************
      * TEAR DOWN *
      *************/
-    if (curl_ready != 0 ) { 
-        curl_global_cleanup();
-        curl_ready = 0;
-    }
+
+    HDassert(curl_ready == TRUE);
+    curl_global_cleanup();
+    curl_ready = FALSE;
 
     PASSED();
     return 0;
@@ -1854,15 +1854,12 @@ error:
     /***********
      * cleanup *
      ***********/
-    if (handle != NULL) { 
-        H5FD_s3comms_s3r_close(handle); 
-        handle = NULL; 
-    }
 
-    if (curl_ready != 0 ) { 
+    if (handle != NULL)
+        H5FD_s3comms_s3r_close(handle); 
+
+    if (curl_ready == TRUE)
         curl_global_cleanup();
-        curl_ready = 0;
-    }
 
 #undef MY_BUFFER_SIZE
 
@@ -2138,6 +2135,7 @@ test_trim(void)
     TESTING("s3comms trim");
 
     for (i = 0; i < n_cases; i++) {
+        HDassert(str == NULL);
         str = (char *)malloc(sizeof(char) * cases[i].in_len);
         HDassert(str != NULL);
         strncpy(str, cases[i].in, cases[i].in_len);
@@ -2150,24 +2148,29 @@ test_trim(void)
            JSVERIFY( 0, strncmp(cases[i].exp, dest, dest_len),
                      cases[i].exp )
         }
+        free(str);
+        str = NULL;
     }
 
     JSVERIFY( SUCCEED, H5FD_s3comms_trim(dest, NULL, 3, &dest_len),
               "should not fail when trimming a null string" );
     JSVERIFY( 0, dest_len, "trimming NULL string writes 0 characters" )
     
+    HDassert(str == NULL);
     str = (char *)malloc(sizeof(char *) * 11);
     HDassert(str != NULL);
     memcpy(str, "some text ", 11); /* string with null terminator */
     JSVERIFY( FAIL, H5FD_s3comms_trim(NULL, str, 10, &dest_len),
               "destination for trim cannot be NULL" );
     free(str);
+    str = NULL;
 
     PASSED();
     return 0;
 
 error:
-    free(str);
+    if (str != NULL) 
+        free(str);
     return -1;
 
 } /* test_trim */
