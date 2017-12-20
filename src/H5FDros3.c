@@ -862,6 +862,7 @@ done:
         if (file) {
             file = H5FL_FREE(H5FD_ros3_t, file);
         }
+        curl_global_cleanup(); /* early cleanup because open failed */
     } /* if null return value (error) */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1209,9 +1210,9 @@ H5FD_ros3_close(H5FD_t *_file)
      */
     file = H5FL_FREE(H5FD_ros3_t, file);
 
-    curl_global_cleanup();
-
 done:
+    curl_global_cleanup(); /* cleanup to answer init on open */
+
     FUNC_LEAVE_NOAPI(ret_value)
 
 } /* end H5FD_ros3_close() */
