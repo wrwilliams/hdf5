@@ -913,6 +913,7 @@ H5FD_s3comms_hrb_destroy(hrb_t **_buf)
 
     if (_buf != NULL && *_buf != NULL) {
         buf = *_buf;
+        HDassert(buf->magic == S3COMMS_HRB_MAGIC);
         if (buf->magic != S3COMMS_HRB_MAGIC) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "pointer's magic does not match.\n");
@@ -921,6 +922,7 @@ H5FD_s3comms_hrb_destroy(hrb_t **_buf)
         H5MM_xfree(buf->verb);
         H5MM_xfree(buf->version);
         H5MM_xfree(buf->resource);
+        buf->magic = (unsigned long)(~S3COMMS_HRB_MAGIC);
         H5MM_xfree(buf);
         *_buf = NULL;
     }
@@ -1324,7 +1326,7 @@ H5FD_s3comms_s3r_getsize(s3r_t *handle)
 
     /* place null terminator at end of numbers 
      */
-    end = '\0'; 
+    *end = '\0'; 
 
     content_length = strtoul((const char *)start,
                              NULL,
