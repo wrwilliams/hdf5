@@ -45,6 +45,8 @@
 
 /* TODO: mechanism to redirect stats output to file(s) */
 
+#define ROS3_STATS_STARTING_MIN 0xfffffffful
+
 /* 2,1,10,16 -> "overflow" at 64MB for a single read */
 #define ROS3_STATS_BASE         2
 #define ROS3_STATS_INTERVAL     1
@@ -681,14 +683,14 @@ ros3_reset_stats(H5FD_ros3_t *file)
         file->raw[i].time     = 0.0;
         file->raw[i].bytes    = 0;
         file->raw[i].count    = 0;
-        file->raw[i].min      = 1000000000;
+        file->raw[i].min      = ROS3_STATS_STARTING_MIN;
         file->raw[i].max      = 0;
         file->raw[i].avg      = 0.0;
 
         file->meta[i].time    = 0.0;
         file->meta[i].bytes   = 0;
         file->meta[i].count   = 0;
-        file->meta[i].min     = 1000000000;
+        file->meta[i].min     = ROS3_STATS_STARTING_MIN;
         file->meta[i].max     = 0;
         file->meta[i].avg     = 0.0;
     }
@@ -696,14 +698,14 @@ ros3_reset_stats(H5FD_ros3_t *file)
     file->over_raw.time       = 0.0;
     file->over_raw.bytes      = 0;
     file->over_raw.count      = 0;
-    file->over_raw.min        = 1000000000;
+    file->over_raw.min        = ROS3_STATS_STARTING_MIN;
     file->over_raw.max        = 0;
     file->over_raw.avg        = 0.0;
 
     file->over_meta.time      = 0.0;
     file->over_meta.bytes     = 0;
     file->over_meta.count     = 0;
-    file->over_meta.min       = 1000000000;
+    file->over_meta.min       = ROS3_STATS_STARTING_MIN;
     file->over_meta.max       = 0;
     file->over_meta.avg       = 0.0;
 
@@ -1049,30 +1051,62 @@ ros3_fprint_stats(FILE              *stream,
     if (count_raw + count_meta == 0) 
         goto done;
 
-    HDfprintf(stream, "SIZES      min     avg           max\n");
-    if (count_meta > 0) {
-        for (suffix_i = 0; average_meta >= 1024.0; suffix_i++) 
-            average_meta /= 1024.0;
+    HDfprintf(stream, "SIZES     meta      raw\n");
+    HDfprintf(stream, "  min ");
+    if (count_meta == 0) {
+        HDfprintf(stream, "   0.000  ");
+    } else {
+        re_dub = (double)min_meta;
+        for (suffix_i = 0; re_dub >= 1024.0; suffix_i++)
+            re_dub /= 1024.0;
         HDassert(suffix_i < sizeof(suffixes));
-        HDfprintf(stream, "    meta  %4llu %7.3lf%c %12llu\n",
-                  min_meta, average_meta, suffixes[suffix_i], max_meta);
+        HDfprintf(stream, "%8.3lf%c ", re_dub, suffixes[suffix_i]);
     }
-    if (count_raw > 0) {
-        for (suffix_i = 0; average_raw >= 1024.0; suffix_i++) 
-            average_raw /= 1024.0;
+
+    if (count_raw == 0) {
+        HDfprintf(stream, "   0.000 \n");
+    } else {
+        re_dub = (double)min_raw;
+        for (suffix_i = 0; re_dub >= 1024.0; suffix_i++)
+            re_dub /= 1024.0;
         HDassert(suffix_i < sizeof(suffixes));
-        HDfprintf(stream, "    raw   %4llu %7.3lf%c %12llu\n",
-                  min_raw, average_raw, suffixes[suffix_i], max_raw);
+        HDfprintf(stream, "%8.3lf%c\n", re_dub, suffixes[suffix_i]);
     }
+
+    HDfprintf(stream, "  avg ");
+    re_dub = (double)average_meta;
+    for (suffix_i = 0; re_dub >= 1024.0; suffix_i++)
+        re_dub /= 1024.0;
+    HDassert(suffix_i < sizeof(suffixes));
+    HDfprintf(stream, "%8.3lf%c ", re_dub, suffixes[suffix_i]);
+
+    re_dub = (double)average_raw;
+    for (suffix_i = 0; re_dub >= 1024.0; suffix_i++)
+        re_dub /= 1024.0;
+    HDassert(suffix_i < sizeof(suffixes));
+    HDfprintf(stream, "%8.3lf%c\n", re_dub, suffixes[suffix_i]);
+
+    HDfprintf(stream, "  max ");
+    re_dub = (double)max_meta;
+    for (suffix_i = 0; re_dub >= 1024.0; suffix_i++)
+        re_dub /= 1024.0;
+    HDassert(suffix_i < sizeof(suffixes));
+    HDfprintf(stream, "%8.3lf%c ", re_dub, suffixes[suffix_i]);
+
+    re_dub = (double)max_raw;
+    for (suffix_i = 0; re_dub >= 1024.0; suffix_i++)
+        re_dub /= 1024.0;
+    HDassert(suffix_i < sizeof(suffixes));
+    HDfprintf(stream, "%8.3lf%c\n", re_dub, suffixes[suffix_i]);
 
     /******************************
      * PRINT INDIVIDUAL BIN STATS *
      ******************************/
 
     HDfprintf(stream, 
-        "BINS       # of reads     total bytes     average size\n");
+        "BINS             # of reads      total bytes         average size\n");
     HDfprintf(stream, 
-        "up-to      meta   raw    meta      raw    meta     raw\n");
+        "    up-to      meta     raw     meta      raw       meta      raw\n");
 
     for (i = 0; i <= ROS3_STATS_BIN_COUNT; i++) {
         const ros3_statsbin *m;
@@ -1141,7 +1175,7 @@ ros3_fprint_stats(FILE              *stream,
         }
         HDassert(suffix_i < sizeof(suffixes));
 
-        HDfprintf(stream, "%7.3f%c %5d %5d %7.3f%c %7.3f%c %7.3f%c %7.3f%c\n",
+        HDfprintf(stream, " %8.3f%c %7d %7d %8.3f%c %8.3f%c %8.3f%c %8.3f%c\n",
                   re_dub, suffixes[suffix_i],
                   m->count, r->count,
                   bm_val, bm_suffix, br_val, br_suffix,
