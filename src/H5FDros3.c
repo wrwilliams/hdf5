@@ -1328,33 +1328,33 @@ H5FD_ros3_cmp(const H5FD_t *_f1,
 
     /* FAPL: AWS_REGION */
     if (0 == ret_value) {
-        if (f1->fa.aws_region && f2->fa.aws_region) {
+        if ((f1->fa.aws_region[0] != '\0') && (f2->fa.aws_region[0] != '\0')) {
 	    ret_value = strcmp(f1->fa.aws_region, f2->fa.aws_region);
-        } else if (f1->fa.aws_region && !f2->fa.aws_region) {
+        } else if ((f1->fa.aws_region[0] != '\0') && (f2->fa.aws_region[0] == '\0')) {
             ret_value = 1;
-        } else if (f2->fa.aws_region && !f1->fa.aws_region) {
+        } else if ((f2->fa.aws_region[0] != '\0') && (f1->fa.aws_region[0] == '\0')) {
             ret_value = -1;
         }
     }
 
     /* FAPL: SECRET_ID */
     if (0 == ret_value) {
-        if (f1->fa.secret_id && f2->fa.secret_id) {
+        if ((f1->fa.secret_id[0] != '\0') && (f2->fa.secret_id[0] != '\0')) {
 	    ret_value = strcmp(f1->fa.secret_id, f2->fa.secret_id);
-        } else if (f1->fa.secret_id && !f2->fa.secret_id) {
+        } else if ((f1->fa.secret_id[0] != '\0') && (f2->fa.secret_id[0] == '\0')) {
             ret_value = 1;
-        } else if (f2->fa.secret_id && !f1->fa.secret_id) {
+        } else if ((f2->fa.secret_id[0] != '\0') && (f1->fa.secret_id[0] == '\0')) {
             ret_value = -1;
         }
     }
 
     /* FAPL: SECRET_KEY */
     if (0 == ret_value) {
-        if (f1->fa.secret_key && f2->fa.secret_key) {
+        if ((f1->fa.secret_key[0] != '\0') && (f2->fa.secret_key[0] != '\0')) {
 	    ret_value = strcmp(f1->fa.secret_key, f2->fa.secret_key);
-        } else if (f1->fa.secret_key && !f2->fa.secret_key) {
+        } else if ((f1->fa.secret_key[0] != '\0') && (f2->fa.secret_key[0] == '\0')) {
             ret_value = 1;
-        } else if (f2->fa.aws_region && !f1->fa.aws_region) {
+        } else if ((f2->fa.secret_key[0] != '\0') && (f1->fa.secret_key[0] == '\0')) {
             ret_value = -1;
         }
     }
