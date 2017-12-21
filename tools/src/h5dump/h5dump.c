@@ -190,7 +190,7 @@ static struct long_options l_opts[] = {
     { "any_path", require_arg, 'N' },
     { "vds-view-first-missing", no_arg, 'v' },
     { "vds-gap-size", require_arg, 'G' },
-    { "s3_cred", require_arg, '$' },
+    { "s3-cred", require_arg, '$' },
     { NULL, 0, '\0' }
 };
 

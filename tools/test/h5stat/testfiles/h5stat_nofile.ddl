@@ -22,4 +22,7 @@ Usage: h5stat [OPTIONS] file
                            than 0.  The default threshold is 10.
      -s, --freespace       Print free space information
      -S, --summary         Print summary of file space information
+     --s3-cred=<cred>      Access file on S3, using provided credential
+                           <cred> :: (region,id,key)
+                           If <cred> == "(,,)", no authentication is used.
 h5stat error: missing file name

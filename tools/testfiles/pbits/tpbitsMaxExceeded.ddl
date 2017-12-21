@@ -12,6 +12,10 @@ usage: h5dump [OPTIONS] files
      -b B, --binary=B     Binary file output, of form B
      -O F, --ddl=F        Output ddl text into file F
                           Use blank(empty) filename F to suppress ddl display
+     --s3-cred=<cred>     Supply S3 authentication information to "ros3" vfd.
+                          <cred> :: "(<aws-region>,<access-id>,<access-key>)"
+                          If absent or <cred> -> "(,,)", no authentication.
+                          Has no effect is filedriver is not `ros3'.
 --------------- Object Options ---------------
      -a P, --attribute=P  Print the specified attribute
                           If an attribute name contains a slash (/), escape the
