@@ -3744,6 +3744,173 @@ Java_hdf_hdf5lib_H5_H5Pset_1fapl_1windows
 } /* end Java_hdf_hdf5lib_H5_H5Pset_1fapl_1windows */
 
 /*
+ * Class:     hdf5_hdf5lib_H5
+ * Method:    H5Pget_fapl_ros3
+ * Signature: (J)Lhdf/hdf5lib/structs/H5FD_ros3_fapl_t;
+ */
+JNIEXPORT jobject JNICALL
+Java_hdf_hdf5lib_H5_H5Pget_1fapl_1ros3
+    (JNIEnv *env, jclass clss, jlong fapl_id)
+{
+/*    herr_t           retVal  = -1; */
+    herr_t           success = FAIL;
+    H5FD_ros3_fapl_t fa; /* local fapl_t instance */
+    jobject          ret_obj = NULL;
+    jvalue           args[3];
+    jstring          j_aws   = NULL;
+    jstring          j_id    = NULL;
+    jstring          j_key   = NULL;
+
+    /* pass fapl and fapl_t instance into library get_fapl */
+    /* store fapl details in ros3_fapl_t instance `fa`          */
+    success = H5Pget_fapl_ros3((long)fapl_id, &fa); /* id: jlong -> long */
+
+    if (success == FAIL) {
+        h5libraryError(env);
+        goto done;
+    }
+
+    /* create new Jfapl_t (jobject of H5FD_ros3_fapl_t) */
+    j_aws = ENVPTR->NewStringUTF(ENVPAR fa.aws_region);
+    if (j_aws == NULL) {
+        h5JNIFatalError(env, 
+                        "H5Pget_fapl_ros3: can't create aws_region string");
+        goto done;
+    }
+    args[0].l = j_aws;
+
+    j_id = ENVPTR->NewStringUTF(ENVPAR fa.secret_id);
+    if (j_id == NULL) {
+        h5JNIFatalError(env, 
+                        "H5Pget_fapl_ros3: can't create secret_id string");
+        goto done;
+    }
+    args[1].l = j_id;
+
+    j_key = ENVPTR->NewStringUTF(ENVPAR fa.secret_key);
+    if (j_key == NULL) {
+        h5JNIFatalError(env, 
+                        "H5Pget_fapl_ros3: can't create secret_key string");
+        goto done;
+    }
+    args[2].l = j_key;
+
+    CALL_CONSTRUCTOR(
+           "hdf/hdf5lib/structs/H5FD_ros3_fapl_t",                      \
+           "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V", \
+            args);
+    if (ret_obj == NULL) {
+        h5JNIFatalError(env, 
+                "H5Pget_fapl_ros3: can't create H5FD_ros3_fapl_t java object");
+        goto done;
+    }
+
+done:
+    return ret_obj;
+
+} /* end Java_hdf_hdf5lib_H5_H5Pget_1fapl_1ros3 */
+
+/*
+ * Class:     hdf_hdf5lib_H5
+ * Method:    H5Pset_fapl_ros3
+ * Signature: (JLhdf/hdf5lib/structs/H5FD_ros3_fapl_t;)I
+ */
+JNIEXPORT jint JNICALL
+Java_hdf_hdf5lib_H5_H5Pset_1fapl_1ros3
+    (JNIEnv *env, jclass clss, jlong fapl_id, jobject fapl_config)
+{
+    herr_t            retVal = -1;
+    jfieldID          fid;
+    jclass            cls;
+    jstring           j_str;
+    H5FD_ros3_fapl_t  instance;
+    const char       *str;
+
+    instance.version       = 1;
+    instance.authenticate  = FALSE;
+    instance.aws_region[0] = '\0';
+    instance.secret_id[0]  = '\0';
+    instance.secret_key[0] = '\0';
+
+    cls = ENVPTR->GetObjectClass(ENVPAR fapl_config);
+
+    fid = ENVPTR->GetFieldID(ENVPAR cls, "version", "J");
+    if (fid == 0) {
+        h5badArgument(env, "H5Pset_fapl_ros3: version");
+        goto done;
+    }
+    instance.version = ENVPTR->GetIntField(ENVPAR fapl_config, fid);
+    if (ENVPTR->ExceptionOccurred(ENVONLY)) {
+        h5JNIFatalError(env, "H5Pset_fapl_ros3: loading version failed");
+        goto done;
+    }
+
+    fid = ENVPTR->GetFieldID(ENVPAR cls, "aws_region", "Ljava/lang/String;");
+    if (fid == 0) {
+        h5badArgument(env, "H5FDset_fapl_ros3: aws_region");
+        goto done;
+    }
+    j_str = (jstring)ENVPTR->GetObjectField(ENVPAR fapl_config, fid);
+    str = ENVPTR->GetStringUTFChars(ENVPAR j_str, NULL);
+    if (str == NULL) {
+        h5JNIFatalerror(env, "H5Pset_fapl_ros3: out of memory aws_region");
+        goto done;
+    }
+    strncpy(instance.aws_region, str, strlen(str)+1);
+    ENVPTR->ReleaseStringUTFChars(ENVPAR j_str, str);
+    if (ENVPTR->ExceptionOccurred(ENVONLY)) {
+        h5JNIFatalError(env, "H5Pset_fapl_ros3: loading aws_region failed");
+        goto done;
+    }
+
+    fid = ENVPTR->GetFieldID(ENVPAR cls, "secret_id", "Ljava/lang/String;");
+    if (fid == 0) {
+        h5badArgument(env, "H5FDset_fapl_ros3: secret_id");
+        goto done;
+    }
+    j_str = (jstring)ENVPTR->GetObjectField(ENVPAR fapl_config, fid);
+    str = ENVPTR->GetStringUTFChars(ENVPAR j_str, NULL);
+    if (str == NULL) {
+        h5JNIFatalerror(env, "H5Pset_fapl_ros3: out of memory secret_id");
+        goto done;
+    }
+    strncpy(instance.secret_id, str, strlen(str)+1);
+    ENVPTR->ReleaseStringUTFChars(ENVPAR j_str, str);
+    if (ENVPTR->ExceptionOccurred(ENVONLY)) {
+        h5JNIFatalError(env, "H5Pset_fapl_ros3: loading secret_id failed");
+        goto done;
+    }
+
+    fid = ENVPTR->GetFieldID(ENVPAR cls, "secret_key", "Ljava/lang/String;");
+    if (fid == 0) {
+        h5badArgument(env, "H5FDset_fapl_ros3: secret_key");
+        goto done;
+    }
+    j_str = (jstring)ENVPTR->GetObjectField(ENVPAR fapl_config, fid);
+    str = ENVPTR->GetStringUTFChars(ENVPAR j_str, NULL);
+    if (str == NULL) {
+        h5JNIFatalerror(env, "H5Pset_fapl_ros3: out of memory secret_key");
+        goto done;
+    }
+    strncpy(instance.secret_key, str, strlen(str)+1);
+    ENVPTR->ReleaseStringUTFChars(ENVPAR j_str, str);
+    if (ENVPTR->ExceptionOccurred(ENVONLY)) {
+        h5JNIFatalError(env, "H5Pset_fapl_ros3: loading secret_key failed");
+        goto done;
+    }
+
+    if (instance.aws_region[0] != '\0' && instance.secret_id[0] !='\0')
+        instance.authenticate = TRUE;
+
+    retVal = H5Pset_fapl_ros3((hid_t) fapl_id, &instance);
+    if (retVal < 0)
+        h5libraryError(env);
+
+done:
+    return (jint)retVal;
+} /* end Java_hdf_hdf5lib_H5_H5Pset_1fapl_1ros3 */
+
+/*
  * Class:     hdf_hdf5lib_H5
  * Method:    H5Pget_fapl_muti
  * Signature: (J[I[J[Ljava/lang/String;[J)Z
