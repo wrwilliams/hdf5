@@ -50,6 +50,7 @@ import hdf.hdf5lib.structs.H5AC_cache_config_t;
 import hdf.hdf5lib.structs.H5A_info_t;
 import hdf.hdf5lib.structs.H5E_error2_t;
 import hdf.hdf5lib.structs.H5F_info2_t;
+import hdf.hdf5lib.structs.H5FD_ros3_fapl_t;
 import hdf.hdf5lib.structs.H5G_info_t;
 import hdf.hdf5lib.structs.H5L_info_t;
 import hdf.hdf5lib.structs.H5O_info_t;
@@ -7090,6 +7091,10 @@ public class H5 implements java.io.Serializable {
     public synchronized static native int H5Pset_fapl_stdio(long fapl_id) throws HDF5LibraryException, NullPointerException;
 
     public synchronized static native int H5Pset_fapl_windows(long fapl_id) throws HDF5LibraryException, NullPointerException;
+
+    public synchronized static native int H5Pset_fapl_ros3(long fapl_id, H5FD_ros3_fapl_t fapl_conf) throws HDF5LibraryException, NullPointerException;
+
+    public synchronized static native H5FD_ros3_fapl_t H5Pget_fapl_ros3(long fapl_id) throws HDF5LibraryException, NullPointerException;
 
     // /////// unimplemented ////////
 

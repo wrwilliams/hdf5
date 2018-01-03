@@ -434,6 +434,8 @@ Java_hdf_hdf5lib_HDF5Constants_H5FD_1MULTI(JNIEnv *env, jclass cls) { return H5F
 JNIEXPORT jlong JNICALL
 Java_hdf_hdf5lib_HDF5Constants_H5FD_1SEC2(JNIEnv *env, jclass cls) { return H5FD_SEC2; }
 JNIEXPORT jlong JNICALL
+Java_hdf_hdf5lib_HDF5Constants_H5FD_1ROS3(JNIEnv *env, jclass cls) { return H5FD_ROS3; }
+JNIEXPORT jlong JNICALL
 Java_hdf_hdf5lib_HDF5Constants_H5FD_1STDIO(JNIEnv *env, jclass cls) { return H5FD_STDIO; }
 JNIEXPORT jlong JNICALL
 Java_hdf_hdf5lib_HDF5Constants_H5FD_1WINDOWS(JNIEnv *env, jclass cls) {

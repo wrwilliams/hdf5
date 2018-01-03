@@ -1139,6 +1139,24 @@ Java_hdf_hdf5lib_H5_H5Pset_1fapl_1windows
 
 /*
  * Class:     hdf_hdf5lib_H5
+ * Method:    H5Pget_fapl_ros3
+ * Signature: (J)Lhdf/hdf5lib/structs/H5FD_ros3_fapl_t;
+ */
+JNIEXPORT jobject JNICALL
+Java_hdf_hdf5lib_H5_H5Pget_1fapl_1ros3
+(JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     hdf_hdf5lib_H5
+ * Method:    H5Pset_fapl_ros3
+ * Signature: (JLhdf/hdf5lib/structs/H5FD_ros3_fapl_t;)I
+ */
+JNIEXPORT jint JNICALL
+Java_hdf_hdf5lib_H5_H5Pset_1fapl_1ros3
+(JNIEnv *, jclass, jlong, jobject);
+
+/*
+ * Class:     hdf_hdf5lib_H5
  * Method:    H5Pget_fapl_muti
  * Signature: (J[I[J[Ljava/lang/String;[J)Z
  */
