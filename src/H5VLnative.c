@@ -3106,7 +3106,7 @@ H5VL_native_object_specific(void *obj, H5VL_loc_params_t loc_params, H5VL_object
             }
         case H5VL_OBJECT_FLUSH:
             {
-                hid_t                   obj_id      = va_arg(arguments, hid_t);
+                hid_t                   oid         = va_arg(arguments, hid_t);
                 H5O_loc_t              *oloc        = loc.oloc;
                 const H5O_obj_class_t  *obj_class   = NULL;         /* Class of object */
 
@@ -3119,13 +3119,20 @@ H5VL_native_object_specific(void *obj, H5VL_loc_params_t loc_params, H5VL_object
                     HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to flush object")
 
                 /* Flush the object metadata and invoke flush callback */
-                if (H5O_flush_common(oloc, obj_id, H5AC_ind_read_dxpl_id) < 0)
+                if (H5O_flush_common(oloc, oid, H5AC_ind_read_dxpl_id) < 0)
                     HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to flush object and object flush callback")
 
                 break;
             }
         case H5VL_OBJECT_REFRESH:
             {
+                hid_t                   oid         = va_arg(arguments, hid_t);
+                H5O_loc_t              *oloc        = loc.oloc;
+
+                /* Refresh the metadata */
+                if (H5O_refresh_metadata(oid, *oloc, H5AC_ind_read_dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to refresh object")
+
                 break;
             }
         case H5VL_REF_CREATE:

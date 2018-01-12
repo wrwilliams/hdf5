@@ -64,27 +64,27 @@ static herr_t H5O_oh_tag(const H5O_loc_t *oloc, hid_t dxpl_id, haddr_t *tag);
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Oflush(hid_t obj_id)
+H5Oflush(hid_t oid)
 {
     H5VL_object_t      *obj         = NULL;     /* Object token     */
     H5VL_loc_params_t   loc_params;
     herr_t              ret_value   = SUCCEED;  /* Return value     */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE1("e", "i", obj_id);
+    H5TRACE1("e", "i", oid);
 
     /* Check args */
-    if (NULL == (obj = H5VL_get_object(obj_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid location identifier")
+    if (NULL == (obj = H5VL_get_object(oid)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid object identifier")
 
     /* Set location parameters */
     loc_params.type         = H5VL_OBJECT_BY_SELF;
-    loc_params.obj_type     = H5I_get_type(obj_id);
+    loc_params.obj_type     = H5I_get_type(oid);
 
     /* Flush the object through the VOL */
     if ((ret_value = H5VL_object_specific(obj->vol_obj, loc_params, obj->vol_info->vol_cls, 
                                          H5VL_OBJECT_FLUSH, H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, 
-                                         obj_id)) < 0)
+                                         oid)) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_BADITER, FAIL, "object flush failed")
 
 done:
@@ -184,19 +184,26 @@ done:
 herr_t
 H5Orefresh(hid_t oid)
 {
-    H5O_loc_t *oloc;            /* object location */
-    herr_t ret_value = SUCCEED; /* return value */
-    
+    H5VL_object_t      *obj         = NULL;     /* Object token     */
+    H5VL_loc_params_t   loc_params;
+    herr_t              ret_value   = SUCCEED;  /* Return value     */
+
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "i", oid);
 
     /* Check args */
-    if(NULL == (oloc = H5O_get_loc(oid)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not an object")
+    if (NULL == (obj = H5VL_get_object(oid)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid object identifier")
 
-    /* Private function */
-    if(H5O_refresh_metadata(oid, *oloc, H5AC_ind_read_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to refresh object")
+    /* Set location parameters */
+    loc_params.type         = H5VL_OBJECT_BY_SELF;
+    loc_params.obj_type     = H5I_get_type(oid);
+
+    /* Refresh the object through the VOL */
+    if ((ret_value = H5VL_object_specific(obj->vol_obj, loc_params, obj->vol_info->vol_cls, 
+                                         H5VL_OBJECT_REFRESH, H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, 
+                                         oid)) < 0)
+        HGOTO_ERROR(H5E_OHDR, H5E_BADITER, FAIL, "object refresh failed")
 
 done:
     FUNC_LEAVE_API(ret_value)
