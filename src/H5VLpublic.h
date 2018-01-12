@@ -173,7 +173,10 @@ typedef enum H5VL_object_specific_t {
     H5VL_OBJECT_CHANGE_REF_COUNT,      /* H5Oincr/decr_refcount              */
     H5VL_OBJECT_EXISTS,                /* H5Oexists_by_name                  */
     H5VL_OBJECT_VISIT,                 /* H5Ovisit(_by_name)                 */
-    H5VL_REF_CREATE                    /* H5Rcreate                          */
+    H5VL_REF_CREATE,                   /* H5Rcreate                          */
+    /* XXX: New API calls */
+    H5VL_OBJECT_FLUSH,
+    H5VL_OBJECT_REFRESH
 } H5VL_object_specific_t;
 
 /* types for different ways that objects are located in an HDF5 container */

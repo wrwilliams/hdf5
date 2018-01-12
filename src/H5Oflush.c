@@ -66,33 +66,26 @@ static herr_t H5O_oh_tag(const H5O_loc_t *oloc, hid_t dxpl_id, haddr_t *tag);
 herr_t
 H5Oflush(hid_t obj_id)
 {
-    H5O_loc_t *oloc;            /* object location */
-    void *obj_ptr;		/* Pointer to object */
-    const H5O_obj_class_t  *obj_class = NULL;       /* Class of object */
-    herr_t ret_value = SUCCEED; /* return value */
+    H5VL_object_t      *obj         = NULL;     /* Object token     */
+    H5VL_loc_params_t   loc_params;
+    herr_t              ret_value   = SUCCEED;  /* Return value     */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "i", obj_id);
 
     /* Check args */
-    if(NULL == (oloc = H5O_get_loc(obj_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not an object")
+    if (NULL == (obj = H5VL_get_object(obj_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid location identifier")
 
-    /* Get the object pointer */
-    if(NULL == (obj_ptr = H5I_object(obj_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid object identifier")
+    /* Set location parameters */
+    loc_params.type         = H5VL_OBJECT_BY_SELF;
+    loc_params.obj_type     = H5I_get_type(obj_id);
 
-    /* Get the object class */
-    if(NULL == (obj_class = H5O_obj_class(oloc, H5AC_ind_read_dxpl_id)))
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to determine object class")
-
-    /* Flush the object of this class */
-    if(obj_class->flush && obj_class->flush(obj_ptr, H5AC_ind_read_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to flush object")
-
-    /* Flush the object metadata and invoke flush callback */
-    if(H5O_flush_common(oloc, obj_id, H5AC_ind_read_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to flush object and object flush callback")
+    /* Flush the object through the VOL */
+    if ((ret_value = H5VL_object_specific(obj->vol_obj, loc_params, obj->vol_info->vol_cls, 
+                                         H5VL_OBJECT_FLUSH, H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, 
+                                         obj_id)) < 0)
+        HGOTO_ERROR(H5E_OHDR, H5E_BADITER, FAIL, "object flush failed")
 
 done:
     FUNC_LEAVE_API(ret_value)

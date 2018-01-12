@@ -3032,15 +3032,11 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5VL_native_object_specific
+ * Function:    H5VL_native_object_specific
  *
- * Purpose:	Perform a driver specific operation for an objectibute
+ * Purpose:     Perform a driver specific operation for an objectibute
  *
- * Return:	Success:	0
- *		Failure:	-1
- *
- * Programmer:  Mohamad Chaarawi
- *              April, 2012
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
@@ -3060,7 +3056,7 @@ H5VL_native_object_specific(void *obj, H5VL_loc_params_t loc_params, H5VL_object
         /* H5Oincr_refcount / H5Odecr_refcount */
         case H5VL_OBJECT_CHANGE_REF_COUNT:
             {
-                int update_ref  = va_arg (arguments, int);
+                int update_ref  = va_arg(arguments, int);
                 H5O_loc_t  *oloc = loc.oloc;
 
                 if(H5O_link(oloc, update_ref, dxpl_id) < 0)
@@ -3071,7 +3067,7 @@ H5VL_native_object_specific(void *obj, H5VL_loc_params_t loc_params, H5VL_object
         /* H5Oexists_by_name */
         case H5VL_OBJECT_EXISTS:
             {
-                htri_t *ret = va_arg (arguments, htri_t *);
+                htri_t *ret = va_arg(arguments, htri_t *);
 
                 if(loc_params.type == H5VL_OBJECT_BY_NAME) {
                     /* Check if the object exists */
@@ -3087,10 +3083,10 @@ H5VL_native_object_specific(void *obj, H5VL_loc_params_t loc_params, H5VL_object
             }
         case H5VL_OBJECT_VISIT:
             {
-                H5_index_t idx_type = va_arg (arguments, H5_index_t);
-                H5_iter_order_t order = va_arg (arguments, H5_iter_order_t);
-                H5O_iterate_t op = va_arg (arguments, H5O_iterate_t);
-                void *op_data = va_arg (arguments, void *);
+                H5_index_t idx_type     = va_arg(arguments, H5_index_t);
+                H5_iter_order_t order   = va_arg(arguments, H5_iter_order_t);
+                H5O_iterate_t op        = va_arg(arguments, H5O_iterate_t);
+                void *op_data           = va_arg(arguments, void *);
 
                 /* Call internal object visitation routine */
                 if(loc_params.type == H5VL_OBJECT_BY_SELF) {
@@ -3108,12 +3104,36 @@ H5VL_native_object_specific(void *obj, H5VL_loc_params_t loc_params, H5VL_object
                     HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "unknown object visit params");
                 break;
             }
+        case H5VL_OBJECT_FLUSH:
+            {
+                hid_t                   obj_id      = va_arg(arguments, hid_t);
+                H5O_loc_t              *oloc        = loc.oloc;
+                const H5O_obj_class_t  *obj_class   = NULL;         /* Class of object */
+
+                /* Get the object class */
+                if (NULL == (obj_class = H5O_obj_class(oloc, H5AC_ind_read_dxpl_id)))
+                    HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to determine object class")
+
+                /* Flush the object of this class */
+                if (obj_class->flush && obj_class->flush(obj, H5AC_ind_read_dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to flush object")
+
+                /* Flush the object metadata and invoke flush callback */
+                if (H5O_flush_common(oloc, obj_id, H5AC_ind_read_dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to flush object and object flush callback")
+
+                break;
+            }
+        case H5VL_OBJECT_REFRESH:
+            {
+                break;
+            }
         case H5VL_REF_CREATE:
             {
-                void        *ref      = va_arg (arguments, void *);
-                const char  *name     = va_arg (arguments, char *);
-                H5R_type_t  ref_type  = va_arg (arguments, H5R_type_t);
-                hid_t       space_id  = va_arg (arguments, hid_t);
+                void        *ref      = va_arg(arguments, void *);
+                const char  *name     = va_arg(arguments, char *);
+                H5R_type_t  ref_type  = va_arg(arguments, H5R_type_t);
+                hid_t       space_id  = va_arg(arguments, hid_t);
                 H5S_t       *space = NULL;   /* Pointer to dataspace containing region */
                 
                 if(space_id != (-1) && (NULL == (space = (H5S_t *)H5I_object_verify(space_id, H5I_DATASPACE))))

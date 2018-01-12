@@ -936,7 +936,7 @@ H5Ovisit(hid_t obj_id, H5_index_t idx_type, H5_iter_order_t order,
     if ((ret_value = H5VL_object_specific(obj->vol_obj, loc_params, obj->vol_info->vol_cls, 
                                          H5VL_OBJECT_VISIT, H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, 
                                          idx_type, order, op, op_data)) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_BADITER, FAIL, "link iteration failed")
+        HGOTO_ERROR(H5E_OHDR, H5E_BADITER, FAIL, "object iteration failed")
 
 done:
     FUNC_LEAVE_API(ret_value)
