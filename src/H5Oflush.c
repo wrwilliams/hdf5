@@ -128,7 +128,7 @@ H5O_flush_common(H5O_loc_t *oloc, hid_t obj_id, hid_t dxpl_id)
 
     /* Check to invoke callback */
     if(H5F_object_flush_cb(oloc->file, obj_id) < 0)
-	HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to do object flush callback")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to do object flush callback")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -262,7 +262,7 @@ H5O_refresh_metadata(hid_t oid, H5O_loc_t oloc, hid_t dxpl_id)
         /* Re-open the object, re-fetching its metadata */
         if((H5O_refresh_metadata_reopen(oid, &obj_loc, dxpl_id, FALSE)) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to refresh object")
-    } /* end if */
+    }
 
 done:
     if(objs_incr)
@@ -306,12 +306,12 @@ H5O_refresh_metadata_close(hid_t oid, H5O_loc_t oloc, H5G_loc_t *obj_loc, hid_t 
 
         H5G_loc(oid, &tmp_loc);
         H5G_loc_copy(obj_loc, &tmp_loc, H5_COPY_DEEP);
-    } /* end if */
+    }
 
     /* Get object's type */
     if(H5I_get_type(oid) == H5I_DATASET)
-	if(H5D_mult_refresh_close(oid, dxpl_id) < 0)
-	    HGOTO_ERROR(H5E_DATASET, H5E_CANTOPENOBJ, FAIL, "unable to prepare refresh for dataset")
+        if(H5D_mult_refresh_close(oid, dxpl_id) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTOPENOBJ, FAIL, "unable to prepare refresh for dataset")
 
     /* Retrieve tag for object */
     if(H5O_oh_tag(&oloc, dxpl_id, &tag) < 0)
@@ -335,8 +335,8 @@ H5O_refresh_metadata_close(hid_t oid, H5O_loc_t oloc, H5G_loc_t *obj_loc, hid_t 
 
     /* Re-cork object with tag */
     if(corked)
-	if(H5AC_cork(oloc.file, tag, H5AC__SET_CORK, &corked) < 0)
-	    HGOTO_ERROR(H5E_ATOM, H5E_SYSTEM, FAIL, "unable to cork the object")
+        if(H5AC_cork(oloc.file, tag, H5AC__SET_CORK, &corked) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_SYSTEM, FAIL, "unable to cork the object")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
@@ -408,7 +408,7 @@ H5O_refresh_metadata_reopen(hid_t oid, H5G_loc_t *obj_loc, hid_t dxpl_id, hbool_
         default:
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a valid file object ID (dataset, group, or datatype)")
         break;
-    } /* end switch */
+    }
 
     /* Re-register ID for the object */
     if((H5I_register_with_id(type, object, TRUE, oid)) < 0)

@@ -1001,10 +1001,9 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5VL_native_dataset_create
  *
- * Purpose:     Creates a dataset inside a native h5 file.
+ * Purpose:     Creates a dataset in a native HDF5 file
  *
- * Return:      Success:    A pointer to a dataset struct
- *
+ * Return:      Success:    Pointer to a dataset struct
  *              Failure:    NULL
  *
  *-------------------------------------------------------------------------
@@ -1079,15 +1078,12 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5VL_native_dataset_open
+ * Function:    H5VL_native_dataset_open
  *
- * Purpose:	Opens a dataset inside a native h5 file.
+ * Purpose:     Opens a dataset in a native HDF5 file.
  *
- * Return:	Success:	dataset id. 
- *		Failure:	NULL
- *
- * Programmer:  Mohamad Chaarawi
- *              March, 2012
+ * Return:      Success:    Pointer to a dataset struct
+ *              Failure:    NULL
  *
  *-------------------------------------------------------------------------
  */
@@ -1116,15 +1112,11 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5VL_native_dataset_read
+ * Function:    H5VL_native_dataset_read
  *
- * Purpose:	Reads raw data from a dataset into a buffer.
+ * Purpose:     Reads raw data from a dataset into a buffer.
  *
- * Return:	Success:	0
- *		Failure:	-1, dataset not readd.
- *
- * Programmer:  Mohamad Chaarawi
- *              March, 2012
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
@@ -1161,15 +1153,11 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5VL_native_dataset_write
+ * Function:    H5VL_native_dataset_write
  *
- * Purpose:	Writes raw data from a buffer into a dataset.
+ * Purpose:     Writes raw data from a buffer into a dataset.
  *
- * Return:	Success:	0
- *		Failure:	-1, dataset not writed.
- *
- * Programmer:  Mohamad Chaarawi
- *              March, 2012
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
@@ -1217,15 +1205,11 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5VL_native_dataset_get
+ * Function:    H5VL_native_dataset_get
  *
- * Purpose:	Gets certain information about a dataset
+ * Purpose:     Gets certain information about a dataset
  *
- * Return:	Success:	0
- *		Failure:	-1
- *
- * Programmer:  Mohamad Chaarawi
- *              March, 2012
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
@@ -1321,15 +1305,11 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5VL_native_dataset_specific
+ * Function:    H5VL_native_dataset_specific
  *
- * Purpose:	Specific operations for datasets
+ * Purpose:     Specific operations for datasets
  *
- * Return:	Success:	0
- *		Failure:	-1
- *
- * Programmer:  Mohamad Chaarawi
- *              August, 2014
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
@@ -1346,10 +1326,38 @@ H5VL_native_dataset_specific(void *obj, H5VL_dataset_specific_t specific_type,
         /* H5Dspecific_space */
         case H5VL_DATASET_SET_EXTENT:
             {
-                const hsize_t *size = va_arg (arguments, const hsize_t *); 
+                const hsize_t *size = va_arg(arguments, const hsize_t *); 
 
                 if(H5D__set_extent(dset, size, dxpl_id) < 0)
                     HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to set extent of dataset")
+                break;
+            }
+        case H5VL_DATASET_ITERATE:
+            {
+                break;
+            }
+        case H5VL_DATASET_FLUSH:
+            {
+                hid_t dset_id = va_arg(arguments, hid_t);
+
+                /* Flush any dataset information still cached in memory */
+                if (H5D__flush_real(dset, H5AC_ind_read_dxpl_id) < 0)
+                    HDONE_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to flush cached dataset info")
+
+                /* Flush object's metadata to file */
+                if (H5O_flush_common(&dset->oloc, dset_id, H5AC_ind_read_dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_DATASET, H5E_CANTFLUSH, FAIL, "unable to flush dataset and object flush callback")
+
+                break;
+            }
+        case H5VL_DATASET_REFRESH:
+            {
+                hid_t dset_id = va_arg(arguments, hid_t);
+
+                /* Call private function to refresh the dataset object */
+                if ((H5D__refresh(dset_id, dset, H5AC_ind_read_dxpl_id)) < 0)
+                    HGOTO_ERROR(H5E_DATASET, H5E_CANTLOAD, FAIL, "unable to refresh dataset")
+
                 break;
             }
         default:
@@ -1362,15 +1370,12 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5VL_native_dataset_close
+ * Function:    H5VL_native_dataset_close
  *
- * Purpose:	Closes a dataset.
+ * Purpose:     Closes a dataset.
  *
- * Return:	Success:	0
- *		Failure:	-1, dataset not closed.
- *
- * Programmer:  Mohamad Chaarawi
- *              March, 2012
+ * Return:      Success:    SUCCEED
+ *              Failure:    FAIL (dataset will not be closed)
  *
  *-------------------------------------------------------------------------
  */
