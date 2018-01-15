@@ -2765,7 +2765,6 @@ H5_trace(const double *returning, const char *func, const char *type, ...)
                             H5VL_group_specific_t specific = (H5VL_group_specific_t)va_arg(ap, int);
 
                             switch(specific) {
-                                case H5VL_GROUP_SPECIFIC_INVALID:
                                 default:
                                     fprintf(out, "%ld", (long)specific);
                                     break;

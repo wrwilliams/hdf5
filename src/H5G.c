@@ -771,19 +771,20 @@ done:
 herr_t
 H5Gflush(hid_t group_id)
 {
-    H5G_t *grp;        /* Dataset for this operation */
-    herr_t ret_value = SUCCEED; /* return value */
+    H5VL_object_t  *grp;                    /* Group for this operation     */
+    herr_t          ret_value = SUCCEED;    /* Return value                 */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "i", group_id);
     
     /* Check args */
-    if(NULL == (grp = (H5G_t *)H5I_object_verify(group_id, H5I_GROUP)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a group")
+    if (NULL == (grp = (H5VL_object_t *)H5I_object_verify(group_id, H5I_GROUP)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5I_INVALID_HID, "not a group ID")
 
     /* Flush object's metadata to file */
-    if(H5O_flush_common(&grp->oloc, group_id, H5AC_ind_read_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_CANTFLUSH, FAIL, "unable to flush group and object flush callback")
+    if ((ret_value = H5VL_group_specific(grp->vol_obj, grp->vol_info->vol_cls, H5VL_GROUP_FLUSH, 
+                                          H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, group_id)) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTFLUSH, FAIL, "unable to flush group")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -805,19 +806,20 @@ done:
 herr_t
 H5Grefresh(hid_t group_id)
 {
-    H5G_t * grp = NULL;
-    herr_t ret_value = SUCCEED; /* return value */
-    
+    H5VL_object_t  *grp;                    /* Group for this operation     */
+    herr_t          ret_value = SUCCEED;    /* Return value                 */
+
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "i", group_id);
 
     /* Check args */
-    if(NULL == (grp = (H5G_t *)H5I_object_verify(group_id, H5I_GROUP)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a group")
+    if (NULL == (grp = (H5VL_object_t *)H5I_object_verify(group_id, H5I_GROUP)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5I_INVALID_HID, "not a group ID")
 
-    /* Call private function to refresh group object */
-    if ((H5O_refresh_metadata(group_id, grp->oloc, H5AC_ind_read_dxpl_id)) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_CANTLOAD, FAIL, "unable to refresh group")
+    /* Refresh object's metadata */
+    if ((ret_value = H5VL_group_specific(grp->vol_obj, grp->vol_info->vol_cls, H5VL_GROUP_REFRESH, 
+                                          H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, group_id)) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTFLUSH, FAIL, "unable to flush group")
 
 done:
     FUNC_LEAVE_API(ret_value)

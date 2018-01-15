@@ -88,6 +88,7 @@ static herr_t H5VL_native_file_close(void *file, hid_t dxpl_id, void **req);
 static void *H5VL_native_group_create(void *obj, H5VL_loc_params_t loc_params, const char *name, hid_t gcpl_id, hid_t gapl_id, hid_t dxpl_id, void **req);
 static void *H5VL_native_group_open(void *obj, H5VL_loc_params_t loc_params, const char *name, hid_t gapl_id, hid_t dxpl_id, void **req);
 static herr_t H5VL_native_group_get(void *obj, H5VL_group_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_native_group_specific(void *dset, H5VL_group_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
 static herr_t H5VL_native_group_close(void *grp, hid_t dxpl_id, void **req);
 
 /* Link callbacks */
@@ -167,7 +168,7 @@ static H5VL_class_t H5VL_native_g = {
         H5VL_native_group_create,                   /* create       */
         H5VL_native_group_open,                     /* open         */
         H5VL_native_group_get,                      /* get          */
-        NULL,                                       /* specific     */
+        H5VL_native_group_specific,                 /* specific     */
         NULL,                                       /* optional     */
         H5VL_native_group_close                     /* close        */
     },
@@ -2342,6 +2343,54 @@ H5VL_native_group_get(void *obj, H5VL_group_get_t get_type, hid_t dxpl_id, void 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL_native_group_get() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_native_group_specific
+ *
+ * Purpose:     Specific operations for groups
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5VL_native_group_specific(void *obj, H5VL_group_specific_t specific_type, 
+                             hid_t dxpl_id, void H5_ATTR_UNUSED **req, va_list arguments)
+{
+    H5G_t       *grp = (H5G_t *)obj;
+    herr_t       ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    switch (specific_type) {
+        case H5VL_GROUP_FLUSH:
+            {
+                hid_t group_id = va_arg(arguments, hid_t);
+
+                /* Flush object's metadata to file */
+                if (H5O_flush_common(&grp->oloc, group_id, H5AC_ind_read_dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_SYM, H5E_CANTFLUSH, FAIL, "unable to flush group")
+
+                break;
+            }
+        case H5VL_GROUP_REFRESH:
+            {
+                hid_t group_id = va_arg(arguments, hid_t);
+
+                /* Call private function to refresh group object */
+                if ((H5O_refresh_metadata(group_id, grp->oloc, H5AC_ind_read_dxpl_id)) < 0)
+                    HGOTO_ERROR(H5E_SYM, H5E_CANTLOAD, FAIL, "unable to refresh group")
+
+                break;
+            }
+        default:
+            HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid specific operation")
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5VL_native_group_specific() */
 
 
 /*-------------------------------------------------------------------------

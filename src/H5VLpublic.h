@@ -137,7 +137,9 @@ typedef enum H5VL_group_get_t {
 
 /* types for group SPECFIC callback */
 typedef enum H5VL_group_specific_t {
-    H5VL_GROUP_SPECIFIC_INVALID
+    /* XXX: New API calls */
+    H5VL_GROUP_FLUSH,
+    H5VL_GROUP_REFRESH
 } H5VL_group_specific_t;
 
 /* link create types for VOL */
