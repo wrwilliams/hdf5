@@ -784,7 +784,7 @@ H5Gflush(hid_t group_id)
     /* Flush object's metadata to file */
     if ((ret_value = H5VL_group_specific(grp->vol_obj, grp->vol_info->vol_cls, H5VL_GROUP_FLUSH, 
                                           H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, group_id)) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTFLUSH, FAIL, "unable to flush group")
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTFLUSH, FAIL, "unable to flush group")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -819,7 +819,7 @@ H5Grefresh(hid_t group_id)
     /* Refresh object's metadata */
     if ((ret_value = H5VL_group_specific(grp->vol_obj, grp->vol_info->vol_cls, H5VL_GROUP_REFRESH, 
                                           H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, group_id)) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTFLUSH, FAIL, "unable to flush group")
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTFLUSH, FAIL, "unable to flush group")
 
 done:
     FUNC_LEAVE_API(ret_value)

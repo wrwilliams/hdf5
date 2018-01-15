@@ -106,7 +106,9 @@ typedef enum H5VL_datatype_get_t {
 
 /* types for datatype SPECFIC callback */
 typedef enum H5VL_datatype_specific_t {
-    H5VL_DATATYPE_SPECIFIC_INVALID
+    /* XXX: New API calls */
+    H5VL_DATATYPE_FLUSH,
+    H5VL_DATATYPE_REFRESH
 } H5VL_datatype_specific_t;
 
 /* types for file GET callback */

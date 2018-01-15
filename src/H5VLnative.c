@@ -116,6 +116,7 @@ static herr_t H5VL_native_object_optional(void *obj, hid_t dxpl_id, void **req, 
 static void *H5VL_native_datatype_commit(void *obj, H5VL_loc_params_t loc_params, const char *name, hid_t type_id, hid_t lcpl_id, hid_t tcpl_id, hid_t tapl_id, hid_t dxpl_id, void **req);
 static void *H5VL_native_datatype_open(void *obj, H5VL_loc_params_t loc_params, const char *name, hid_t tapl_id, hid_t dxpl_id, void **req);
 static herr_t H5VL_native_datatype_get(void *dt, H5VL_datatype_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_native_datatype_specific(void *dt, H5VL_datatype_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
 static herr_t H5VL_native_datatype_close(void *dt, hid_t dxpl_id, void **req);
 
 /* Native VOL driver class struct */
@@ -152,7 +153,7 @@ static H5VL_class_t H5VL_native_g = {
         H5VL_native_datatype_commit,                /* commit       */
         H5VL_native_datatype_open,                  /* open         */
         H5VL_native_datatype_get,                   /* get          */
-        NULL,                                       /* specific     */
+        H5VL_native_datatype_specific,              /* specific     */
         NULL,                                       /* optional     */
         H5VL_native_datatype_close                  /* close        */
     },
@@ -3552,6 +3553,54 @@ H5VL_native_datatype_get(void *obj, H5VL_datatype_get_t get_type,
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL_native_datatype_get() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_native_datatype_specific
+ *
+ * Purpose:     Specific operations for datatype
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5VL_native_datatype_specific(void *obj, H5VL_datatype_specific_t specific_type, 
+                             hid_t dxpl_id, void H5_ATTR_UNUSED **req, va_list arguments)
+{
+    H5T_t       *dt = (H5T_t *)obj;
+    herr_t       ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    switch (specific_type) {
+        case H5VL_DATATYPE_FLUSH:
+            {
+                hid_t type_id = va_arg(arguments, hid_t);
+
+                /* To flush metadata and invoke flush callback if there is */
+                if (H5O_flush_common(&dt->oloc, type_id, H5AC_ind_read_dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTFLUSH, FAIL, "unable to flush datatype")
+
+                break;
+            }
+        case H5VL_DATATYPE_REFRESH:
+            {
+                hid_t type_id = va_arg(arguments, hid_t);
+
+                /* Call private function to refresh datatype object */
+                if ((H5O_refresh_metadata(type_id, dt->oloc, H5AC_ind_read_dxpl_id)) < 0)
+                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTLOAD, FAIL, "unable to refresh datatype")
+
+                break;
+            }
+        default:
+            HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid specific operation")
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5VL_native_datatype_specific() */
 
 
 /*-------------------------------------------------------------------------
