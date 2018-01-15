@@ -1333,10 +1333,6 @@ H5VL_native_dataset_specific(void *obj, H5VL_dataset_specific_t specific_type,
                     HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to set extent of dataset")
                 break;
             }
-        case H5VL_DATASET_ITERATE:
-            {
-                break;
-            }
         case H5VL_DATASET_FLUSH:
             {
                 hid_t dset_id = va_arg(arguments, hid_t);

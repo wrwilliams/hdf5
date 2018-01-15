@@ -94,7 +94,6 @@ typedef enum H5VL_dataset_get_t {
 typedef enum H5VL_dataset_specific_t {
     H5VL_DATASET_SET_EXTENT,                /* H5Dset_extent                       */
     /* XXX: New API calls */
-    H5VL_DATASET_ITERATE,
     H5VL_DATASET_FLUSH,
     H5VL_DATASET_REFRESH
 } H5VL_dataset_specific_t;
