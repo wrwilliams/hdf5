@@ -370,6 +370,10 @@ test_basic_group_operation(void)
     if (H5Gget_info_by_idx(fid, "/", H5_INDEX_NAME, H5_ITER_NATIVE, 0, &info, H5P_DEFAULT) < 0)
         TEST_ERROR;
 
+    /* H5Gflush */
+    if (H5Gflush(gid) < 0)
+        TEST_ERROR;
+
     /* H5Gclose */
     if (H5Gclose(gid) < 0)
         TEST_ERROR;
@@ -380,6 +384,10 @@ test_basic_group_operation(void)
 
     /* H5Gcreate_anon */
     if ((gid_a = H5Gcreate_anon(fid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+        TEST_ERROR;
+
+    /* H5Grefresh */
+    if (H5Grefresh(gid) < 0)
         TEST_ERROR;
 
     if (H5Gclose(gid) < 0)
@@ -473,8 +481,16 @@ test_basic_dataset_operation(void)
     if (H5Dset_extent(did, &curr_dims) < 0)
         TEST_ERROR;
 
+    /* H5Dflush */
+    if (H5Dflush(did) < 0)
+        TEST_ERROR;
+
     /* H5Dwrite */
     if (H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, in_buf) < 0)
+        TEST_ERROR;
+
+    /* H5Drefresh */
+    if (H5Drefresh(did) < 0)
         TEST_ERROR;
 
     /* H5Dclose */
