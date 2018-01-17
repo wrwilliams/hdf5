@@ -88,6 +88,7 @@ static herr_t H5VL_native_file_close(void *file, hid_t dxpl_id, void **req);
 static void *H5VL_native_group_create(void *obj, H5VL_loc_params_t loc_params, const char *name, hid_t gcpl_id, hid_t gapl_id, hid_t dxpl_id, void **req);
 static void *H5VL_native_group_open(void *obj, H5VL_loc_params_t loc_params, const char *name, hid_t gapl_id, hid_t dxpl_id, void **req);
 static herr_t H5VL_native_group_get(void *obj, H5VL_group_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_native_group_specific(void *dset, H5VL_group_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
 static herr_t H5VL_native_group_close(void *grp, hid_t dxpl_id, void **req);
 
 /* Link callbacks */
@@ -115,6 +116,7 @@ static herr_t H5VL_native_object_optional(void *obj, hid_t dxpl_id, void **req, 
 static void *H5VL_native_datatype_commit(void *obj, H5VL_loc_params_t loc_params, const char *name, hid_t type_id, hid_t lcpl_id, hid_t tcpl_id, hid_t tapl_id, hid_t dxpl_id, void **req);
 static void *H5VL_native_datatype_open(void *obj, H5VL_loc_params_t loc_params, const char *name, hid_t tapl_id, hid_t dxpl_id, void **req);
 static herr_t H5VL_native_datatype_get(void *dt, H5VL_datatype_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_native_datatype_specific(void *dt, H5VL_datatype_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
 static herr_t H5VL_native_datatype_close(void *dt, hid_t dxpl_id, void **req);
 
 /* Native VOL driver class struct */
@@ -151,7 +153,7 @@ static H5VL_class_t H5VL_native_g = {
         H5VL_native_datatype_commit,                /* commit       */
         H5VL_native_datatype_open,                  /* open         */
         H5VL_native_datatype_get,                   /* get          */
-        NULL,                                       /* specific     */
+        H5VL_native_datatype_specific,              /* specific     */
         NULL,                                       /* optional     */
         H5VL_native_datatype_close                  /* close        */
     },
@@ -167,7 +169,7 @@ static H5VL_class_t H5VL_native_g = {
         H5VL_native_group_create,                   /* create       */
         H5VL_native_group_open,                     /* open         */
         H5VL_native_group_get,                      /* get          */
-        NULL,                                       /* specific     */
+        H5VL_native_group_specific,                 /* specific     */
         NULL,                                       /* optional     */
         H5VL_native_group_close                     /* close        */
     },
@@ -1001,10 +1003,9 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5VL_native_dataset_create
  *
- * Purpose:     Creates a dataset inside a native h5 file.
+ * Purpose:     Creates a dataset in a native HDF5 file
  *
- * Return:      Success:    A pointer to a dataset struct
- *
+ * Return:      Success:    Pointer to a dataset struct
  *              Failure:    NULL
  *
  *-------------------------------------------------------------------------
@@ -1079,15 +1080,12 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5VL_native_dataset_open
+ * Function:    H5VL_native_dataset_open
  *
- * Purpose:	Opens a dataset inside a native h5 file.
+ * Purpose:     Opens a dataset in a native HDF5 file.
  *
- * Return:	Success:	dataset id. 
- *		Failure:	NULL
- *
- * Programmer:  Mohamad Chaarawi
- *              March, 2012
+ * Return:      Success:    Pointer to a dataset struct
+ *              Failure:    NULL
  *
  *-------------------------------------------------------------------------
  */
@@ -1116,15 +1114,11 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5VL_native_dataset_read
+ * Function:    H5VL_native_dataset_read
  *
- * Purpose:	Reads raw data from a dataset into a buffer.
+ * Purpose:     Reads raw data from a dataset into a buffer.
  *
- * Return:	Success:	0
- *		Failure:	-1, dataset not readd.
- *
- * Programmer:  Mohamad Chaarawi
- *              March, 2012
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
@@ -1161,15 +1155,11 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5VL_native_dataset_write
+ * Function:    H5VL_native_dataset_write
  *
- * Purpose:	Writes raw data from a buffer into a dataset.
+ * Purpose:     Writes raw data from a buffer into a dataset.
  *
- * Return:	Success:	0
- *		Failure:	-1, dataset not writed.
- *
- * Programmer:  Mohamad Chaarawi
- *              March, 2012
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
@@ -1217,15 +1207,11 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5VL_native_dataset_get
+ * Function:    H5VL_native_dataset_get
  *
- * Purpose:	Gets certain information about a dataset
+ * Purpose:     Gets certain information about a dataset
  *
- * Return:	Success:	0
- *		Failure:	-1
- *
- * Programmer:  Mohamad Chaarawi
- *              March, 2012
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
@@ -1321,15 +1307,11 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5VL_native_dataset_specific
+ * Function:    H5VL_native_dataset_specific
  *
- * Purpose:	Specific operations for datasets
+ * Purpose:     Specific operations for datasets
  *
- * Return:	Success:	0
- *		Failure:	-1
- *
- * Programmer:  Mohamad Chaarawi
- *              August, 2014
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
@@ -1346,10 +1328,34 @@ H5VL_native_dataset_specific(void *obj, H5VL_dataset_specific_t specific_type,
         /* H5Dspecific_space */
         case H5VL_DATASET_SET_EXTENT:
             {
-                const hsize_t *size = va_arg (arguments, const hsize_t *); 
+                const hsize_t *size = va_arg(arguments, const hsize_t *); 
 
                 if(H5D__set_extent(dset, size, dxpl_id) < 0)
                     HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to set extent of dataset")
+                break;
+            }
+        case H5VL_DATASET_FLUSH:
+            {
+                hid_t dset_id = va_arg(arguments, hid_t);
+
+                /* Flush any dataset information still cached in memory */
+                if (H5D__flush_real(dset, H5AC_ind_read_dxpl_id) < 0)
+                    HDONE_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to flush cached dataset info")
+
+                /* Flush object's metadata to file */
+                if (H5O_flush_common(&dset->oloc, dset_id, H5AC_ind_read_dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_DATASET, H5E_CANTFLUSH, FAIL, "unable to flush dataset and object flush callback")
+
+                break;
+            }
+        case H5VL_DATASET_REFRESH:
+            {
+                hid_t dset_id = va_arg(arguments, hid_t);
+
+                /* Call private function to refresh the dataset object */
+                if ((H5D__refresh(dset_id, dset, H5AC_ind_read_dxpl_id)) < 0)
+                    HGOTO_ERROR(H5E_DATASET, H5E_CANTLOAD, FAIL, "unable to refresh dataset")
+
                 break;
             }
         default:
@@ -1362,15 +1368,12 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5VL_native_dataset_close
+ * Function:    H5VL_native_dataset_close
  *
- * Purpose:	Closes a dataset.
+ * Purpose:     Closes a dataset.
  *
- * Return:	Success:	0
- *		Failure:	-1, dataset not closed.
- *
- * Programmer:  Mohamad Chaarawi
- *              March, 2012
+ * Return:      Success:    SUCCEED
+ *              Failure:    FAIL (dataset will not be closed)
  *
  *-------------------------------------------------------------------------
  */
@@ -1776,9 +1779,9 @@ H5VL_native_file_optional(void *obj, hid_t dxpl_id, void H5_ATTR_UNUSED **req, v
         /* H5Fget_file_image */
         case H5VL_FILE_GET_FILE_IMAGE:
             {
-                void       *buf_ptr   = va_arg (arguments, void *);
-                ssize_t    *ret       = va_arg (arguments, ssize_t *);
-                size_t      buf_len   = va_arg (arguments, size_t );
+                void       *buf_ptr   = va_arg(arguments, void *);
+                ssize_t    *ret       = va_arg(arguments, ssize_t *);
+                size_t      buf_len   = va_arg(arguments, size_t );
 
                 f = (H5F_t *)obj;
                 /* Do the actual work */
@@ -1801,10 +1804,10 @@ H5VL_native_file_optional(void *obj, hid_t dxpl_id, void H5_ATTR_UNUSED **req, v
             }
         case H5VL_FILE_GET_FREE_SECTIONS:
             {
-                H5F_sect_info_t *sect_info = va_arg (arguments, H5F_sect_info_t *);
-                ssize_t         *ret       = va_arg (arguments, ssize_t *);
-                H5F_mem_t       type       = va_arg (arguments, H5F_mem_t);
-                size_t          nsects     = va_arg (arguments, size_t);
+                H5F_sect_info_t *sect_info = va_arg(arguments, H5F_sect_info_t *);
+                ssize_t         *ret       = va_arg(arguments, ssize_t *);
+                H5F_mem_t       type       = va_arg(arguments, H5F_mem_t);
+                size_t          nsects     = va_arg(arguments, size_t);
 
                 f = (H5F_t *)obj;
                 /* Go get the free-space section information in the file */
@@ -1875,10 +1878,10 @@ H5VL_native_file_optional(void *obj, hid_t dxpl_id, void H5_ATTR_UNUSED **req, v
         /* H5Fget_mdc_size */
         case H5VL_FILE_GET_MDC_SIZE:
             {
-                size_t *max_size_ptr        = va_arg (arguments, size_t *);
-                size_t *min_clean_size_ptr  = va_arg (arguments, size_t *);
-                size_t *cur_size_ptr        = va_arg (arguments, size_t *); 
-                int    *cur_num_entries_ptr = va_arg (arguments, int *); 
+                size_t *max_size_ptr        = va_arg(arguments, size_t *);
+                size_t *min_clean_size_ptr  = va_arg(arguments, size_t *);
+                size_t *cur_size_ptr        = va_arg(arguments, size_t *); 
+                int    *cur_num_entries_ptr = va_arg(arguments, int *); 
                 uint32_t cur_num_entries;
 
                 f = (H5F_t *)obj;
@@ -1894,8 +1897,8 @@ H5VL_native_file_optional(void *obj, hid_t dxpl_id, void H5_ATTR_UNUSED **req, v
         /* H5Fget_vfd_handle */
         case H5VL_FILE_GET_VFD_HANDLE:
             {
-                void **file_handle  = va_arg (arguments, void **);
-                hid_t  fapl_id      = va_arg (arguments, hid_t);
+                void **file_handle  = va_arg(arguments, void **);
+                hid_t  fapl_id      = va_arg(arguments, hid_t);
 
                 f = (H5F_t *)obj;
 
@@ -1943,14 +1946,117 @@ H5VL_native_file_optional(void *obj, hid_t dxpl_id, void H5_ATTR_UNUSED **req, v
             }
         case H5VL_FILE_SET_MDC_CONFIG:
             {
-                H5AC_cache_config_t *config_ptr = va_arg (arguments, H5AC_cache_config_t *);
+                H5AC_cache_config_t *config_ptr = va_arg(arguments, H5AC_cache_config_t *);
 
                 f = (H5F_t *)obj;
                 /* set the resize configuration  */
                 if(H5AC_set_cache_auto_resize_config(f->shared->cache, config_ptr) < 0)
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "H5AC_set_cache_auto_resize_config() failed.")
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "H5AC_set_cache_auto_resize_config() failed")
                 break;
             }
+        case H5VL_FILE_GET_METADATA_READ_RETRY_INFO:
+            {
+                H5F_retry_info_t *info = va_arg(arguments, H5F_retry_info_t *);
+
+                f = (H5F_t *)obj;
+
+                if (H5F_get_metadata_read_retry_info(f, info) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "can't get metadata read retry info")
+
+                break;
+            }
+        case H5VL_FILE_START_SWMR_WRITE:
+            {
+                f = (H5F_t *)obj;
+
+                if (H5F_start_swmr_write(f) < 0)
+                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "can't start SWMR write")
+
+                break;
+            }
+        case H5VL_FILE_START_MDC_LOGGING:
+            {
+                f = (H5F_t *)obj;
+
+				/* Call mdc logging function */
+				if (H5C_start_logging(f->shared->cache) < 0)
+					HGOTO_ERROR(H5E_FILE, H5E_LOGFAIL, FAIL, "unable to start mdc logging")
+
+                break;
+            }
+        case H5VL_FILE_STOP_MDC_LOGGING:
+            {
+                f = (H5F_t *)obj;
+
+				/* Call mdc logging function */
+				if (H5C_stop_logging(f->shared->cache) < 0)
+					HGOTO_ERROR(H5E_FILE, H5E_LOGFAIL, FAIL, "unable to stop mdc logging")
+
+                break;
+            }
+        case H5VL_FILE_GET_MDC_LOGGING_STATUS:
+            {
+				hbool_t *is_enabled				= va_arg(arguments, hbool_t *);
+                hbool_t *is_currently_logging	= va_arg(arguments, hbool_t *);
+
+                f = (H5F_t *)obj;
+
+				/* Call mdc logging function */
+				if (H5C_get_logging_status(f->shared->cache, is_enabled, is_currently_logging) < 0)
+					HGOTO_ERROR(H5E_FILE, H5E_LOGFAIL, FAIL, "unable to get logging status")
+
+                break;
+            }
+        case H5VL_FILE_SET_LATEST_FORMAT:
+            {
+                HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
+                break;
+            }
+        case H5VL_FILE_FORMAT_CONVERT_SUPER:
+            {
+                HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
+                break;
+            }
+        case H5VL_FILE_RESET_PAGE_BUFFERING_STATS:
+            {
+                f = (H5F_t *)obj;
+
+                /* Sanity check */
+                if (NULL == f->shared->page_buf)
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "page buffering not enabled on file")
+
+                /* Reset the statistics */
+                if (H5PB_reset_stats(f->shared->page_buf) < 0)
+                    HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't reset stats for page buffering")
+
+                break;
+            }
+        case H5VL_FILE_GET_PAGE_BUFFERING_STATS:
+            {
+                unsigned *accesses      = va_arg(arguments, unsigned *);
+                unsigned *hits          = va_arg(arguments, unsigned *);
+                unsigned *misses        = va_arg(arguments, unsigned *);
+                unsigned *evictions     = va_arg(arguments, unsigned *);
+                unsigned *bypasses      = va_arg(arguments, unsigned *);
+                
+                f = (H5F_t *)obj;
+
+                /* Sanity check */
+                if (NULL == f->shared->page_buf)
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "page buffering not enabled on file")
+
+                /* Get the statistics */
+                if (H5PB_get_stats(f->shared->page_buf, accesses, hits, misses, evictions, bypasses) < 0)
+                    HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't retrieve stats for page buffering")
+
+                break;
+            }
+        case H5VL_FILE_GET_MDC_IMAGE_INFO:
+            {
+                HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
+                break;
+            }
+
         default:
             HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
     }
@@ -2234,6 +2340,54 @@ H5VL_native_group_get(void *obj, H5VL_group_get_t get_type, hid_t dxpl_id, void 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL_native_group_get() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_native_group_specific
+ *
+ * Purpose:     Specific operations for groups
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5VL_native_group_specific(void *obj, H5VL_group_specific_t specific_type, 
+                             hid_t dxpl_id, void H5_ATTR_UNUSED **req, va_list arguments)
+{
+    H5G_t       *grp = (H5G_t *)obj;
+    herr_t       ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    switch (specific_type) {
+        case H5VL_GROUP_FLUSH:
+            {
+                hid_t group_id = va_arg(arguments, hid_t);
+
+                /* Flush object's metadata to file */
+                if (H5O_flush_common(&grp->oloc, group_id, H5AC_ind_read_dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_SYM, H5E_CANTFLUSH, FAIL, "unable to flush group")
+
+                break;
+            }
+        case H5VL_GROUP_REFRESH:
+            {
+                hid_t group_id = va_arg(arguments, hid_t);
+
+                /* Call private function to refresh group object */
+                if ((H5O_refresh_metadata(group_id, grp->oloc, H5AC_ind_read_dxpl_id)) < 0)
+                    HGOTO_ERROR(H5E_SYM, H5E_CANTLOAD, FAIL, "unable to refresh group")
+
+                break;
+            }
+        default:
+            HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid specific operation")
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5VL_native_group_specific() */
 
 
 /*-------------------------------------------------------------------------
@@ -2924,15 +3078,11 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5VL_native_object_specific
+ * Function:    H5VL_native_object_specific
  *
- * Purpose:	Perform a driver specific operation for an objectibute
+ * Purpose:     Perform a driver specific operation for an objectibute
  *
- * Return:	Success:	0
- *		Failure:	-1
- *
- * Programmer:  Mohamad Chaarawi
- *              April, 2012
+ * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
@@ -2952,7 +3102,7 @@ H5VL_native_object_specific(void *obj, H5VL_loc_params_t loc_params, H5VL_object
         /* H5Oincr_refcount / H5Odecr_refcount */
         case H5VL_OBJECT_CHANGE_REF_COUNT:
             {
-                int update_ref  = va_arg (arguments, int);
+                int update_ref  = va_arg(arguments, int);
                 H5O_loc_t  *oloc = loc.oloc;
 
                 if(H5O_link(oloc, update_ref, dxpl_id) < 0)
@@ -2963,7 +3113,7 @@ H5VL_native_object_specific(void *obj, H5VL_loc_params_t loc_params, H5VL_object
         /* H5Oexists_by_name */
         case H5VL_OBJECT_EXISTS:
             {
-                htri_t *ret = va_arg (arguments, htri_t *);
+                htri_t *ret = va_arg(arguments, htri_t *);
 
                 if(loc_params.type == H5VL_OBJECT_BY_NAME) {
                     /* Check if the object exists */
@@ -2979,10 +3129,10 @@ H5VL_native_object_specific(void *obj, H5VL_loc_params_t loc_params, H5VL_object
             }
         case H5VL_OBJECT_VISIT:
             {
-                H5_index_t idx_type = va_arg (arguments, H5_index_t);
-                H5_iter_order_t order = va_arg (arguments, H5_iter_order_t);
-                H5O_iterate_t op = va_arg (arguments, H5O_iterate_t);
-                void *op_data = va_arg (arguments, void *);
+                H5_index_t idx_type     = va_arg(arguments, H5_index_t);
+                H5_iter_order_t order   = va_arg(arguments, H5_iter_order_t);
+                H5O_iterate_t op        = va_arg(arguments, H5O_iterate_t);
+                void *op_data           = va_arg(arguments, void *);
 
                 /* Call internal object visitation routine */
                 if(loc_params.type == H5VL_OBJECT_BY_SELF) {
@@ -3000,12 +3150,43 @@ H5VL_native_object_specific(void *obj, H5VL_loc_params_t loc_params, H5VL_object
                     HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "unknown object visit params");
                 break;
             }
+        case H5VL_OBJECT_FLUSH:
+            {
+                hid_t                   oid         = va_arg(arguments, hid_t);
+                H5O_loc_t              *oloc        = loc.oloc;
+                const H5O_obj_class_t  *obj_class   = NULL;         /* Class of object */
+
+                /* Get the object class */
+                if (NULL == (obj_class = H5O_obj_class(oloc, H5AC_ind_read_dxpl_id)))
+                    HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to determine object class")
+
+                /* Flush the object of this class */
+                if (obj_class->flush && obj_class->flush(obj, H5AC_ind_read_dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to flush object")
+
+                /* Flush the object metadata and invoke flush callback */
+                if (H5O_flush_common(oloc, oid, H5AC_ind_read_dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to flush object and object flush callback")
+
+                break;
+            }
+        case H5VL_OBJECT_REFRESH:
+            {
+                hid_t                   oid         = va_arg(arguments, hid_t);
+                H5O_loc_t              *oloc        = loc.oloc;
+
+                /* Refresh the metadata */
+                if (H5O_refresh_metadata(oid, *oloc, H5AC_ind_read_dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to refresh object")
+
+                break;
+            }
         case H5VL_REF_CREATE:
             {
-                void        *ref      = va_arg (arguments, void *);
-                const char  *name     = va_arg (arguments, char *);
-                H5R_type_t  ref_type  = va_arg (arguments, H5R_type_t);
-                hid_t       space_id  = va_arg (arguments, hid_t);
+                void        *ref      = va_arg(arguments, void *);
+                const char  *name     = va_arg(arguments, char *);
+                H5R_type_t  ref_type  = va_arg(arguments, H5R_type_t);
+                hid_t       space_id  = va_arg(arguments, hid_t);
                 H5S_t       *space = NULL;   /* Pointer to dataspace containing region */
                 
                 if(space_id != (-1) && (NULL == (space = (H5S_t *)H5I_object_verify(space_id, H5I_DATASPACE))))
@@ -3372,6 +3553,54 @@ H5VL_native_datatype_get(void *obj, H5VL_datatype_get_t get_type,
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL_native_datatype_get() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_native_datatype_specific
+ *
+ * Purpose:     Specific operations for datatype
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5VL_native_datatype_specific(void *obj, H5VL_datatype_specific_t specific_type, 
+                             hid_t dxpl_id, void H5_ATTR_UNUSED **req, va_list arguments)
+{
+    H5T_t       *dt = (H5T_t *)obj;
+    herr_t       ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    switch (specific_type) {
+        case H5VL_DATATYPE_FLUSH:
+            {
+                hid_t type_id = va_arg(arguments, hid_t);
+
+                /* To flush metadata and invoke flush callback if there is */
+                if (H5O_flush_common(&dt->oloc, type_id, H5AC_ind_read_dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTFLUSH, FAIL, "unable to flush datatype")
+
+                break;
+            }
+        case H5VL_DATATYPE_REFRESH:
+            {
+                hid_t type_id = va_arg(arguments, hid_t);
+
+                /* Call private function to refresh datatype object */
+                if ((H5O_refresh_metadata(type_id, dt->oloc, H5AC_ind_read_dxpl_id)) < 0)
+                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTLOAD, FAIL, "unable to refresh datatype")
+
+                break;
+            }
+        default:
+            HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid specific operation")
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5VL_native_datatype_specific() */
 
 
 /*-------------------------------------------------------------------------

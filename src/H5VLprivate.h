@@ -67,6 +67,7 @@ H5_DLL hid_t H5VL_register_id(H5I_type_t type, void *object, H5VL_t *vol_driver,
 H5_DLL herr_t H5VL_free_object(H5VL_object_t *obj);
 H5_DLL hid_t H5VL_register(const void *cls, size_t size, hbool_t app_ref);
 H5_DLL hid_t H5VL_object_register(void *obj, H5I_type_t obj_type, hid_t driver_id, hbool_t app_ref);
+/* H5VL_get_plugin_name() in original vol branch */
 H5_DLL ssize_t H5VL_get_driver_name(hid_t id, char *name/*out*/, size_t size);
 H5_DLL H5VL_object_t *H5VL_get_object(hid_t id);
 H5_DLL void *H5VL_object(hid_t id);

@@ -41,6 +41,7 @@
 #include "H5ACprivate.h"	    /* Metadata cache                           */
 #include "H5Eprivate.h"		    /* Error handling                           */
 #include "H5Gprivate.h"		    /* Groups                                   */
+#include "H5Iprivate.h"         /* IDs                                      */
 #include "H5Oprivate.h"		    /* Object headers                           */
 #include "H5Rpkg.h"             /* References                               */
 
@@ -101,7 +102,8 @@
 H5G_obj_t
 H5Rget_obj_type1(hid_t id, H5R_type_t ref_type, const void *ref)
 {
-    H5G_loc_t loc;              /* Object location */
+    H5VL_object_t    *obj = NULL;        /* object token of loc_id */
+    H5VL_loc_params_t loc_params;
     H5O_type_t obj_type;        /* Object type */
     H5G_obj_t ret_value;        /* Return value */
 
@@ -109,16 +111,23 @@ H5Rget_obj_type1(hid_t id, H5R_type_t ref_type, const void *ref)
     H5TRACE3("Go", "iRt*x", id, ref_type, ref);
 
     /* Check args */
-    if (H5G_loc(id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5G_UNKNOWN, "not a location")
     if (ref_type <= H5R_BADTYPE || ref_type >= H5R_MAXTYPE)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, H5G_UNKNOWN, "invalid reference type")
     if (ref == NULL)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, H5G_UNKNOWN, "invalid reference pointer")
 
-    /* Get the object information */
-    if (H5R_get_obj_type(loc.oloc->file, H5AC_ind_read_dxpl_id, ref_type, ref, &obj_type) < 0)
-        HGOTO_ERROR(H5E_REFERENCE, H5E_CANTINIT, H5G_UNKNOWN, "unable to determine object type")
+    /* Set location parameters */
+    loc_params.type = H5VL_OBJECT_BY_SELF;
+    loc_params.obj_type = H5I_get_type(id);
+
+    /* Get the vol object */
+    if (NULL == (obj = H5VL_get_object(id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5G_UNKNOWN, "invalid file identifier")
+
+    /* Get the object type through the VOL */
+    if (H5VL_object_get(obj->vol_obj, loc_params, obj->vol_info->vol_cls, H5VL_REF_GET_TYPE,
+                                    H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, &obj_type, ref_type, ref) < 0)
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTGET, H5G_UNKNOWN, "unable to get group info")
 
     /* Set return value */
     ret_value = H5G_map_obj_type(obj_type);

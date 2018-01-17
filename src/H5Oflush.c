@@ -64,35 +64,28 @@ static herr_t H5O_oh_tag(const H5O_loc_t *oloc, hid_t dxpl_id, haddr_t *tag);
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Oflush(hid_t obj_id)
+H5Oflush(hid_t oid)
 {
-    H5O_loc_t *oloc;            /* object location */
-    void *obj_ptr;		/* Pointer to object */
-    const H5O_obj_class_t  *obj_class = NULL;       /* Class of object */
-    herr_t ret_value = SUCCEED; /* return value */
+    H5VL_object_t      *obj         = NULL;     /* Object token     */
+    H5VL_loc_params_t   loc_params;
+    herr_t              ret_value   = SUCCEED;  /* Return value     */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE1("e", "i", obj_id);
+    H5TRACE1("e", "i", oid);
 
     /* Check args */
-    if(NULL == (oloc = H5O_get_loc(obj_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not an object")
-
-    /* Get the object pointer */
-    if(NULL == (obj_ptr = H5I_object(obj_id)))
+    if (NULL == (obj = H5VL_get_object(oid)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid object identifier")
 
-    /* Get the object class */
-    if(NULL == (obj_class = H5O_obj_class(oloc, H5AC_ind_read_dxpl_id)))
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to determine object class")
+    /* Set location parameters */
+    loc_params.type         = H5VL_OBJECT_BY_SELF;
+    loc_params.obj_type     = H5I_get_type(oid);
 
-    /* Flush the object of this class */
-    if(obj_class->flush && obj_class->flush(obj_ptr, H5AC_ind_read_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to flush object")
-
-    /* Flush the object metadata and invoke flush callback */
-    if(H5O_flush_common(oloc, obj_id, H5AC_ind_read_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to flush object and object flush callback")
+    /* Flush the object through the VOL */
+    if ((ret_value = H5VL_object_specific(obj->vol_obj, loc_params, obj->vol_info->vol_cls, 
+                                         H5VL_OBJECT_FLUSH, H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, 
+                                         oid)) < 0)
+        HGOTO_ERROR(H5E_OHDR, H5E_BADITER, FAIL, "object flush failed")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -128,7 +121,7 @@ H5O_flush_common(H5O_loc_t *oloc, hid_t obj_id, hid_t dxpl_id)
 
     /* Check to invoke callback */
     if(H5F_object_flush_cb(oloc->file, obj_id) < 0)
-	HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to do object flush callback")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to do object flush callback")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -191,19 +184,26 @@ done:
 herr_t
 H5Orefresh(hid_t oid)
 {
-    H5O_loc_t *oloc;            /* object location */
-    herr_t ret_value = SUCCEED; /* return value */
-    
+    H5VL_object_t      *obj         = NULL;     /* Object token     */
+    H5VL_loc_params_t   loc_params;
+    herr_t              ret_value   = SUCCEED;  /* Return value     */
+
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "i", oid);
 
     /* Check args */
-    if(NULL == (oloc = H5O_get_loc(oid)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not an object")
+    if (NULL == (obj = H5VL_get_object(oid)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid object identifier")
 
-    /* Private function */
-    if(H5O_refresh_metadata(oid, *oloc, H5AC_ind_read_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to refresh object")
+    /* Set location parameters */
+    loc_params.type         = H5VL_OBJECT_BY_SELF;
+    loc_params.obj_type     = H5I_get_type(oid);
+
+    /* Refresh the object through the VOL */
+    if ((ret_value = H5VL_object_specific(obj->vol_obj, loc_params, obj->vol_info->vol_cls, 
+                                         H5VL_OBJECT_REFRESH, H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, 
+                                         oid)) < 0)
+        HGOTO_ERROR(H5E_OHDR, H5E_BADITER, FAIL, "object refresh failed")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -262,7 +262,7 @@ H5O_refresh_metadata(hid_t oid, H5O_loc_t oloc, hid_t dxpl_id)
         /* Re-open the object, re-fetching its metadata */
         if((H5O_refresh_metadata_reopen(oid, &obj_loc, dxpl_id, FALSE)) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to refresh object")
-    } /* end if */
+    }
 
 done:
     if(objs_incr)
@@ -306,12 +306,12 @@ H5O_refresh_metadata_close(hid_t oid, H5O_loc_t oloc, H5G_loc_t *obj_loc, hid_t 
 
         H5G_loc(oid, &tmp_loc);
         H5G_loc_copy(obj_loc, &tmp_loc, H5_COPY_DEEP);
-    } /* end if */
+    }
 
     /* Get object's type */
     if(H5I_get_type(oid) == H5I_DATASET)
-	if(H5D_mult_refresh_close(oid, dxpl_id) < 0)
-	    HGOTO_ERROR(H5E_DATASET, H5E_CANTOPENOBJ, FAIL, "unable to prepare refresh for dataset")
+        if(H5D_mult_refresh_close(oid, dxpl_id) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTOPENOBJ, FAIL, "unable to prepare refresh for dataset")
 
     /* Retrieve tag for object */
     if(H5O_oh_tag(&oloc, dxpl_id, &tag) < 0)
@@ -335,8 +335,8 @@ H5O_refresh_metadata_close(hid_t oid, H5O_loc_t oloc, H5G_loc_t *obj_loc, hid_t 
 
     /* Re-cork object with tag */
     if(corked)
-	if(H5AC_cork(oloc.file, tag, H5AC__SET_CORK, &corked) < 0)
-	    HGOTO_ERROR(H5E_ATOM, H5E_SYSTEM, FAIL, "unable to cork the object")
+        if(H5AC_cork(oloc.file, tag, H5AC__SET_CORK, &corked) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_SYSTEM, FAIL, "unable to cork the object")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
@@ -408,7 +408,7 @@ H5O_refresh_metadata_reopen(hid_t oid, H5G_loc_t *obj_loc, hid_t dxpl_id, hbool_
         default:
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a valid file object ID (dataset, group, or datatype)")
         break;
-    } /* end switch */
+    }
 
     /* Re-register ID for the object */
     if((H5I_register_with_id(type, object, TRUE, oid)) < 0)

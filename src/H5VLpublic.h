@@ -87,12 +87,15 @@ typedef enum H5VL_dataset_get_t {
     H5VL_DATASET_GET_SPACE,                 /* dataspace                           */
     H5VL_DATASET_GET_SPACE_STATUS,          /* space  status                       */
     H5VL_DATASET_GET_STORAGE_SIZE,          /* storage size                        */
-    H5VL_DATASET_GET_TYPE                   /* datatype                            */
+    H5VL_DATASET_GET_TYPE,                  /* datatype                            */
 } H5VL_dataset_get_t;
 
 /* types for dataset SPECFIC callback */
 typedef enum H5VL_dataset_specific_t {
-    H5VL_DATASET_SET_EXTENT                 /* H5Dset_extent                       */
+    H5VL_DATASET_SET_EXTENT,                /* H5Dset_extent                       */
+    /* XXX: New API calls */
+    H5VL_DATASET_FLUSH,
+    H5VL_DATASET_REFRESH
 } H5VL_dataset_specific_t;
 
 /* types for datatype GET callback */
@@ -103,7 +106,9 @@ typedef enum H5VL_datatype_get_t {
 
 /* types for datatype SPECFIC callback */
 typedef enum H5VL_datatype_specific_t {
-    H5VL_DATATYPE_SPECIFIC_INVALID
+    /* XXX: New API calls */
+    H5VL_DATATYPE_FLUSH,
+    H5VL_DATATYPE_REFRESH
 } H5VL_datatype_specific_t;
 
 /* types for file GET callback */
@@ -133,7 +138,9 @@ typedef enum H5VL_group_get_t {
 
 /* types for group SPECFIC callback */
 typedef enum H5VL_group_specific_t {
-    H5VL_GROUP_SPECIFIC_INVALID
+    /* XXX: New API calls */
+    H5VL_GROUP_FLUSH,
+    H5VL_GROUP_REFRESH
 } H5VL_group_specific_t;
 
 /* link create types for VOL */
@@ -169,7 +176,10 @@ typedef enum H5VL_object_specific_t {
     H5VL_OBJECT_CHANGE_REF_COUNT,      /* H5Oincr/decr_refcount              */
     H5VL_OBJECT_EXISTS,                /* H5Oexists_by_name                  */
     H5VL_OBJECT_VISIT,                 /* H5Ovisit(_by_name)                 */
-    H5VL_REF_CREATE                    /* H5Rcreate                          */
+    H5VL_REF_CREATE,                   /* H5Rcreate                          */
+    /* XXX: New API calls */
+    H5VL_OBJECT_FLUSH,
+    H5VL_OBJECT_REFRESH
 } H5VL_object_specific_t;
 
 /* types for different ways that objects are located in an HDF5 container */
@@ -405,6 +415,7 @@ H5_DLL hid_t H5VLregister(const H5VL_class_t *cls);
 H5_DLL hid_t H5VLregister_by_name(const char *driver_name);
 H5_DLL herr_t H5VLunregister(hid_t driver_id);
 H5_DLL htri_t H5VLis_registered(const char *name);
+H5_DLL hid_t H5VLget_driver_id(const char *name);
 H5_DLL ssize_t H5VLget_driver_name(hid_t id, char *name/*out*/, size_t size);
 H5_DLL hid_t H5VLobject_register(void *obj, H5I_type_t obj_type, hid_t driver_id);
 H5_DLL herr_t H5VLget_object(hid_t obj_id, void **obj);

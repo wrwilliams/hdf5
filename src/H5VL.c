@@ -390,6 +390,44 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5VLget_driver_id
+ *
+ * Purpose:     Retrieves the ID for a registered VOL driver.
+ *
+ * Return:      Positive if the VOL class has been registered
+ *              Negative on error (if the class is not a valid class or not registered)
+ *
+ *-------------------------------------------------------------------------
+ */
+hid_t
+H5VLget_driver_id(const char *name)
+{
+    H5VL_get_driver_ud_t    op_data;
+    hid_t                   ret_value = H5I_INVALID_HID;     /* Return value */
+
+    FUNC_ENTER_API(H5I_INVALID_HID)
+    H5TRACE1("i", "*s", name);
+
+    op_data.found_id    = H5I_INVALID_HID;
+    op_data.name        = name;
+
+    /* Check arguments */
+    if (H5I_iterate(H5I_VOL, H5VL__get_driver_cb, &op_data, TRUE) < 0)
+        HGOTO_ERROR(H5E_VOL, H5E_BADITER, H5I_INVALID_HID, "can't iterate over VOL driver IDs")
+
+    if (op_data.found_id != H5I_INVALID_HID) {
+        if (H5I_inc_ref(op_data.found_id, TRUE) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTINC, H5I_INVALID_HID, "unable to increment ref count on VOL driver")
+
+        ret_value = op_data.found_id;
+    }
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* end H5VLget_driver_id() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5VLget_driver_name
  *
  * Purpose:     Returns the driver name for the VOL associated with the
