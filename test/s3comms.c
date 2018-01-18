@@ -511,15 +511,13 @@ test_aws_canonical_request(void)
         /* Create headers list from test case input
          */
         for (j = 0; j < C->listsize; j++) {
-            node = H5FD_s3comms_hrb_node_set(node, 
-                                             C->list[j].name,
-                                             C->list[j].value);
+            HDassert( SUCCEED ==
+                      H5FD_s3comms_hrb_node_set( 
+                              &node,
+                              C->list[j].name,
+                              C->list[j].value));
         }
 
-        /* get first node (sorted) from headers list, set as "first" node
-         * in request object
-         */
-        node = H5FD_s3comms_hrb_node_first(node, HRB_NODE_ORD_SORTED);
         hrb->first_header = node;
 
         /* test
@@ -532,7 +530,9 @@ test_aws_canonical_request(void)
 
         /* tear-down
          */
-        HDassert( SUCCEED == H5FD_s3comms_hrb_node_destroy(&node));
+        while (node != NULL) 
+            HDassert(SUCCEED ==
+                     H5FD_s3comms_hrb_node_set(&node, node->name, NULL));
         HDassert(NULL == node);
         HDassert( SUCCEED == H5FD_s3comms_hrb_destroy(&hrb));
         HDassert(NULL == hrb);
@@ -556,15 +556,20 @@ test_aws_canonical_request(void)
               "signed headers destination cannot be null" )
 
     HDassert( SUCCEED == H5FD_s3comms_hrb_destroy(&hrb) );
-    HDassert(NULL == hrb);
+    HDassert( NULL == hrb );
 
     PASSED();
     return 0;
 
 error:
 
-    if (node != NULL) { (void)H5FD_s3comms_hrb_node_destroy(&node); }
-    if (hrb  != NULL) { (void)H5FD_s3comms_hrb_destroy(&hrb); }
+    if (node != NULL) { 
+        while (node != NULL) 
+            HDassert( SUCCEED ==
+                      H5FD_s3comms_hrb_node_set(&node, node->name, NULL) );
+    }
+    if (hrb != NULL) 
+        (void)H5FD_s3comms_hrb_destroy(&hrb);
 
     return -1;
 
@@ -790,27 +795,11 @@ error:
 
 /*---------------------------------------------------------------------------
  *
- * Function: test_hrb_node_t()
+ * Function: test_hrb_node_set()
  *
  * Purpose: 
  *
  *     Test operations on hrb_node_t structure
- *
- *     Specifies :
- *         `H5FD_s3comms_hrb_node_set()`
- *         `H5FD_s3comms_hrb_node_first()`
- *         `H5FD_s3comms_hrb_node_next()`
- *         `H5FD_s3comms_hrb_node_destroy()`
- *
- *     - An initial node is created by calling set() with a NULL list/note and
- *       non-null field and value strings.
- *     - To this node, additional nodes may be attached (or removed or modified)
- *       with additional set() calls _on any node in the list_.
- *     - first() and next() provide abstract means to navigate through the list.
- *     - To eliminate a list, one may:
- *         - call destroy() on any note that is part of the list.
- *         - call set() for each node in the list with a field name that is
- *           a member and NULL for the value.
  *
  * Programmer: Jacob Smith
  *             2017-09-22
@@ -818,308 +807,129 @@ error:
  *---------------------------------------------------------------------------
  */
 static herr_t
-test_hrb_node_t(void)
+test_hrb_node_set(void)
 {
-    /*********************
-     * test-local macros *
-     *********************/
-/* 
- * THNT_* := Test Hrb Node Type
- */
-#define THNT_STR_LEN 256 /* 0x100 */
-
-#define THNT_NAME      1
-#define THNT_VALUE     2
-#define THNT_CAT       3
-#define THNT_LOWERNAME 4
-
-/*
- * THNT_CAT_CHECK := THNT conCATenation CHECK
- *
- * with inputs: 
- *     `expected` - a given concatenated output 
- *     `ord_enum` - sorting order enum and
- *     `selector` - component selector definition
- *
- * use function-local variables:
- *     `str`  - string buffer 
- *     `i`    - indexing vairable
- *     `list` - pointer to any `hrb_node_t` node in list to check
- *     `node` - working variable `hrb_node_t` node pointer
- *
- * zero and build a comparison string buffer 
- * check against the expected
- * error if mismatch with expected.
- */
-#define THNT_CAT_CHECK(expected, ord_enum, selector)                    \
-{   for (i = 0; i < THNT_STR_LEN; i++) {                                \
-        str[i] = 0; /* zero comparison string */                        \
-    }                                                                   \
-    /* working node at start of list, per ord_enum */                   \
-    /* node = H5FD_s3comms_hrb_node_first(list, ord_enum); */           \
-    node = list;                                                        \
-    if (ord_enum == HRB_NODE_ORD_GIVEN) {                               \
-        while (node->prev != NULL) node = node->prev;                   \
-    } else {                                                            \
-        while (node->prev_lower != NULL) node = node->prev_lower;       \
-    }                                                                   \
-    while (node != NULL) { /* stract which strings to str */            \
-        switch(selector) {                                              \
-            case THNT_NAME :                                            \
-                strcat(str, node->name);                                \
-                break;                                                  \
-            case THNT_VALUE :                                           \
-                strcat(str, node->value);                               \
-                break;                                                  \
-            case THNT_CAT :                                             \
-                strcat(str, node->cat);                                 \
-                break;                                                  \
-            case THNT_LOWERNAME :                                       \
-                strcat(str, node->lowername);                           \
-                break;                                                  \
-            default :                                                   \
-                break;                                                  \
-        }                                                               \
-        /* advance to next node, according to order enum */             \
-        node = H5FD_s3comms_hrb_node_next(node, (ord_enum));            \
-    }                                                                   \
-    FAIL_IF( node != NULL);                                             \
-    /* comparison string completed; compare */                          \
-    JSVERIFY_STR( expected, str, NULL )                                 \
-}
-
     /************************
      * test-local variables *
      ************************/
 
-    size_t      i    = 0;          /* working variable for macro */
-    hrb_node_t *list = NULL;       /* list node we are working with */
-    hrb_node_t *node = NULL;       /* working variable for macro */
-    char        str[THNT_STR_LEN]; /* working buffer to test against */
+    hrb_node_t *list = NULL;
 
 
 
     TESTING("test_hrb_node_t");
 
-    /* cannot "unset" a field from an uninstantiated hrb_node_t */
-    FAIL_IF( NULL != H5FD_s3comms_hrb_node_set(NULL, "Host", NULL) );
+    HDassert( list == NULL );
+    JSVERIFY( FAIL,
+              H5FD_s3comms_hrb_node_set(&list, "Host", NULL),
+              "removed a node from a null list")
 
-    /* NULL field name has no effect */
-    FAIL_IF( NULL != H5FD_s3comms_hrb_node_set(NULL, NULL, "somevalue") );
+    HDassert( list == NULL );
+    JSVERIFY( FAIL,
+              H5FD_s3comms_hrb_node_set(&list, NULL, "somevalue"),
+              "created a list with NULL field name")
 
-    /* looking for 'next' on an uninstantiated hrb_node_t returns NULL */
-    FAIL_IF( list != NULL);
-    FAIL_IF( NULL != H5FD_s3comms_hrb_node_next(list, HRB_NODE_ORD_GIVEN) );
-    FAIL_IF( NULL != H5FD_s3comms_hrb_node_next(list, HRB_NODE_ORD_SORTED) );
+    HDassert( list == NULL );
 
-    /* insert one element
-     */
-    list = H5FD_s3comms_hrb_node_set(NULL, "Host", "mybucket.s3.com");
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_hrb_node_set(&list, "Host", "mybucket.s3.com") ,
+              "unable to create a node")
     FAIL_IF( list == NULL );
     JSVERIFY( S3COMMS_HRB_NODE_MAGIC, list->magic, NULL )
-    THNT_CAT_CHECK("Host", HRB_NODE_ORD_GIVEN, THNT_NAME);
-    THNT_CAT_CHECK("Host", HRB_NODE_ORD_SORTED, THNT_NAME);
-    THNT_CAT_CHECK("mybucket.s3.com", HRB_NODE_ORD_SORTED, THNT_VALUE);
-    THNT_CAT_CHECK("Host: mybucket.s3.com", HRB_NODE_ORD_GIVEN, THNT_CAT);
-    FAIL_IF( NULL != H5FD_s3comms_hrb_node_next(list, HRB_NODE_ORD_GIVEN) );
-    FAIL_IF( NULL != H5FD_s3comms_hrb_node_next(list, HRB_NODE_ORD_SORTED) );
+    JSVERIFY_STR( "Host",                  list->name,      NULL )
+    JSVERIFY_STR( "host",                  list->lowername, NULL )
+    JSVERIFY_STR( "mybucket.s3.com",       list->value,     NULL )
+    JSVERIFY_STR( "Host: mybucket.s3.com", list->cat,       NULL )
+    FAIL_IF( list->next != NULL)
 
-    /* insert two more elements, one sorted "between" 
-     */
-    list = H5FD_s3comms_hrb_node_set(list, "x-amz-date", "20170921");
-    list = H5FD_s3comms_hrb_node_set(list, "Range", "bytes=50-100");
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_hrb_node_set(&list, "x-amz-date", "20170921"),
+              "unable to append node" )
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_hrb_node_set(&list, "Range", "bytes=50-100"),
+              "unable to insert node" );
+    JSVERIFY_STR( "host",       list->lowername,             NULL )
+    JSVERIFY_STR( "range",      list->next->lowername,       NULL )
+    JSVERIFY_STR( "x-amz-date", list->next->next->lowername, NULL )
+    FAIL_IF( list->next->next->next != NULL )
+    JSVERIFY_STR( "bytes=50-100", list->next->value, NULL )
+
+    JSVERIFY( SUCCEED, 
+              H5FD_s3comms_hrb_node_set(&list, "Access", "always"),
+              "unable to prepend node" )
     FAIL_IF( list == NULL );
-    JSVERIFY( S3COMMS_HRB_NODE_MAGIC, list->magic, NULL )
-    THNT_CAT_CHECK("Hostx-amz-dateRange", HRB_NODE_ORD_GIVEN, THNT_NAME);
-    THNT_CAT_CHECK("HostRangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
-    THNT_CAT_CHECK("hostrangex-amz-date", HRB_NODE_ORD_SORTED, THNT_LOWERNAME);
+    JSVERIFY_STR( "Access",     list->name,                   NULL )
+    JSVERIFY_STR( "Host",       list->next->name,             NULL )
+    JSVERIFY_STR( "Range",      list->next->next->name,       NULL )
+    JSVERIFY_STR( "x-amz-date", list->next->next->next->name, NULL )
+    FAIL_IF( list->next->next->next->next != NULL )
+    JSVERIFY_STR( "bytes=50-100", list->next->next->value, NULL )
 
-    THNT_CAT_CHECK(                                \
-            "mybucket.s3.combytes=50-10020170921", \
-            HRB_NODE_ORD_SORTED,                   \
-            THNT_VALUE);
-    THNT_CAT_CHECK(                                                         \
-            "Host: mybucket.s3.comRange: bytes=50-100x-amz-date: 20170921", \
-            HRB_NODE_ORD_SORTED,                                            \
-            THNT_CAT);
-    THNT_CAT_CHECK(                                                         \
-            "Host: mybucket.s3.comx-amz-date: 20170921Range: bytes=50-100", \
-            HRB_NODE_ORD_GIVEN,                                             \
-            THNT_CAT);
+    JSVERIFY_STR( "x-amz-date: 20170921", list->next->next->next->cat, NULL)
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_hrb_node_set(&list, "x-amz-date", "19411207"),
+              "unable to modify x-amz-date value" )
+    JSVERIFY_STR( "x-amz-date: 19411207", list->next->next->next->cat, NULL)
 
-    /* add entry "less than" first node
-     */
-    list = H5FD_s3comms_hrb_node_set(list, "Access", "always");
-    FAIL_IF( list == NULL );
-    THNT_CAT_CHECK("Hostx-amz-dateRangeAccess", HRB_NODE_ORD_GIVEN, THNT_NAME);
-    THNT_CAT_CHECK("AccessHostRangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
-    /* demonstrate `H5FD_s3comms_hrb_node_first()`
-     */
-    node = H5FD_s3comms_hrb_node_first(list, HRB_NODE_ORD_SORTED);
-    JSVERIFY_STR( "Access: always", node->cat, NULL )
-    node = NULL;
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_hrb_node_set(&list, "hoST", "none"),
+              "unable to modify Host -> hoST" )
+    JSVERIFY_STR( "Access: always", list->cat, NULL )
+    JSVERIFY_STR( "hoST: none", list->next->cat, NULL )
+    JSVERIFY_STR( "Range: bytes=50-100", list->next->next->cat, NULL )
 
-    /* modify entry
-     */
-    list = H5FD_s3comms_hrb_node_set(list, "x-amz-date", "19411207");
-    FAIL_IF( list == NULL );
-    THNT_CAT_CHECK("Hostx-amz-dateRangeAccess", HRB_NODE_ORD_GIVEN, THNT_NAME);
-    THNT_CAT_CHECK( \
- "Access: alwaysHost: mybucket.s3.comRange: bytes=50-100x-amz-date: 19411207",\
-            HRB_NODE_ORD_SORTED, \
-            THNT_CAT);
-
-    /* add at end again
-     */
-    list = H5FD_s3comms_hrb_node_set(list, "x-forbidden", "True");
-    FAIL_IF( list == NULL );
-    THNT_CAT_CHECK("Hostx-amz-dateRangeAccessx-forbidden", \
-                   HRB_NODE_ORD_GIVEN,                     \
-                   THNT_NAME);
-    THNT_CAT_CHECK("AccessHostRangex-amz-datex-forbidden", \
-                   HRB_NODE_ORD_SORTED,                    \
-                   THNT_NAME);
-    THNT_CAT_CHECK("accesshostrangex-amz-datex-forbidden", \
-                   HRB_NODE_ORD_SORTED,                    \
-                   THNT_LOWERNAME);
-    THNT_CAT_CHECK("alwaysmybucket.s3.combytes=50-10019411207True", \
-                   HRB_NODE_ORD_SORTED,                             \
-                   THNT_VALUE);
-
-    /* modify and case-change entry
-     */
-    list = H5FD_s3comms_hrb_node_set(list, "hoST", "none");
-    THNT_CAT_CHECK("hoSTx-amz-dateRangeAccessx-forbidden", \
-                   HRB_NODE_ORD_GIVEN,                     \
-                   THNT_NAME);
-    THNT_CAT_CHECK("AccesshoSTRangex-amz-datex-forbidden", \
-                   HRB_NODE_ORD_SORTED,                    \
-                   THNT_NAME);
-    THNT_CAT_CHECK("accesshostrangex-amz-datex-forbidden", \
-                   HRB_NODE_ORD_SORTED,                    \
-                   THNT_LOWERNAME);
-    THNT_CAT_CHECK("alwaysnonebytes=50-10019411207True", \
-                   HRB_NODE_ORD_SORTED,                  \
-                   THNT_VALUE);
+    JSVERIFY( FAIL,
+              H5FD_s3comms_hrb_node_set(&list, NULL, "somevalue"),
+              "set NULL element in list" )
 
     /* AT THIS TIME:
      *
-     * given  order: host, x-amz-date, range, access, x-forbidden
-     * sorted order: access, host, range, x-amz-date, x-forbidden
+     * list order: [access, host, range, x-amz-date]
      *
-     * `list` points to 'host' node
-     *
-     * now, remove nodes and observe changes
+     * now remove nodes and observe changes
      */
 
-    /* remove last node of both lists
-     */
-    list = H5FD_s3comms_hrb_node_set(list, "x-forbidden", NULL);
-    THNT_CAT_CHECK("hoSTx-amz-dateRangeAccess", HRB_NODE_ORD_GIVEN,  THNT_NAME);
-    THNT_CAT_CHECK("AccesshoSTRangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_hrb_node_set(&list, "Access", NULL),
+              "unable to remove first node in list (Access)" )
+    JSVERIFY_STR( "hoST", list->name, NULL )
+    JSVERIFY_STR( "Range", list->next->name, NULL )
+    JSVERIFY_STR( "x-amz-date", list->next->next->name, NULL )
+    FAIL_IF( list->next->next->next != NULL )
 
-    /* remove first node of sorted 
-     */
-    list = H5FD_s3comms_hrb_node_set(list, "ACCESS", NULL);
-    JSVERIFY_STR("hoST", list->name, NULL)
-    THNT_CAT_CHECK("hoSTRangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
-    THNT_CAT_CHECK("hoSTx-amz-dateRange", HRB_NODE_ORD_GIVEN,  THNT_NAME);
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_hrb_node_set(&list, "rAnGe", NULL),
+              "unable to remove inner node with case-differing name" )
+    JSVERIFY_STR( "hoST", list->name, NULL )
+    JSVERIFY_STR( "x-amz-date", list->next->name, NULL )
+    FAIL_IF( list->next->next != NULL )
 
-    /* remove first node of both; changes `list` pointer 
-     * to first non null of previous sorted or next sorted 
-     *     (in this case, next)
-     */
-    list = H5FD_s3comms_hrb_node_set(list, "Host", NULL);
-    THNT_CAT_CHECK("x-amz-dateRange", HRB_NODE_ORD_GIVEN,  THNT_NAME);
-    THNT_CAT_CHECK("Rangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
-    JSVERIFY_STR("Range", list->name, NULL )
+    JSVERIFY( FAIL,
+              H5FD_s3comms_hrb_node_set(&list, "Range", NULL),
+              "no error reported when trying to remove absent node" )
+    JSVERIFY_STR( "hoST", list->name, NULL )
+    JSVERIFY_STR( "x-amz-date", list->next->name, NULL )
+    FAIL_IF( list->next->next != NULL )
 
-    /* re-add Host element, and remove sorted Range
-     */
-    list = H5FD_s3comms_hrb_node_set(list, "Host", "nah");
-    THNT_CAT_CHECK("x-amz-dateRangeHost", HRB_NODE_ORD_GIVEN,  THNT_NAME);
-    THNT_CAT_CHECK("HostRangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
-    JSVERIFY_STR( "Range", list->name, NULL )
-    list = H5FD_s3comms_hrb_node_set(list, "Range", NULL);
-    THNT_CAT_CHECK("x-amz-dateHost", HRB_NODE_ORD_GIVEN,  THNT_NAME);
-    THNT_CAT_CHECK("Hostx-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
-    JSVERIFY_STR( "Host", list->name, NULL )
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_hrb_node_set(&list, "x-amz-date", NULL),
+              "unable to remove node at end of list" )
+    JSVERIFY_STR( "hoST", list->name, NULL )
+    FAIL_IF( list->next != NULL )
 
-    /* remove Host again; on opposite ends of each list
-     */ 
-    list = H5FD_s3comms_hrb_node_set(list, "Host", NULL);
-    THNT_CAT_CHECK("x-amz-date", HRB_NODE_ORD_GIVEN,  THNT_NAME);
-    THNT_CAT_CHECK("x-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
-    JSVERIFY_STR( "x-amz-date", list->name, NULL )
-
-    /* removing absent element has no effect
-     */
-    list = H5FD_s3comms_hrb_node_set(list, "Host", NULL);
-    THNT_CAT_CHECK("x-amz-date", HRB_NODE_ORD_GIVEN,  THNT_NAME);
-    THNT_CAT_CHECK("x-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
-    JSVERIFY_STR( "x-amz-date", list->name, NULL )
-
-    /* removing last element returns NULL; no more elements/nodes in list
-     */
-    list = H5FD_s3comms_hrb_node_set(list, "x-amz-date", NULL);
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_hrb_node_set(&list, "host", NULL),
+              "unable to empty list" )
     FAIL_IF( list != NULL )
-
-    HDassert( node == NULL );
-
-    /***********
-     * DESTROY *
-     ***********/
-    
-    /*  build up a list and demonstrate `H5FD_s3comms_hrb_node_destroy()`
-     */
-
-    list = H5FD_s3comms_hrb_node_set(NULL, "Host", "something");
-    list = H5FD_s3comms_hrb_node_set(list, "Access", "None");
-    list = H5FD_s3comms_hrb_node_set(list, "x-amz-date", "20171010T210844Z");
-    list = H5FD_s3comms_hrb_node_set(list, "Range", "bytes=1024-");
-
-    /* verify list */
-    THNT_CAT_CHECK("HostAccessx-amz-dateRange", HRB_NODE_ORD_GIVEN, THNT_NAME);
-    THNT_CAT_CHECK("AccessHostRangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
-    HDassert( node == NULL );
-
-    /* change pointer; demonstrate can destroy from anywhere in list */
-    list = H5FD_s3comms_hrb_node_next(list, HRB_NODE_ORD_GIVEN);
-    list = H5FD_s3comms_hrb_node_next(list, HRB_NODE_ORD_GIVEN);
-    JSVERIFY_STR( "x-amz-date", list->name, NULL);
-
-    /* re-verify list */
-    THNT_CAT_CHECK("HostAccessx-amz-dateRange", HRB_NODE_ORD_GIVEN, THNT_NAME);
-    THNT_CAT_CHECK("AccessHostRangex-amz-date", HRB_NODE_ORD_SORTED, THNT_NAME);
-
-    /* destroy eats everything but programmer must reset pointer */
-    JSVERIFY( SUCCEED, H5FD_s3comms_hrb_node_destroy(&list), 
-              "unable to destroy");
-    FAIL_IF( list != NULL );
-    HDassert( node == NULL );
-
-    /**********
-     * PASSED *
-     **********/
 
     PASSED();
     return 0;
 
 error:
-    if (list != NULL) {
-        HDassert( SUCCEED == H5FD_s3comms_hrb_node_destroy(&list) );
-        HDassert( list == NULL );
-    }
-    HDassert( node == NULL );
+    while (list != NULL) 
+        HDassert(SUCCEED == H5FD_s3comms_hrb_node_set(&list, list->name, NULL));
 
     return -1;
-
-#undef THNT_STR_LEN
-#undef THNT_CAT
-#undef THNT_LOWERNAME
-#undef THNT_NAME
-#undef THNT_VALUE
-#undef THNT_CAT_CHECK
 
 } /* test_hrb_node_t */
 
@@ -2337,7 +2147,7 @@ main(void)
     nerrors += test_bytes_to_hex()            < 0 ? 1 : 0;
     nerrors += test_HMAC_SHA256()             < 0 ? 1 : 0;
     nerrors += test_signing_key()             < 0 ? 1 : 0;
-    nerrors += test_hrb_node_t()              < 0 ? 1 : 0;
+    nerrors += test_hrb_node_set()            < 0 ? 1 : 0;
     nerrors += test_hrb_init_request()        < 0 ? 1 : 0;
     nerrors += test_parse_url()               < 0 ? 1 : 0;
     nerrors += test_aws_canonical_request()   < 0 ? 1 : 0;

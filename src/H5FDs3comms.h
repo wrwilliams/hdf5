@@ -75,7 +75,7 @@
 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 /* string length (plus null terminator)
- * example ISO8601-format string: "20170713T145903Z" (yyyyMMDD'T'hhmmss'_')
+ * example ISO8601-format string: "20170713T145903Z" (YYYYmmdd'T'HHMMSS'_')
  */
 #define ISO8601_SIZE 17
 
@@ -90,7 +90,7 @@
  *
  * Purpose:
  *
- *     write "yyyyMMDD'T'hhmmss'Z'" (less single-quotes) to dest
+ *     write "YYYYmmdd'T'HHMMSS'Z'" (less single-quotes) to dest
  *     e.g., "20170630T204155Z"
  * 
  *     wrapper for strftime()
@@ -112,7 +112,7 @@ strftime((dest), ISO8601_SIZE, "%Y%m%dT%H%M%SZ", (now_gm))
  *
  * Purpose:
  *
- *     write "Day, DD Mon yyyy hh:mm:ss GMT" to dest
+ *     write "Day, dd Mmm YYYY HH:MM:SS GMT" to dest
  *     e.g., "Fri, 30 Jun 2017 20:41:55 GMT"
  * 
  *     wrapper for strftime()
@@ -133,11 +133,11 @@ strftime((dest), RFC7231_SIZE, "%a, %d %b %Y %H:%M:%S GMT", (now_gm))
  * Provided for error-checking S3COMMS_FORMAT_CREDENTIAL (below).
  *  17 <- "////aws4_request\0"
  *   2 < "s3" (service)
- *   8 <- "yyyyMMDD" (date)
+ *   8 <- "YYYYmmdd" (date)
  * 128 <- (access_id)
- * 145 :: sum
+ * 155 :: sum
  */
-#define S3COMMS_MAX_CREDENTIAL_SIZE 145
+#define S3COMMS_MAX_CREDENTIAL_SIZE 155
 
 
 /*---------------------------------------------------------------------------
@@ -158,13 +158,13 @@ strftime((dest), RFC7231_SIZE, "%a, %d %b %Y %H:%M:%S GMT", (now_gm))
  *             S3COMMS_FORMAT_CREDENTIAL(...) );
  *     ```
  * 
- *     "<acces-key-id>/<date>/<aws-region>/<aws-service>/aws4_request"
+ *     "<access-id>/<date>/<aws-region>/<aws-service>/aws4_request"
  *     assuming that `dest` has adequate space.
  *
- *     ALl inputs must be null-terminated strings.
+ *     ALL inputs must be null-terminated strings.
  *
  *     `access` should be the user's access key ID.
- *     `date` must be of format "yyyyMMDD".
+ *     `date` must be of format "YYYYmmdd".
  *     `region` should be relevant AWS region, i.e. "us-east-1".
  *     `service` should be "s3".
  *
@@ -175,22 +175,14 @@ strftime((dest), RFC7231_SIZE, "%a, %d %b %Y %H:%M:%S GMT", (now_gm))
  *             
  *---------------------------------------------------------------------------
  */
-#define S3COMMS_FORMAT_CREDENTIAL(dest, access, iso8601_date, region, service)\
-snprintf((dest), S3COMMS_MAX_CREDENTIAL_SIZE,                                 \
-         "%s/%s/%s/%s/aws4_request",                                          \
+#define S3COMMS_FORMAT_CREDENTIAL(dest, access, iso8601_date, region, service) \
+snprintf((dest), S3COMMS_MAX_CREDENTIAL_SIZE,                                  \
+         "%s/%s/%s/%s/aws4_request",                                           \
          (access), (iso8601_date), (region), (service))
 
 /*********************
  * PUBLIC STRUCTURES *
  *********************/
-
-/* sorting order enums 
- * used in `H5FD_s3comms_hrb_node_next()` and `H5FD_s3comms_hrb_node_first()`
- */
-enum HRB_NODE_ORD {
-    HRB_NODE_ORD_GIVEN,  /* sort by order added, first to last */
-    HRB_NODE_ORD_SORTED, /* sort by lowername, least to greatest (via strcmp) */
-};
 
 
 /*----------------------------------------------------------------------------
@@ -201,7 +193,7 @@ enum HRB_NODE_ORD {
  *
  *
  *
- * Maintain a set/list of HTTP Header fields, with field name and value.
+ * Maintain a ordered (linked) list of HTTP Header fields.
  *
  * Provides efficient access and manipulation of a logical sequence of
  * HTTP header fields, of particular use when composing an 
@@ -211,70 +203,30 @@ enum HRB_NODE_ORD {
  *     - convert field names to lower case 
  *     - sort by this lower-case name
  *     - convert ": " name-value separator in HTTP string to ":"
- *     - get sorted lowercase names without field or spearator
+ *     - get sorted lowercase names without field or separator
  *
- * Each node contains its own header field information, plus pointers
- * to the next and previous node in order added, and pointers to the nodes
- * next and previous in order sorted by lowercase name.
+ * As HTTP headers allow headers in any order (excepting the case of multiple
+ * headers with the same name), the list ordering can be optimized for Canonical
+ * Request creation, suggesting alphabtical order. For more expedient insertion
+ * and removal of elements in the list, linked list seems preferable to a
+ * dynamically-expanding array. The usually-smaller number of entries (5 or 
+ * fewer) makes performance overhead of traversing the list trivial.
  *
- *         +====================+
- *         | "Host"             | = `name`
- *         | "host"             | = `lowername`
- * +-----> | "s3.aws.com"       | = `value`
- * |       | "Host: s3.aws.com" | = `cat`
- * |       +--------------------+
- * |       |       next        -------------+
- * |       +--------------------+           |
- * | NULL <---     prev         |           |
- * |       +--------------------+           |
- * |       |     next_lower    ---------+   |
- * |       +--------------------+       |   |
- * |    +----    prev_lower     |       |   |
- * |    |  +====================+       |   |
- * |    |     ^            ^            |   |
- * |    |     |            |            |   |
- * | +--|-----+            +------+     |   |
- * | |  |                         |     |   |
- * | |  |  +==================+   |     |   |
- * | |  |  | "Date"           |   |     |   |
- * | |  |  | "date"           | <-|-----|---+
- * | |  +->| "Fri, ..."       |   |     |
- * | |     | "Date: Fri, ..." |   |     |
- * | |     +------------------+   |     |
- * | |     |       next      -----|--+  |
- * | |     +------------------+   |  |  |
- * | +-------      prev       |   |  |  |
- * |       +------------------+   |  |  |
- * |       |    next_lower   -----+  |  |
- * |       +------------------+      |  |
- * | NULL <---  prev_lower    |      |  |
- * |       +==================+      |  |
- * |         ^                       |  |
- * |         |          +------------+  |
- * |    +----+          |               |
- * |    |               v               |
- * |    |  +==============+             |
- * |    |  | "x-tbd"      | <-----------+
- * |    |  | "x-tbd"      |
- * |    |  | "val"        |
- * |    |  | "x-tbd: val" |
- * |    |  +--------------+
- * |    |  |     next    -----> NULL
- * |    |  +--------------+
- * |    +----    prev     |
- * |       +--------------+
- * |       |  next_lower -----> NULL
- * |       +--------------+
- * +--------- prev_lower  |
- *         +==============+
+ * The above requirements of creating at Canonical Request suggests a reasonable
+ * trade-off of speed for space with the option to compute elements as needed
+ * or to have the various elements prepared and stored in the structure 
+ * (e.g. name, value, lowername, concatenated name:value)
+ * The structure currently is implemented to pre-compute.
  *
- * Node for multiply doubly-linked list, each list for:
+ * At all times, the "first" node of the list should be the least, 
+ * alphabetically. For all nodes, the `next` node should be either NULL or
+ * of greater alphabetical value.
  *
- * - order added
- * - lowercase sorted names
+ * Each node contains its own header field information, plus a pointer to the
+ * next node.
  *
- * It is not allowed to have multiple nodes in a list with the same
- * _lowercase_ `name`s.
+ * It is not allowed to have multiple nodes with the same _lowercase_ `name`s
+ * in the same list
  * (i.e., name is case-insensitive for access and modification.)
  *
  * All data (`name`, `value`, `lowername`, and `cat`) are null-terminated 
@@ -309,21 +261,19 @@ enum HRB_NODE_ORD {
  *     e.g., "Range: bytes=0-9"
  *
  * `next`       (hrb_node_t *)
- * `next_lower` (hrb_node_t *)
- * `prev`       (hrb_node_t *)
- * `prev_lower` (hrb_node_t *)
  *
- *     Pointers to other nodes (or NULL) within two doubly-linked lists.
- *     `next` and `prev` move in order given (next being added later).
- *     `*_lower` move in order sorted by lowername, next being "greater"
- *     as determined by `strcmp`()`.
+ *     Pointers to next node in the list, or NULL sentinel as end of list. 
+ *     Next node must have a greater `lowername` as determined by strcmp().
  *
  *
  *
  * Programmer: Jacob Smith
  *             2017-09-22
  *
- * Changes: None.
+ * Changes:
+ *
+ *     - Change from twin doubly-linked lists to singly-linked list.
+ *     --- Jake Smith 2017-01-17
  *
  *----------------------------------------------------------------------------
  */
@@ -334,11 +284,7 @@ typedef struct hrb_node_t {
     char              *cat;
     char              *lowername;
     struct hrb_node_t *next;
-    struct hrb_node_t *next_lower;
-    struct hrb_node_t *prev;
-    struct hrb_node_t *prev_lower;
 } hrb_node_t;
-
 #define S3COMMS_HRB_NODE_MAGIC 0x7F5757UL
 
 
@@ -356,7 +302,7 @@ typedef struct hrb_node_t {
  * Host: over.rainbow.oz
  * Date: Fri, 01 Dec 2017 12:35:04 CST
  *
- *
+ * <body>
  * ```
  * ...with fast, efficient access to and modification of primary and field 
  * elements. 
@@ -367,7 +313,7 @@ typedef struct hrb_node_t {
  *
  *
  *
- * `magic` (unsigned long int)
+ * `magic` (unsigned long)
  *
  *     "Magic" number confirming that this is an hrb_t structure and
  *     what operations are valid for it.
@@ -378,7 +324,7 @@ typedef struct hrb_node_t {
  *
  *     Pointer to start of HTTP body.
  *
- *     Can be NULL, in which case it is treated as the empty string, "" .
+ *     Can be NULL, in which case it is treated as the empty string, "".
  *
  * `body_len` (size_t) :
  *
@@ -396,11 +342,11 @@ typedef struct hrb_node_t {
  *
  * `verb` (char *) :
  *
- *     Pointer to HTTP verb, e.g., "GET".
+ *     Pointer to HTTP verb string, e.g., "GET".
  *
  * `version` (char *) :
  *
- *     Pointer to start of string of HTTP version, e.g., "HTTP/1.1".
+ *     Pointer to HTTP version string, e.g., "HTTP/1.1".
  *
  *
  *
@@ -428,9 +374,9 @@ typedef struct {
  *
  *     Represent a URL with easily-accessed pointers to logical elements within.
  *     These elements (components) are stored as null-terminated strings (or
- *     just NULLs) within the structure. These components should be allocated
- *     for the structure, making the data as safe as possible from modification.
- *     If a component is NULL, it is either implicit in or absent from the URL.
+ *     just NULLs). These components should be allocated for the structure, 
+ *     making the data as safe as possible from modification. If a component 
+ *     is NULL, it is either implicit in or absent from the URL.
  *
  * "http://mybucket.s3.amazonaws.com:8080/somefile.h5?param=value&arg=value"
  *  ^--^   ^-----------------------^ ^--^ ^---------^ ^-------------------^
@@ -509,7 +455,7 @@ typedef struct {
  *
  *
  *
- * `magic` (unsigned long int)
+ * `magic` (unsigned long)
  *
  *     "magic" number identifying this structure as unique type.
  *     MUST equal `S3R_MAGIC` to be valid.
@@ -568,16 +514,17 @@ typedef struct {
  *
  * Programmer: Jacob Smith
  *
- *---------------------------------------------------------------------------*/
+ *----------------------------------------------------------------------------
+ */
 typedef struct {
-    unsigned long int  magic;
-    CURL              *curlhandle;
-    size_t             filesize;
-    char              *httpverb;
-    parsed_url_t      *purl;
-    char              *region;
-    char              *secret_id;
-    unsigned char     *signing_key;
+    unsigned long  magic;
+    CURL          *curlhandle;
+    size_t         filesize;
+    char          *httpverb;
+    parsed_url_t  *purl;
+    char          *region;
+    char          *secret_id;
+    unsigned char *signing_key;
 } s3r_t;
 #define S3COMMS_S3R_MAGIC 0x44d8d79
 
@@ -585,6 +532,11 @@ typedef struct {
  * DECLARATION OF HTTP FIELD LIST ROUTINES *
  *******************************************/
 
+herr_t H5FD_s3comms_hrb_node_set(hrb_node_t **L,
+                                 const char  *name,
+                                 const char  *value);
+
+/*
 herr_t H5FD_s3comms_hrb_node_destroy(hrb_node_t **L);
 
 hrb_node_t * H5FD_s3comms_hrb_node_first(hrb_node_t        *L,
@@ -596,10 +548,11 @@ hrb_node_t * H5FD_s3comms_hrb_node_next(hrb_node_t        *L,
 hrb_node_t * H5FD_s3comms_hrb_node_set(hrb_node_t *L,
                                        const char *name,
                                        const char *value);
+*/
 
-/********************************************************
- * DECLARATION OF HTTP REQUEST|RESPONSE BUFFER ROUTINES *
- ********************************************************/
+/***********************************************
+ * DECLARATION OF HTTP REQUEST BUFFER ROUTINES *
+ ***********************************************/
 
 herr_t H5FD_s3comms_hrb_destroy(hrb_t **buf);
 
@@ -655,9 +608,9 @@ herr_t H5FD_s3comms_nlowercase(char       *dest,
 herr_t H5FD_s3comms_parse_url(const char    *str, 
                               parsed_url_t **purl);
 
-herr_t H5FD_s3comms_percent_encode_char(char               *repr,
-                                        const unsigned char c,
-                                        size_t             *repr_len);
+herr_t H5FD_s3comms_percent_encode_char(char                *repr,
+                                        const unsigned char  c,
+                                        size_t              *repr_len);
 
 herr_t H5FD_s3comms_signing_key(unsigned char *md,
                                 const char    *secret,
