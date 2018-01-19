@@ -1119,14 +1119,12 @@ H5FD_s3comms_s3r_open(const char          *url,
     }
     HDassert( purl != NULL ); /* if above passes, this must be true */
     HDassert( purl->magic == S3COMMS_PARSED_URL_MAGIC );
-//printf("GOT PARSED URL\n");
 
     h = (s3r_t *)H5MM_malloc(sizeof(s3r_t));
     if (h == NULL) {
         HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, NULL,
                     "could not malloc space for handle.\n");
     }
-//printf("HANDLE MALLOC'D\n");
 
     h->magic        = S3COMMS_S3R_MAGIC;
     h->purl         = purl;
@@ -1140,12 +1138,10 @@ H5FD_s3comms_s3r_open(const char          *url,
      * RECORD AUTHENTICATION INFORMATION *
      *************************************/
 
-//printf("CHECKING FOR AUTH INFO\n");
     if ((region      != NULL && *region      != '\0') || 
         (id          != NULL && *id          != '\0') || 
         (signing_key != NULL && *signing_key != '\0'))
     {
-//printf("RECORD AUTH INFO\n");
         /* if one exists, all three must exist
          */
         if (region == NULL || region[0] == '\0') {
@@ -1192,7 +1188,6 @@ H5FD_s3comms_s3r_open(const char          *url,
     /************************
      * INITIATE CURL HANDLE *
      ************************/
-//printf("INITIATE CURL HANDLE\n");
 
     curlh = curl_easy_init();
 
@@ -1258,7 +1253,6 @@ H5FD_s3comms_s3r_open(const char          *url,
 #endif 
 
     h->curlhandle = curlh;
-//printf("READY TO GETSIZE\n");
 
     /*******************
      * OPEN CONNECTION *
@@ -2534,17 +2528,13 @@ H5FD_s3comms_parse_url(const char    *str,
 
 
 
-//printf("DONE PARSING\n");
     *_purl = purl;
-//printf("POINTER SET\n");
     ret_value =  SUCCEED;
 
 done:
     if (ret_value == FAIL) {
-//printf("FAILURE\n");
         H5FD_s3comms_free_purl(purl);
     }
-//printf("LEAVING\n");
     FUNC_LEAVE_NOAPI(ret_value);
 
 } /* H5FD_s3comms_parse_url */
