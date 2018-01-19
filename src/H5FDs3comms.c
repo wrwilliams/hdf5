@@ -1086,16 +1086,16 @@ done:
  *----------------------------------------------------------------------------
  */
 s3r_t *
-H5FD_s3comms_s3r_open(const char          url[],
-                      const char          region[],
-                      const char          id[],
-                      const unsigned char signing_key[])
+H5FD_s3comms_s3r_open(const char          *url,
+                      const char          *region,
+                      const char          *id,
+                      const unsigned char *signing_key)
 {
-    size_t        tmplen      = 0;
-    CURL         *curlh       = NULL;
-    s3r_t        *h           = NULL; /* "h" for handle */
-    parsed_url_t *purl        = NULL;
-    s3r_t        *ret_value   = NULL;
+    size_t        tmplen    = 0;
+    CURL         *curlh     = NULL;
+    s3r_t        *h         = NULL; /* "h" for handle */
+    parsed_url_t *purl      = NULL;
+    s3r_t        *ret_value = NULL;
 
 
 
@@ -1107,7 +1107,7 @@ H5FD_s3comms_s3r_open(const char          url[],
 
 
 
-    if (url == NULL) {
+    if (url == NULL || url[0] == '\0') {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
                     "url cannot be null.\n");
     }
@@ -1119,12 +1119,14 @@ H5FD_s3comms_s3r_open(const char          url[],
     }
     HDassert( purl != NULL ); /* if above passes, this must be true */
     HDassert( purl->magic == S3COMMS_PARSED_URL_MAGIC );
+//printf("GOT PARSED URL\n");
 
     h = (s3r_t *)H5MM_malloc(sizeof(s3r_t));
     if (h == NULL) {
         HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, NULL,
                     "could not malloc space for handle.\n");
     }
+//printf("HANDLE MALLOC'D\n");
 
     h->magic        = S3COMMS_S3R_MAGIC;
     h->purl         = purl;
@@ -1138,19 +1140,23 @@ H5FD_s3comms_s3r_open(const char          url[],
      * RECORD AUTHENTICATION INFORMATION *
      *************************************/
 
-    if (region != NULL || id != NULL || signing_key != NULL)
+//printf("CHECKING FOR AUTH INFO\n");
+    if ((region      != NULL && *region      != '\0') || 
+        (id          != NULL && *id          != '\0') || 
+        (signing_key != NULL && *signing_key != '\0'))
     {
+//printf("RECORD AUTH INFO\n");
         /* if one exists, all three must exist
          */
-        if (region == NULL) {
+        if (region == NULL || region[0] == '\0') {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
                         "region cannot be null.\n");
         }
-        if (id == NULL) {
+        if (id == NULL || id[0] == '\0') {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
                         "secret id cannot be null.\n");
         }
-        if (signing_key == NULL) {
+        if (signing_key == NULL || signing_key[0] == '\0') {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
                         "signing key cannot be null.\n");
         }
@@ -1186,6 +1192,7 @@ H5FD_s3comms_s3r_open(const char          url[],
     /************************
      * INITIATE CURL HANDLE *
      ************************/
+//printf("INITIATE CURL HANDLE\n");
 
     curlh = curl_easy_init();
 
@@ -1251,6 +1258,7 @@ H5FD_s3comms_s3r_open(const char          url[],
 #endif 
 
     h->curlhandle = curlh;
+//printf("READY TO GETSIZE\n");
 
     /*******************
      * OPEN CONNECTION *
@@ -1308,6 +1316,9 @@ done:
  *     If `len` is 0, reads entirety of file starting at `offset`.
  *     If `offset` and `len` are both 0, reads entire file.
  *
+ *     If `offset` or `offset+len` is greater than the file size, read is 
+ *     aborted and returns `FAIL`.
+ *
  *     High-level routine to execute request as defined in provided handle.
  *
  *     Uses configured "curl easy handle" to perform request.
@@ -1321,7 +1332,7 @@ done:
  *
  *     `dest` may be NULL, but no body data will be recorded.
  *
- *     * NULL dest used for `s3r_getsize()`, in conjunction with
+ *     - NULL dest used for `s3r_getsize()`, in conjunction with
  *       CURLOPT_NOBODY to preempt transmission of file body data.
  *
  * Return:
@@ -1351,6 +1362,9 @@ done:
  *
  *     - Update to use `parsed_url_t *purl` in handle.
  *     --- Jacob Smith 2017-11-01
+ *
+ *     - Better define behavior upon read past EOF
+ *     --- Jacob Smith 2017-01-19
  *
  *----------------------------------------------------------------------------
  */
@@ -1405,6 +1419,10 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
                     "handle has bad (null) url.\n")
     }
     HDassert( handle->purl->magic == S3COMMS_PARSED_URL_MAGIC );
+    if (offset > handle->filesize || (len + offset) > handle->filesize) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "unable to read past EoF")
+    }
 
     curlh = handle->curlhandle;
 
@@ -2360,17 +2378,15 @@ H5FD_s3comms_parse_url(const char    *str,
                         "invalid SCHEME consruction");
         }
     }
-    /* copy 
+    /* copy lowercased scheme to structure
      */
     purl->scheme = (char *)H5MM_malloc(sizeof(char) * (size_t)(len + 1));
-    if (purl->scheme == NULL) { /* cannot malloc */
+    if (purl->scheme == NULL) {
         HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
                     "can't allocate space for SCHEME");
     }
     (void)strncpy(purl->scheme, curstr, (size_t)len);
-    purl->scheme[len] = 0;
-    /* convert to lowercase 
-     */
+    purl->scheme[len] = '\0';
     for ( i = 0; i < len; i++ ) {
         purl->scheme[i] = (char)tolower(purl->scheme[i]);
     }
@@ -2518,13 +2534,17 @@ H5FD_s3comms_parse_url(const char    *str,
 
 
 
+//printf("DONE PARSING\n");
     *_purl = purl;
+//printf("POINTER SET\n");
     ret_value =  SUCCEED;
 
 done:
     if (ret_value == FAIL) {
+//printf("FAILURE\n");
         H5FD_s3comms_free_purl(purl);
     }
+//printf("LEAVING\n");
     FUNC_LEAVE_NOAPI(ret_value);
 
 } /* H5FD_s3comms_parse_url */

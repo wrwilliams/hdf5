@@ -21,8 +21,17 @@
 
 #include "h5test.h"
 #include "H5FDs3comms.h"
+#include "H5MMprivate.h" /* memory management */
 
+/*
+#define S3COMMS_TEST_S3_BUCKET_URL "http://minio.ad.hdfgroup.org:9000/shakespeare"
+*/
+#define S3COMMS_TEST_S3_BUCKET_URL "https://s3.us-east-2.amazonaws.com/hdf5ros3"
+#define S3COMMS_TEST_S3_REGION "us-east-2"
+#define S3COMMS_TEST_S3_ACCESS_ID "AKIAIMC3D3XLYXLN5COA"
+#define S3COMMS_TEST_S3_ACCESS_KEY "ugs5aVVnLFCErO/8uW14iWE3K5AgXMpsMlWneO/+"
 
+#define S3COMMS_TEST_RUN_TIMEOUT 0
 
 /*****************************************************************************
  *
@@ -1221,22 +1230,22 @@ test_parse_url(void)
             },
             "root IPv6 ftp with port",
         },
-        {   "http://minio.ad.hdfgroup.org:9000/shakespeare/Poe_Raven.txt",
+        {   "http://some.domain.org:9000/path/to/resource.txt",
             SUCCEED,
             {   "http",
-                "minio.ad.hdfgroup.org",
+                "some.domain.org",
                 "9000",
-                "shakespeare/Poe_Raven.txt",
+                "path/to/resource.txt",
                 NULL,
             },
-            "hdf minio w/out query",
+            "without query",
         },
-        {   "http://hdfgroup.org:00/Poe_Raven.txt?some_params unchecked",
+        {   "https://domain.me:00/file.txt?some_params unchecked",
             SUCCEED,
-            {   "http",
-                "hdfgroup.org",
+            {   "https",
+                "domain.me",
                 "00",
-                "Poe_Raven.txt",
+                "file.txt",
                 "some_params unchecked",
             },
             "with query",
@@ -1485,9 +1494,241 @@ error:
 } /* test_percent_encode_char */
 
 
+
+/*---------------------------------------------------------------------------
+ *---------------------------------------------------------------------------
+ */
+static herr_t
+test_s3r_open(void)
+{
+
+#define S3COMMS_TEST_ARR_SIZE 128
+
+    /************************
+     * test-local variables *
+     ************************/
+
+    char           url_missing[S3COMMS_TEST_ARR_SIZE];
+    char           url_raven[S3COMMS_TEST_ARR_SIZE];
+    char           url_raven_badport[S3COMMS_TEST_ARR_SIZE];
+    char           url_shakespeare[S3COMMS_TEST_ARR_SIZE];
+    unsigned char  signing_key[SHA256_DIGEST_LENGTH];
+    struct tm     *now          = NULL;
+    char           iso8601now[ISO8601_SIZE];
+    s3r_t         *handle       = NULL;
+    hbool_t        curl_ready   = FALSE;
+    parsed_url_t  *purl         = NULL;
+
+
+
+    TESTING("s3r_open");
+
+    /******************
+     * PRE-TEST SETUP *
+     ******************/
+
+    FAIL_IF( S3COMMS_TEST_ARR_SIZE < 
+             snprintf(url_shakespeare, 
+                      S3COMMS_TEST_ARR_SIZE,
+                      "%s/%s", 
+                      S3COMMS_TEST_S3_BUCKET_URL, 
+                      "t8.shakespeare.txt") );
+
+    FAIL_IF( S3COMMS_TEST_ARR_SIZE <
+             snprintf(url_missing,
+                      S3COMMS_TEST_ARR_SIZE,
+                      "%s/%s", 
+                      S3COMMS_TEST_S3_BUCKET_URL, 
+                      "missing.csv") );
+
+    FAIL_IF( S3COMMS_TEST_ARR_SIZE <
+             snprintf(url_raven,
+                      S3COMMS_TEST_ARR_SIZE, 
+                      "%s/%s",
+                      S3COMMS_TEST_S3_BUCKET_URL,
+                      "Poe_Raven.txt") );
+
+    /* Set given bucket url with invalid/inactive port number for badport.
+     * Note, this sort of micro-management of parsed_url_t is not advised
+     */
+    FAIL_IF( FAIL == H5FD_s3comms_parse_url(S3COMMS_TEST_S3_BUCKET_URL, &purl) )
+    if (purl->port == NULL) {
+        purl->port = H5MM_malloc(sizeof(char) * 5);
+        FAIL_IF( purl->port == NULL );
+        FAIL_IF( 5 < snprintf(purl->port, 5, "9000") )
+    } else if (strcmp(purl->port, "9000") != 0) {
+        FAIL_IF( 5 < snprintf(purl->port, 5, "9000") )
+    } else {
+        FAIL_IF( 5 < snprintf(purl->port, 5, "1234") )
+    }
+    FAIL_IF( S3COMMS_TEST_ARR_SIZE < 
+             snprintf(url_raven_badport, 
+                      S3COMMS_TEST_ARR_SIZE,
+                      "%s://%s:%s/%s",
+                      purl->scheme,
+                      purl->host,
+                      purl->port,
+                      "Poe_Raven.txt") );
+//TODO: nix all HDasserts
+
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    curl_ready = TRUE;
+
+    now = gmnow();
+    HDassert(now != NULL);
+    HDassert(ISO8601NOW(iso8601now, now) == (ISO8601_SIZE - 1)); 
+
+    /* It is desired to have means available to verify that signing_key
+     * was set successfully and to an expected value.
+     */
+    HDassert( SUCCEED ==
+              H5FD_s3comms_signing_key(
+                      signing_key, 
+                      (const char *)S3COMMS_TEST_S3_ACCESS_KEY,
+                      (const char *)S3COMMS_TEST_S3_REGION,
+                      (const char *)iso8601now) );
+
+    /*************************
+     * OPEN NONEXISTENT FILE *
+     *************************/
+
+    /* attempt anonymously
+     */
+    handle = H5FD_s3comms_s3r_open(url_missing, NULL, NULL, NULL); 
+    FAIL_IF( handle != NULL );
+
+    /* attempt with authentication
+     */
+    handle = H5FD_s3comms_s3r_open(
+             url_missing,
+             (const char *)S3COMMS_TEST_S3_REGION,
+             (const char *)S3COMMS_TEST_S3_ACCESS_ID,
+             (const unsigned char *)signing_key);
+    FAIL_IF( handle != NULL );
+
+    /**************************
+     * INACTIVE PORT  ON HOST *
+     **************************/
+
+#if S3COMMS_TEST_RUN_TIMEOUT
+printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
+    handle = H5FD_s3comms_s3r_open(url_raven_badport, NULL, NULL, NULL);
+    FAIL_IF( handle != NULL );
+#endif
+
+    /*******************************
+     * INVALID AUTHENTICATION INFO *
+     *******************************/
+
+    /* anonymous access on restricted file
+     */
+    handle = H5FD_s3comms_s3r_open(url_shakespeare, NULL, NULL, NULL);
+    FAIL_IF( handle != NULL );
+
+    /* passed in a bad ID 
+     */
+    handle = H5FD_s3comms_s3r_open(
+             url_shakespeare,
+             (const char *)S3COMMS_TEST_S3_REGION,
+             "I_MADE_UP_MY_ID",
+             (const unsigned char *)signing_key);
+    FAIL_IF( handle != NULL );
+
+    /* using an invalid signing key
+     */
+    handle = H5FD_s3comms_s3r_open(
+             url_shakespeare,
+             (const char *)S3COMMS_TEST_S3_REGION,
+             (const char *)S3COMMS_TEST_S3_ACCESS_ID,
+             (const unsigned char *)EMPTY_SHA256);
+    FAIL_IF( handle != NULL );
+
+    /*******************************
+     * SUCCESSFUL OPEN (AND CLOSE) *
+     *******************************/
+
+    /* anonymous 
+     */
+    handle = H5FD_s3comms_s3r_open(url_raven, NULL, NULL, NULL);
+    FAIL_IF( handle == NULL );
+    JSVERIFY( 6464, handle->filesize, NULL )
+    JSVERIFY( SUCCEED, 
+              H5FD_s3comms_s3r_close(handle),
+              "unable to close file" )
+    handle = NULL;
+    
+    /* authenticating
+     */
+    handle = H5FD_s3comms_s3r_open(
+                     url_shakespeare,
+                     (const char *)S3COMMS_TEST_S3_REGION,
+                     (const char *)S3COMMS_TEST_S3_ACCESS_ID,
+                     (const unsigned char *)signing_key);
+    FAIL_IF( handle == NULL );
+    JSVERIFY( 5458199, handle->filesize, NULL )
+    JSVERIFY( SUCCEED, 
+              H5FD_s3comms_s3r_close(handle),
+              "unable to close file" )
+    handle = NULL;
+
+    /* using authentication on anonymously-accessible file?
+     */
+    handle = H5FD_s3comms_s3r_open(
+             url_raven,
+             (const char *)S3COMMS_TEST_S3_REGION,
+             (const char *)S3COMMS_TEST_S3_ACCESS_ID,
+             (const unsigned char *)signing_key);
+    FAIL_IF( handle == NULL );
+    JSVERIFY( 6464, handle->filesize, NULL )
+    JSVERIFY( SUCCEED, 
+              H5FD_s3comms_s3r_close(handle),
+              "unable to close file" )
+    handle = NULL;
+    
+    /* authenticating
+     */
+    handle = H5FD_s3comms_s3r_open(
+                     url_shakespeare,
+                     (const char *)S3COMMS_TEST_S3_REGION,
+                     (const char *)S3COMMS_TEST_S3_ACCESS_ID,
+                     (const unsigned char *)signing_key);
+    FAIL_IF( handle == NULL );
+    JSVERIFY( 5458199, handle->filesize, NULL )
+    JSVERIFY( SUCCEED, 
+              H5FD_s3comms_s3r_close(handle),
+              "unable to close file" )
+    handle = NULL;
+
+
+
+    curl_global_cleanup();
+    curl_ready = FALSE;
+
+    FAIL_IF( FAIL == H5FD_s3comms_free_purl(purl) )
+    purl = NULL;
+
+    PASSED();
+    return 0;
+error:
+    /***********
+     * cleanup *
+     ***********/
+
+    if (handle != NULL)
+        H5FD_s3comms_s3r_close(handle); 
+    if (purl != NULL)
+        H5FD_s3comms_free_purl(purl);
+    if (curl_ready == TRUE)
+        curl_global_cleanup();
+
+    return -1;
+#undef S3COMMS_TEST_ARR_SIZE
+} /* test_s3r_open */
+
+
 /*---------------------------------------------------------------------------
  *
- * Function: test_s3r_ops()
+ * Function: test_s3r_read()
  *
  * Purpose:
  *
@@ -1507,153 +1748,158 @@ error:
  *---------------------------------------------------------------------------
  */
 static herr_t
-test_s3r_ops(void)
+test_s3r_read(void)
 {
-    /*********************
-     * test-local macros *
-     *********************/
-#define MY_BUFFER_SIZE 0x100 /* 256 */
-
-    /*************************
-     * test-local structures *
-     *************************/
-
+#define S3COMMS_TEST_BUFFER_SIZE 256
     /************************
      * test-local variables *
      ************************/
 
-    const char     region[]     = "us-east-1";
-    const char     secret_id[]  = "HDFGROUP0";
-    const char     secret_key[] = "HDFGROUP0";
-    char           buffer[MY_BUFFER_SIZE];
-    char           buffer2[MY_BUFFER_SIZE];
-    unsigned char  signing_key[SHA256_DIGEST_LENGTH];
-    struct tm     *now          = NULL;
-    char           iso8601now[ISO8601_SIZE];
-    s3r_t         *handle       = NULL;
-    hbool_t        curl_ready   = FALSE;
+    char           url_raven[S3COMMS_TEST_BUFFER_SIZE];
+    char           buffer[S3COMMS_TEST_BUFFER_SIZE];
+    char           buffer2[S3COMMS_TEST_BUFFER_SIZE];
+    s3r_t         *handle     = NULL;
+    hbool_t        curl_ready = FALSE;
+    unsigned int   i          = 0;
 
 
 
-    TESTING("test_s3r_ops");
+    TESTING("test_s3r_read");
 
-    /***************
-     * BASIC SETUP *
-     ***************/
+    /*
+     * initial setup
+     */
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl_ready = TRUE;
+    FAIL_IF( S3COMMS_TEST_BUFFER_SIZE < 
+             snprintf(url_raven, 
+                      S3COMMS_TEST_BUFFER_SIZE,
+                      "%s/%s", 
+                      S3COMMS_TEST_S3_BUCKET_URL, 
+                      "Poe_Raven.txt") );
 
-    now = gmnow();
-    HDassert(now != NULL);
-    HDassert(ISO8601NOW(iso8601now, now) == (ISO8601_SIZE - 1)); 
+    for (i = 0; i < S3COMMS_TEST_BUFFER_SIZE; i++) 
+        buffer[i] = '\0';
 
-    /* It is desired to have means available to verify that signing_key
-     * was set successfully and to an expected value.
+    /* open file
      */
-    HDassert(SUCCEED ==
-             H5FD_s3comms_signing_key(signing_key, 
-                                      (const char *)secret_key,
-                                      (const char *)region,
-                                      (const char *)iso8601now) );
+    handle = H5FD_s3comms_s3r_open(url_raven, NULL, NULL, NULL);
+    FAIL_IF( handle == NULL )
+    FAIL_IF( handle->filesize != 6464 )
 
-    /**************
-     * READ RANGE *
-     **************/
+    for (i = 0; i < S3COMMS_TEST_BUFFER_SIZE; i++) 
+        buffer[i] = '\0';
 
-    handle = H5FD_s3comms_s3r_open(
-             "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
-             region,
-             secret_id,
-             (const unsigned char *)signing_key);
-
-    FAIL_IF( handle == NULL );
-    JSVERIFY( SUCCEED,
-              H5FD_s3comms_s3r_read(handle,
-                                    (haddr_t)1200699,
-                                    (size_t)103,
-                                    buffer),
-              NULL )
-    JSVERIFY( 0,
-              strncmp(buffer,
-                      "Osr. Sweet lord, if your lordship were at leisure, "  \
-                      "I should impart\n    a thing to you from his Majesty.",
-                      103),
-              buffer )
-
-    /**********************
-     * DEMONSTRATE RE-USE *
+    /********************** 
+     * read start of file *
      **********************/
 
     JSVERIFY( SUCCEED,
-              H5FD_s3comms_s3r_read(handle,
-                                    (haddr_t)3544662,
-                                    (size_t)44,
-                                    buffer2),
+              H5FD_s3comms_s3r_read(
+                      handle,
+                      (haddr_t)0,
+                      (size_t)117,
+                      buffer),
               NULL )
-    JSVERIFY( 0, strncmp(buffer2,
-                         "Our sport shall be to take what they mistake",
-                         44),
-              buffer2 );
+    JSVERIFY( 0,
+              strncmp(buffer,
+                      "Once upon a midnight dreary, while I pondered, weak and weary,\nOver many a quaint and curious volume of forgotten lore",
+                      117),
+              buffer )
 
-    /* stop using this handle now!
-     */
+    for (i = 0; i < S3COMMS_TEST_BUFFER_SIZE; i++) 
+        buffer[i] = '\0';
+
+    /************************
+     * read arbitrary range *
+     ************************/
+
     JSVERIFY( SUCCEED,
-              H5FD_s3comms_s3r_close(handle),
-              "unable to close file" )
-    handle = NULL;
+              H5FD_s3comms_s3r_read(
+                      handle,
+                      (haddr_t)2540,
+                      (size_t)53,
+                      buffer),
+              NULL )
+    JSVERIFY( 0,
+              strncmp(buffer,
+                      "the grave and stern decorum of the countenance it wore",
+                      53),
+              buffer )
 
-    /***********************
-     * OPEN AN ABSENT FILE *
-     ***********************/
+    for (i = 0; i < S3COMMS_TEST_BUFFER_SIZE; i++) 
+        buffer[i] = '\0';
 
-    handle = H5FD_s3comms_s3r_open(
-             "http://minio.ad.hdfgroup.org:9000/shakespeare/missing.csv",
-             region,
-             secret_id,
-             (const unsigned char *)signing_key);
+    /***************
+     * read to EoF *
+     ***************/
 
-    FAIL_IF( handle != NULL );
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_s3r_read(
+                      handle,
+                      (haddr_t)6370,
+                      (size_t)0,
+                      buffer),
+              NULL )
+    JSVERIFY( 0,
+              strncmp(buffer,
+                      "And my soul from out that shadow that lies floating on the floor\nShall be lifted—nevermore!\n",
+                      64),
+              buffer )
 
-    /**************************
-     * INACTIVE PORT  ON HOST *
-     **************************/
+    for (i = 0; i < S3COMMS_TEST_BUFFER_SIZE; i++) 
+        buffer[i] = '\0';
 
-    FAIL_IF(NULL != H5FD_s3comms_s3r_open(
-             "http://minio.ad.hdfgroup.org:80/shakespeare/t8.shakespeare.txt",
-             region,
-             secret_id,
-             (const unsigned char *)signing_key) )
+    /*****************
+     * read past eof *
+     *****************/
 
-    /*******************************
-     * INVALID AUTHENTICATION INFO *
-     *******************************/
+    JSVERIFY( FAIL,
+              H5FD_s3comms_s3r_read(
+                      handle,
+                      (haddr_t)6400,
+                      (size_t)100, /* 6400+100 > 6464 */
+                      buffer),
+              NULL )
+     JSVERIFY( 0, strcmp("", buffer), NULL )
 
-    /* passed in a bad ID 
-     */
-    handle = H5FD_s3comms_s3r_open(
-             "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
-             region,
-             "I_MADE_UP_MY_ID",
-             (const unsigned char *)signing_key);
+    /************************
+     * read starts past eof *
+     ************************/
 
-    FAIL_IF( handle != NULL );
+    JSVERIFY( FAIL,
+              H5FD_s3comms_s3r_read(
+                      handle,
+                      (haddr_t)1200699, /* 1200699 > 6464 */
+                      (size_t)100,
+                      buffer),
+              NULL )
+     JSVERIFY( 0, strcmp("", buffer), NULL )
 
-    /* using an invalid signing key
-     */
-    handle = H5FD_s3comms_s3r_open(
-             "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
-             region,
-             secret_id,
-             (const unsigned char *)EMPTY_SHA256);
+    /**********************
+     * read starts on eof *
+     **********************/
 
-    FAIL_IF( handle != NULL );
+    JSVERIFY( FAIL,
+              H5FD_s3comms_s3r_read(
+                      handle,
+                      (haddr_t)6464,
+                      (size_t)0,
+                      buffer),
+              NULL )
+     JSVERIFY( 0, strcmp("", buffer), NULL )
 
     /*************
      * TEAR DOWN *
      *************/
 
-    HDassert(curl_ready == TRUE);
+    JSVERIFY( SUCCEED,
+              H5FD_s3comms_s3r_close(handle),
+              "unable to close file" )
+    handle = NULL;
+
+    HDassert( curl_ready == TRUE );
     curl_global_cleanup();
     curl_ready = FALSE;
 
@@ -1671,11 +1917,11 @@ error:
     if (curl_ready == TRUE)
         curl_global_cleanup();
 
-#undef MY_BUFFER_SIZE
-
     return -1;
 
-} /* test_s3r_ops*/
+#undef S3COMMS_TEST_BUFFER_SIZE
+
+} /* test_s3r_read */
 
 
 /*---------------------------------------------------------------------------
@@ -2152,7 +2398,8 @@ main(void)
     nerrors += test_parse_url()               < 0 ? 1 : 0;
     nerrors += test_aws_canonical_request()   < 0 ? 1 : 0;
     nerrors += test_tostringtosign()          < 0 ? 1 : 0;
-    nerrors += test_s3r_ops()                 < 0 ? 1 : 0;
+    nerrors += test_s3r_open()                < 0 ? 1 : 0;
+    nerrors += test_s3r_read()                < 0 ? 1 : 0;
 
     if(nerrors) {
         HDprintf("***** %d S3comms TEST%s FAILED! *****\n",

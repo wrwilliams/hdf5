@@ -260,7 +260,7 @@ snprintf((dest), S3COMMS_MAX_CREDENTIAL_SIZE,                                  \
  *     as the field would appear in an HTTP request.
  *     e.g., "Range: bytes=0-9"
  *
- * `next`       (hrb_node_t *)
+ * `next` (hrb_node_t *)
  *
  *     Pointers to next node in the list, or NULL sentinel as end of list. 
  *     Next node must have a greater `lowername` as determined by strcmp().
