@@ -2035,6 +2035,7 @@ H5I_iterate(H5I_type_t type, H5I_search_func_t func, void *udata, hbool_t app_re
         iter_udata.user_func    = func;
         iter_udata.user_udata   = udata;
         iter_udata.app_ref      = app_ref;
+        iter_udata.obj_type     = type;
 
         /* Iterate over IDs */
         if ((iter_status = H5SL_iterate(type_ptr->ids, H5I__iterate_cb, &iter_udata)) < 0)
