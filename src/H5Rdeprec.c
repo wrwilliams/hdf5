@@ -149,34 +149,46 @@ done:
  *      ref         IN: Reference to open
  *
  * Return:      Success:	Valid HDF5 ID
- *              Failure:    Negative
+ *              Failure:    H5I_INVALID_HID
  *
  *-------------------------------------------------------------------------
  */
 hid_t
 H5Rdereference1(hid_t obj_id, H5R_type_t ref_type, const void *_ref)
 {
-    H5G_loc_t loc;      /* Group location */
-    H5F_t *file = NULL; /* File object */
-    hid_t ret_value;
-
-    FUNC_ENTER_API(FAIL)
+    H5VL_object_t *obj = NULL;        /* object token of loc_id */
+    H5I_type_t opened_type;
+    void *opened_obj = NULL;
+    H5VL_loc_params_t loc_params;
+    hid_t ret_value = H5I_INVALID_HID;
+    
+    FUNC_ENTER_API(H5I_INVALID_HID)
     H5TRACE3("i", "iRt*x", obj_id, ref_type, _ref);
 
     /* Check args */
-    if (H5G_loc(obj_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
-    if (ref_type <= H5R_BADTYPE || ref_type >= H5R_MAXTYPE)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid reference type")
-    if (_ref == NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid reference pointer")
+    if(ref_type <= H5R_BADTYPE || ref_type >= H5R_MAXTYPE)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, H5I_INVALID_HID, "invalid reference type")
+    if(_ref == NULL)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, H5I_INVALID_HID, "invalid reference pointer")
 
-    /* Get the file pointer from the entry */
-    file = loc.oloc->file;
+    /* get the vol object */
+    if(NULL == (obj = H5VL_get_object(obj_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5I_INVALID_HID, "invalid file identifier")
 
-    /* Create reference */
-    if ((ret_value = H5R_dereference(file, H5P_DATASET_ACCESS_DEFAULT, H5AC_ind_read_dxpl_id, ref_type, _ref, TRUE)) < 0)
-        HGOTO_ERROR(H5E_REFERENCE, H5E_CANTINIT, FAIL, "unable dereference object")
+    loc_params.type = H5VL_OBJECT_BY_REF;
+    loc_params.loc_data.loc_by_ref.ref_type = ref_type;
+    loc_params.loc_data.loc_by_ref._ref = _ref;
+    loc_params.loc_data.loc_by_ref.lapl_id = H5P_DATASET_ACCESS_DEFAULT;
+    loc_params.obj_type = H5I_get_type(obj_id);
+
+    /* Open the object through the VOL */
+    if(NULL == (opened_obj = H5VL_object_open(obj->vol_obj, loc_params, obj->vol_info->vol_cls, &opened_type, 
+                                              H5AC_ind_read_dxpl_id, H5_REQUEST_NULL)))
+        HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, H5I_INVALID_HID, "unable to open object")
+
+    /* Get an atom for the object */
+    if((ret_value = H5VL_register_id(opened_type, opened_obj, obj->vol_info, TRUE)) < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, H5I_INVALID_HID, "unable to atomize object handle")
 
 done:
     FUNC_LEAVE_API(ret_value)

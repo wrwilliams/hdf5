@@ -42,6 +42,7 @@
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5Lprivate.h"         /* Links                                */
 #include "H5Pprivate.h"         /* Property lists                       */
+#include "H5VLprivate.h"	/* VOL plugins				*/
 
 
 /****************/
