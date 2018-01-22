@@ -376,6 +376,33 @@ if (strcmp((actual), (expected)) != 0) {       \
  */
 #define MAXADDR (((haddr_t)1<<(8*sizeof(HDoff_t)-1))-1)
 
+#define S3_TEST_BUCKET_URL "https://s3.us-east-2.amazonaws.com/hdf5ros3"
+#define S3_TEST_REGION "us-east-2"
+#define S3_TEST_ACCESS_ID "AKIAIMC3D3XLYXLN5COA"
+#define S3_TEST_ACCESS_KEY "ugs5aVVnLFCErO/8uW14iWE3K5AgXMpsMlWneO/+"
+#define S3_TEST_MAX_URL_SIZE 256
+
+#define S3_TEST_RESOURCE_TEXT_RESTRICTED "t8.shakespeare.txt"
+#define S3_TEST_RESOURCE_TEXT_PUBLIC "Poe_Raven.txt"
+#define S3_TEST_RESOURCE_H5_PUBLIC "GMODO-SVM01.h5"
+#define S3_TEST_RESOURCE_MISSING "missing.csv"
+
+static char url_text_restricted[S3_TEST_MAX_URL_SIZE];
+static char url_text_public[S3_TEST_MAX_URL_SIZE];
+static char url_h5_public[S3_TEST_MAX_URL_SIZE];
+static char url_missing[S3_TEST_MAX_URL_SIZE];
+
+H5FD_ros3_fapl_t restricted_access_fa = {
+            H5FD__CURR_ROS3_FAPL_T_VERSION, /* fapl version      */
+            TRUE,                           /* authenticate      */
+            S3_TEST_REGION,                 /* aws region        */
+            S3_TEST_ACCESS_ID,              /* access key id     */
+            S3_TEST_ACCESS_KEY };           /* secret access key */
+
+H5FD_ros3_fapl_t anonymous_fa = {
+            H5FD__CURR_ROS3_FAPL_T_VERSION,
+            FALSE, "", "", "" };
+
 
 /*---------------------------------------------------------------------------
  *
@@ -561,7 +588,7 @@ test_fapl_config_validation(void)
          * per-test sanitation/teardown
          *-----------------------------
          */
-        HDassert( SUCCEED == H5Pclose(fapl_id) );
+        FAIL_IF( FAIL == H5Pclose(fapl_id) )
         fapl_id = -1;
 
     } /* for each test case */
@@ -633,7 +660,7 @@ test_ros3_fapl(void)
     /* Set property list and file name for ROS3 driver. 
      */
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
-    FAIL_IF( fapl_id < 0 ) /* sanity-check */
+    FAIL_IF( fapl_id < 0 )
 
     JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &ros3_fa_0), NULL )
 
@@ -734,23 +761,12 @@ test_vfd_open(void)
     H5FD_t           *fd         = NULL;
     hbool_t           curl_ready = FALSE;
     hid_t             fapl_id    = -1;
-    H5FD_ros3_fapl_t  ros3_fa    = {
-        H5FD__CURR_ROS3_FAPL_T_VERSION, /* version      */
-        TRUE,                           /* authenticate */
-        "us-east-1",                    /* aws_region   */
-        "HDFGROUP0",                    /* secret_id    */
-        "HDFGROUP0",                    /* secret_key   */
-    };
 
 
 
     TESTING("ROS3 VFD-level open");
 
-    /* required setup for s3comms underneath
-     * FAIL_UNLESS instead of HDassert, because other tests might be run
-     * even if this one cannot
-     */
-    HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
+    FAIL_IF( CURLE_OK != curl_global_init(CURL_GLOBAL_DEFAULT) )
     curl_ready = TRUE;
 
     /*********
@@ -758,7 +774,7 @@ test_vfd_open(void)
      *********/
 
     VFD_OPEN_VERIFY_NULL( "default _property list_ is not allowed",
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
+            url_text_public,
             H5F_ACC_RDONLY, H5P_DEFAULT, MAXADDR )
 
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
@@ -766,10 +782,11 @@ test_vfd_open(void)
 
     VFD_OPEN_VERIFY_NULL(
             "generic file access property list is not allowed",
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
-             H5F_ACC_RDONLY, H5P_DEFAULT, MAXADDR )
+            url_text_public,
+            H5F_ACC_RDONLY, H5P_DEFAULT, MAXADDR )
 
-    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &ros3_fa),
+    JSVERIFY( SUCCEED, 
+              H5Pset_fapl_ros3(fapl_id, &anonymous_fa),
               "(sanity check) unable to set fapl" )
 
     /* filename must be valid
@@ -781,50 +798,47 @@ test_vfd_open(void)
 
     /* File must exist at given URL/URI */
     VFD_OPEN_VERIFY_NULL( "file must exist",
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/nonexistent.txt",
+            url_missing,
             H5F_ACC_RDWR, fapl_id, MAXADDR )
 
     /* only supported flag is "Read-Only"
      */
     VFD_OPEN_VERIFY_NULL( "read-write flag not supported",
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
+            url_text_public,
             H5F_ACC_RDWR, fapl_id, MAXADDR )
     VFD_OPEN_VERIFY_NULL( "truncate flag not supported",
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
+            url_text_public,
             H5F_ACC_TRUNC, fapl_id, MAXADDR )
     VFD_OPEN_VERIFY_NULL( "create flag not supported",
-            "http://minio.ad.hdfgroup.org/shakespeare/t8.shakespeare.txt",
+            url_text_public,
             H5F_ACC_CREAT, fapl_id, MAXADDR )
     VFD_OPEN_VERIFY_NULL( "EXCL flag not supported",
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
+            url_text_public,
             H5F_ACC_EXCL, fapl_id, MAXADDR )
 
     /* maxaddr limitations
      */
     VFD_OPEN_VERIFY_NULL( "MAXADDR cannot be 0 (caught in `H5FD_open()`)",
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
+            url_text_public,
             H5F_ACC_RDONLY, fapl_id, 0 )
 
     /* finally, show that a file can be opened 
      */
     fd = H5FDopen(
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/Poe_Raven.txt", 
+            url_text_public, 
             H5F_ACC_RDONLY, 
             fapl_id, 
             MAXADDR);
-    /* long/pointer conflation
-     * JSVERIFY_NOT( NULL,  fd, "this open should succeed!" )
-     */
     FAIL_IF( NULL == fd ) 
 
     /************
      * TEARDOWN *
      ************/
 
-    HDassert( SUCCEED == H5FDclose(fd) );
+    FAIL_IF( FAIL == H5FDclose(fd) )
     fd = NULL;
 
-    HDassert( SUCCEED == H5Pclose(fapl_id) );
+    FAIL_IF( FAIL == H5Pclose(fapl_id) )
     fapl_id = -1;
 
     curl_global_cleanup();
@@ -893,13 +907,6 @@ test_eof_eoa(void)
     H5FD_t           *fd_shakespeare  = NULL;
     hbool_t           curl_ready = FALSE;
     hid_t             fapl_id    = -1;
-    H5FD_ros3_fapl_t  ros3_fa    = {
-        H5FD__CURR_ROS3_FAPL_T_VERSION, /* version      */
-        TRUE,                           /* authenticate */
-        "us-east-1",                    /* aws_region   */
-        "HDFGROUP0",                    /* secret_id    */
-        "HDFGROUP0",                    /* secret_key   */
-    };
 
 
 
@@ -909,15 +916,15 @@ test_eof_eoa(void)
      * SETUP *
      *********/
     
-    HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
+    FAIL_IF( CURLE_OK != curl_global_init(CURL_GLOBAL_DEFAULT) )
     curl_ready = TRUE;
 
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
     FAIL_IF( 0 > fapl_id )
-    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &ros3_fa), NULL )
+    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &restricted_access_fa), NULL )
 
     fd_shakespeare = H5FDopen(
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
+             url_text_restricted,
              H5F_ACC_RDONLY,
              fapl_id,
              HADDR_UNDEF);
@@ -965,9 +972,9 @@ test_eof_eoa(void)
      * TEARDOWN *
      ************/
 
-    HDassert( SUCCEED == H5FDclose(fd_shakespeare) );
+    FAIL_IF( FAIL == H5FDclose(fd_shakespeare) )
 
-    HDassert( SUCCEED == H5Pclose(fapl_id) );
+    FAIL_IF( FAIL == H5Pclose(fapl_id) )
     fapl_id = -1;
 
     curl_global_cleanup();
@@ -1035,13 +1042,6 @@ test_read(void)
     hid_t             dxpl_id          = -1;
     H5FD_dxpl_type_t  dxpl_type_raw    = H5FD_RAWDATA_DXPL;
     H5P_genplist_t   *dxpl_plist       = NULL;
-    H5FD_ros3_fapl_t  ros3_fa          = {
-        H5FD__CURR_ROS3_FAPL_T_VERSION, /* version       */
-        TRUE,                           /* authenticate  */
-        "us-east-1",                    /* aws_region    */
-        "HDFGROUP0",                    /* secret_id     */
-        "HDFGROUP0",                    /* secret_key    */
-    };
 
 
 
@@ -1051,9 +1051,7 @@ test_read(void)
      * SETUP *
      *********/
 
-    /* initialize CURL
-     */
-    HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
+    FAIL_IF( CURLE_OK != curl_global_init(CURL_GLOBAL_DEFAULT) )
     curl_ready = TRUE;
 
     /* create ROS3 fapl 
@@ -1061,7 +1059,7 @@ test_read(void)
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
     FAIL_IF( fapl_id < 0 )
     JSVERIFY( SUCCEED, 
-              H5Pset_fapl_ros3(fapl_id, &ros3_fa),
+              H5Pset_fapl_ros3(fapl_id, &restricted_access_fa),
               "problem configuring fapl" )
 
     /* create suitable dxpl
@@ -1084,7 +1082,7 @@ test_read(void)
         H5FD_dxpl_type_t  test_dxpl_type = H5FD_METADATA_DXPL;
 
         test_plist = (H5P_genplist_t *)H5I_object(dxpl_id); 
-        HDassert(test_plist);
+        FAIL_IF( test_plist == NULL )
 
         JSVERIFY( SUCCEED,
                   H5P_get(test_plist, 
@@ -1101,15 +1099,15 @@ test_read(void)
 
     /* open two separate files 
      */
-    file_raven = H5FDopen(
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/Poe_Raven.txt",
+    file_raven = H5FDopen( /* will open with "authenticating" fapl */
+            url_text_public,
             H5F_ACC_RDONLY,
             fapl_id,
             HADDR_UNDEF); /* Demonstrate success with "automatic" value */
     FAIL_IF( NULL == file_raven )
 
     file_shakespeare = H5FDopen(
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
+            url_text_restricted,
             H5F_ACC_RDONLY,
             fapl_id,
             MAXADDR);
@@ -1228,16 +1226,16 @@ test_read(void)
      * TEARDOWN *
      ************/
 
-    HDassert( SUCCEED == H5FDclose(file_raven) );
+    FAIL_IF( FAIL == H5FDclose(file_raven) )
     file_raven = NULL;
 
-    HDassert( SUCCEED == H5FDclose(file_shakespeare) );
+    FAIL_IF( FAIL == H5FDclose(file_shakespeare) )
     file_shakespeare = NULL;
 
-    HDassert( SUCCEED == H5Pclose(fapl_id) );
+    FAIL_IF( FAIL == H5Pclose(fapl_id) )
     fapl_id = -1;
 
-    HDassert( SUCCEED == H5Pclose(dxpl_id) );
+    FAIL_IF( FAIL == H5Pclose(dxpl_id) )
     dxpl_id = -1;
 
     curl_global_cleanup();
@@ -1311,13 +1309,6 @@ test_noops_and_autofails(void)
     H5P_genplist_t   *dxpl_plist = NULL;
     H5FD_dxpl_type_t  dxpl_type  = H5FD_RAWDATA_DXPL;
     const char        data[36]   = "The Force shall be with you, always";
-    H5FD_ros3_fapl_t  ros3_fa    = {
-        H5FD__CURR_ROS3_FAPL_T_VERSION, /* version       */
-        TRUE,                           /* authenticate  */
-        "us-east-1",                    /* aws_region    */
-        "HDFGROUP0",                    /* secret_id     */
-        "HDFGROUP0",                    /* secret_key    */
-    };
 
 
 
@@ -1327,16 +1318,14 @@ test_noops_and_autofails(void)
      * SETUP *
      *********/
 
-    /* prepare CURL 
-     */
-    HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
+    FAIL_IF( CURLE_OK != curl_global_init(CURL_GLOBAL_DEFAULT) )
     curl_ready = TRUE;
 
     /* create ROS3 fapl 
      */
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
     FAIL_IF( fapl_id < 0 )
-    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &ros3_fa), NULL )
+    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &anonymous_fa), NULL )
 
     /* create suitable dxpl
      */
@@ -1351,7 +1340,7 @@ test_noops_and_autofails(void)
     /* open file
      */
     file = H5FDopen(
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/Poe_Raven.txt",
+            url_text_public,
             H5F_ACC_RDONLY,
             fapl_id,
             HADDR_UNDEF);
@@ -1400,13 +1389,13 @@ test_noops_and_autofails(void)
      * TEARDOWN *
      ************/
 
-    HDassert( SUCCEED == H5FDclose(file) );
+    FAIL_IF( FAIL == H5FDclose(file) )
     file = NULL;
 
-    HDassert( SUCCEED == H5Pclose(dxpl_id) );
+    FAIL_IF( FAIL == H5Pclose(dxpl_id) )
     dxpl_id = -1;
 
-    HDassert( SUCCEED == H5Pclose(fapl_id) );
+    FAIL_IF( FAIL == H5Pclose(fapl_id) )
     fapl_id = -1;
 
     curl_global_cleanup();
@@ -1476,13 +1465,6 @@ test_cmp(void)
     H5FD_t           *fd_raven_2 = NULL;
     hbool_t           curl_ready = FALSE;
     hid_t             fapl_id    = -1;
-    H5FD_ros3_fapl_t  ros3_fa    = {
-        H5FD__CURR_ROS3_FAPL_T_VERSION, /* version      */
-        TRUE,                           /* authenticate */
-        "us-east-1",                    /* aws_region   */
-        "HDFGROUP0",                    /* secret_id    */
-        "HDFGROUP0",                    /* secret_key   */
-    };
 
 
 
@@ -1492,29 +1474,29 @@ test_cmp(void)
      * SETUP *
      *********/
 
-    HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
+    FAIL_IF( CURLE_OK != curl_global_init(CURL_GLOBAL_DEFAULT) )
     curl_ready = TRUE;
 
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
     FAIL_IF( 0 > fapl_id )
-    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &ros3_fa), NULL )
+    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &restricted_access_fa), NULL )
 
     fd_raven = H5FDopen(
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/Poe_Raven.txt",
+            url_text_public,
             H5F_ACC_RDONLY,
             fapl_id,
             HADDR_UNDEF);
     FAIL_IF( NULL == fd_raven )
 
     fd_shakes = H5FDopen(
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/t8.shakespeare.txt",
+            url_text_restricted,
             H5F_ACC_RDONLY,
             fapl_id,
             HADDR_UNDEF);
     FAIL_IF( NULL == fd_shakes )
 
     fd_raven_2 = H5FDopen(
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/Poe_Raven.txt",
+            url_text_public,
             H5F_ACC_RDONLY,
             fapl_id,
             HADDR_UNDEF);
@@ -1532,11 +1514,13 @@ test_cmp(void)
      * TEARDOWN *
      ************/
 
-    HDassert( SUCCEED == H5FDclose(fd_raven) );
-    HDassert( SUCCEED == H5FDclose(fd_shakes) );
-    HDassert( SUCCEED == H5FDclose(fd_raven_2) ); 
-
-    HDassert( SUCCEED == H5Pclose(fapl_id) );
+    FAIL_IF( FAIL == H5FDclose(fd_raven) )
+    fd_raven = NULL;
+    FAIL_IF( FAIL == H5FDclose(fd_shakes) )
+    fd_shakes = NULL;
+    FAIL_IF( FAIL == H5FDclose(fd_raven_2) )
+    fd_raven_2 = NULL;
+    FAIL_IF( FAIL == H5Pclose(fapl_id) )
     fapl_id = -1;
 
     curl_global_cleanup();
@@ -1550,10 +1534,10 @@ error:
      * CLEANUP *
      ***********/
 
-    if (fd_raven)           { (void)H5FDclose(fd_raven);   }
-    if (fd_raven_2)         { (void)H5FDclose(fd_raven_2); }
-    if (fd_shakes)          { (void)H5FDclose(fd_shakes);  }
-    if (TRUE == curl_ready) { curl_global_cleanup(); }
+    if (fd_raven   != NULL)  (void)H5FDclose(fd_raven);
+    if (fd_raven_2 != NULL)  (void)H5FDclose(fd_raven_2);
+    if (fd_shakes  != NULL)  (void)H5FDclose(fd_shakes);
+    if (TRUE == curl_ready)  curl_global_cleanup();
     if (fapl_id >= 0) { 
         H5E_BEGIN_TRY {
             (void)H5Pclose(fapl_id);
@@ -1601,13 +1585,6 @@ test_H5F_integration(void)
     hid_t             file       = -1;
     hbool_t           curl_ready = FALSE;
     hid_t             fapl_id    = -1;
-    H5FD_ros3_fapl_t  ros3_fa    = {
-        H5FD__CURR_ROS3_FAPL_T_VERSION, /* version       */
-        TRUE,                           /* authenticate  */
-        "us-east-1",                    /* aws_region    */
-        "HDFGROUP0",                    /* secret_id     */
-        "HDFGROUP0",                    /* secret_key    */
-    };
 
 
 
@@ -1617,12 +1594,12 @@ test_H5F_integration(void)
      * SETUP *
      *********/
 
-    HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
+    FAIL_IF( CURLE_OK != curl_global_init(CURL_GLOBAL_DEFAULT) )
     curl_ready = TRUE;
 
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
     FAIL_IF( 0 > fapl_id )
-    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &ros3_fa), NULL )
+    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &restricted_access_fa), NULL )
 
     /*********
      * TESTS *
@@ -1632,7 +1609,7 @@ test_H5F_integration(void)
      */
     H5E_BEGIN_TRY {
         FAIL_IF( 0 <= H5Fopen(
-                      "http://minio.ad.hdfgroup.org:9000/shakespeare/t.h5",
+                      url_h5_public,
                       H5F_ACC_RDWR,
                       fapl_id) )
     } H5E_END_TRY;
@@ -1641,7 +1618,7 @@ test_H5F_integration(void)
      */
     H5E_BEGIN_TRY {
         FAIL_IF( 0 <= H5Fcreate(
-                      "http://minio.ad.hdfgroup.org:9000/shakespeare/nope.h5",
+                      url_missing,
                       H5F_ACC_RDONLY,
                       H5P_DEFAULT,
                       fapl_id) )
@@ -1650,7 +1627,7 @@ test_H5F_integration(void)
     /* Successful open.
      */
     file = H5Fopen(
-            "http://minio.ad.hdfgroup.org:9000/shakespeare/t.h5",
+            url_h5_public,
             H5F_ACC_RDONLY,
             fapl_id);
     FAIL_IF( file < 0 )
@@ -1659,10 +1636,10 @@ test_H5F_integration(void)
      * TEARDOWN *
      ************/
 
-    HDassert( SUCCEED == H5Fclose(file) );
+    FAIL_IF( FAIL == H5Fclose(file) )
     file = -1;
 
-    HDassert( SUCCEED == H5Pclose(fapl_id) );
+    FAIL_IF( FAIL == H5Pclose(fapl_id) )
     fapl_id = -1;
 
     curl_global_cleanup();
@@ -1709,6 +1686,55 @@ int
 main(void)
 {
     int nerrors = 0;
+
+    /************************
+     * initialize test urls *
+     ************************/
+
+    if (S3_TEST_MAX_URL_SIZE < snprintf(
+            url_text_restricted, 
+            (size_t)S3_TEST_MAX_URL_SIZE,
+            "%s/%s", 
+            (const char *)S3_TEST_BUCKET_URL, 
+            (const char *)S3_TEST_RESOURCE_TEXT_RESTRICTED))
+    {
+        HDprintf("* ros3 setup failed (text_restricted) ! *\n");
+        return 1;
+    }
+    if (S3_TEST_MAX_URL_SIZE < snprintf(
+            url_text_public,
+            (size_t)S3_TEST_MAX_URL_SIZE,
+            "%s/%s",
+            (const char *)S3_TEST_BUCKET_URL,
+            (const char *)S3_TEST_RESOURCE_TEXT_PUBLIC))
+    {
+        HDprintf("* ros3 setup failed (text_public) ! *\n");
+        return 1;
+    }
+    if (S3_TEST_MAX_URL_SIZE < snprintf(
+            url_h5_public,
+            (size_t)S3_TEST_MAX_URL_SIZE,
+            "%s/%s",
+            (const char *)S3_TEST_BUCKET_URL,
+            (const char *)S3_TEST_RESOURCE_H5_PUBLIC))
+    {
+        HDprintf("* ros3 setup failed (h5_public) ! *\n");
+        return 1;
+    }
+    if (S3_TEST_MAX_URL_SIZE < snprintf(
+            url_missing,
+            S3_TEST_MAX_URL_SIZE,
+            "%s/%s",
+            (const char *)S3_TEST_BUCKET_URL,
+            (const char *)S3_TEST_RESOURCE_MISSING))
+    {
+        HDprintf("* ros3 setup failed (missing) ! *\n");
+        return 1;
+    }
+
+    /******************
+     * commence tests *
+     ******************/
 
     h5_reset();
 
