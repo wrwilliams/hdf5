@@ -837,6 +837,16 @@ test_basic_datatype_operation(void)
     /* H5Tcommit */
     if (H5Tcommit2(fid, NATIVE_VOL_TEST_DATATYPE_NAME, tid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0)
         TEST_ERROR;
+
+    /* H5Tflush */
+    if (H5Tflush(tid) < 0)
+        TEST_ERROR;
+
+    /* H5Trefresh */
+    if (H5Trefresh(tid) < 0)
+        TEST_ERROR;
+
+    /* H5Tclose */
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
