@@ -1653,7 +1653,6 @@ test_attr_dtype_shared(hid_t fapl)
     if(empty_filesize < 0)
         TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
 
-
     /* Re-open file */
     file_id = H5Fopen(FILENAME, H5F_ACC_RDWR, fapl);
     CHECK(file_id, FAIL, "H5Fopen");
@@ -4062,7 +4061,6 @@ test_attr_deprec(hid_t fcpl, hid_t fapl)
     /* Close attribute */
     ret = H5Aclose(attr);
     CHECK(ret, FAIL, "H5Aclose");
-
 
     /* Close dataspaces */
     ret = H5Sclose(sid);
