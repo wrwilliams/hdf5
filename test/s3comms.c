@@ -23,16 +23,6 @@
 #include "H5FDs3comms.h"
 #include "H5MMprivate.h" /* memory management */
 
-/*
-#define S3COMMS_TEST_S3_BUCKET_URL "http://minio.ad.hdfgroup.org:9000/shakespeare"
-*/
-#define S3COMMS_TEST_S3_BUCKET_URL "https://s3.us-east-2.amazonaws.com/hdf5ros3"
-#define S3COMMS_TEST_S3_REGION "us-east-2"
-#define S3COMMS_TEST_S3_ACCESS_ID "AKIAIMC3D3XLYXLN5COA"
-#define S3COMMS_TEST_S3_ACCESS_KEY "ugs5aVVnLFCErO/8uW14iWE3K5AgXMpsMlWneO/+"
-
-#define S3COMMS_TEST_RUN_TIMEOUT 0
-
 /*****************************************************************************
  *
  * FILE-LOCAL TESTING MACROS
@@ -369,6 +359,21 @@ if (strcmp((actual), (expected)) != 0) {       \
 } /* JSVERIFY_STR */
 
 #endif /* ifdef/else JSVERIFY_EXP_ACT */
+
+
+
+#define S3_TEST_BUCKET_URL "https://s3.us-east-2.amazonaws.com/hdf5ros3"
+#define S3_TEST_REGION "us-east-2"
+#define S3_TEST_ACCESS_ID "AKIAIMC3D3XLYXLN5COA"
+#define S3_TEST_ACCESS_KEY "ugs5aVVnLFCErO/8uW14iWE3K5AgXMpsMlWneO/+"
+
+#define S3_TEST_RESOURCE_TEXT_RESTRICTED "t8.shakespeare.txt"
+#define S3_TEST_RESOURCE_TEXT_PUBLIC "Poe_Raven.txt"
+#define S3_TEST_RESOURCE_H5_PUBLIC "GMODO-SVM01.h5"
+#define S3_TEST_RESOURCE_MISSING "missing.csv"
+
+#define S3_TEST_RUN_TIMEOUT 0 /* run tests that might hand */
+#define S3_TEST_MAX_URL_SIZE 256 /* char array size */
 
 
 
@@ -1502,16 +1507,14 @@ static herr_t
 test_s3r_open(void)
 {
 
-#define S3COMMS_TEST_ARR_SIZE 128
-
     /************************
      * test-local variables *
      ************************/
 
-    char           url_missing[S3COMMS_TEST_ARR_SIZE];
-    char           url_raven[S3COMMS_TEST_ARR_SIZE];
-    char           url_raven_badport[S3COMMS_TEST_ARR_SIZE];
-    char           url_shakespeare[S3COMMS_TEST_ARR_SIZE];
+    char           url_missing[S3_TEST_MAX_URL_SIZE];
+    char           url_raven[S3_TEST_MAX_URL_SIZE];
+    char           url_raven_badport[S3_TEST_MAX_URL_SIZE];
+    char           url_shakespeare[S3_TEST_MAX_URL_SIZE];
     unsigned char  signing_key[SHA256_DIGEST_LENGTH];
     struct tm     *now          = NULL;
     char           iso8601now[ISO8601_SIZE];
@@ -1527,31 +1530,31 @@ test_s3r_open(void)
      * PRE-TEST SETUP *
      ******************/
 
-    FAIL_IF( S3COMMS_TEST_ARR_SIZE < 
+    FAIL_IF( S3_TEST_MAX_URL_SIZE < 
              snprintf(url_shakespeare, 
-                      S3COMMS_TEST_ARR_SIZE,
+                      S3_TEST_MAX_URL_SIZE,
                       "%s/%s", 
-                      S3COMMS_TEST_S3_BUCKET_URL, 
-                      "t8.shakespeare.txt") );
+                      S3_TEST_BUCKET_URL, 
+                      S3_TEST_RESOURCE_TEXT_RESTRICTED) );
 
-    FAIL_IF( S3COMMS_TEST_ARR_SIZE <
+    FAIL_IF( S3_TEST_MAX_URL_SIZE <
              snprintf(url_missing,
-                      S3COMMS_TEST_ARR_SIZE,
+                      S3_TEST_MAX_URL_SIZE,
                       "%s/%s", 
-                      S3COMMS_TEST_S3_BUCKET_URL, 
+                      S3_TEST_BUCKET_URL, 
                       "missing.csv") );
 
-    FAIL_IF( S3COMMS_TEST_ARR_SIZE <
+    FAIL_IF( S3_TEST_MAX_URL_SIZE <
              snprintf(url_raven,
-                      S3COMMS_TEST_ARR_SIZE, 
+                      S3_TEST_MAX_URL_SIZE,
                       "%s/%s",
-                      S3COMMS_TEST_S3_BUCKET_URL,
+                      S3_TEST_BUCKET_URL, 
                       "Poe_Raven.txt") );
 
     /* Set given bucket url with invalid/inactive port number for badport.
      * Note, this sort of micro-management of parsed_url_t is not advised
      */
-    FAIL_IF( FAIL == H5FD_s3comms_parse_url(S3COMMS_TEST_S3_BUCKET_URL, &purl) )
+    FAIL_IF( FAIL == H5FD_s3comms_parse_url(S3_TEST_BUCKET_URL, &purl) )
     if (purl->port == NULL) {
         purl->port = H5MM_malloc(sizeof(char) * 5);
         FAIL_IF( purl->port == NULL );
@@ -1561,9 +1564,9 @@ test_s3r_open(void)
     } else {
         FAIL_IF( 5 < snprintf(purl->port, 5, "1234") )
     }
-    FAIL_IF( S3COMMS_TEST_ARR_SIZE < 
+    FAIL_IF( S3_TEST_MAX_URL_SIZE < 
              snprintf(url_raven_badport, 
-                      S3COMMS_TEST_ARR_SIZE,
+                      S3_TEST_MAX_URL_SIZE,
                       "%s://%s:%s/%s",
                       purl->scheme,
                       purl->host,
@@ -1584,8 +1587,8 @@ test_s3r_open(void)
     HDassert( SUCCEED ==
               H5FD_s3comms_signing_key(
                       signing_key, 
-                      (const char *)S3COMMS_TEST_S3_ACCESS_KEY,
-                      (const char *)S3COMMS_TEST_S3_REGION,
+                      (const char *)S3_TEST_ACCESS_KEY,
+                      (const char *)S3_TEST_REGION,
                       (const char *)iso8601now) );
 
     /*************************
@@ -1601,8 +1604,8 @@ test_s3r_open(void)
      */
     handle = H5FD_s3comms_s3r_open(
              url_missing,
-             (const char *)S3COMMS_TEST_S3_REGION,
-             (const char *)S3COMMS_TEST_S3_ACCESS_ID,
+             (const char *)S3_TEST_REGION,
+             (const char *)S3_TEST_ACCESS_ID,
              (const unsigned char *)signing_key);
     FAIL_IF( handle != NULL );
 
@@ -1610,7 +1613,7 @@ test_s3r_open(void)
      * INACTIVE PORT  ON HOST *
      **************************/
 
-#if S3COMMS_TEST_RUN_TIMEOUT
+#if S3_TEST_RUN_TIMEOUT
 printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
     handle = H5FD_s3comms_s3r_open(url_raven_badport, NULL, NULL, NULL);
     FAIL_IF( handle != NULL );
@@ -1629,7 +1632,7 @@ printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
      */
     handle = H5FD_s3comms_s3r_open(
              url_shakespeare,
-             (const char *)S3COMMS_TEST_S3_REGION,
+             (const char *)S3_TEST_REGION,
              "I_MADE_UP_MY_ID",
              (const unsigned char *)signing_key);
     FAIL_IF( handle != NULL );
@@ -1638,8 +1641,8 @@ printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
      */
     handle = H5FD_s3comms_s3r_open(
              url_shakespeare,
-             (const char *)S3COMMS_TEST_S3_REGION,
-             (const char *)S3COMMS_TEST_S3_ACCESS_ID,
+             (const char *)S3_TEST_REGION,
+             (const char *)S3_TEST_ACCESS_ID,
              (const unsigned char *)EMPTY_SHA256);
     FAIL_IF( handle != NULL );
 
@@ -1661,8 +1664,8 @@ printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
      */
     handle = H5FD_s3comms_s3r_open(
                      url_shakespeare,
-                     (const char *)S3COMMS_TEST_S3_REGION,
-                     (const char *)S3COMMS_TEST_S3_ACCESS_ID,
+                     (const char *)S3_TEST_REGION,
+                     (const char *)S3_TEST_ACCESS_ID,
                      (const unsigned char *)signing_key);
     FAIL_IF( handle == NULL );
     JSVERIFY( 5458199, handle->filesize, NULL )
@@ -1675,8 +1678,8 @@ printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
      */
     handle = H5FD_s3comms_s3r_open(
              url_raven,
-             (const char *)S3COMMS_TEST_S3_REGION,
-             (const char *)S3COMMS_TEST_S3_ACCESS_ID,
+             (const char *)S3_TEST_REGION,
+             (const char *)S3_TEST_ACCESS_ID,
              (const unsigned char *)signing_key);
     FAIL_IF( handle == NULL );
     JSVERIFY( 6464, handle->filesize, NULL )
@@ -1689,8 +1692,8 @@ printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
      */
     handle = H5FD_s3comms_s3r_open(
                      url_shakespeare,
-                     (const char *)S3COMMS_TEST_S3_REGION,
-                     (const char *)S3COMMS_TEST_S3_ACCESS_ID,
+                     (const char *)S3_TEST_REGION,
+                     (const char *)S3_TEST_ACCESS_ID,
                      (const unsigned char *)signing_key);
     FAIL_IF( handle == NULL );
     JSVERIFY( 5458199, handle->filesize, NULL )
@@ -1722,7 +1725,6 @@ error:
         curl_global_cleanup();
 
     return -1;
-#undef S3COMMS_TEST_ARR_SIZE
 } /* test_s3r_open */
 
 
@@ -1755,7 +1757,7 @@ test_s3r_read(void)
      * test-local variables *
      ************************/
 
-    char           url_raven[S3COMMS_TEST_BUFFER_SIZE];
+    char           url_raven[S3_TEST_MAX_URL_SIZE];
     char           buffer[S3COMMS_TEST_BUFFER_SIZE];
     char           buffer2[S3COMMS_TEST_BUFFER_SIZE];
     s3r_t         *handle     = NULL;
@@ -1772,11 +1774,11 @@ test_s3r_read(void)
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl_ready = TRUE;
-    FAIL_IF( S3COMMS_TEST_BUFFER_SIZE < 
+    FAIL_IF( S3_TEST_MAX_URL_SIZE < 
              snprintf(url_raven, 
-                      S3COMMS_TEST_BUFFER_SIZE,
+                      S3_TEST_MAX_URL_SIZE,
                       "%s/%s", 
-                      S3COMMS_TEST_S3_BUCKET_URL, 
+                      S3_TEST_BUCKET_URL, 
                       "Poe_Raven.txt") );
 
     for (i = 0; i < S3COMMS_TEST_BUFFER_SIZE; i++) 
