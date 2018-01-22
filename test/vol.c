@@ -596,7 +596,9 @@ static herr_t
 test_basic_attribute_operation(void)
 {
     hid_t fid       = H5I_INVALID_HID;
+    hid_t gid       = H5I_INVALID_HID;
     hid_t aid       = H5I_INVALID_HID;
+    hid_t aid_name  = H5I_INVALID_HID;
     hid_t sid       = H5I_INVALID_HID;
 
     hsize_t dims    = 1;
@@ -608,14 +610,14 @@ test_basic_attribute_operation(void)
 
     if ((fid = H5Fcreate(NATIVE_VOL_TEST_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0)
         TEST_ERROR;
-
-    /* H5Acreate */
+    if ((gid = H5Gcreate2(fid, NATIVE_VOL_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+        TEST_ERROR;
     dims = 1;
     if ((sid = H5Screate_simple(1, &dims, &dims)) < 0)
         TEST_ERROR;
+
+    /* H5Acreate */
     if ((aid = H5Acreate2(fid, NATIVE_VOL_TEST_ATTRIBUTE_NAME, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
-        TEST_ERROR;
-    if (H5Sclose(sid) < 0)
         TEST_ERROR;
 
     /* H5Awrite */
@@ -642,6 +644,21 @@ test_basic_attribute_operation(void)
     if (H5Adelete(fid, NATIVE_VOL_TEST_ATTRIBUTE_NAME) < 0)
         TEST_ERROR;
 
+    /* H5Acreate_by_name */
+    if ((aid_name = H5Acreate_by_name(fid, NATIVE_VOL_TEST_GROUP_NAME, NATIVE_VOL_TEST_ATTRIBUTE_NAME, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+        TEST_ERROR;
+    /* H5Aclose */
+    if (H5Aclose(aid_name) < 0)
+        TEST_ERROR;
+
+    /* H5Adelete_by_name */
+    if (H5Adelete_by_name(fid, NATIVE_VOL_TEST_GROUP_NAME, NATIVE_VOL_TEST_ATTRIBUTE_NAME, H5P_DEFAULT) < 0)
+        TEST_ERROR;
+
+    if (H5Sclose(sid) < 0)
+        TEST_ERROR;
+    if (H5Gclose(gid) < 0)
+        TEST_ERROR;
     if (H5Fclose(fid) < 0)
         TEST_ERROR;
 
@@ -653,8 +670,10 @@ test_basic_attribute_operation(void)
 error:
     H5E_BEGIN_TRY {
         H5Fclose(fid);
-        H5Aclose(aid);
+        H5Gclose(gid);
         H5Sclose(sid);
+        H5Aclose(aid);
+        H5Aclose(aid_name);
     } H5E_END_TRY;
 
     return FAIL;
