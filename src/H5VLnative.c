@@ -55,6 +55,7 @@ static hid_t H5VL_NATIVE_g = 0;
 
 /* Prototypes */
 static H5F_t *H5VL_native_get_file(void *obj, H5I_type_t type);
+static herr_t H5VL__native_term(void);
 
 /* Atrribute callbacks */
 static void *H5VL_native_attr_create(void *obj, H5VL_loc_params_t loc_params, const char *attr_name, hid_t acpl_id, hid_t aapl_id, hid_t dxpl_id, void **req);
@@ -124,8 +125,9 @@ static H5VL_class_t H5VL_native_g = {
     H5VL_NATIVE_VERSION,                            /* version      */
     H5VL_NATIVE_VALUE,                              /* value        */
     H5VL_NATIVE_NAME,                               /* name         */
-    NULL,                                           /* initialize   */
-    NULL,                                           /* terminate    */
+    /* XXX: init and term not set in the vol branch -- unclear why */
+    H5VL_native_init,                               /* initialize   */
+    H5VL__native_term,                              /* terminate    */
     (size_t)0,                                      /* fapl size    */
     NULL,                                           /* fapl copy    */
     NULL,                                           /* fapl free    */
@@ -195,30 +197,6 @@ static H5VL_class_t H5VL_native_g = {
     },
     NULL                                            /* optional     */
 };
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5VL__init_package
- *
- * Purpose:     Initializes any interface-specific data or routines.
- *
- * Return:      SUCCEED/FAILURE
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5VL__init_package(void)
-{
-    herr_t ret_value = SUCCEED;
-
-    FUNC_ENTER_STATIC
-
-    if (H5VL_native_init() < 0)
-        HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, FAIL, "unable to initialize native VOL driver")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5VL__init_package() */
 
 
 /*-------------------------------------------------------------------------
@@ -1018,7 +996,7 @@ H5VL_native_dataset_create(void *obj, H5VL_loc_params_t loc_params, const char *
     H5G_loc_t	    loc;                 /* Object location to insert dataset into */
     hid_t           type_id = H5I_INVALID_HID;
     hid_t           space_id = H5I_INVALID_HID;
-    hid_t           lcpl_id = H5I_INVALID_HID;;
+    hid_t           lcpl_id = H5I_INVALID_HID;
     H5D_t          *dset = NULL;        /* New dataset's info */
     const H5S_t    *space;              /* Dataspace for dataset */
     void           *ret_value;
@@ -2353,7 +2331,7 @@ done:
  */
 static herr_t
 H5VL_native_group_specific(void *obj, H5VL_group_specific_t specific_type, 
-                             hid_t dxpl_id, void H5_ATTR_UNUSED **req, va_list arguments)
+                             hid_t H5_ATTR_UNUSED dxpl_id, void H5_ATTR_UNUSED **req, va_list arguments)
 {
     H5G_t       *grp = (H5G_t *)obj;
     herr_t       ret_value = SUCCEED;    /* Return value */
@@ -3565,7 +3543,7 @@ done:
  */
 static herr_t
 H5VL_native_datatype_specific(void *obj, H5VL_datatype_specific_t specific_type, 
-                             hid_t dxpl_id, void H5_ATTR_UNUSED **req, va_list arguments)
+                             hid_t H5_ATTR_UNUSED dxpl_id, void H5_ATTR_UNUSED **req, va_list arguments)
 {
     H5T_t       *dt = (H5T_t *)obj;
     herr_t       ret_value = SUCCEED;    /* Return value */
