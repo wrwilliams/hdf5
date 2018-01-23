@@ -1841,7 +1841,7 @@ H5Tlock(hid_t type_id)
     H5TRACE1("e", "i", type_id);
 
     /* Check args */
-    if(NULL == (dt = (H5T_t *)H5I_object_verify(type_id,H5I_DATATYPE)))
+    if(NULL == (dt = (H5T_t *)H5I_object_verify(type_id, H5I_DATATYPE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype")
     if(H5T_STATE_NAMED == dt->shared->state || H5T_STATE_OPEN == dt->shared->state)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unable to lock named datatype")
@@ -3436,9 +3436,9 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5T_lock (H5T_t *dt, hbool_t immutable)
+H5T_lock(H5T_t *dt, hbool_t immutable)
 {
-    herr_t ret_value=SUCCEED;   /* Return value */
+    herr_t ret_value = SUCCEED;   /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
@@ -3449,7 +3449,8 @@ H5T_lock (H5T_t *dt, hbool_t immutable)
             dt->shared->state = immutable ? H5T_STATE_IMMUTABLE : H5T_STATE_RDONLY;
             break;
         case H5T_STATE_RDONLY:
-            if (immutable) dt->shared->state = H5T_STATE_IMMUTABLE;
+            if (immutable)
+                dt->shared->state = H5T_STATE_IMMUTABLE;
             break;
         case H5T_STATE_IMMUTABLE:
         case H5T_STATE_NAMED:
