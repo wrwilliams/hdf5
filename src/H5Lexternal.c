@@ -32,6 +32,8 @@
 #include "H5MMprivate.h"        /* Memory management                    */
 #include "H5Opublic.h"          /* File objects                         */
 #include "H5Pprivate.h"         /* Property lists                       */
+#include "H5VLprivate.h"        /* Virtual Object Layer                 */
+#include "H5VLnative.h"         /* Native VOL Driver                    */
 
 
 /****************/
@@ -251,6 +253,22 @@ H5L_extern_traverse(const char H5_ATTR_UNUSED *link_name, hid_t cur_group,
     /* Open the object referenced in the external file */
     if((ext_obj = H5O_open_name(&root_loc, obj_name, lapl_id, dxpl_id, FALSE)) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open object")
+
+    /* Get the native object from the ID created by the object header and create 
+     * a "VOL object" ID
+     */
+    {
+        void  *temp_obj = NULL;
+        H5I_type_t obj_type;
+
+        obj_type = H5I_get_type(ext_obj);
+        if(NULL == (temp_obj = H5I_remove(ext_obj)))
+            HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open object")
+
+        /* Get an atom for the datatype */
+        if((ext_obj = H5VL_native_register(obj_type, temp_obj, TRUE)) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register datatype")
+    }
 
     /* Set return value */
     ret_value = ext_obj;
