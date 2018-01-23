@@ -786,8 +786,8 @@ test_basic_link_operation(void)
         TEST_ERROR;
 
     /* H5Lmove */
-//    if (H5Lmove(fid, NATIVE_VOL_TEST_COPY_LINK_NAME, gid, NATIVE_VOL_TEST_MOVE_LINK_NAME, H5P_DEFAULT, H5P_DEFAULT) < 0)
-//        TEST_ERROR;
+    if (H5Lmove(fid, NATIVE_VOL_TEST_COPY_LINK_NAME, gid, NATIVE_VOL_TEST_MOVE_LINK_NAME, H5P_DEFAULT, H5P_DEFAULT) < 0)
+        TEST_ERROR;
 
     if (H5Fclose(fid) < 0)
         TEST_ERROR;
