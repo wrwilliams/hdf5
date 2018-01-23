@@ -1632,19 +1632,24 @@ done:
  *
  *-------------------------------------------------------------------------
  */
+/* XXX: This needs to go in the native VOL driver under 'optional' but I'm
+ *      goign to hack it for now.
+ */
 herr_t
 H5Fset_latest_format(hid_t file_id, hbool_t latest_format)
 {
-    H5F_t *f;                           /* File */
+    H5VL_object_t *obj;                 /* File as VOL object           */
+    H5F_t *f;                           /* File                         */
     unsigned latest_flags;              /* Latest format flags for file */
-    herr_t ret_value = SUCCEED;         /* Return value */
+    herr_t ret_value = SUCCEED;         /* Return value                 */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "ib", file_id, latest_format);
 
     /* Check args */
-    if (NULL == (f = (H5F_t *)H5I_object_verify(file_id, H5I_FILE)))
+    if (NULL == (obj = (H5VL_object_t *)H5I_object_verify(file_id, H5I_FILE)))
         HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "not a file ID")
+    f = (H5F_t *)(obj->vol_obj);
 
     /* Check if the value is changing */
     latest_flags = H5F_USE_LATEST_FLAGS(f, H5F_LATEST_ALL_FLAGS);

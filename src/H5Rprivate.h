@@ -48,7 +48,7 @@
 H5_DLL herr_t H5R_create(void *ref, H5G_loc_t *loc, const char *name,
     H5R_type_t ref_type, H5S_t *space, hid_t dxpl_id);
 H5_DLL H5S_t * H5R_get_region(H5F_t *file, hid_t dxpl_id, const void *_ref);
-H5_DLL ssize_t H5R_get_name(H5F_t *file, hid_t lapl_id, hid_t dxpl_id, hid_t id,
+H5_DLL ssize_t H5R_get_name(H5G_loc_t *loc, hid_t lapl_id, hid_t dxpl_id,
     H5R_type_t ref_type, const void *_ref, char *name, size_t size);
 H5_DLL herr_t H5R_get_obj_type(H5F_t *file, hid_t dxpl_id, H5R_type_t ref_type,
     const void *_ref, H5O_type_t *obj_type);

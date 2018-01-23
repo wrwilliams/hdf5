@@ -141,11 +141,11 @@ H5Dcreate2(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id,
     if (NULL == (plist = (H5P_genplist_t *)H5I_object(dcpl_id)))
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, H5I_INVALID_HID, "can't find object for ID")
 
-    /* get the location object */
+    /* Get the location object */
     if (NULL == (obj = (H5VL_object_t *)H5I_object(loc_id)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5I_INVALID_HID, "invalid location identifier")
 
-    /* set creation properties */
+    /* Set creation properties */
     if (H5P_set(plist, H5VL_PROP_DSET_TYPE_ID, &type_id) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, H5I_INVALID_HID, "can't set property value for datatype id")
     if (H5P_set(plist, H5VL_PROP_DSET_SPACE_ID, &space_id) < 0)

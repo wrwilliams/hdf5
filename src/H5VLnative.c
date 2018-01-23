@@ -1029,7 +1029,7 @@ H5VL_native_dataset_create(void *obj, H5VL_loc_params_t loc_params, const char *
     if (NULL == (plist = (H5P_genplist_t *)H5I_object(dcpl_id)))
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, NULL, "can't find object for ID")
 
-    /* get creation properties */
+    /* Get creation properties */
     if (H5P_get(plist, H5VL_PROP_DSET_TYPE_ID, &type_id) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get property value for datatype id")
     if (H5P_get(plist, H5VL_PROP_DSET_SPACE_ID, &space_id) < 0)
@@ -3064,8 +3064,7 @@ H5VL_native_object_get(void *obj, H5VL_loc_params_t loc_params, H5VL_object_get_
                 void        *ref       = va_arg (arguments, void *);
 
                 /* Get name */
-                /* XXX: enable when H5R_get_name is fixed up */
-//                if((*ret = H5R_get_name(&loc, H5P_DEFAULT, dxpl_id, ref_type, ref, name, size)) < 0)
+                if((*ret = H5R_get_name(&loc, H5P_DEFAULT, dxpl_id, ref_type, ref, name, size)) < 0)
                     HGOTO_ERROR(H5E_REFERENCE, H5E_CANTINIT, FAIL, "unable to determine object path")
                 break;
             }

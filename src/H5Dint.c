@@ -29,6 +29,7 @@
 #include "H5Iprivate.h"       /* IDs */
 #include "H5Lprivate.h"       /* Links */
 #include "H5MMprivate.h"      /* Memory management */
+#include "H5VLprivate.h"	/* Virtual Object Layer                 */
 
 
 /****************/
@@ -693,8 +694,9 @@ H5D__init_type(H5F_t *file, const H5D_t *dset, hid_t type_id, const H5T_t *type)
         if((dset->shared->type = H5T_copy(type, H5T_COPY_ALL)) == NULL)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTCOPY, FAIL, "can't copy datatype")
 
-    /* Convert a datatype (if committed) to a transient type if the committed datatype's file
-    location is different from the file location where the dataset will be created */
+        /* Convert a datatype (if committed) to a transient type if the committed datatype's file
+         * location is different from the file location where the dataset will be created.
+         */
         if(H5T_convert_committed_datatype(dset->shared->type, file) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't get shared datatype info")
 
@@ -708,9 +710,9 @@ H5D__init_type(H5F_t *file, const H5D_t *dset, hid_t type_id, const H5T_t *type)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "can't set latest version of datatype")
 
         /* Get a datatype ID for the dataset's datatype */
-    if((dset->shared->type_id = H5I_register(H5I_DATATYPE, dset->shared->type, FALSE)) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL, "unable to register type")
-    } /* end if */
+        if((dset->shared->type_id = H5I_register(H5I_DATATYPE, dset->shared->type, FALSE)) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL, "unable to register type")
+    }
     /* Not a custom datatype, just use it directly */
     else {
         if(H5I_inc_ref(type_id, FALSE) < 0)
@@ -719,7 +721,7 @@ H5D__init_type(H5F_t *file, const H5D_t *dset, hid_t type_id, const H5T_t *type)
         /* Use existing datatype */
         dset->shared->type_id = type_id;
         dset->shared->type = (H5T_t *)type; /* (Cast away const OK - QAK) */
-    } /* end else */
+    }
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2609,7 +2611,6 @@ H5D__vlen_get_buf_size(void H5_ATTR_UNUSED *elem, hid_t type_id, unsigned H5_ATT
     HDassert(H5I_DATATYPE == H5I_get_type(type_id));
 
     /* Check args */
-    /* XXX: H5VL? */
     if(NULL == (dt = (H5T_t *)H5I_object(type_id)))
         HGOTO_ERROR(H5E_DATASET, H5E_BADTYPE, FAIL, "not a datatype")
 

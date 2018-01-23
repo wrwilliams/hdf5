@@ -1841,9 +1841,9 @@ H5Tlock(hid_t type_id)
     H5TRACE1("e", "i", type_id);
 
     /* Check args */
-    if(NULL == (dt = (H5T_t *)H5I_object_verify(type_id,H5I_DATATYPE)))
+    if(NULL == (dt = (H5T_t *)H5I_object_verify(type_id, H5I_DATATYPE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype")
-    if(H5T_STATE_NAMED==dt->shared->state || H5T_STATE_OPEN==dt->shared->state)
+    if(H5T_STATE_NAMED == dt->shared->state || H5T_STATE_OPEN == dt->shared->state)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unable to lock named datatype")
 
     if(H5T_lock(dt, TRUE) < 0)
@@ -3436,9 +3436,9 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5T_lock (H5T_t *dt, hbool_t immutable)
+H5T_lock(H5T_t *dt, hbool_t immutable)
 {
-    herr_t ret_value=SUCCEED;   /* Return value */
+    herr_t ret_value = SUCCEED;   /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
@@ -3449,7 +3449,8 @@ H5T_lock (H5T_t *dt, hbool_t immutable)
             dt->shared->state = immutable ? H5T_STATE_IMMUTABLE : H5T_STATE_RDONLY;
             break;
         case H5T_STATE_RDONLY:
-            if (immutable) dt->shared->state = H5T_STATE_IMMUTABLE;
+            if (immutable)
+                dt->shared->state = H5T_STATE_IMMUTABLE;
             break;
         case H5T_STATE_IMMUTABLE:
         case H5T_STATE_NAMED:
@@ -5555,22 +5556,24 @@ H5T_patch_vlen_file(H5T_t *dt, H5F_t *f)
 herr_t
 H5Tflush(hid_t type_id)
 {
-    H5VL_object_t  *dt;                     /* Group for this operation     */
+    H5T_t          *dt;                     /* Group for this operation     */
     herr_t          ret_value = SUCCEED;    /* Return value                 */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "i", type_id);
 
     /* Check args */
-    if (NULL == (dt = (H5VL_object_t *)H5I_object_verify(type_id, H5I_DATATYPE)))
+    if (NULL == (dt = (H5T_t *)H5I_object_verify(type_id, H5I_DATATYPE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype")
     if (!H5T_is_named(dt))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a committed datatype")
 
     /* Flush object's metadata to file */
-    if ((ret_value = H5VL_datatype_specific(dt->vol_obj, dt->vol_info->vol_cls, H5VL_DATATYPE_FLUSH, 
+    /* XXX: Make this prettier? */
+    if (dt->vol_obj)
+        if ((ret_value = H5VL_datatype_specific(dt->vol_obj->vol_obj, dt->vol_obj->vol_info->vol_cls, H5VL_DATATYPE_FLUSH, 
                                           H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, type_id)) < 0)
-        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTFLUSH, FAIL, "unable to flush datatype")
+            HGOTO_ERROR(H5E_INTERNAL, H5E_CANTFLUSH, FAIL, "unable to flush datatype")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -5592,22 +5595,24 @@ done:
 herr_t
 H5Trefresh(hid_t type_id)
 {
-    H5VL_object_t  *dt;                     /* Group for this operation     */
+    H5T_t          *dt;                     /* Group for this operation     */
     herr_t          ret_value = SUCCEED;    /* Return value                 */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "i", type_id);
 
     /* Check args */
-    if (NULL == (dt = (H5VL_object_t *)H5I_object_verify(type_id, H5I_DATATYPE)))
+    if (NULL == (dt = (H5T_t *)H5I_object_verify(type_id, H5I_DATATYPE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype")
     if (!H5T_is_named(dt))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a committed datatype")
 
     /* Refresh the object's metadata */
-    if ((ret_value = H5VL_datatype_specific(dt->vol_obj, dt->vol_info->vol_cls, H5VL_DATATYPE_REFRESH, 
+    /* XXX: Make this prettier? */
+    if (dt->vol_obj)
+        if ((ret_value = H5VL_datatype_specific(dt->vol_obj->vol_obj, dt->vol_obj->vol_info->vol_cls, H5VL_DATATYPE_REFRESH, 
                                           H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, type_id)) < 0)
-        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTFLUSH, FAIL, "unable to refresh datatype")
+            HGOTO_ERROR(H5E_INTERNAL, H5E_CANTFLUSH, FAIL, "unable to refresh datatype")
 
 done:
     FUNC_LEAVE_API(ret_value)

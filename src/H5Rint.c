@@ -670,13 +670,12 @@ done:
     Internal routine to determine a name for the object referenced
  USAGE
     ssize_t H5R_get_name(f, dxpl_id, ref_type, ref, name, size)
-        H5F_t *f;       IN: Pointer to the file that the reference is pointing
-                            into
+        H5G_loc_t *loc; IN: Pointer to the location that the reference
+                            is pointing to
         hid_t lapl_id;  IN: LAPL to use for operation
         hid_t dxpl_id;  IN: DXPL to use for operation
-        hid_t id;       IN: Location ID given for reference
         H5R_type_t ref_type;    IN: Type of reference
-        void *ref;      IN: Reference to query.
+        void *_ref;     IN: Reference to query.
         char *name;     OUT: Buffer to place name of object referenced
         size_t size;    IN: Size of name buffer
 
@@ -692,9 +691,10 @@ done:
  REVISION LOG
 --------------------------------------------------------------------------*/
 ssize_t
-H5R_get_name(H5F_t *f, hid_t lapl_id, hid_t dxpl_id, hid_t id, H5R_type_t ref_type,
+H5R_get_name(H5G_loc_t *loc, hid_t lapl_id, hid_t dxpl_id, H5R_type_t ref_type,
     const void *_ref, char *name, size_t size)
 {
+    H5F_t *f;
     hid_t file_id = H5I_INVALID_HID;    /* ID for file that the reference is in */
     H5O_loc_t oloc;             /* Object location describing object for reference */
     ssize_t ret_value = -1;     /* Return value */
@@ -702,8 +702,11 @@ H5R_get_name(H5F_t *f, hid_t lapl_id, hid_t dxpl_id, hid_t id, H5R_type_t ref_ty
     FUNC_ENTER_NOAPI_NOINIT
 
     /* Check args */
-    HDassert(f);
     HDassert(_ref);
+
+    /* Get the file pointer from the entry */
+    f = loc->oloc->file;
+    HDassert(f);
 
     /* Initialize the object location */
     H5O_loc_reset(&oloc);
@@ -712,10 +715,8 @@ H5R_get_name(H5F_t *f, hid_t lapl_id, hid_t dxpl_id, hid_t id, H5R_type_t ref_ty
     /* Get address for reference */
     switch (ref_type) {
         case H5R_OBJECT:
-        {
             oloc.addr = *(const hobj_ref_t *)_ref;
             break;
-        }
 
         case H5R_DATASET_REGION:
         {
@@ -730,7 +731,7 @@ H5R_get_name(H5F_t *f, hid_t lapl_id, hid_t dxpl_id, hid_t id, H5R_type_t ref_ty
 
             /* Get the dataset region from the heap (allocate inside routine) */
             if ((buf = (uint8_t *)H5HG_read(oloc.file, dxpl_id, &hobjid, NULL, NULL)) == NULL)
-                HGOTO_ERROR(H5E_REFERENCE, H5E_READERROR, FAIL, "Unable to read dataset region information")
+                HGOTO_ERROR(H5E_REFERENCE, H5E_READERROR, (-1), "Unable to read dataset region information")
 
             /* Get the object oid for the dataset */
             p = buf;
@@ -738,29 +739,27 @@ H5R_get_name(H5F_t *f, hid_t lapl_id, hid_t dxpl_id, hid_t id, H5R_type_t ref_ty
 
             /* Free the buffer allocated in H5HG_read() */
             H5MM_xfree(buf);
-
-            break;
         }
+        break;
 
         case H5R_BADTYPE:
         case H5R_MAXTYPE:
         default:
-            HDassert("unknown reference type" && 0);
-            HGOTO_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL, "internal error (unknown reference type)")
-    } /* end switch */
+            HGOTO_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, (-1), "internal error (unknown reference type)")
+    }
 
     /* Retrieve file ID for name search */
-    if ((file_id = H5F_get_id(id, FALSE)) < 0)
-        HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, FAIL, "can't retrieve file ID")
+    if ((file_id = H5F_get_id(f, FALSE)) < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTGET, (-1), "can't get file ID")
 
     /* Get name, length, etc. */
     if ((ret_value = H5G_get_name_by_addr(file_id, lapl_id, dxpl_id, &oloc, name, size)) < 0)
-        HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, FAIL, "can't determine name")
+        HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, (-1), "can't determine name")
 
 done:
     /* Close file ID used for search */
     if (file_id > 0 && H5I_dec_ref(file_id) < 0)
-        HDONE_ERROR(H5E_REFERENCE, H5E_CANTDEC, FAIL, "can't decrement ref count of temp ID")
+        HDONE_ERROR(H5E_REFERENCE, H5E_CANTDEC, (-1), "can't decrement ref count of temp ID")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5R_get_name() */

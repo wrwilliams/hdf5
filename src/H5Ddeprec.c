@@ -39,6 +39,7 @@
 #include "H5Dpkg.h"		/* Datasets 				*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5Iprivate.h"		/* IDs			  		*/
+#include "H5VLprivate.h"	/* VOL plugins				*/
 
 
 /****************/
@@ -104,7 +105,7 @@ static herr_t H5D__extend(H5D_t *dataset, const hsize_t *size, hid_t dxpl_id);
  *				value.	The dataset should be closed when
  *				the caller is no longer interested in it.
  *
- *		Failure:	FAIL
+ *		Failure:	H5I_INVALID_HID
  *
  * Programmer:	Robb Matzke
  *		Wednesday, December  3, 1997
@@ -115,41 +116,55 @@ hid_t
 H5Dcreate1(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id,
 	  hid_t dcpl_id)
 {
-    H5G_loc_t	    loc;                /* Object location to insert dataset into */
-    H5D_t	   *dset = NULL;        /* New dataset's info */
-    const H5S_t    *space;              /* Dataspace for dataset */
-    hid_t           ret_value;          /* Return value */
+    void *dset = NULL;       /* dset token from VOL plugin */
+    H5VL_object_t *obj = NULL;        /* object token of loc_id */
+    H5VL_loc_params_t loc_params;
+    H5P_genplist_t *plist;            /* Property list pointer */
+    hid_t lcpl_id = H5P_LINK_CREATE_DEFAULT;
+    hid_t ret_value;          /* Return value */
 
-    FUNC_ENTER_API(FAIL)
+    FUNC_ENTER_API(H5I_INVALID_HID)
     H5TRACE5("i", "i*siii", loc_id, name, type_id, space_id, dcpl_id);
 
-    /* Check arguments */
-    if(H5G_loc(loc_id, &loc) < 0)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location ID")
-    if(!name || !*name)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name")
-    if(H5I_DATATYPE != H5I_get_type(type_id))
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype ID")
-    if(NULL == (space = (const H5S_t *)H5I_object_verify(space_id,H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace ID")
     if(H5P_DEFAULT == dcpl_id)
         dcpl_id = H5P_DATASET_CREATE_DEFAULT;
     else
         if(TRUE != H5P_isa_class(dcpl_id, H5P_DATASET_CREATE))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not dataset create property list ID")
+            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5I_INVALID_HID, "not dataset create property list ID")
 
-    /* Build and open the new dataset */
-    if(NULL == (dset = H5D__create_named(&loc, name, type_id, space, H5P_LINK_CREATE_DEFAULT, dcpl_id, H5P_DATASET_ACCESS_DEFAULT, H5AC_ind_read_dxpl_id)))
-	HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to create dataset")
+    /* Get the plist structure */
+    if(NULL == (plist = (H5P_genplist_t *)H5I_object(dcpl_id)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, H5I_INVALID_HID, "can't find object for ID")
 
-    /* Register the new dataset to get an ID for it */
-    if((ret_value = H5I_register(H5I_DATASET, dset, TRUE)) < 0)
-	HGOTO_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL, "unable to register dataset")
+    /* set creation properties */
+    if(H5P_set(plist, H5VL_PROP_DSET_TYPE_ID, &type_id) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, H5I_INVALID_HID, "can't set property value for datatype id")
+    if(H5P_set(plist, H5VL_PROP_DSET_SPACE_ID, &space_id) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, H5I_INVALID_HID, "can't set property value for space id")
+    if(H5P_set(plist, H5VL_PROP_DSET_LCPL_ID, &lcpl_id) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, H5I_INVALID_HID, "can't set property value for lcpl id")
+
+    /* Set location parameters */
+    loc_params.type = H5VL_OBJECT_BY_SELF;
+    loc_params.obj_type = H5I_get_type(loc_id);
+
+    /* get the location object */
+    if(NULL == (obj = H5VL_get_object(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5I_INVALID_HID, "invalid location identifier")
+
+    /* Create the dataset through the VOL */
+    if(NULL == (dset = H5VL_dataset_create(obj->vol_obj, loc_params, obj->vol_info->vol_cls, name, dcpl_id, 
+                                           H5P_DATASET_ACCESS_DEFAULT, H5AC_ind_read_dxpl_id, H5_REQUEST_NULL)))
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, H5I_INVALID_HID, "unable to create dataset")
+
+    /* Get an atom for the dataset */
+    if((ret_value = H5VL_register_id(H5I_DATASET, dset, obj->vol_info, TRUE)) < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, H5I_INVALID_HID, "unable to atomize dataset handle")
 
 done:
-    if(ret_value < 0)
-        if(dset && H5D_close(dset) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release dataset")
+    if (H5I_INVALID_HID == ret_value)
+        if(dset && H5VL_dataset_close(dset, obj->vol_info->vol_cls, H5AC_ind_read_dxpl_id, H5_REQUEST_NULL) < 0)
+            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, H5I_INVALID_HID, "unable to release dataset")
 
     FUNC_LEAVE_API(ret_value)
 } /* end H5Dcreate1() */
@@ -165,7 +180,7 @@ done:
  * Note:	Deprecated in favor of H5Dopen2
  *
  * Return:	Success:	A new dataset ID
- *		Failure:	FAIL
+ *		Failure:	H5I_INVALID_HID
  *
  * Programmer:	Robb Matzke
  *		Thursday, December  4, 1997
@@ -175,32 +190,40 @@ done:
 hid_t
 H5Dopen1(hid_t loc_id, const char *name)
 {
-    H5D_t       *dset = NULL;
-    H5G_loc_t   loc;                    /* Object location of group */
-    hid_t       ret_value;
+    void         *dset = NULL;       /* dset token from VOL plugin */
+    H5VL_object_t *obj = NULL;       /* object token of loc_id */
+    H5VL_loc_params_t loc_params;
+    hid_t        dxpl_id = H5AC_ind_read_dxpl_id; /* dxpl to use to open datset */
+    hid_t        ret_value;
 
-    FUNC_ENTER_API(FAIL)
+    FUNC_ENTER_API(H5I_INVALID_HID)
     H5TRACE2("i", "i*s", loc_id, name);
 
     /* Check args */
-    if(H5G_loc(loc_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(!name || !*name)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name")
 
-    /* Open the dataset */
-    if(NULL == (dset = H5D__open_name(&loc, name, H5P_DATASET_ACCESS_DEFAULT, H5AC_ind_read_dxpl_id)))
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTOPENOBJ, FAIL, "unable to open dataset")
+    /* Set location parameters */
+    loc_params.type = H5VL_OBJECT_BY_SELF;
+    loc_params.obj_type = H5I_get_type(loc_id);
 
-    /* Register an atom for the dataset */
-    if((ret_value = H5I_register(H5I_DATASET, dset, TRUE)) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "can't register dataset atom")
+    /* get the location object */
+    if(NULL == (obj = H5VL_get_object(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5I_INVALID_HID, "invalid location identifier")
+
+    /* Create the dataset through the VOL */
+    if(NULL == (dset = H5VL_dataset_open(obj->vol_obj, loc_params, obj->vol_info->vol_cls, name, 
+                                         H5P_DATASET_ACCESS_DEFAULT, dxpl_id, H5_REQUEST_NULL)))
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, H5I_INVALID_HID, "unable to create dataset")
+
+    /* Get an atom for the dataset */
+    if((ret_value = H5VL_register_id(H5I_DATASET, dset, obj->vol_info, TRUE)) < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, H5I_INVALID_HID, "unable to atomize dataset handle")
 
 done:
-    if(ret_value < 0)
-        if(dset && H5D_close(dset) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release dataset")
-
+    if (H5I_INVALID_HID == ret_value)
+        if(dset && H5VL_dataset_close(dset, obj->vol_info->vol_cls, dxpl_id, H5_REQUEST_NULL) < 0)
+            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, H5I_INVALID_HID, "unable to release dataset")
     FUNC_LEAVE_API(ret_value)
 } /* end H5Dopen1() */
 
@@ -231,10 +254,10 @@ H5Dextend(hid_t dset_id, const hsize_t size[])
     H5TRACE2("e", "i*h", dset_id, size);
 
     /* Check args */
-    if(NULL == (dset = (H5D_t *)H5I_object_verify(dset_id, H5I_DATASET)))
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
+    if(NULL == (dset = (H5D_t *)H5VL_object_verify(dset_id, H5I_DATASET)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
     if(!size)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no size specified")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no size specified")
 
     /* Increase size */
     if(H5D__extend(dset, size, H5AC_ind_read_dxpl_id) < 0)
@@ -357,7 +380,7 @@ H5D__extend(H5D_t *dataset, const hsize_t *size, hid_t dxpl_id)
             } /* end if */
         } /* end if */
 
-	/* Allocate space for the new parts of the dataset, if appropriate */
+        /* Allocate space for the new parts of the dataset, if appropriate */
         fill = &dataset->shared->dcpl_cache.fill;
         if(fill->alloc_time == H5D_ALLOC_TIME_EARLY) {
             H5D_io_info_t io_info;
