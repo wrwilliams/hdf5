@@ -18,7 +18,7 @@
  * Purpose: 
  *
  *     Provide read-only access to files hosted on Amazon's S3 service.
- *     Uses "s3comms" utility layer to interface with the S3 REST API.
+ *     Relies on "s3comms" utility layer to implement the AWS REST API.
  */
 
 /* This source code file is part of the H5FD driver module */
@@ -37,50 +37,39 @@
  */
 #define ROS3_DEBUG 0
 
-/* toggle stats collection
+/* toggle stats collection and reporting
  */
 #define ROS3_STATS 0
 
+/* The driver identification number, initialized at runtime
+ */
+static hid_t H5FD_ROS3_g = 0;
+
 #if ROS3_STATS
 
-/* TODO: mechanism to redirect stats output to file(s) */
-
+/* arbitrarily large value, such that any reasonable size read will be "less"
+ * than this value and set a true minimum
+ * not 0 because that may be a valid recorded minimum in degenerate cases
+ */
 #define ROS3_STATS_STARTING_MIN 0xfffffffful
 
-/* 2,1,10,16 -> "overflow" at 64MB for a single read */
+/* Configuration definitions for stats collection and breakdown
+ *
+ * 2^10 = 1024
+ *     Reads up to 1024 bytes (1 kB) fall in bin 0
+ * 2^(10+(1*16)) = 2^26 = 64MB
+ *     Reads of 64MB or greater fall in "overflow" bin[BIN_COUNT]
+ */
 #define ROS3_STATS_BASE         2
 #define ROS3_STATS_INTERVAL     1
 #define ROS3_STATS_START_POWER 10
-#define ROS3_STATS_BIN_COUNT   16
-/* first "bin" (bin[0]) spans size of 0 to
- * ROS3_STATS_BASE^ROS3_STATS_BIN_START_POWER - 1 bytes
- * And subsequent bins start at
- * ROS3_STATS_BASE^(ROS3_STATS_BIN_START_POWER + interval)
- * incrementing interval as appropriate
- *
- * BASE, INTERVAL, START_POWER
- * 2,    1,        10
- * bin0    0 <= size < 1024 (2^(10))
- * bin1 1024 <= size < 2048 (2^(10+1))
- * bin2 2048 <= size < 4096 (2^(10+2))
- * ...
- *
- * 10, 3, 1    
- * bin0     0 <= size <       10 (10^(1))
- * bin1    10 <= size <    10000 (10^(1+3))
- * bin2 10000 <= size < 10000000 (10^(1+6))
- * ...
- *
- * Overflow bin starts at (BASE ^ (START_POWER + (INTERVAL + BIN_COUNT)))
- * 2,1,10,20
- * overflow bin starts at 2^(10+(1*20)) -> 2^30 -> 1GB
- */
+#define ROS3_STATS_BIN_COUNT   16 /* MUST BE GREATER THAN 0 */
 
 
 /*
- * Given a "bin index" and a destination (unsigned long long), find the value
- * of the start of the next bin-- *`out_ptr` - 1 -> max size for bin `bin_i` 
- * Stores result at `out_ptr`, naturally.
+ * Calculate `BASE ^ (START_POWER + (INTERVAL * bin_i))`
+ * Stores result at `(unsigned long long *) out_ptr`.
+ * Used in computing boundaries between stats bins.
  */
 #define ROS3_STATS_POW(bin_i, out_ptr) {                       \
     unsigned long long donotshadowresult = 1;                  \
@@ -95,22 +84,51 @@
     *(out_ptr) = donotshadowresult;                            \
 }
 
-/* stats collection structure */
+/* array to hold pre-computed boundaries for stats bins
+ */
+static unsigned long long ros3_stats_boundaries[ROS3_STATS_BIN_COUNT];
+
+/***************************************************************************
+ *
+ * Structure: ros3_statsbin
+ *
+ * Purpose:
+ *
+ *     Structure for storing per-file ros3 VFD usage statistics.
+ *
+ *
+ *
+ * `count` (unsigned long long)
+ *
+ *     Number of reads with size in this bin's range.
+ *
+ * `bytes` (unsigned long long)
+ *
+ *     Total number of bytes read through this bin.
+ *
+ * `min` (unsigned long long)
+ *
+ *     Smallest read size in this bin.
+ *
+ * `max` (unsigned long long)
+ *
+ *     Largest read size in this bin.
+ *
+ *
+ *
+ * Programmer: Jacob Smith
+ *
+ * Changes: None
+ *
+ ***************************************************************************/
 typedef struct {
-    double             time;  /* total time spent reading in this bin */
-    unsigned long long bytes; /* total number of bytes read in this bin */
-    unsigned long long count; /* total reads in this bin */
-    unsigned long long min;   /* smallest read in this bin (size) */
-    unsigned long long max;   /* largest read in this bin (size) */
-    double             avg;   /* average size of reads in this bin (size) */
+    unsigned long long count;
+    unsigned long long bytes;
+    unsigned long long min;
+    unsigned long long max;
 } ros3_statsbin;
 
 #endif /* ROS3_STATS */
-
-
-
-/* The driver identification number, initialized at runtime */
-static hid_t H5FD_ROS3_g = 0;
 
 /***************************************************************************
  *
@@ -135,7 +153,7 @@ static hid_t H5FD_ROS3_g = 0;
  *
  * `fa` (H5FD_ros3_fapl_t)
  *
- *     Instance of H5FD_ros3_fapl_t containing the S3 configuration data 
+ *     Instance of `H5FD_ros3_fapl_t` containing the S3 configuration data 
  *     needed to "open" the HDF5 file.
  *
  * `eoa` (haddr_t)
@@ -149,9 +167,29 @@ static hid_t H5FD_ROS3_g = 0;
  *     Responsible for communicating with remote host and presenting file 
  *     contents as indistinguishable from a file on the local filesystem.
  *
+ * *** present only if ROS3_SATS is flagged to enable stats collection ***
+ *
+ * `meta` (ros3_statsbin[])
+ * `raw` (ros3_statsbin[])
+ *
+ *     Only present if ros3 stats collection is enabled.
+ *
+ *     Arrays of `ros3_statsbin` structures to record raw- and metadata reads.
+ *
+ *     Records count and size of reads performed by the VFD, and is used to
+ *     print formatted usage statistics to stdout upon VFD shutdown.
+ *
+ *     Reads of each raw- and metadata type are recorded in an individual bin
+ *     determined by the size of the read.  The last bin of each type is
+ *     reserved for "big" reads, with no defined upper bound.
+ *
+ * *** end ROS3_STATS ***
+ *
  *
  *
  * Programmer: Jacob Smith
+ *
+ * Changes: None.
  *
  ***************************************************************************/
 typedef struct H5FD_ros3_t {
@@ -160,16 +198,8 @@ typedef struct H5FD_ros3_t {
     haddr_t           eoa;
     s3r_t            *s3r_handle;
 #if ROS3_STATS
-    /* If collectin stats, set up "bins" for raw and non-raw reads
-     * Arrays each for our standard bins (up to COUNT),
-     * and an overflow bin for each as well
-     *
-     * Each bin should be reset upon open.
-     */
-    ros3_statsbin    meta[ROS3_STATS_BIN_COUNT];
-    ros3_statsbin    raw[ROS3_STATS_BIN_COUNT];
-    ros3_statsbin    over_meta; /* for all reads that "overflow" max bin size */
-    ros3_statsbin    over_raw;
+    ros3_statsbin    meta[ROS3_STATS_BIN_COUNT + 1];
+    ros3_statsbin    raw[ROS3_STATS_BIN_COUNT + 1];
 #endif
 } H5FD_ros3_t;
 
@@ -310,6 +340,16 @@ H5FD_ros3_init(void)
     if (H5I_VFL != H5I_get_type(H5FD_ROS3_g))
         H5FD_ROS3_g = H5FD_register(&H5FD_ros3_g, sizeof(H5FD_class_t), FALSE);
 
+#if ROS3_STATS
+    /* pre-compute statsbin boundaries
+     */
+    for (unsigned bin_i = 0; bin_i < ROS3_STATS_BIN_COUNT; bin_i++) {
+        unsigned long long value = 0;
+        ROS3_STATS_POW(bin_i, &value)
+        ros3_stats_boundaries[bin_i] = value;
+    }
+#endif
+
     /* Set return value */
     ret_value = H5FD_ROS3_g;
 
@@ -442,8 +482,8 @@ H5FD_ros3_validate_config(const H5FD_ros3_fapl_t * fa)
     /* if set to authenticate, region and id cannot be empty strings
      */
     if (fa->authenticate == TRUE) {
-        if ((fa->aws_region[0] == 0) ||
-            (fa->secret_id[0]  == 0))
+        if ((fa->aws_region[0] == '\0') ||
+            (fa->secret_id[0]  == '\0'))
         {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "Inconsistent authentication information");
@@ -679,37 +719,17 @@ ros3_reset_stats(H5FD_ros3_t *file)
                     "file was null");
     }
 
-    for (i = 0; i < ROS3_STATS_BIN_COUNT; i++) {
-        file->raw[i].time     = 0.0;
-        file->raw[i].bytes    = 0;
-        file->raw[i].count    = 0;
-        file->raw[i].min      = ROS3_STATS_STARTING_MIN;
-        file->raw[i].max      = 0;
-        file->raw[i].avg      = 0.0;
+    for (i = 0; i <= ROS3_STATS_BIN_COUNT; i++) {
+        file->raw[i].bytes  = 0;
+        file->raw[i].count  = 0;
+        file->raw[i].min    = (unsigned long long)ROS3_STATS_STARTING_MIN;
+        file->raw[i].max    = 0;
 
-        file->meta[i].time    = 0.0;
-        file->meta[i].bytes   = 0;
-        file->meta[i].count   = 0;
-        file->meta[i].min     = ROS3_STATS_STARTING_MIN;
-        file->meta[i].max     = 0;
-        file->meta[i].avg     = 0.0;
+        file->meta[i].bytes = 0;
+        file->meta[i].count = 0;
+        file->meta[i].min   = (unsigned long long)ROS3_STATS_STARTING_MIN;
+        file->meta[i].max   = 0;
     }
-
-    file->over_raw.time       = 0.0;
-    file->over_raw.bytes      = 0;
-    file->over_raw.count      = 0;
-    file->over_raw.min        = ROS3_STATS_STARTING_MIN;
-    file->over_raw.max        = 0;
-    file->over_raw.avg        = 0.0;
-
-    file->over_meta.time      = 0.0;
-    file->over_meta.bytes     = 0;
-    file->over_meta.count     = 0;
-    file->over_meta.min       = ROS3_STATS_STARTING_MIN;
-    file->over_meta.max       = 0;
-    file->over_meta.avg       = 0.0;
-
-
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
@@ -883,24 +903,25 @@ done:
  *
  *     Should be called upon file close.
  *
- *     TODO: currently just prints to STDOUT
- *
  *     Shows number of reads and bytes read, broken down by
  *     "raw" (H5FD_MEM_DRAW)
  *     or "meta" (any other flag)
  *
+ *     Prints filename and listing of total number of reads and bytes read,
+ *     both as a grand total and separate  meta- and rawdata reads.
+ *
  *     If any reads were done, prints out two tables:
  *
- *     1. overview of reads done by raw or meta flags, with
+ *     1. overview of raw- and metadata reads
  *         - min (smallest size read)
  *         - average of size read
- *             - k,M,G suffixes by powers of 2^10
+ *             - k,M,G suffixes by powers of 1024 (2^10)
  *         - max (largest size read)
  *     2. tabulation of "bins", sepraring reads into exponentially-larger
  *        ranges of size.
- *         - in each row is for reads in a certain bytes range (up to number)
- *           with colums for number of reads, number of bytes read, and
- *           average size of all reads in that size range.
+ *         - columns for number of reads, total bytes, and average size, with 
+ *           separate sub-colums for raw- and metadata reads.
+ *         - each row represents one bin, identified by the top of its range
  *     
  *     Bin ranges can be modified with pound-defines at the top of this file.
  *
@@ -909,8 +930,11 @@ done:
  *     An "overflow" bin is also present, to catch "big" reads.
  *
  *     Output for all bins (and range ceiling and average size report) 
- *     is segregated by power of 1024
- *     thus 40.177k -> 41080.
+ *     is divied by powers of 1024. By corollary, four digits before the decimal
+ *     is valid.
+ *
+ *     - 41080 bytes is represented by 40.177k, not 41.080k
+ *     - 1004.831M represents approx. 1052642000 bytes
  *
  * Return:
  *
@@ -929,24 +953,22 @@ static herr_t
 ros3_fprint_stats(FILE              *stream,
                   const H5FD_ros3_t *file)
 {
-    herr_t        ret_value    = SUCCEED;
-    parsed_url_t *purl         = NULL;
-    unsigned      i            = 0;
-    double        time_meta    = 0.0; /* total time */
-    double        time_raw     = 0.0;
-    unsigned long count_meta   = 0; /* total count */
-    unsigned long count_raw    = 0;
-    double        average_meta = 0.0; /* average size of all reads */
-    double        average_raw  = 0.0;
-    unsigned long long min_meta = 1000000000; /* size; all reads */
-    unsigned long long min_raw  = 1000000000;
-    unsigned long long max_meta = 0;
-    unsigned long long max_raw  = 0;
-    unsigned long long bytes_raw  = 0;
-    unsigned long long bytes_meta = 0;
-    double re_dub = 0.0;
-    unsigned           suffix_i   = 0;
-    char               suffixes[] = { ' ', 'K', 'M', 'G', 'T', 'P'};
+    herr_t             ret_value    = SUCCEED;
+    parsed_url_t      *purl         = NULL;
+    unsigned           i            = 0;
+    unsigned long      count_meta   = 0;
+    unsigned long      count_raw    = 0;
+    double             average_meta = 0.0;
+    double             average_raw  = 0.0;
+    unsigned long long min_meta   = (unsigned long long)ROS3_STATS_STARTING_MIN;
+    unsigned long long min_raw    = (unsigned long long)ROS3_STATS_STARTING_MIN;
+    unsigned long long max_meta     = 0;
+    unsigned long long max_raw      = 0;
+    unsigned long long bytes_raw    = 0;
+    unsigned long long bytes_meta   = 0;
+    double             re_dub       = 0.0; /* re-usable double variable */
+    unsigned           suffix_i     = 0;
+    const char         suffixes[]   = { ' ', 'K', 'M', 'G', 'T', 'P' };
 
 
 
@@ -986,17 +1008,13 @@ ros3_fprint_stats(FILE              *stream,
     } else if (purl->path != NULL && purl->path[0] != '\0') {
         HDfprintf(stream, "/%s", purl->path);
     }
-    HDfprintf(stream, "\n\n");
-
-    /***************
-     * PRINT STATS *
-     ***************/
+    HDfprintf(stream, "\n");
 
     /*******************
      * AGGREGATE STATS *
      *******************/
 
-    for (i = 0; i < ROS3_STATS_BIN_COUNT; i++) {
+    for (i = 0; i <= ROS3_STATS_BIN_COUNT; i++) {
         const ros3_statsbin *r = &file->raw[i];
         const ros3_statsbin *m = &file->meta[i];
 
@@ -1005,43 +1023,19 @@ ros3_fprint_stats(FILE              *stream,
         if (m->max > max_meta)  max_meta = m->max;
         if (r->max > max_raw)   max_raw  = r->max;
 
-        if (count_raw + r->count > 0) {
-            average_raw = ((average_raw * (double)count_raw) + \
-                           (r->avg * (double)r->count)) / \
-                          (double)(count_raw + r->count);
-        }
-        if (count_meta + m->count > 0) {
-            average_meta = ((average_meta * (double)count_meta) + \
-                            (m->avg * (double)m->count)) / \
-                           (double)(count_meta + m->count);
-        }
         count_raw  += r->count;
         count_meta += m->count;
-        time_raw   += r->time;
-        time_meta  += m->time;
         bytes_raw  += r->bytes;
         bytes_meta += m->bytes;
     }
-    if (file->over_raw.count > 0) {
-        const ros3_statsbin *r = &file->over_raw;
-        average_raw = ((average_raw * (double)count_raw) + \
-                       (r->avg * (double)r->count)) / \
-                      (double)(count_raw + r->count);
-        count_raw += r->count;
-        time_raw  += r->time;
-        max_raw    = r->max;
-        bytes_raw += r->bytes;
-    }
-    if (file->over_meta.count > 0) {
-        const ros3_statsbin *m = &file->over_meta;
-        average_meta = ((average_meta * (double)count_meta) + \
-                        (m->avg * (double)m->count)) / \
-                       (double)(count_meta + m->count);
-        count_meta += m->count;
-        time_meta  += m->time;
-        max_meta    = m->max;
-        bytes_meta += m->bytes;
-    }
+    if (count_raw > 0)
+        average_raw = (double)bytes_raw / (double)count_raw;
+    if (count_meta > 0)
+        average_meta = (double)bytes_meta / (double)count_meta;
+
+    /******************
+     * PRINT OVERVIEW *
+     ******************/
 
     HDfprintf(stream, "TOTAL READS: %llu  (%llu meta, %llu raw)\n",
               count_raw + count_meta, count_meta, count_raw);
@@ -1050,6 +1044,10 @@ ros3_fprint_stats(FILE              *stream,
 
     if (count_raw + count_meta == 0) 
         goto done;
+
+    /*************************
+     * PRINT AGGREGATE STATS *
+     *************************/
 
     HDfprintf(stream, "SIZES     meta      raw\n");
     HDfprintf(stream, "  min ");
@@ -1111,75 +1109,70 @@ ros3_fprint_stats(FILE              *stream,
     for (i = 0; i <= ROS3_STATS_BIN_COUNT; i++) {
         const ros3_statsbin *m;
         const ros3_statsbin *r;
-        unsigned long long range_end = 0;
-        char bm_suffix = ' '; /* bytes-meta */
-        double bm_val = 0.0;
-        char br_suffix = ' '; /* bytes-raw */
-        double br_val = 0.0;
-        char am_suffix = ' '; /* avg-meta */
-        double am_val = 0.0;
-        char ar_suffix = ' '; /* avg-raw */
-        double ar_val = 0.0;
+        unsigned long long   range_end = 0;
+        char                 bm_suffix = ' '; /* bytes-meta */
+        double               bm_val    = 0.0;
+        char                 br_suffix = ' '; /* bytes-raw */
+        double               br_val    = 0.0;
+        char                 am_suffix = ' '; /* average-meta */
+        double               am_val    = 0.0;
+        char                 ar_suffix = ' '; /* average-raw */
+        double               ar_val    = 0.0;
 
-        if (i == ROS3_STATS_BIN_COUNT) {
-            m = &file->over_meta;
-            r = &file->over_raw;
-        } else {
-            m = &file->meta[i];
-            r = &file->raw[i];
-        }
-
+        m = &file->meta[i];
+        r = &file->raw[i];
         if (r->count == 0 && m->count == 0) 
             continue;
 
-        ROS3_STATS_POW(i, &range_end);
+        range_end = ros3_stats_boundaries[i];
 
         if (i == ROS3_STATS_BIN_COUNT) {
-            ROS3_STATS_POW(i-1, &range_end);
+            range_end = ros3_stats_boundaries[i-1];
             HDfprintf(stream, ">");
         } else {
             HDfprintf(stream, " ");
         }
 
         bm_val = (double)m->bytes;
-        for (suffix_i = 0; bm_val >= 1024.0; suffix_i++) {
+        for (suffix_i = 0; bm_val >= 1024.0; suffix_i++)
             bm_val /= 1024.0;
-        }
         HDassert(suffix_i < sizeof(suffixes));
         bm_suffix = suffixes[suffix_i];
 
         br_val = (double)r->bytes;
-        for (suffix_i = 0; br_val >= 1024.0; suffix_i++) {
+        for (suffix_i = 0; br_val >= 1024.0; suffix_i++)
             br_val /= 1024.0;
-        }
         HDassert(suffix_i < sizeof(suffixes));
         br_suffix = suffixes[suffix_i];
 
-        am_val = (double)m->avg;
-        for (suffix_i = 0; am_val >= 1024.0; suffix_i++) {
+        if (m->count > 0)
+            am_val = (double)(m->bytes) / (double)(m->count);
+        for (suffix_i = 0; am_val >= 1024.0; suffix_i++)
             am_val /= 1024.0;
-        }
         HDassert(suffix_i < sizeof(suffixes));
         am_suffix = suffixes[suffix_i];
 
-        ar_val = (double)r->avg;
-        for (suffix_i = 0; ar_val >= 1024.0; suffix_i++) {
+        if (r->count > 0)
+            ar_val = (double)(r->bytes) / (double)(r->count);
+        for (suffix_i = 0; ar_val >= 1024.0; suffix_i++)
             ar_val /= 1024.0;
-        }
         HDassert(suffix_i < sizeof(suffixes));
         ar_suffix = suffixes[suffix_i];
 
         re_dub = (double)range_end;
-        for (suffix_i = 0; re_dub >= 1024.0; suffix_i++) {
+        for (suffix_i = 0; re_dub >= 1024.0; suffix_i++)
             re_dub /= 1024.0;
-        }
         HDassert(suffix_i < sizeof(suffixes));
 
-        HDfprintf(stream, " %8.3f%c %7d %7d %8.3f%c %8.3f%c %8.3f%c %8.3f%c\n",
-                  re_dub, suffixes[suffix_i],
-                  m->count, r->count,
-                  bm_val, bm_suffix, br_val, br_suffix,
-                  am_val, am_suffix, ar_val, ar_suffix);
+        HDfprintf(stream, 
+                  " %8.3f%c %7d %7d %8.3f%c %8.3f%c %8.3f%c %8.3f%c\n",
+                  re_dub, suffixes[suffix_i], /* bin ceiling      */
+                  m->count,                   /* metadata reads   */
+                  r->count,                   /* rawdata reads    */
+                  bm_val, bm_suffix,          /* metadata bytes   */
+                  br_val, br_suffix,          /* rawdata bytes    */
+                  am_val, am_suffix,          /* metadata average */
+                  ar_val, ar_suffix);         /* rawdata average  */
 
         fflush(stream);
     }
@@ -1237,6 +1230,7 @@ H5FD_ros3_close(H5FD_t *_file)
     }
 
 #if ROS3_STATS
+    /* TODO: mechanism to re-target stats printout */
     HDassert( SUCCEED == ros3_fprint_stats(stdout, file) );
 #endif /* ROS3_STATS */
 
@@ -1324,41 +1318,37 @@ H5FD_ros3_cmp(const H5FD_t *_f1,
     ret_value = strcmp(purl1->scheme, purl2->scheme);
 
     /* URL: HOST */
-    if (0 == ret_value) {
+    if (0 == ret_value)
         ret_value = strcmp(purl1->host, purl2->host);
-    }
 
     /* URL: PORT */
     if (0 == ret_value) {
-        if (purl1->port && purl2->port) {
+        if (purl1->port && purl2->port)
 	    ret_value = strcmp(purl1->port, purl2->port);
-        } else if (purl1->port && !purl2->port) {
+        else if (purl1->port && !purl2->port)
             ret_value = 1;
-        } else if (purl2->port && !purl1->port) {
+        else if (purl2->port && !purl1->port)
             ret_value = -1;
-        }
     }
 
     /* URL: PATH */
     if (0 == ret_value) {
-        if (purl1->path && purl2->path) {
+        if (purl1->path && purl2->path)
 	    ret_value = strcmp(purl1->path, purl2->path);
-        } else if (purl1->path && !purl2->path) {
+        else if (purl1->path && !purl2->path)
             ret_value = 1;
-        } else if (purl2->path && !purl1->path) {
+        else if (purl2->path && !purl1->path)
             ret_value = -1;
-        }
     }
 
     /* URL: QUERY */
     if (0 == ret_value) {
-        if (purl1->query && purl2->query) {
+        if (purl1->query && purl2->query)
 	    ret_value = strcmp(purl1->query, purl2->query);
-        } else if (purl1->query && !purl2->query) {
+        else if (purl1->query && !purl2->query)
             ret_value = 1;
-        } else if (purl2->query && !purl1->query) {
+        else if (purl2->query && !purl1->query)
             ret_value = -1;
-        }
     }
 
     /* FAPL: AWS_REGION */
@@ -1457,7 +1447,7 @@ H5FD_ros3_query(const H5FD_t H5_ATTR_UNUSED *_file,
  *
  * Return:
  *
- *     The end-of-address marker. (length of the file.)
+ *     The end-of-address marker.
  *
  * Programmer: Jacob Smith
  *             2017-11-02
@@ -1490,7 +1480,6 @@ H5FD_ros3_get_eoa(const H5FD_t                *_file,
  * Purpose:
  *
  *     Set the end-of-address marker for the file.
- *     Not possible with this VFD.
  *
  * Return:
  *
@@ -1529,9 +1518,7 @@ H5FD_ros3_set_eoa(H5FD_t                    *_file,
  *
  * Purpose:
  *
- *     Returns the end-of-file marker, which is the greater of
- *     either the filesystem end-of-file or the HDF5 end-of-address
- *     markers.
+ *     Returns the end-of-file marker.
  *
  * Return:
  *
@@ -1615,9 +1602,11 @@ done:
  *
  * Return:
  *
- *     Success:    SUCCEED - Result is stored in caller-supplied
- *                           buffer BUF.
- *     Failure:    FAIL    - Contents of buffer BUF are undefined.
+ *     Success: `SUCCEED`
+ *         - Result is stored in caller-supplied buffer BUF.
+ *     Failure: `FAIL`
+ *         - Unable to complete read.
+ *         - Contents of buffer `buf` are undefined.
  *
  * Programmer: Jacob Smith
  *             2017-11-??
@@ -1638,15 +1627,9 @@ H5FD_ros3_read(H5FD_t                    *_file,
     herr_t       ret_value = SUCCEED;                  /* Return value */
 #if ROS3_STATS
     /* working variables for storing stats */
-    ros3_statsbin *bin  = NULL;
-    unsigned       kb_i = 1; /* starting power of two to check for stats */
-                                /* bin. size will always(?) be > 0          */
-#if CLOCKS_PER_SEC > 0
-    clock_t      t0        = 0;
-    clock_t      t1        = 0;
-    double       elapsed   = 0;
-    unsigned long long pow = 0;
-#endif
+    ros3_statsbin      *bin   = NULL;
+    /* hbool_t             is_big = TRUE; */
+    unsigned            bin_i = 0;
 #endif /* ROS3_STATS */
     
 
@@ -1665,68 +1648,32 @@ H5FD_ros3_read(H5FD_t                    *_file,
         HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "range exceeds file address")
     }
 
-    /* If logging, get pre-read timestamp
-     */
-#if ROS3_STATS
-#if CLOCKS_PER_SEC > 0
-    t0 = clock();
-#endif
-#endif /* ROS3_STATS */
-
     if (FAIL == H5FD_s3comms_s3r_read(file->s3r_handle, addr, size, buf) ) {
         HGOTO_ERROR(H5E_VFL, H5E_READERROR, FAIL, "unable to execute read")
     }
 
 #if ROS3_STATS
 
-#if CLOCKS_PER_SEC > 0
-    t1 = clock();
-    /* calculate elapsed time, store in t1 */
-    if (t1 < t0) {
-        /* time "wrapped around" */
-        /* do math */
-        HGOTO_ERROR(H5E_ERROR, H5E_OVERFLOW, FAIL,
-                    "clock() wrapped around; math to resolve TODO\n")
-    } else {
-        t1 -= t0; /* t1 is delta time */
-    }
-    elapsed = ((double)t1) / CLOCKS_PER_SEC;
-#endif
-
     /* Find which "bin" this read fits in. Can be "overflow" bin.
      */
-    kb_i = 0;
-    pow = 0;
-    do {
-        ROS3_STATS_POW(kb_i, &pow)
-        kb_i++;
-    } while ((unsigned long long)size >= pow);
-    kb_i--; /* back off to last valid index */
-
-    if (kb_i >= ROS3_STATS_BIN_COUNT) {
-        bin = (type == H5FD_MEM_DRAW)
-            ? &file->over_raw
-            : &file->over_meta;
-    } else {
-        bin = (type == H5FD_MEM_DRAW) 
-            ? &file->raw[kb_i] 
-            : &file->meta[kb_i];
+    for (bin_i = 0; bin_i < ROS3_STATS_BIN_COUNT; bin_i++) {
+        if ((unsigned long long)size < ros3_stats_boundaries[bin_i])
+            break;
     }
+    bin = (type == H5FD_MEM_DRAW)
+        ? &file->raw[bin_i]
+        : &file->meta[bin_i];
 
     /* Store collected stats in appropriate bin 
      */
-#if CLOCKS_PER_SEC > 0
-    bin->time += elapsed;
-#endif
     if (bin->count == 0) {
         bin->min = size;
         bin->max = size;
-        bin->avg = (double)size;
     } else {
-        if (size < bin->min) { bin->min = size; }
-        if (size > bin->max) { bin->max = size; }
-        bin->avg = ((double)size + bin->avg * (double)bin->count) / \
-                   (double)(bin->count + 1);
+        if (size < bin->min) 
+            bin->min = size;
+        if (size > bin->max)
+            bin->max = size;
     }
     bin->count++;
     bin->bytes += (unsigned long long)size;

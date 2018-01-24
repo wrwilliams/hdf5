@@ -28,23 +28,22 @@ extern "C" {
 
 /****************************************************************************
  *
- * Structure: H5FD_s3_config_t
+ * Structure: H5FD_ros3_fapl_t
  *
  * Purpose:
  *
- *     H5FD_s3_config_t is a public structure that is used to pass S3 
- *     configuration data to the appropriate S3 VFD via the FAPL.  A 
- *     pointer to an instance of this structure is a parameter in the 
- *     H5Pset_s3_config() and H5Pget_s3_config() API calls.
+ *     H5FD_ros3_fapl_t is a public structure that is used to pass S3 
+ *     authentication data to the appropriate S3 VFD via the FAPL.  A pointer 
+ *     to an instance of this structure is a parameter to H5Pset_fapl_ros3() 
+ *     and H5Pget_fapl_ros3().
  *
  *
  *
  * `version` (int32_t)
  *
- *     Integer field containing the version number of this version
- *     of the H5FD_s3_config_t structure.  Any instance of
- *     H5FD_s3_config_t passed to the above calls must have a known
- *     version number, or an error will be flagged.
+ *     Version number of the H5FD_ros3_fapl_t structure.  Any instance passed 
+ *     to the above calls must have a recognized version number, or an error
+ *     will be flagged.
  *
  *     This field should be set to H5FD__CURR_ROS3_FAPL_T_VERSION.
  *
@@ -53,11 +52,11 @@ extern "C" {
  *     Flag TRUE or FALSE whether or not requests are to be authenticated
  *     with the AWS4 algorithm. 
  *     If TRUE, `aws_region`, `secret_id`, and `secret_key` must be populated. 
- *     If FALSE, those three components are unused and may be NULL.
+ *     If FALSE, those three components are unused.
  *
  * `aws_region` (char[])
  *
- *     String identifier of the AWS "region" of the host, e.g. "us-east-1".
+ *     String: name of the AWS "region" of the host, e.g. "us-east-1".
  *
  * `secret_id` (char[])
  *
