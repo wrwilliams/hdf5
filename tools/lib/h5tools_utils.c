@@ -423,7 +423,7 @@ parse_tuple(const char   *start,
            unsigned     *nelems,
            char       ***ptrs_out)
 {
-    char      *elem_ptr    = start;
+    char      *elem_ptr    = NULL;
     char      *dest_ptr    = NULL;
     unsigned   elems_count = 0;
     char     **elems       = NULL; /* more like *elems[], but complier... */
@@ -438,21 +438,23 @@ parse_tuple(const char   *start,
      * SANITY-CHECKS *
      *****************/
 
-    elem_ptr = start;
-
-    /* must start with "(" */
-    if (*elem_ptr != '(') {
+    /* must start with "(" 
+     */
+    if (start[0] != '(') {
         ret_value = FAIL;
         goto done;
     }
 
-    /* must end with ")" */
-    while (*elem_ptr != '\0') { elem_ptr++; }
-    elem_ptr--; /* back up to ultimate non-null char */
-    if (*elem_ptr != ')') {
+    /* must end with ")"
+     */
+    while (start[elems_count] != '\0') 
+        elems_count++;
+    if (start[elems_count - 1] != ')') {
         ret_value = FAIL;
         goto done;
     }
+
+    elems_count = 0;
 
 
 

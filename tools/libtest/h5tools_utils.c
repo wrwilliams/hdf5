@@ -563,7 +563,7 @@ test_parse_tuple(void)
         success = parse_tuple(tc.in_str, tc.sep,
                               &cpy, &count, &parsed);
 
-        JSVERIFY( tc.exp_ret,    success, NULL )
+        JSVERIFY( tc.exp_ret,    success, "function returned incorrect value" )
         JSVERIFY( tc.exp_nelems, count,   NULL )
         if (success == SUCCEED) {
             FAIL_IF( parsed == NULL )
