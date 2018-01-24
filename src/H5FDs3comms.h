@@ -566,7 +566,7 @@ hrb_t * H5FD_s3comms_hrb_init_request(const char *verb,
 
 herr_t H5FD_s3comms_s3r_close(s3r_t *handle);
 
-herr_t H5FD_s3comms_s3r_getsize(s3r_t *handle);
+size_t H5FD_s3comms_s3r_get_filesize(s3r_t *handle);
 
 s3r_t * H5FD_s3comms_s3r_open(const char          url[],
                               const char          region[],

@@ -1542,7 +1542,7 @@ H5FD_ros3_get_eof(const H5FD_t                *_file,
     HDfprintf(stdout, "H5FD_ros3_get_eof() called.\n");
 #endif
 
-    FUNC_LEAVE_NOAPI(file->s3r_handle->filesize)
+    FUNC_LEAVE_NOAPI(H5FD_s3comms_s3r_get_filesize(file->s3r_handle))
 
 } /* end H5FD_ros3_get_eof() */
 
@@ -1624,11 +1624,11 @@ H5FD_ros3_read(H5FD_t                    *_file,
                void                      *buf)  /* out            */
 {
     H5FD_ros3_t *file      = (H5FD_ros3_t *)_file;
+    size_t       filesize  = 0;
     herr_t       ret_value = SUCCEED;                  /* Return value */
 #if ROS3_STATS
     /* working variables for storing stats */
     ros3_statsbin      *bin   = NULL;
-    /* hbool_t             is_big = TRUE; */
     unsigned            bin_i = 0;
 #endif /* ROS3_STATS */
     
@@ -1643,8 +1643,9 @@ H5FD_ros3_read(H5FD_t                    *_file,
     HDassert(file->s3r_handle);
     HDassert(buf);
 
-    if ((addr > file->s3r_handle->filesize) || 
-        ((addr + size) > file->s3r_handle->filesize)) {
+    filesize = H5FD_s3comms_s3r_get_filesize(file->s3r_handle);
+
+    if ((addr > filesize) || ((addr + size) > filesize)) {
         HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "range exceeds file address")
     }
 

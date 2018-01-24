@@ -93,6 +93,8 @@ size_t curlwritecallback(char   *ptr,
                          size_t  nmemb,
                          void   *userdata);
 
+herr_t H5FD_s3comms_s3r_getsize(s3r_t *handle);
+
 /*********************/
 /* Package Variables */
 /*********************/
@@ -842,6 +844,42 @@ done:
 
 /*----------------------------------------------------------------------------
  *
+ * Function: H5FD_s3comms_s3r_get_filesize()
+ *
+ * Purpose:
+ *
+ *     Retrieve the filesize of an open request handle.
+ *
+ *     Wrapper "getter" to hide implementation details.
+ *
+ *
+ * Return:
+ *
+ *     0 if handle is NULL or undefined
+ *     size of file, in bytes, if handle is valid.
+ *
+ * Programmer: Jacob Smith 2017-01-14
+ *
+ * Changes: None
+ *
+ *----------------------------------------------------------------------------
+ */
+size_t
+H5FD_s3comms_s3r_get_filesize(s3r_t *handle) {
+    size_t ret_value = 0;
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    if (handle != NULL) 
+        ret_value = handle->filesize;
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5FD_s3comms_s3r_get_filesize */
+
+
+/*----------------------------------------------------------------------------
+ *
  * Function: H5FD_s3comms_s3r_getsize()
  *
  * Purpose:
@@ -1313,8 +1351,6 @@ done:
  *     If `offset` or `offset+len` is greater than the file size, read is 
  *     aborted and returns `FAIL`.
  *
- *     High-level routine to execute request as defined in provided handle.
- *
  *     Uses configured "curl easy handle" to perform request.
  *
  *     In event of error, buffer should remain unaltered.
@@ -1324,10 +1360,12 @@ done:
  *     which is then translated to a `curl slist` and set in the curl handle
  *     for the request.
  *
- *     `dest` may be NULL, but no body data will be recorded.
+ *     `dest` _may_ be NULL, but no body data will be recorded.
  *
- *     - NULL dest used for `s3r_getsize()`, in conjunction with
- *       CURLOPT_NOBODY to preempt transmission of file body data.
+ *     - In general practice, NULL should never be passed in as `dest`.
+ *     - NULL `dest` passed in by internal function `s3r_getsize()`, in
+ *       conjunction with CURLOPT_NOBODY to preempt transmission of file data
+ *       from server.
  *
  * Return:
  *
@@ -1397,13 +1435,10 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "handle cannot be null.\n");
     }
-    HDassert( handle->magic == S3COMMS_S3R_MAGIC );
-/*
     if (handle->magic != S3COMMS_S3R_MAGIC) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "handle has invalid magic.\n");
     }
-*/
     if (handle->curlhandle == NULL) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "handle has bad (null) curlhandle.\n")

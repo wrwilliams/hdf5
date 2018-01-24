@@ -1499,8 +1499,69 @@ error:
 } /* test_percent_encode_char */
 
 
-
 /*---------------------------------------------------------------------------
+ * Function: test_s3r_open()
+ *
+ * Programmer: Jacob Smith 2018-01-24
+ *
+ * Changes: None
+ *
+ *---------------------------------------------------------------------------
+ */
+static herr_t
+test_s3r_get_filesize(void)
+{
+
+    /************************
+     * test-local variables *
+     ************************/
+
+    char url_raven[S3_TEST_MAX_URL_SIZE];
+    s3r_t *handle = NULL;
+
+    TESTING("s3r_get_filesize");
+
+    /******************
+     * pre-test setup *
+     ******************/
+
+    FAIL_IF( S3_TEST_MAX_URL_SIZE <
+             snprintf(url_raven,
+                      S3_TEST_MAX_URL_SIZE,
+                      "%s/%s",
+                      S3_TEST_BUCKET_URL,
+                      "Poe_Raven.txt") );   
+
+    JSVERIFY( 0, H5FD_s3comms_s3r_get_filesize(NULL), 
+              "filesize of the null handle should be 0" )
+
+    handle = H5FD_s3comms_s3r_open(url_raven, NULL, NULL, NULL);
+    FAIL_IF( handle == NULL )
+
+    JSVERIFY( 6464, H5FD_s3comms_s3r_get_filesize(handle), NULL )
+
+
+    FAIL_IF( SUCCEED != H5FD_s3comms_s3r_close(handle) )
+
+    PASSED();
+    return 0;
+
+error:
+    if (handle != NULL)
+        (void)H5FD_s3comms_s3r_close(handle);
+
+    return -1;
+
+} /* test_s3r_get_filesize */
+
+
+/*---------------------------------------------------------------------------
+ * Function: test_s3r_open()
+ *
+ * Programmer: Jacob Smith 2018-01-??
+ *
+ * Changes: None
+ *
  *---------------------------------------------------------------------------
  */
 static herr_t
@@ -1654,7 +1715,8 @@ printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
      */
     handle = H5FD_s3comms_s3r_open(url_raven, NULL, NULL, NULL);
     FAIL_IF( handle == NULL );
-    JSVERIFY( 6464, handle->filesize, NULL )
+    JSVERIFY( 6464, H5FD_s3comms_s3r_get_filesize(handle), 
+              "did not get expected filesize" )
     JSVERIFY( SUCCEED, 
               H5FD_s3comms_s3r_close(handle),
               "unable to close file" )
@@ -1668,7 +1730,8 @@ printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
                      (const char *)S3_TEST_ACCESS_ID,
                      (const unsigned char *)signing_key);
     FAIL_IF( handle == NULL );
-    JSVERIFY( 5458199, handle->filesize, NULL )
+    JSVERIFY( 5458199, H5FD_s3comms_s3r_get_filesize(handle), 
+              "did not get expected filesize" )
     JSVERIFY( SUCCEED, 
               H5FD_s3comms_s3r_close(handle),
               "unable to close file" )
@@ -1682,7 +1745,7 @@ printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
              (const char *)S3_TEST_ACCESS_ID,
              (const unsigned char *)signing_key);
     FAIL_IF( handle == NULL );
-    JSVERIFY( 6464, handle->filesize, NULL )
+    JSVERIFY( 6464, H5FD_s3comms_s3r_get_filesize(handle), NULL )
     JSVERIFY( SUCCEED, 
               H5FD_s3comms_s3r_close(handle),
               "unable to close file" )
@@ -1696,7 +1759,7 @@ printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
                      (const char *)S3_TEST_ACCESS_ID,
                      (const unsigned char *)signing_key);
     FAIL_IF( handle == NULL );
-    JSVERIFY( 5458199, handle->filesize, NULL )
+    JSVERIFY( 5458199, H5FD_s3comms_s3r_get_filesize(handle), NULL )
     JSVERIFY( SUCCEED, 
               H5FD_s3comms_s3r_close(handle),
               "unable to close file" )
@@ -1788,7 +1851,7 @@ test_s3r_read(void)
      */
     handle = H5FD_s3comms_s3r_open(url_raven, NULL, NULL, NULL);
     FAIL_IF( handle == NULL )
-    FAIL_IF( handle->filesize != 6464 )
+    JSVERIFY( 6464, H5FD_s3comms_s3r_get_filesize(handle), NULL )
 
     for (i = 0; i < S3COMMS_TEST_BUFFER_SIZE; i++) 
         buffer[i] = '\0';
@@ -2401,6 +2464,7 @@ main(void)
     nerrors += test_aws_canonical_request()   < 0 ? 1 : 0;
     nerrors += test_tostringtosign()          < 0 ? 1 : 0;
     nerrors += test_s3r_open()                < 0 ? 1 : 0;
+    nerrors += test_s3r_get_filesize()        < 0 ? 1 : 0;
     nerrors += test_s3r_read()                < 0 ? 1 : 0;
 
     if(nerrors) {
