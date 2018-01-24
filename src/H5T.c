@@ -3498,7 +3498,7 @@ H5T__alloc(void)
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
     dt->shared->version = H5O_DTYPE_VERSION_1;
 
-    /* No VOL object */
+    /* No VOL object initially */
     dt->vol_obj = NULL;
 
     /* Assign return value */
@@ -3562,25 +3562,23 @@ H5T__free(H5T_t *dt)
     /* Free the ID to name info */
     H5G_name_free(&(dt->path));
 
-    /*
-     * Don't free locked datatypes.
-     */
-    if(H5T_STATE_IMMUTABLE==dt->shared->state)
+    /* Don't free locked datatypes */
+    if(H5T_STATE_IMMUTABLE == dt->shared->state)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CLOSEERROR, FAIL, "unable to close immutable datatype")
 
     /* Close the datatype */
     switch(dt->shared->type) {
         case H5T_COMPOUND:
-            for(i = 0; i < dt->shared->u.compnd.nmembs; i++) {
+            for (i = 0; i < dt->shared->u.compnd.nmembs; i++) {
                 dt->shared->u.compnd.memb[i].name = (char *)H5MM_xfree(dt->shared->u.compnd.memb[i].name);
                 H5T_close(dt->shared->u.compnd.memb[i].type);
-            } /* end for */
+            }
             dt->shared->u.compnd.memb = (H5T_cmemb_t *)H5MM_xfree(dt->shared->u.compnd.memb);
             dt->shared->u.compnd.nmembs = 0;
             break;
 
         case H5T_ENUM:
-            for(i = 0; i < dt->shared->u.enumer.nmembs; i++)
+            for (i = 0; i < dt->shared->u.enumer.nmembs; i++)
                 dt->shared->u.enumer.name[i] = (char *)H5MM_xfree(dt->shared->u.enumer.name[i]);
             dt->shared->u.enumer.name = (char **)H5MM_xfree(dt->shared->u.enumer.name);
             dt->shared->u.enumer.value = (uint8_t *)H5MM_xfree(dt->shared->u.enumer.value);
@@ -3603,12 +3601,12 @@ H5T__free(H5T_t *dt)
         case H5T_NCLASSES:
         default:
             break;
-    } /* end switch */
+    }
     dt->shared->type = H5T_NO_CLASS;
 
     /* Close the parent */
     HDassert(dt->shared->parent != dt);
-    if(dt->shared->parent && H5T_close(dt->shared->parent) < 0)
+    if (dt->shared->parent && H5T_close(dt->shared->parent) < 0)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTCLOSEOBJ, FAIL, "unable to close parent data type")
     dt->shared->parent = NULL;
 
@@ -3645,23 +3643,22 @@ H5T_close(H5T_t *dt)
     if(dt->shared->state != H5T_STATE_OPEN || dt->shared->fo_count == 0) {
         /* Uncork cache entries with object address tag for named datatype only */
         if(dt->shared->state == H5T_STATE_OPEN && dt->shared->fo_count == 0) {
-                hbool_t     corked;            /* Whether the named datatype is corked or not */
+            hbool_t     corked;            /* Whether the named datatype is corked or not */
 
             if(H5AC_cork(dt->oloc.file, dt->oloc.addr, H5AC__GET_CORKED, &corked) < 0)
                 HGOTO_ERROR(H5E_DATATYPE, H5E_CANTGET, FAIL, "unable to retrieve an object's cork status")
             if(corked)
                 if(H5AC_cork(dt->oloc.file, dt->oloc.addr, H5AC__UNCORK, NULL) < 0)
                     HGOTO_ERROR(H5E_DATATYPE, H5E_CANTUNCORK, FAIL, "unable to uncork an object")
-        } /* end if */
+        }
 
         if(H5T__free(dt) < 0)
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTFREE, FAIL, "unable to free datatype");
 
         dt->shared = H5FL_FREE(H5T_shared_t, dt->shared);
-    } /* end if */
+    }
     else {
-        /*
-         * If a named type is being closed then close the object header and
+        /* If a named type is being closed then close the object header and
          * remove from the list of open objects in the file.
          */
         if(H5T_STATE_OPEN == dt->shared->state) {
@@ -3676,13 +3673,12 @@ H5T_close(H5T_t *dt)
                 /* Close object location for named datatype */
                 if(H5O_close(&dt->oloc, NULL) < 0)
                     HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to close")
-            } /* end if */
+            }
             else
-                /* Free object location (i.e. "unhold" the file if appropriate)
-                 */
+                /* Free object location (i.e. "unhold" the file if appropriate) */
                 if(H5O_loc_free(&(dt->oloc)) < 0)
                     HGOTO_ERROR(H5E_DATATYPE, H5E_CANTRELEASE, FAIL, "problem attempting to free location")
-        } /* end if */
+        }
 
         /* Free the group hier. path since we're not calling H5T__free() */
         H5G_name_free(&(dt->path));

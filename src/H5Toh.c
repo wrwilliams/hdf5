@@ -214,14 +214,17 @@ done:
 static H5O_loc_t *
 H5O_dtype_get_oloc(hid_t obj_id)
 {
-    H5T_t       *type;                  /* Datatype opened */
+    H5T_t       *type = NULL;           /* Datatype opened */
+    H5T_t       *dt = NULL;
     H5O_loc_t	*ret_value = NULL;      /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
 
     /* Get the datatype */
-    if(NULL == (type = (H5T_t *)H5I_object(obj_id)))
+    if(NULL == (dt = (H5T_t *)H5I_object(obj_id)))
         HGOTO_ERROR(H5E_OHDR, H5E_BADATOM, NULL, "couldn't get object from ID")
+    /* If this is a named datatype, get the plugin pointer to the datatype */
+    type = (H5T_t *)H5T_get_actual_type(dt);
 
     /* Get the datatype's object header location */
     if(NULL == (ret_value = H5T_oloc(type)))

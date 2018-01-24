@@ -3344,25 +3344,25 @@ H5VL_native_datatype_commit(void *obj, H5VL_loc_params_t loc_params, const char 
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file or file object")
 
     if(NULL == (dt = (H5T_t *)H5I_object_verify(type_id, H5I_DATATYPE)))
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a datatype")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a datatype")
 
-    /*
-     * Check arguments.  We cannot commit an immutable type because H5Tclose()
+    /* Check arguments.  We cannot commit an immutable type because H5Tclose()
      * normally fails on such types (try H5Tclose(H5T_NATIVE_INT)) but closing
      * a named type should always succeed.
      */
     if(H5T_STATE_NAMED == dt->shared->state || H5T_STATE_OPEN == dt->shared->state)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "datatype is already committed")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "datatype is already committed")
     if(H5T_STATE_IMMUTABLE == dt->shared->state)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "datatype is immutable")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "datatype is immutable")
 
     /* Check for a "sensible" datatype to store on disk */
     if(H5T_is_sensible(dt) <= 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "datatype is not sensible")
 
     /* Copy the datatype - the copied one will be the type that is
-       committed, and attached to original datatype above the VOL
-       layer*/
+     * committed, and attached to original datatype above the VOL
+     * layer
+     */
     if(NULL == (type = H5T_copy(dt, H5T_COPY_TRANSIENT)))
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, NULL, "unable to copy");
 
@@ -3429,7 +3429,7 @@ H5VL_native_datatype_open(void *obj, H5VL_loc_params_t loc_params, const char *n
     if(H5G_loc_real(obj, loc_params.obj_type, &loc) < 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file or file object")
 
-   /* Set up datatype location to fill in */
+    /* Set up datatype location to fill in */
     type_loc.oloc = &oloc;
     type_loc.path = &path;
     H5G_loc_reset(&type_loc);
@@ -3601,7 +3601,7 @@ H5VL_native_datatype_close(void *dt, hid_t H5_ATTR_UNUSED dxpl_id, void H5_ATTR_
     FUNC_ENTER_NOAPI_NOINIT
 
     if(H5T_close((H5T_t*)dt) < 0)
-	HGOTO_ERROR(H5E_SYM, H5E_CANTDEC, FAIL, "can't close datatype")
+        HGOTO_ERROR(H5E_SYM, H5E_CANTDEC, FAIL, "can't close datatype")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
