@@ -296,20 +296,24 @@ typedef struct hrb_node_t {
  *
  *
  *
- * Logically represent an HTTP request...
- * ```
- * GET /myplace/myfile.h5 HTTP/1.1
- * Host: over.rainbow.oz
- * Date: Fri, 01 Dec 2017 12:35:04 CST
+ * Logically represent an HTTP request
+ * 
+ *     GET /myplace/myfile.h5 HTTP/1.1
+ *     Host: over.rainbow.oz
+ *     Date: Fri, 01 Dec 2017 12:35:04 CST
  *
- * <body>
- * ```
+ *     <body>
+ *
  * ...with fast, efficient access to and modification of primary and field 
  * elements. 
  *
- * Structure for building HTTP requests at a medium-hign level, bundling
- * metadata (in its own components and `hrb_node_t "header lists"`) with
- * an optional body.
+ * Structure for building HTTP requests while hiding much of the string
+ * processing required "under the hood."
+ *
+ * Information about the request target -- the first line -- and the body text,
+ * if any, are managed directly with this structure. All header fields, e.g.,
+ * "Host" and "Date" above, are created with a linked list of `hrb_node_t` and
+ * included in the request by a pointer to the head of the list. 
  *
  *
  *
@@ -370,13 +374,12 @@ typedef struct {
  *
  * Structure: parsed_url_t
  *
- * Purpose:
  *
- *     Represent a URL with easily-accessed pointers to logical elements within.
- *     These elements (components) are stored as null-terminated strings (or
- *     just NULLs). These components should be allocated for the structure, 
- *     making the data as safe as possible from modification. If a component 
- *     is NULL, it is either implicit in or absent from the URL.
+ * Represent a URL with easily-accessed pointers to logical elements within.
+ * These elements (components) are stored as null-terminated strings (or just
+ * NULLs). These components should be allocated for the structure, making the
+ * data as safe as possible from modification. If a component is NULL, it is
+ * either implicit in or absent from the URL.
  *
  * "http://mybucket.s3.amazonaws.com:8080/somefile.h5?param=value&arg=value"
  *  ^--^   ^-----------------------^ ^--^ ^---------^ ^-------------------^
@@ -438,20 +441,20 @@ typedef struct {
  *
  * Structure: s3r_t
  *
- * Purpose:
  *
- *     S3 request structure "handle".
  *
- *     Holds persistent information for Amazon S3 requests.
+ * S3 request structure "handle".
  *
- *     Instantiated through `H5FD_s3comms_s3r_open()`, copies data into self.
+ * Holds persistent information for Amazon S3 requests.
  *
- *     Intended to be re-used for operations on a remote object.
+ * Instantiated through `H5FD_s3comms_s3r_open()`, copies data into self.
  *
- *     Cleaned up through `H5FD_s3comms_s3r_close()`.
+ * Intended to be re-used for operations on a remote object.
  *
- *     _DO NOT_ share handle between threads: curl easy handle `curlhandle`
- *     has undefined behavior if called to perform in multiple threads.
+ * Cleaned up through `H5FD_s3comms_s3r_close()`.
+ *
+ * _DO NOT_ share handle between threads: curl easy handle `curlhandle` has
+ * undefined behavior if called to perform in multiple threads.
  *
  *
  *

@@ -578,9 +578,10 @@ test_aws_canonical_request(void)
 error:
 
     if (node != NULL) { 
-        while (node != NULL) 
+        while (node != NULL)
             HDassert( SUCCEED ==
                       H5FD_s3comms_hrb_node_set(&node, node->name, NULL) );
+        HDassert( node == NULL );
     }
     if (hrb != NULL) 
         (void)H5FD_s3comms_hrb_destroy(&hrb);
@@ -823,9 +824,223 @@ error:
 static herr_t
 test_hrb_node_set(void)
 {
+    /*************************
+     * test-local structures *
+     *************************/
+
+    /* bundle of name/value representing an hrb_node_t
+     */
+    typedef struct node_mock_t {
+        const char *name;
+        const char *value;
+    } node_mock_t;
+
+    /* bundle for a testcase
+     *
+     * `message` 
+     *     purpose of the testcase
+     *
+     * `delta`
+     *     container for name and value strings to pass into node-set function
+     *     to to modify the list.
+     *
+     * `returned`
+     *     expected return value of node-set function
+     *
+     * `given` 
+     * `expected` 
+     *     string arrays representing the state of the list before and after
+     *     modification. The number of strings must be even, with each name
+     *     paired to a value. `NULL` terminates the list, with `{NULL}`
+     *     representing the empty list.
+     */ 
+    typedef struct testcase {
+        const char  *message;
+        node_mock_t  delta;
+        herr_t       returned;
+        const char  *given[11]; /* name/value pairs in array; NULL sentinel */
+        const char  *expected[11];
+    } testcase;
+
     /************************
      * test-local variables *
      ************************/
+
+    testcase cases[] = {
+        {   "cannot remove node from null list",
+            { "Host", NULL },
+            FAIL,
+            {NULL},
+            {NULL},
+        },
+        {   "cannot create list with NULL field name",
+            { NULL, "somevalue" },
+            FAIL,
+            {NULL},
+            {NULL},
+        },
+        {   "create a new list",
+            { "Host", "somevalue" },
+            SUCCEED,
+            {NULL},
+            {   "Host", "somevalue",
+                NULL,
+            },
+        },
+        {   "insert new node at head list",
+            { "Host", "somevalue" },
+            SUCCEED,
+            {   "Range", "bytes=20-40",
+                NULL,
+            },
+            {   "Host", "somevalue", 
+                "Range", "bytes=20-40",
+                NULL,
+            },
+        },
+        {   "append new node at list end",
+            { "x-amz-date", "somevalue" },
+            SUCCEED,
+            {   "Range", "bytes=20-40",
+                NULL,
+            },
+            {   "Range", "bytes=20-40", 
+                "x-amz-date", "somevalue",
+                NULL,
+            },
+        },
+        {   "insert new node inside list",
+            { "Intermediary", "somevalue" },
+            SUCCEED,
+            {   "Host", "somehost" ,
+                "Range", "bytes=20-40",
+                NULL,
+            },
+            {   "Host", "somehost", 
+                "Intermediary", "somevalue",
+                "Range", "bytes=20-40",
+                NULL,
+            },
+        },
+        {   "modify node",
+            { "Range", "bytes=40-80" },
+            SUCCEED,
+            {   "Host", "somehost",
+                "Range", "bytes=20-40",
+                NULL,
+            },
+            {   "Host", "somehost", 
+                "Range", "bytes=40-80",
+                NULL,
+            },
+        },
+        {   "modify node with new case",
+            { "RANGE", "bytes=40-80" },
+            SUCCEED,
+            {   "Host", "somehost",
+                "Range", "bytes=20-40",
+                NULL,
+            },
+            {   "Host", "somehost", 
+                "RANGE", "bytes=40-80",
+                NULL,
+            },
+        },
+        {   "cannot add node with no name",
+            { NULL, "bytes=40-80" },
+            FAIL,
+            {   "Host", "somehost",
+                NULL,
+            },
+            {   "Host", "somehost", 
+                NULL,
+            },
+        },
+        {   "add node with 'empty' name",
+            { "", "bytes=40-80" },
+            SUCCEED,
+            {   "Host", "somehost",
+                NULL,
+            },
+            {   "", "bytes=40-80", 
+                "Host", "somehost", 
+                NULL,
+            },
+        },
+        {   "remove node from end of list",
+            { "Host", NULL },
+            SUCCEED,
+            {   "Date", "Thr, 25 Jan 2018",
+                "Host", "somehost",
+                NULL,
+            },
+            {   "Date", "Thr, 25 Jan 2018",
+                NULL,
+            },
+        },
+        {   "remove node from middle of list",
+            { "Host", NULL },
+            SUCCEED,
+            {   "Date", "Thr, 25 Jan 2018",
+                "Host", "somehost",
+                "Range", "bytes=20-40",
+                NULL,
+            },
+            {   "Date", "Thr, 25 Jan 2018",
+                "Range", "bytes=20-40",
+                NULL,
+            },
+        },
+        {   "remove node from start of list",
+            { "Date", NULL },
+            SUCCEED,
+            {   "Date", "Thr, 25 Jan 2018",
+                "Host", "somehost",
+                "Range", "bytes=20-40",
+                NULL,
+            },
+            {   "Host", "somehost",
+                "Range", "bytes=20-40",
+                NULL,
+            },
+        },
+        {   "remove only node in list",
+            { "Date", NULL },
+            SUCCEED,
+            {   "Date", "Thr, 25 Jan 2018",
+                NULL,
+            },
+            {   NULL,
+            },
+        },
+        {   "attempt to remove absent node fails",
+            { "Host", NULL },
+            FAIL,
+            {   "Date", "Thr, 25 Jan 2018",
+                "Range", "bytes=20-40",
+                NULL,
+            },
+            {   "Date", "Thr, 25 Jan 2018",
+                "Range", "bytes=20-40",
+                NULL,
+            },
+        },
+        {   "removal is case-insensitive",
+            { "hOsT", NULL },
+            SUCCEED,
+            {   "Date", "Thr, 25 Jan 2018",
+                "Host", "somehost",
+                "Range", "bytes=20-40",
+                NULL,
+            },
+            {   "Date", "Thr, 25 Jan 2018",
+                "Range", "bytes=20-40",
+                NULL,
+            },
+        },
+    };
+    unsigned testcases_count = 16;
+    unsigned test_i = 0;
 
     hrb_node_t *list = NULL;
 
@@ -833,108 +1048,62 @@ test_hrb_node_set(void)
 
     TESTING("test_hrb_node_t");
 
-    HDassert( list == NULL );
-    JSVERIFY( FAIL,
-              H5FD_s3comms_hrb_node_set(&list, "Host", NULL),
-              "removed a node from a null list")
+    for (test_i = 0; test_i < testcases_count; test_i++) {
+        const hrb_node_t  *node = NULL;
+        const testcase    *test = &(cases[test_i]);
+        const node_mock_t *mock = NULL;
+        unsigned mock_i = 0;
 
-    HDassert( list == NULL );
-    JSVERIFY( FAIL,
-              H5FD_s3comms_hrb_node_set(&list, NULL, "somevalue"),
-              "created a list with NULL field name")
+        /*********
+         * SETUP *
+         *********/
 
-    HDassert( list == NULL );
+        for (mock_i = 0; test->given[mock_i] != NULL; mock_i += 2) {
+            const char *name = test->given[mock_i];
+            const char *valu = test->given[mock_i+1];
 
-    JSVERIFY( SUCCEED,
-              H5FD_s3comms_hrb_node_set(&list, "Host", "mybucket.s3.com") ,
-              "unable to create a node")
-    FAIL_IF( list == NULL );
-    JSVERIFY( S3COMMS_HRB_NODE_MAGIC, list->magic, NULL )
-    JSVERIFY_STR( "Host",                  list->name,      NULL )
-    JSVERIFY_STR( "host",                  list->lowername, NULL )
-    JSVERIFY_STR( "mybucket.s3.com",       list->value,     NULL )
-    JSVERIFY_STR( "Host: mybucket.s3.com", list->cat,       NULL )
-    FAIL_IF( list->next != NULL)
+            FAIL_IF( SUCCEED !=
+                     H5FD_s3comms_hrb_node_set(&list, name, valu) )
+        }
+        /********
+         * TEST *
+         ********/
 
-    JSVERIFY( SUCCEED,
-              H5FD_s3comms_hrb_node_set(&list, "x-amz-date", "20170921"),
-              "unable to append node" )
-    JSVERIFY( SUCCEED,
-              H5FD_s3comms_hrb_node_set(&list, "Range", "bytes=50-100"),
-              "unable to insert node" );
-    JSVERIFY_STR( "host",       list->lowername,             NULL )
-    JSVERIFY_STR( "range",      list->next->lowername,       NULL )
-    JSVERIFY_STR( "x-amz-date", list->next->next->lowername, NULL )
-    FAIL_IF( list->next->next->next != NULL )
-    JSVERIFY_STR( "bytes=50-100", list->next->value, NULL )
+        /* perform modification on list
+         */
+        JSVERIFY( test->returned,
+                  H5FD_s3comms_hrb_node_set(&list,
+                                            test->delta.name,
+                                            test->delta.value),
+                  test->message )
 
-    JSVERIFY( SUCCEED, 
-              H5FD_s3comms_hrb_node_set(&list, "Access", "always"),
-              "unable to prepend node" )
-    FAIL_IF( list == NULL );
-    JSVERIFY_STR( "Access",     list->name,                   NULL )
-    JSVERIFY_STR( "Host",       list->next->name,             NULL )
-    JSVERIFY_STR( "Range",      list->next->next->name,       NULL )
-    JSVERIFY_STR( "x-amz-date", list->next->next->next->name, NULL )
-    FAIL_IF( list->next->next->next->next != NULL )
-    JSVERIFY_STR( "bytes=50-100", list->next->next->value, NULL )
 
-    JSVERIFY_STR( "x-amz-date: 20170921", list->next->next->next->cat, NULL)
-    JSVERIFY( SUCCEED,
-              H5FD_s3comms_hrb_node_set(&list, "x-amz-date", "19411207"),
-              "unable to modify x-amz-date value" )
-    JSVERIFY_STR( "x-amz-date: 19411207", list->next->next->next->cat, NULL)
+        /* verify resulting list
+         */
+        node = list;
+        mock_i = 0;
+        while (test->expected[mock_i] != NULL && node != NULL) {
+            const char *name = test->expected[mock_i];
+            const char *valu = test->expected[mock_i+1];
 
-    JSVERIFY( SUCCEED,
-              H5FD_s3comms_hrb_node_set(&list, "hoST", "none"),
-              "unable to modify Host -> hoST" )
-    JSVERIFY_STR( "Access: always", list->cat, NULL )
-    JSVERIFY_STR( "hoST: none", list->next->cat, NULL )
-    JSVERIFY_STR( "Range: bytes=50-100", list->next->next->cat, NULL )
+            JSVERIFY_STR( name, node->name, NULL )
+            JSVERIFY_STR( valu, node->value, NULL )
+            
+            mock_i += 2;
+            node = node->next;
+        }
+        FAIL_IF( test->expected[mock_i] != NULL )
+        FAIL_IF( node != NULL )
 
-    JSVERIFY( FAIL,
-              H5FD_s3comms_hrb_node_set(&list, NULL, "somevalue"),
-              "set NULL element in list" )
+        /************
+         * TEARDOWN *
+         ************/
 
-    /* AT THIS TIME:
-     *
-     * list order: [access, host, range, x-amz-date]
-     *
-     * now remove nodes and observe changes
-     */
-
-    JSVERIFY( SUCCEED,
-              H5FD_s3comms_hrb_node_set(&list, "Access", NULL),
-              "unable to remove first node in list (Access)" )
-    JSVERIFY_STR( "hoST", list->name, NULL )
-    JSVERIFY_STR( "Range", list->next->name, NULL )
-    JSVERIFY_STR( "x-amz-date", list->next->next->name, NULL )
-    FAIL_IF( list->next->next->next != NULL )
-
-    JSVERIFY( SUCCEED,
-              H5FD_s3comms_hrb_node_set(&list, "rAnGe", NULL),
-              "unable to remove inner node with case-differing name" )
-    JSVERIFY_STR( "hoST", list->name, NULL )
-    JSVERIFY_STR( "x-amz-date", list->next->name, NULL )
-    FAIL_IF( list->next->next != NULL )
-
-    JSVERIFY( FAIL,
-              H5FD_s3comms_hrb_node_set(&list, "Range", NULL),
-              "no error reported when trying to remove absent node" )
-    JSVERIFY_STR( "hoST", list->name, NULL )
-    JSVERIFY_STR( "x-amz-date", list->next->name, NULL )
-    FAIL_IF( list->next->next != NULL )
-
-    JSVERIFY( SUCCEED,
-              H5FD_s3comms_hrb_node_set(&list, "x-amz-date", NULL),
-              "unable to remove node at end of list" )
-    JSVERIFY_STR( "hoST", list->name, NULL )
-    FAIL_IF( list->next != NULL )
-
-    JSVERIFY( SUCCEED,
-              H5FD_s3comms_hrb_node_set(&list, "host", NULL),
-              "unable to empty list" )
-    FAIL_IF( list != NULL )
+        while (list != NULL) {
+            FAIL_IF( SUCCEED !=
+                     H5FD_s3comms_hrb_node_set(&list, list->name, NULL) )
+        }
+    }
 
     PASSED();
     return 0;

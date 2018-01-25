@@ -50,16 +50,17 @@
 /* Local Macros */
 /****************/
 
-/* toggle function debugging:
- * iff 1 (1L), prints function names as they are called
+/* toggle debugging (enable with 1)
  */
 #define S3COMMS_DEBUG 0
 
 /* maniuplate verbosity of CURL output
+ * operates seprartely from S3COMMS_DEBUG
+ *
  * 0 -> no explicit curl output
  * 1 -> on error, print failure info to stderr
- * 2 -> in addition to above, print information for all performs
- *      sets all curl handles with CURLOPT_VERBOSE
+ * 2 -> in addition to above, print information for all performs; sets all 
+ *      curl handles with CURLOPT_VERBOSE
  */
 #define S3COMMS_CURL_VERBOSITY 0
 
@@ -253,8 +254,9 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
      * PREPARE ALL STRINGS *
      **********************/
 
-    /* if value supplied, copy name, value, and concatenated "name: value"
-     * if NULL, we will be removing (if anything)
+    /* If value supplied, copy name, value, and concatenated "name: value".
+     * If NULL, we will be removing a node or doing nothing, so no need for
+     * copies
      */
     if (value != NULL) {
         size_t valuelen   = strlen(value);
@@ -283,6 +285,21 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
         sprint_ret = snprintf(nvcat, (catlen + 1), "%s: %s", name, value);
         HDassert( sprint_ret > 0 );
         HDassert( catlen == (size_t)sprint_ret );
+
+        /* create new_node, should we need it 
+         */
+        new_node = (hrb_node_t *)H5MM_malloc(sizeof(hrb_node_t));
+        if (new_node == NULL) {
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, 
+                        "cannot make space for new set.\n");
+        }
+
+        new_node->magic     = S3COMMS_HRB_NODE_MAGIC;
+        new_node->name      = NULL;
+        new_node->value     = NULL;
+        new_node->cat       = NULL;
+        new_node->lowername = NULL;
+        new_node->next      = NULL;
     }
 
     /* copy and lowercase name
@@ -297,24 +314,9 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
     }
     lowername[namelen] = 0;
 
-    /* create new_node, should we need it 
-     */
-    new_node = (hrb_node_t *)H5MM_malloc(sizeof(hrb_node_t));
-    if (new_node == NULL) {
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, 
-                    "cannot make space for new set.\n");
-    }
-
-    new_node->magic     = S3COMMS_HRB_NODE_MAGIC;
-    new_node->name      = NULL;
-    new_node->value     = NULL;
-    new_node->cat       = NULL;
-    new_node->lowername = NULL;
-    new_node->next      = NULL;
-
-    /************************************
-     * INSERT, MODIFY, OR REMOVE A NODE *
-     ************************************/
+    /***************
+     * ACT ON LIST *
+     ***************/
 
     if (*L == NULL)  {
         if (value == NULL) {
@@ -335,6 +337,8 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
         }
     }
 
+    /* sanity-check pointer passed in
+     */
     HDassert( (*L) != NULL );
     HDassert( (*L)->magic == S3COMMS_HRB_NODE_MAGIC );
     ptr = (*L);
@@ -342,6 +346,8 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
     /* Check whether to modify/remove first node in list
      */
     if (strcmp(lowername, ptr->lowername) == 0) {
+
+        is_looking = FALSE;
 
         if (value == NULL) {
             /***************
@@ -379,8 +385,9 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
             H5MM_xfree(lowername); lowername = NULL;
             H5MM_xfree(new_node);  new_node  = NULL;
         }
-        is_looking = FALSE;
     } else if (strcmp(lowername, ptr->lowername) < 0) {
+
+        is_looking = FALSE;
 
         if (value == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
@@ -396,13 +403,17 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
             new_node->cat       = nvcat;
             new_node->next      = ptr;
             *L = new_node;
-
-            is_looking = FALSE;
         }
     }
 
+    /***************
+     * SEARCH LIST *
+     ***************/
+
     while (is_looking) {
         if (ptr->next == NULL) {
+
+            is_looking = FALSE;
 
             if (value == NULL) {
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
@@ -419,8 +430,9 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
                 new_node->cat       = nvcat;
                 ptr->next = new_node;
             }
-            is_looking = FALSE;
         } else if (strcmp(lowername, ptr->next->lowername) < 0) {
+
+            is_looking = FALSE;
  
             if (value == NULL) {
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
@@ -438,8 +450,9 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
                 new_node->next      = ptr->next;
                 ptr->next = new_node;
             }
-            is_looking = FALSE;
         } else if (strcmp(lowername, ptr->next->lowername) == 0) {
+
+            is_looking = FALSE;
 
             if (value == NULL) {
                 /*****************
@@ -481,7 +494,6 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
                 ptr->value = valuecpy;
                 ptr->cat = nvcat;
             }
-            is_looking = FALSE;
         } else {
             /****************
              * KEEP LOOKING *
@@ -527,18 +539,18 @@ done:
  *
  *    Headers list at `first_header` is not touched.
  *
- *    - Programmer should re-use or destroy `first_header` 
- *      (hrb_node_t *) pointer as suits their purposes.
+ *    - Programmer should re-use or destroy `first_header` pointer
+ *      (hrb_node_t *) as suits their purposes.
  *    - Recommend fetching prior to destroy()
  *      e.g., `reuse_node = hrb_to_die->first_header; destroy(hrb_to_die);`
  *      or maintaining an external reference.
- *    - Destroy node/list as appropriate separately
- *        - `H5FD_s3comms_hrb_node_destroy(&node);
+ *    - Destroy node/list separately as appropriate
  *    - Failure to account for this will result in a memory leak.
  *
  * Return: 
  *
  *     - SUCCESS: `SUCCEED`
+ *         - successfully released buffer resources
  *         - if `buf` is NULL or `*buf` is NULL, no effect
  *     - FAILURE: `FAIL`
  *         - `buf->magic != S3COMMS_HRB_MAGIC`
@@ -577,7 +589,6 @@ H5FD_s3comms_hrb_destroy(hrb_t **_buf)
 
     if (_buf != NULL && *_buf != NULL) {
         buf = *_buf;
-        HDassert( buf->magic == S3COMMS_HRB_MAGIC );
         if (buf->magic != S3COMMS_HRB_MAGIC) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "pointer's magic does not match.\n");
@@ -603,8 +614,7 @@ done:
  *
  * Purpose:
  *
- *     Create a new HTTP Request Buffer, to build an HTTP request,
- *     element by element (header-by-header, plus optional body).
+ *     Create a new HTTP Request Buffer
  *
  *     All non-null arguments should be null-terminated strings.
  *
@@ -675,18 +685,17 @@ H5FD_s3comms_hrb_init_request(const char *_verb,
 
     /* populate valid NULLs with defaults
      */
-    if (_verb == NULL) {
+    if (_verb == NULL)
         _verb = "GET";
-    }
-    if (_http_version == NULL) {
+
+    if (_http_version == NULL)
         _http_version = "HTTP/1.1";
-    }
 
     /* malloc space for and prepare structure
      */
     request = (hrb_t *)H5MM_malloc(sizeof(hrb_t));
     if (request == NULL) {
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
+        HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, NULL,
                     "no space for request structure");
     }
     request->magic        = S3COMMS_HRB_MAGIC;
@@ -750,12 +759,10 @@ done:
     /* if there is an error, clean up after ourselves
      */
     if (ret_value == NULL) {
-        if (request != NULL) {
-            H5MM_xfree(request);
-        }
-        if (vrsn) { H5MM_xfree(vrsn); }
-        if (verb) { H5MM_xfree(verb); }
-        if (res)  { H5MM_xfree(res);  }
+        if (request != NULL)  H5MM_xfree(request);
+        if (vrsn    != NULL)  H5MM_xfree(vrsn);
+        if (verb    != NULL)  H5MM_xfree(verb);
+        if (res     != NULL)  H5MM_xfree(res);
     }
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -782,8 +789,7 @@ done:
  *
  *     - SUCCESS: `SUCCEED`
  *     - FAILURE: `FAIL`
- *         - `handle == NULL`
- *         - `handle->magic != S3COMMS_S3R_MAGIC`
+ *         - fails if handle is null or has invalid magic number
  *
  *
  * Programmer: Jacob Smith
@@ -828,12 +834,16 @@ H5FD_s3comms_s3r_close(s3r_t *handle)
     }
 
     curl_easy_cleanup(handle->curlhandle);
+
     H5MM_xfree(handle->secret_id);
     H5MM_xfree(handle->region);
     H5MM_xfree(handle->signing_key);
+
     HDassert( handle->httpverb != NULL );
     H5MM_xfree(handle->httpverb);
+
     HDassert( SUCCEED == H5FD_s3comms_free_purl(handle->purl) );
+
     H5MM_xfree(handle);
 
 done:
@@ -855,8 +865,8 @@ done:
  *
  * Return:
  *
- *     0 if handle is NULL or undefined
- *     size of file, in bytes, if handle is valid.
+ *     - SUCCESS: size of file, in bytes, if handle is valid.
+ *     - FAILURE: 0, if handle is NULL or undefined.
  *
  * Programmer: Jacob Smith 2017-01-14
  *
@@ -866,6 +876,7 @@ done:
  */
 size_t
 H5FD_s3comms_s3r_get_filesize(s3r_t *handle) {
+
     size_t ret_value = 0;
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -896,7 +907,9 @@ H5FD_s3comms_s3r_get_filesize(s3r_t *handle) {
  *    Sets curlhandle to write headers to a temporary buffer (using extant 
  *    write callback) and provides no buffer for body.
  *
- *    Upon exit, unsets HTTP HEAD settings from curl handle.
+ *    Upon exit, unsets HTTP HEAD settings from curl handle, returning to
+ *    initial state. In event of error, curl handle state is undefined and is
+ *    not to be trusted.
  *
  * Return:
  *
@@ -968,8 +981,6 @@ H5FD_s3comms_s3r_getsize(s3r_t *handle)
                     "(placeholder flags)");
     }
 
-    /* uses WRITEFUNCTION, as supplied in s3r_open */
-
     if ( CURLE_OK != 
         curl_easy_setopt(curlh,
                          CURLOPT_HEADERDATA,
@@ -1017,8 +1028,7 @@ H5FD_s3comms_s3r_getsize(s3r_t *handle)
     /* move "start" to beginning of value in line; find end of line
      */
     start = start + strlen("\r\nContent-Length: ");
-    end = strstr(start,
-                 "\r\n");
+    end = strstr(start, "\r\n");
     if (end == NULL) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "could not find end of content length line");
@@ -1097,12 +1107,14 @@ done:
  *
  * Return:
  *
- *     - Pointer to new request handle.
- *     - NULL 
- *         - authentication strings are not all NULL or all populated
- *         - url is NULL (no filename)
- *         - unable to parse url (malformed?)
- *         - error while performing `getsize()`
+ *     - SUCCESS: Pointer to new request handle.
+ *     - FAILURE: NULL 
+ *         - occurrs if:
+ *             - authentication strings are incosistent
+ *             - must _all_ be null, or have at least `region` and `id`
+ *             - url is NULL (no filename)
+ *             - unable to parse url (malformed?)
+ *             - error while performing `getsize()`
  *
  * Programmer: Jacob Smith
  *             2017-09-01
@@ -1131,7 +1143,7 @@ H5FD_s3comms_s3r_open(const char          *url,
 {
     size_t        tmplen    = 0;
     CURL         *curlh     = NULL;
-    s3r_t        *h         = NULL; /* "h" for handle */
+    s3r_t        *handle    = NULL;
     parsed_url_t *purl      = NULL;
     s3r_t        *ret_value = NULL;
 
@@ -1158,19 +1170,19 @@ H5FD_s3comms_s3r_open(const char          *url,
     HDassert( purl != NULL ); /* if above passes, this must be true */
     HDassert( purl->magic == S3COMMS_PARSED_URL_MAGIC );
 
-    h = (s3r_t *)H5MM_malloc(sizeof(s3r_t));
-    if (h == NULL) {
+    handle = (s3r_t *)H5MM_malloc(sizeof(s3r_t));
+    if (handle == NULL) {
         HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, NULL,
                     "could not malloc space for handle.\n");
     }
 
-    h->magic        = S3COMMS_S3R_MAGIC;
-    h->purl         = purl;
-    h->filesize     = 0;
-    h->region       = NULL;
-    h->secret_id    = NULL;
-    h->signing_key  = NULL;
-    h->httpverb     = NULL;
+    handle->magic        = S3COMMS_S3R_MAGIC;
+    handle->purl         = purl;
+    handle->filesize     = 0;
+    handle->region       = NULL;
+    handle->secret_id    = NULL;
+    handle->signing_key  = NULL;
+    handle->httpverb     = NULL;
 
     /*************************************
      * RECORD AUTHENTICATION INFORMATION *
@@ -1198,29 +1210,29 @@ H5FD_s3comms_s3r_open(const char          *url,
         /* copy strings 
          */
         tmplen = strlen(region) + 1;
-        h->region = (char *)H5MM_malloc(sizeof(char) * tmplen);
-        if (h->region == NULL) {
+        handle->region = (char *)H5MM_malloc(sizeof(char) * tmplen);
+        if (handle->region == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
                         "could not malloc space for handle region copy.\n");
         }
-        HDmemcpy(h->region, region, tmplen);
+        HDmemcpy(handle->region, region, tmplen);
 
         tmplen = strlen(id) + 1;
-        h->secret_id = (char *)H5MM_malloc(sizeof(char) * tmplen);
-        if (h->secret_id == NULL) {
+        handle->secret_id = (char *)H5MM_malloc(sizeof(char) * tmplen);
+        if (handle->secret_id == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
                         "could not malloc space for handle ID copy.\n");
         }
-        HDmemcpy(h->secret_id, id, tmplen);
+        HDmemcpy(handle->secret_id, id, tmplen);
 
         tmplen = SHA256_DIGEST_LENGTH;
-        h->signing_key = (unsigned char *)H5MM_malloc(sizeof(unsigned char) * \
-                                                 tmplen);
-        if (h->signing_key == NULL) {
+        handle->signing_key = 
+                (unsigned char *)H5MM_malloc(sizeof(unsigned char) * tmplen);
+        if (handle->signing_key == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
                         "could not malloc space for handle key copy.\n");
         }
-        HDmemcpy(h->signing_key, signing_key, tmplen);
+        HDmemcpy(handle->signing_key, signing_key, tmplen);
     } /* if authentication information provided */
 
     /************************
@@ -1290,7 +1302,7 @@ H5FD_s3comms_s3r_open(const char          *url,
     curl_easy_setopt(curlh, CURLOPT_VERBOSE, 1L);
 #endif 
 
-    h->curlhandle = curlh;
+    handle->curlhandle = curlh;
 
     /*******************
      * OPEN CONNECTION *
@@ -1299,7 +1311,7 @@ H5FD_s3comms_s3r_open(const char          *url,
      *******************/
 
     if (FAIL == 
-        H5FD_s3comms_s3r_getsize(h) ) 
+        H5FD_s3comms_s3r_getsize(handle) ) 
     {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
                      "problem in H5FD_s3comms_s3r_getsize.\n");
@@ -1309,10 +1321,10 @@ H5FD_s3comms_s3r_open(const char          *url,
      * FINAL PREPARATION *
      *********************/
 
-    HDassert( h->httpverb != NULL );
-    HDmemcpy(h->httpverb, "GET", 4);
+    HDassert( handle->httpverb != NULL );
+    HDmemcpy(handle->httpverb, "GET", 4);
 
-    ret_value = h;
+    ret_value = handle;
 
 done:
     if (ret_value == NULL) {
@@ -1320,14 +1332,14 @@ done:
             curl_easy_cleanup(curlh);
         }
         HDassert( SUCCEED == H5FD_s3comms_free_purl(purl) );
-        if (h != NULL) {
-            H5MM_xfree(h->region);
-            H5MM_xfree(h->secret_id);
-            H5MM_xfree(h->signing_key);
-            if (h->httpverb != NULL) {
-                H5MM_xfree(h->httpverb);
+        if (handle != NULL) {
+            H5MM_xfree(handle->region);
+            H5MM_xfree(handle->secret_id);
+            H5MM_xfree(handle->signing_key);
+            if (handle->httpverb != NULL) {
+                H5MM_xfree(handle->httpverb);
             }
-            H5MM_xfree(h);
+            H5MM_xfree(handle);
         }
     }
 
@@ -1461,7 +1473,7 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
 
     if (dest != NULL) {
         sds = (struct s3r_datastruct *)H5MM_malloc(
-                        sizeof(struct s3r_datastruct));
+                sizeof(struct s3r_datastruct));
         if (sds == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
                         "could not malloc destination datastructure.\n");
@@ -1524,6 +1536,7 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
             /* Pass in range directly
              */
             char *bytesrange_ptr = NULL; /* pointer past "bytes=" portion */
+
             bytesrange_ptr = strchr(rangebytesstr, '=');
             HDassert( bytesrange_ptr != NULL );
             bytesrange_ptr++; /* move to first char past '=' */
@@ -1536,10 +1549,11 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
             {
                 HGOTO_ERROR(H5E_VFL, H5E_UNINITIALIZED, FAIL,
                         "error while setting CURL option (CURLOPT_RANGE). ");
-            } /* curl setopt failed */
-        } /* if rangebytesstr is defined */
+            }
+        }
     } else {
-        /* authenticate request */
+        /* authenticate request
+         */
         char authorization[512];
             /*   512 := approximate max length...
              *    67 <len("AWS4-HMAC-SHA256 Credential=///s3/aws4_request,"
