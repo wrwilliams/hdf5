@@ -437,9 +437,9 @@ test_fapl_config_validation(void)
      *************************/
 
     struct testcase {
-        H5FD_ros3_fapl_t  config;
-        herr_t            expected;
         const char       *msg;
+        herr_t            expected;
+        H5FD_ros3_fapl_t  config;
     };
 
     /************************
@@ -456,78 +456,78 @@ test_fapl_config_validation(void)
                                          /* dynamic cases creation because    */
                                          /* of compiler warnings Wlarger-than */
     struct testcase  cases_arr[] = {
-        {   {   H5FD__CURR_ROS3_FAPL_T_VERSION, /* version      */
+        {   "non-authenticating config allows empties.\n",
+            SUCCEED,
+            {   H5FD__CURR_ROS3_FAPL_T_VERSION, /* version      */
                 FALSE,                          /* authenticate */
                 "",                             /* aws_region   */
                 "",                             /* secret_id    */
                 "",                             /* secret_key   */
             },
-            SUCCEED,
-            "non-authenticating config allows empties.\n",
         },
-        {   {   H5FD__CURR_ROS3_FAPL_T_VERSION,
+        {   "authenticating config asks for populated strings.\n",
+            FAIL,
+            {   H5FD__CURR_ROS3_FAPL_T_VERSION,
                 TRUE,
                 "",
                 "",
                 "",
             },
-            FAIL,
-            "authenticating config asks for populated strings.\n",
         },
-        {   {   H5FD__CURR_ROS3_FAPL_T_VERSION,
+        {   "populated strings; key is the empty string?\n",
+            SUCCEED,
+            {   H5FD__CURR_ROS3_FAPL_T_VERSION,
                 TRUE,
                 "region",
                 "me",
                 "",
             },
-            SUCCEED,
-            "populated strings; key is the empty string?\n",
         },
-        {   {   H5FD__CURR_ROS3_FAPL_T_VERSION,
+        {   "id cannot be empty.\n",
+            FAIL,
+            {   H5FD__CURR_ROS3_FAPL_T_VERSION,
                 TRUE,
                 "",
                 "me",
                 "",
             },
-            FAIL,
-            "id cannot be empty.\n",
         },
-        {   {   H5FD__CURR_ROS3_FAPL_T_VERSION,
+        {   "region cannot be empty.\n",
+            FAIL,
+            {   H5FD__CURR_ROS3_FAPL_T_VERSION,
                 TRUE,
                 "where",
                 "",
                 "",
             },
-            FAIL,
-            "region cannot be empty.\n",
         },
-        {   {   H5FD__CURR_ROS3_FAPL_T_VERSION,
+        {   "all strings populated.\n",
+            SUCCEED,
+            {   H5FD__CURR_ROS3_FAPL_T_VERSION,
                 TRUE,
                 "where",
                 "who",
                 "thisIsA GREAT seeeecrit",
             },
-            SUCCEED,
-            "all strings populated.\n",
         },
-        {   {   12345,
+        {   "incorrect version should fail\n",
+            FAIL,
+            {   12345,
                 FALSE,
                 "",
                 "",
                 "",
             },
-            FAIL,
-            "incorrect version should fail\n",
         },
-        {   {   H5FD__CURR_ROS3_FAPL_T_VERSION,
+        {   "non-authenticating config cares not for (de)population"
+            "of strings.\n",
+            SUCCEED,
+            {   H5FD__CURR_ROS3_FAPL_T_VERSION,
                 FALSE,
                 "someregion",
                 "someid",
                 "somekey",
             },
-            SUCCEED,
-            "non-authenticating config cares not for (de)population"
-            "of strings.\n",
         },
     };
 
@@ -574,14 +574,25 @@ test_fapl_config_validation(void)
             JSVERIFY( SUCCEED,
                       H5Pget_fapl_ros3(fapl_id, &fa_fetch),
                       "unable to get fapl" )
-            /* or,  ( H5Pget_fapl_ros3(...) < 0 )  */
 
-            JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION, fa_fetch.version, NULL )
-            JSVERIFY( config.version,      fa_fetch.version,      NULL )
-            JSVERIFY( config.authenticate, fa_fetch.authenticate, NULL )
-            JSVERIFY_STR( config.aws_region, fa_fetch.aws_region, NULL )    
-            JSVERIFY_STR( config.secret_id,  fa_fetch.secret_id,  NULL )
-            JSVERIFY_STR( config.secret_key, fa_fetch.secret_key, NULL )
+            JSVERIFY( H5FD__CURR_ROS3_FAPL_T_VERSION,
+                      fa_fetch.version,
+                      "invalid version number" )
+            JSVERIFY( config.version,
+                      fa_fetch.version,
+                      "version number mismatch" )
+            JSVERIFY( config.authenticate,
+                      fa_fetch.authenticate,
+                      "authentication flag mismatch" )
+            JSVERIFY_STR( config.aws_region,
+                          fa_fetch.aws_region,
+                          NULL )    
+            JSVERIFY_STR( config.secret_id,
+                          fa_fetch.secret_id,
+                          NULL )
+            JSVERIFY_STR( config.secret_key,
+                          fa_fetch.secret_key,
+                          NULL )
         }
 
         /*-----------------------------
@@ -662,21 +673,18 @@ test_ros3_fapl(void)
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
     FAIL_IF( fapl_id < 0 )
 
-    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &ros3_fa_0), NULL )
+    FAIL_IF( FAIL == H5Pset_fapl_ros3(fapl_id, &ros3_fa_0) )
+
+    driver_id = H5Pget_driver(fapl_id);
+    FAIL_IF( driver_id < 0 )
 
     /****************
      * Check that the VFD feature flags are correct
      * SPEC MAY CHANGE 
      ******************/
 
-    driver_id = H5Pget_driver(fapl_id);
-    FAIL_IF( driver_id < 0 )
-
     FAIL_IF( H5FDdriver_query(driver_id, &driver_flags) < 0 )
 
-    /* bit(s) in `driver_flags` must align with H5FD_FEAT_DATA_SIEVE
-     */
-    /* FAIL_IF( !(driver_flags & H5FD_FEAT_DATA_SIEVE) ) */
     JSVERIFY_NOT( 0, (driver_flags & H5FD_FEAT_DATA_SIEVE), 
                   "bit(s) in `driver_flags` must align with "
                   "H5FD_FEAT_DATA_SIEVE" )
@@ -758,9 +766,9 @@ test_vfd_open(void)
      * test-local variables *
      ************************/
 
-    H5FD_t           *fd         = NULL;
-    hbool_t           curl_ready = FALSE;
-    hid_t             fapl_id    = -1;
+    H5FD_t  *fd         = NULL;
+    hbool_t  curl_ready = FALSE;
+    hid_t    fapl_id    = -1;
 
 
 
@@ -773,7 +781,8 @@ test_vfd_open(void)
      * TESTS *
      *********/
 
-    VFD_OPEN_VERIFY_NULL( "default _property list_ is not allowed",
+    VFD_OPEN_VERIFY_NULL(
+            "default _property list_ is not allowed",
             url_text_public,
             H5F_ACC_RDONLY, H5P_DEFAULT, MAXADDR )
 
@@ -785,40 +794,48 @@ test_vfd_open(void)
             url_text_public,
             H5F_ACC_RDONLY, H5P_DEFAULT, MAXADDR )
 
-    JSVERIFY( SUCCEED, 
-              H5Pset_fapl_ros3(fapl_id, &anonymous_fa),
-              "(sanity check) unable to set fapl" )
+    /* sanity check while setting fapl
+     */
+    FAIL_IF( FAIL == H5Pset_fapl_ros3(fapl_id, &anonymous_fa) )
 
     /* filename must be valid
      */
-    VFD_OPEN_VERIFY_NULL( "filename cannot be null",
+    VFD_OPEN_VERIFY_NULL(
+            "filename cannot be null",
             NULL, H5F_ACC_RDONLY, fapl_id, MAXADDR )
-    VFD_OPEN_VERIFY_NULL( "filename cannot be empty", 
+    VFD_OPEN_VERIFY_NULL(
+            "filename cannot be empty", 
             "", H5F_ACC_RDONLY, fapl_id, MAXADDR )
 
     /* File must exist at given URL/URI */
-    VFD_OPEN_VERIFY_NULL( "file must exist",
+    VFD_OPEN_VERIFY_NULL(
+            "file must exist",
             url_missing,
             H5F_ACC_RDWR, fapl_id, MAXADDR )
 
     /* only supported flag is "Read-Only"
      */
-    VFD_OPEN_VERIFY_NULL( "read-write flag not supported",
+    VFD_OPEN_VERIFY_NULL(
+            "read-write flag not supported",
             url_text_public,
             H5F_ACC_RDWR, fapl_id, MAXADDR )
-    VFD_OPEN_VERIFY_NULL( "truncate flag not supported",
+    VFD_OPEN_VERIFY_NULL(
+            "truncate flag not supported",
             url_text_public,
             H5F_ACC_TRUNC, fapl_id, MAXADDR )
-    VFD_OPEN_VERIFY_NULL( "create flag not supported",
+    VFD_OPEN_VERIFY_NULL(
+            "create flag not supported",
             url_text_public,
             H5F_ACC_CREAT, fapl_id, MAXADDR )
-    VFD_OPEN_VERIFY_NULL( "EXCL flag not supported",
+    VFD_OPEN_VERIFY_NULL(
+            "EXCL flag not supported",
             url_text_public,
             H5F_ACC_EXCL, fapl_id, MAXADDR )
 
     /* maxaddr limitations
      */
-    VFD_OPEN_VERIFY_NULL( "MAXADDR cannot be 0 (caught in `H5FD_open()`)",
+    VFD_OPEN_VERIFY_NULL(
+            "MAXADDR cannot be 0 (caught in `H5FD_open()`)",
             url_text_public,
             H5F_ACC_RDONLY, fapl_id, 0 )
 
@@ -904,9 +921,9 @@ test_eof_eoa(void)
      * test-local variables *
      ************************/
 
-    H5FD_t           *fd_shakespeare  = NULL;
-    hbool_t           curl_ready = FALSE;
-    hid_t             fapl_id    = -1;
+    H5FD_t  *fd_shakespeare  = NULL;
+    hbool_t  curl_ready      = FALSE;
+    hid_t    fapl_id         = -1;
 
 
 
@@ -921,7 +938,7 @@ test_eof_eoa(void)
 
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
     FAIL_IF( 0 > fapl_id )
-    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &restricted_access_fa), NULL )
+    FAIL_IF( FAIL == H5Pset_fapl_ros3(fapl_id, &restricted_access_fa) )
 
     fd_shakespeare = H5FDopen(
              url_text_restricted,
@@ -988,8 +1005,8 @@ error:
      * CLEANUP *
      ***********/
 
-    if (fd_shakespeare)     { (void)H5FDclose(fd_shakespeare); }
-    if (TRUE == curl_ready) { curl_global_cleanup(); }
+    if (fd_shakespeare)     (void)H5FDclose(fd_shakespeare);
+    if (TRUE == curl_ready) curl_global_cleanup();
     if (fapl_id >= 0) { 
         H5E_BEGIN_TRY {
             (void)H5Pclose(fapl_id);
@@ -999,6 +1016,143 @@ error:
     return 1;
 
 } /* test_eof_eoa */
+
+
+/*-----------------------------------------------------------------------------
+ *
+ * Function: test_H5FDread_without_eoa_set_fails()
+ * 
+ * Purpose:
+ * 
+ *     Demonstrate a not-obvious constraint by the library, preventing
+ *     file read before EoA is set
+ *
+ * Programmer: Jacob Smith
+ *             2018-01-26
+ *
+ *-----------------------------------------------------------------------------
+ */
+static int
+test_H5FDread_without_eoa_set_fails(void)
+{
+    char              buffer[256];
+    unsigned int      i                = 0;
+    H5FD_t           *file_shakespeare = NULL;
+    hid_t             fapl_id          = -1;
+    hid_t             dxpl_id          = -1;
+    H5FD_dxpl_type_t  dxpl_type_raw    = H5FD_RAWDATA_DXPL;
+    H5P_genplist_t   *dxpl_plist       = NULL;
+
+
+
+    TESTING("ROS3 VFD read-eoa temporal coupling library limitation ");
+
+    /*********
+     * SETUP *
+     *********/
+
+    /* create ROS3 fapl 
+     */
+    fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+    FAIL_IF( fapl_id < 0 )
+    FAIL_IF( FAIL == H5Pset_fapl_ros3(fapl_id, &restricted_access_fa) )
+
+    /* create suitable dxpl
+     */
+    dxpl_id = H5Pcreate(H5P_DATASET_XFER);
+    FAIL_IF( dxpl_id < 0 )
+
+    dxpl_plist = (H5P_genplist_t *)H5I_object(dxpl_id);
+    FAIL_IF( NULL == dxpl_plist )
+    FAIL_IF( FAIL == H5P_set(dxpl_plist, H5FD_DXPL_TYPE_NAME, &dxpl_type_raw) )
+
+    /* Verify that dxpl_id reflects type setting.
+     * i.e., set was successful.
+     */
+    {
+        H5P_genplist_t   *test_plist     = NULL;
+        H5FD_dxpl_type_t  test_dxpl_type = H5FD_METADATA_DXPL;
+
+        test_plist = (H5P_genplist_t *)H5I_object(dxpl_id);
+        FAIL_IF( test_plist == NULL )
+
+        FAIL_IF( FAIL ==
+                 H5P_get(test_plist,
+                         H5FD_DXPL_TYPE_NAME,
+                         &test_dxpl_type) )
+
+        JSVERIFY( H5FD_RAWDATA_DXPL,
+                  test_dxpl_type,
+                  "sanity check: dxpl types must match" )
+
+    }
+
+    file_shakespeare = H5FDopen(
+            url_text_restricted,
+            H5F_ACC_RDONLY,
+            fapl_id,
+            MAXADDR);
+    FAIL_IF( NULL == file_shakespeare )
+
+    JSVERIFY( 0, H5FDget_eoa(file_shakespeare, H5FD_MEM_DEFAULT),
+              "EoA should remain unset by H5FDopen" )
+
+    for (i = 0; i < 256; i++)
+        buffer[i] = 0; /* zero buffer contents */
+
+    /********
+     * TEST *
+     ********/
+
+    H5E_BEGIN_TRY { /* mute stack trace on expected failure */
+        JSVERIFY( FAIL,
+                  H5FDread(file_shakespeare,
+                       H5FD_MEM_DRAW,
+                       dxpl_id,
+                       1200699,
+                       102,
+                       buffer),
+                  "cannot read before eoa is set" )
+    } H5E_END_TRY;
+    JSVERIFY_STR( "", buffer, "buffer should remain untouched" )
+
+    /************
+     * TEARDOWN *
+     ************/
+
+    FAIL_IF( FAIL == H5FDclose(file_shakespeare) )
+    file_shakespeare = NULL;
+
+    FAIL_IF( FAIL == H5Pclose(fapl_id) )
+    fapl_id = -1;
+
+    FAIL_IF( FAIL == H5Pclose(dxpl_id) )
+    dxpl_id = -1;
+
+    PASSED();
+    return 0;
+
+error:
+    /***********
+     * CLEANUP *
+     ***********/
+
+    if (file_shakespeare)   { (void)H5FDclose(file_shakespeare); }
+    if (fapl_id >= 0) {
+        H5E_BEGIN_TRY {
+           (void)H5Pclose(fapl_id);
+        } H5E_END_TRY;
+    }
+    if (dxpl_id >= 0) {
+        H5E_BEGIN_TRY {
+           (void)H5Pclose(dxpl_id);
+        } H5E_END_TRY;
+    }
+
+    return 1;
+
+} /* test_H5FDread_without_eoa_set_fails */
+
 
 
 /*---------------------------------------------------------------------------
@@ -1027,16 +1181,68 @@ test_read(void)
     /*************************
      * test-local structures *
      *************************/
+    struct testcase {
+        const char *message;  /* purpose of test case */
+        haddr_t     eoa_set;  /* set file EOA to this prior to read */
+        size_t      addr;     /* offset of read in file */
+        size_t      len;      /* length of read in file */
+        herr_t      success;  /* expected return value of read function */
+        const char *expected; /* expected contents of buffer; failure ignores */
+    };
 
     /************************
      * test-local variables *
      ************************/
-
-    char              buffer[256];
-    hbool_t           curl_ready       = FALSE;
-    hbool_t           show_progress    = FALSE;
+    struct testcase cases[] = {
+        {   "successful range-get",
+            6464,
+            5691,
+            31,
+            SUCCEED,
+            "Quoth the Raven “Nevermore.”",
+        },
+        {   "read past EOA fails (EOA < EOF < addr)",
+            3000,
+            4000,
+            100,
+            FAIL,
+            NULL,
+        },
+        {   "read overlapping EOA fails (EOA < addr < EOF < (addr+len))",
+            3000,
+            8000,
+            100,
+            FAIL,
+            NULL,
+        },
+        {   "read past EOA/EOF fails ((EOA==EOF) < addr)",
+            6464,
+            7000,
+            100,
+            FAIL,
+            NULL,
+        },
+        {   "read overlapping EOA/EOF fails (addr < (EOA==EOF) < (addr+len))",
+            6464,
+            6400,
+            100,
+            FAIL,
+            NULL,
+        },
+        {   "read between EOF and EOA fails (EOF < addr < (addr+len) < EOA)",
+            8000,
+            7000,
+            100,
+            FAIL,
+            NULL,
+        },
+    };
+    unsigned          testcase_count   = 6;
+    unsigned          test_i           = 0;
+    struct testcase   test;
+    herr_t            open_return      = FAIL;
+    char              buffer[S3_TEST_MAX_URL_SIZE];
     unsigned int      i                = 0;
-    H5FD_t           *file_shakespeare = NULL;
     H5FD_t           *file_raven       = NULL;
     hid_t             fapl_id          = -1;
     hid_t             dxpl_id          = -1;
@@ -1051,16 +1257,11 @@ test_read(void)
      * SETUP *
      *********/
 
-    FAIL_IF( CURLE_OK != curl_global_init(CURL_GLOBAL_DEFAULT) )
-    curl_ready = TRUE;
-
     /* create ROS3 fapl 
      */
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
     FAIL_IF( fapl_id < 0 )
-    JSVERIFY( SUCCEED, 
-              H5Pset_fapl_ros3(fapl_id, &restricted_access_fa),
-              "problem configuring fapl" )
+    FAIL_IF( FAIL == H5Pset_fapl_ros3(fapl_id, &restricted_access_fa) )
 
     /* create suitable dxpl
      */
@@ -1069,10 +1270,7 @@ test_read(void)
 
     dxpl_plist = (H5P_genplist_t *)H5I_object(dxpl_id);
     FAIL_IF( NULL == dxpl_plist )
-
-    JSVERIFY( SUCCEED, 
-              H5P_set(dxpl_plist, H5FD_DXPL_TYPE_NAME, &dxpl_type_raw),
-              "problem setting dxpl type" )
+    FAIL_IF( FAIL == H5P_set(dxpl_plist, H5FD_DXPL_TYPE_NAME, &dxpl_type_raw) )
 
     /* Verify that dxpl_id reflects type setting.
      * i.e., set was successful.
@@ -1084,20 +1282,13 @@ test_read(void)
         test_plist = (H5P_genplist_t *)H5I_object(dxpl_id); 
         FAIL_IF( test_plist == NULL )
 
-        JSVERIFY( SUCCEED,
-                  H5P_get(test_plist, 
-                          H5FD_DXPL_TYPE_NAME, 
-                          &test_dxpl_type),
-                   NULL )
+        FAIL_IF( FAIL ==
+                 H5P_get(test_plist, H5FD_DXPL_TYPE_NAME, &test_dxpl_type) )
 
-        JSVERIFY( H5FD_RAWDATA_DXPL, test_dxpl_type, NULL )
-
-        if (show_progress) { 
-            HDfprintf(stdout, "dxpl_type set successfully\n");
-        }
+        FAIL_IF( H5FD_RAWDATA_DXPL != test_dxpl_type )
     }
 
-    /* open two separate files 
+    /* open file 
      */
     file_raven = H5FDopen( /* will open with "authenticating" fapl */
             url_text_public,
@@ -1106,121 +1297,50 @@ test_read(void)
             HADDR_UNDEF); /* Demonstrate success with "automatic" value */
     FAIL_IF( NULL == file_raven )
 
-    file_shakespeare = H5FDopen(
-            url_text_restricted,
-            H5F_ACC_RDONLY,
-            fapl_id,
-            MAXADDR);
-    FAIL_IF( NULL == file_shakespeare )
-
-    for (i = 0; i < 256; i++) { buffer[i] = 0; } /* zero buffer contents */
+    FAIL_IF( 6464 != H5FDget_eof(file_raven, H5FD_MEM_DEFAULT) )
 
     /*********
      * TESTS *
      *********/
 
-    JSVERIFY( 5458199, H5FDget_eof(file_shakespeare, H5FD_MEM_DEFAULT), NULL )
+    for (test_i = 0; test_i < testcase_count; test_i++) {
 
-    JSVERIFY( 0, H5FDget_eoa(file_shakespeare, H5FD_MEM_DEFAULT), 
-              "EoA should remain unset by H5FDopen" )
+        /* -------------- *
+         * per-test setup *
+         * -------------- */
 
-    if (show_progress) {
-        HDfprintf(stdout, "\n\n******* read fail (address overflow ) ******\n");
-    }
+        test        = cases[test_i];
+        open_return = FAIL;
 
-    H5E_BEGIN_TRY { /* mute stack trace on expected failure */
-        JSVERIFY( FAIL,
-                  H5FDread(file_shakespeare, 
-                       H5FD_MEM_DRAW, 
-                       dxpl_id,
-                       1200699,
-                       102,
-                       buffer),
-                  "address beyond EoA (0) results in read failure/error" )
-    } H5E_END_TRY;
+        FAIL_IF( S3_TEST_MAX_URL_SIZE < test.len ) /* buffer too small! */
 
-    if (show_progress) {
-        HDfprintf(stdout, "\n\n******* first read ******\n");
-    }
+        FAIL_IF( FAIL == 
+                 H5FD_set_eoa( file_raven, H5FD_MEM_DEFAULT, test.eoa_set) )
 
-    JSVERIFY( SUCCEED, 
-              H5FDset_eoa(file_shakespeare, 
-                          H5FD_MEM_DEFAULT, 
-                          H5FDget_eof(file_shakespeare, H5FD_MEM_DEFAULT) ),
-              "unable to set EoA" )
+        for (i = 0; i < S3_TEST_MAX_URL_SIZE; i++) /* zero buffer contents */
+            buffer[i] = 0;
 
-    JSVERIFY( SUCCEED, 
-              H5FDread(file_shakespeare, 
-                       H5FD_MEM_DRAW, 
-                       dxpl_id,
-                       1200699,
-                       102,
-                       buffer),
-               "unable to execute read" )
-    JSVERIFY_STR( "Osr. Sweet lord, if your lordship were at leisure, " \
-                  "I should impart\n    a thing to you from his Majesty.", 
-            buffer, 
-            NULL )
+        /* ------------ *
+         * conduct test *
+         * ------------ */
 
-    for (i = 0; i < 256; i++) { buffer[i] = 0; }
+        H5E_BEGIN_TRY {
+            open_return = H5FDread(
+                    file_raven,
+                    H5FD_MEM_DRAW,
+                    dxpl_id,
+                    test.addr,
+                    test.len,
+                    buffer);
+        } H5E_END_TRY;
 
-    if (show_progress) {
-        HDfprintf(stdout, "\n\n******* second read ******\n");
-    }
+        JSVERIFY( test.success,
+                  open_return,
+                  test.message )
+        if (open_return == SUCCEED)
+            JSVERIFY_STR( test.expected, buffer, NULL )
 
-    JSVERIFY( SUCCEED, 
-              H5FDset_eoa(file_raven, 
-                          H5FD_MEM_DEFAULT, 
-                          H5FDget_eof(file_raven, H5FD_MEM_DEFAULT) ),
-              "unable to set EoA" )
-
-    JSVERIFY( SUCCEED,
-              H5FDread(file_raven,
-                       H5FD_MEM_DRAW,
-                       dxpl_id,
-                       5691,
-                       31,
-                       buffer),
-               "unable to execute read" )
-    JSVERIFY_STR( "Quoth the Raven “Nevermore.”", buffer, NULL )
-
-    for (i = 0; i < 256; i++) { buffer[i] = 0; }
-
-    if (show_progress) {
-        HDfprintf(stdout, "\n\n******* addr past eoa ******\n");
-    }
-
-    H5E_BEGIN_TRY { /* mute stack trace on expected failure */
-        JSVERIFY( FAIL, 
-                  H5FDread(file_shakespeare,
-                           H5FD_MEM_DRAW,
-                           dxpl_id,
-                           5555555,
-                           102,
-                           buffer),
-                   "reading with addr past eoa/eof should fail" )
-    } H5E_END_TRY;
-
-    if (show_progress) {
-        HDfprintf(stdout, "\n\n******* addr+size past eoa ******\n");
-    }
-
-    H5E_BEGIN_TRY { /* mute stack trace on expected failure */
-        JSVERIFY( FAIL, 
-                  H5FDread(file_shakespeare,
-                           H5FD_MEM_DRAW,
-                           dxpl_id,
-                           5458000,
-                           255,
-                           buffer),
-                   "reading with (addr+size) past eoa/eof should fail" )
-    } H5E_END_TRY;
-
-
-
-    if (show_progress) {
-        HDfprintf(stdout, "\n\n******* tests successful ******\n");
-    }
+    } /* for each testcase */
 
     /************
      * TEARDOWN *
@@ -1229,17 +1349,11 @@ test_read(void)
     FAIL_IF( FAIL == H5FDclose(file_raven) )
     file_raven = NULL;
 
-    FAIL_IF( FAIL == H5FDclose(file_shakespeare) )
-    file_shakespeare = NULL;
-
     FAIL_IF( FAIL == H5Pclose(fapl_id) )
     fapl_id = -1;
 
     FAIL_IF( FAIL == H5Pclose(dxpl_id) )
     dxpl_id = -1;
-
-    curl_global_cleanup();
-    curl_ready = FALSE;
 
     PASSED();
     return 0;
@@ -1249,9 +1363,8 @@ error:
      * CLEANUP *
      ***********/
 
-    if (file_raven)         { (void)H5FDclose(file_raven);       }
-    if (file_shakespeare)   { (void)H5FDclose(file_shakespeare); }
-    if (curl_ready == TRUE) { curl_global_cleanup();             }
+    if (file_raven) 
+        (void)H5FDclose(file_raven);
     if (fapl_id >= 0) {
         H5E_BEGIN_TRY {
            (void)H5Pclose(fapl_id);
@@ -1744,6 +1857,7 @@ main(void)
     nerrors += test_ros3_fapl();
     nerrors += test_vfd_open();
     nerrors += test_eof_eoa();
+    nerrors += test_H5FDread_without_eoa_set_fails();
     nerrors += test_read();
     nerrors += test_noops_and_autofails();
     nerrors += test_cmp();
