@@ -173,6 +173,7 @@ hid_t
 H5Topen1(hid_t loc_id, const char *name)
 {
     void *vol_dt = NULL;           /* datatype token created by VOL plugin */
+    H5T_t *dt = NULL;              /* upper level H5T_t for datatype */
     H5VL_object_t *obj = NULL;     /* object token of loc_id */
     H5VL_loc_params_t loc_params;
     hid_t        dxpl_id = H5AC_ind_read_dxpl_id; /* dxpl to use to open datatype */
@@ -203,6 +204,10 @@ H5Topen1(hid_t loc_id, const char *name)
         HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, H5I_INVALID_HID, "unable to atomize datatype handle")
 
 done:
+    if (H5I_INVALID_HID == ret_value)
+        if(dt && H5VL_datatype_close (vol_dt, obj->vol_info->vol_cls, dxpl_id, H5_REQUEST_NULL) < 0)
+            HDONE_ERROR(H5E_SYM, H5E_CLOSEERROR, FAIL, "unable to release dataset")
+
     FUNC_LEAVE_API(ret_value)
 } /* end H5Topen1() */
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
