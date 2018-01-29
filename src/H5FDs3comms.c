@@ -283,7 +283,9 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
                         "cannot make space for concatenated string.\n");
         }
         sprint_ret = snprintf(nvcat, (catlen + 1), "%s: %s", name, value);
-        HDassert( sprint_ret > 0 );
+        if (sprint_ret <= 0)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "error while concatenating `%s: %s", name, value);
         HDassert( catlen == (size_t)sprint_ret );
 
         /* create new_node, should we need it 
@@ -724,7 +726,9 @@ H5FD_s3comms_hrb_init_request(const char *_verb,
                         "no space for resource string");
         }
         sprint_ret = snprintf(res, reslen, "/%s", _resource);
-        HDassert( sprint_ret > 0 );
+        if (sprint_ret <= 0) 
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
+                        "errro while appending resource string %s", _resource);
         HDassert( (reslen - 1) == (size_t)sprint_ret );
     } /* start resource string with '/' */
 
@@ -842,7 +846,10 @@ H5FD_s3comms_s3r_close(s3r_t *handle)
     HDassert( handle->httpverb != NULL );
     H5MM_xfree(handle->httpverb);
 
-    HDassert( SUCCEED == H5FD_s3comms_free_purl(handle->purl) );
+    if (FAIL == H5FD_s3comms_free_purl(handle->purl)) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "unable to release parsed url structure")
+    }
 
     H5MM_xfree(handle);
 
@@ -1331,7 +1338,10 @@ done:
         if (curlh != NULL) {
             curl_easy_cleanup(curlh);
         }
-        HDassert( SUCCEED == H5FD_s3comms_free_purl(purl) );
+        if (FAIL == H5FD_s3comms_free_purl(purl)) {
+            HDONE_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
+                        "unable to free parsed url structure")
+        }
         if (handle != NULL) {
             H5MM_xfree(handle->region);
             H5MM_xfree(handle->secret_id);
@@ -1508,8 +1518,9 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
                        "bytes="H5_PRINTF_HADDR_FMT"-"H5_PRINTF_HADDR_FMT,
                        offset,
                        offset + len);
-        HDassert( ret > 0 );
-        HDassert( MAX_RANGE_BYTES_STR_LEN > ret );
+        if (ret == 0 || ret >= MAX_RANGE_BYTES_STR_LEN)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "unable to format HTTP Range value");
     } else if (offset > 0) {
         rangebytesstr = (char *)H5MM_malloc(sizeof(char) * \
                                             MAX_RANGE_BYTES_STR_LEN);
@@ -1521,8 +1532,9 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
                        (MAX_RANGE_BYTES_STR_LEN),
                       "bytes="H5_PRINTF_HADDR_FMT"-",
                       offset);
-        HDassert( ret > 0 );
-        HDassert( MAX_RANGE_BYTES_STR_LEN > ret );
+        if (ret == 0 || ret >= MAX_RANGE_BYTES_STR_LEN)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "unable to format HTTP Range value");
     }
 
     /*******************
@@ -1625,11 +1637,15 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
                         "could not format ISO8601 time.\n");
         }
 
-        HDassert( SUCCEED ==
-                  H5FD_s3comms_hrb_node_set(
-                          &headers, 
-                          "Host",
-                          (const char *)handle->purl->host) );
+        if (FAIL == 
+            H5FD_s3comms_hrb_node_set(
+                    &headers, 
+                    "Host",
+                    (const char *)handle->purl->host) )
+        {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "unable to set host header")
+        }
         if (headers == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "problem building headers list. "
@@ -1638,11 +1654,16 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
         HDassert( headers->magic == S3COMMS_HRB_NODE_MAGIC );
 
         if (rangebytesstr != NULL) {
-            HDassert( SUCCEED ==
-                      H5FD_s3comms_hrb_node_set(
-                              &headers, 
-                              "Range", 
-                              (const char *)rangebytesstr) );
+
+            if (FAIL ==
+                H5FD_s3comms_hrb_node_set(
+                        &headers, 
+                        "Range", 
+                        (const char *)rangebytesstr) )
+            {
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                            "unable to set range header")
+            }
             if (headers == NULL) {
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                             "problem building headers list. "
@@ -1650,11 +1671,15 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
             }
             HDassert( headers->magic == S3COMMS_HRB_NODE_MAGIC );
         }
-        HDassert( SUCCEED ==
-                  H5FD_s3comms_hrb_node_set(
-                          &headers, 
-                          "x-amz-content-sha256", 
-                          (const char *)EMPTY_SHA256) );
+        if (FAIL ==
+            H5FD_s3comms_hrb_node_set(
+                    &headers, 
+                    "x-amz-content-sha256", 
+                    (const char *)EMPTY_SHA256) )
+        {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "unable to set x-amz-content-sha256 header")
+        }
         if (headers == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "problem building headers list. "
@@ -1662,12 +1687,15 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
         }
         HDassert( headers->magic == S3COMMS_HRB_NODE_MAGIC );
 
-        HDassert( SUCCEED ==
-                  H5FD_s3comms_hrb_node_set(
-                          &headers, 
-                          "x-amz-date", 
-                          (const char *)iso8601now) );
-
+        if (FAIL ==
+            H5FD_s3comms_hrb_node_set(
+                    &headers, 
+                    "x-amz-date", 
+                    (const char *)iso8601now) )
+        {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "unable to set x-amz-date header")
+        }
         if (headers == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "problem building headers list. "
@@ -1713,8 +1741,9 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
                                         iso8601now, 
                                         handle->region, 
                                         "s3");
-        HDassert( ret > 0 );
-        HDassert( S3COMMS_MAX_CREDENTIAL_SIZE > ret );
+        if (ret == 0 || ret >= S3COMMS_MAX_CREDENTIAL_SIZE)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "unable to format aws4 credential string");
 
         ret = snprintf(authorization, 
                 512,
@@ -1722,16 +1751,21 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
                 buffer2,
                 signed_headers,
                 buffer1);
-        HDassert( ret > 0 );
-        HDassert( 512 > ret );
+        if (ret == 0 || ret >= 512)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "unable to format aws4 authorization string");
 
         /* append authorization header to http request buffer
          */
-        HDassert( SUCCEED ==
-                  H5FD_s3comms_hrb_node_set(
-                          &headers, 
-                          "Authorization", 
-                          (const char *)authorization) );
+        if (FAIL ==
+            H5FD_s3comms_hrb_node_set(
+                    &headers, 
+                    "Authorization", 
+                    (const char *)authorization) )
+        {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "unable to set Authorization header")
+        }
         if (headers == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "problem building headers list. "
@@ -1792,22 +1826,34 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
         char     curlerrbuf[CURL_ERROR_SIZE];
         curlerrbuf[0] = '\0';
 
-        HDassert( CURLE_OK == 
-                  curl_easy_setopt(curlh, CURLOPT_ERRORBUFFER, curlerrbuf) );
+        if (CURLE_OK !=
+            curl_easy_setopt(curlh, CURLOPT_ERRORBUFFER, curlerrbuf) )
+        {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "problem setting error buffer")
+        }
 
         p_status = curl_easy_perform(curlh);
 
         if (p_status != CURLE_OK) {
-            HDassert( CURLE_OK ==
-                 curl_easy_getinfo(curlh, CURLINFO_RESPONSE_CODE, &httpcode) );
+            if (CURLE_OK != 
+                curl_easy_getinfo(curlh, CURLINFO_RESPONSE_CODE, &httpcode) )
+            {
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                            "problem getting response code")
+            }
             HDfprintf(stderr, "CURL ERROR CODE: %d\nHTTP CODE: %d\n", 
                      p_status, httpcode);
             HDfprintf(stderr, "%s\n", curl_easy_strerror(p_status));
             HGOTO_ERROR(H5E_VFL, H5E_CANTOPENFILE, FAIL,
                     "problem while performing request.\n");
         }
-        HDassert( CURLE_OK == 
-                  curl_easy_setopt(curlh, CURLOPT_ERRORBUFFER, NULL) );
+        if (CURLE_OK != 
+            curl_easy_setopt(curlh, CURLOPT_ERRORBUFFER, NULL) )
+        {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "problem unsetting error buffer")
+        }
     } /* verbose error reporting */
 #else
     p_status = curl_easy_perform(curlh);
@@ -1826,20 +1872,30 @@ done:
     if (sds           != NULL) H5MM_xfree(sds);
     if (request       != NULL) {
         while (headers != NULL) 
-            HDassert( SUCCEED ==
-                      H5FD_s3comms_hrb_node_set(&headers, headers->name, NULL));
+            if (FAIL == 
+                H5FD_s3comms_hrb_node_set(&headers, headers->name, NULL))
+            {
+                HDONE_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                            "cannot release header node")
+            }
         HDassert( NULL == headers );
-        HDassert( SUCCEED == H5FD_s3comms_hrb_destroy(&request) );
+        if (FAIL == H5FD_s3comms_hrb_destroy(&request)) {
+                HDONE_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                            "cannot release header request structure")
+        }
         HDassert( NULL == request );
     }
 
     if (curlh != NULL) {
         /* clear any Range */
-        HDassert( CURLE_OK == curl_easy_setopt(curlh, CURLOPT_RANGE, NULL) );
+        if (CURLE_OK != curl_easy_setopt(curlh, CURLOPT_RANGE, NULL) )
+                HDONE_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                            "cannot unset CURLOPT_RANGE")
 
         /* clear headers */
-        HDassert( CURLE_OK == 
-                  curl_easy_setopt(curlh, CURLOPT_HTTPHEADER, NULL) );
+        if (CURLE_OK != curl_easy_setopt(curlh, CURLOPT_HTTPHEADER, NULL) )
+                HDONE_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                            "cannot unset CURLOPT_HTTPHEADER")
     }
 
     FUNC_LEAVE_NOAPI(ret_value);
@@ -1881,10 +1937,9 @@ gmnow(void)
     struct tm *ret_value = NULL;
 
     /* Doctor assert, checks against error in time() */
-    HDassert( (time_t)(-1) != time(now_ptr) );
+    if ( (time_t)(-1) != time(now_ptr) )
+        ret_value = gmtime(now_ptr);
 
-    /* check against error when performing gmtime() */
-    ret_value = gmtime(now_ptr);
     HDassert( ret_value != NULL );
 
     return ret_value;
@@ -1982,17 +2037,18 @@ H5FD_s3comms_aws_canonical_request(char  *canonical_request_dest,
     /* HTTP verb, resource path, and query string lines
      */
     len = (strlen(http_request->verb) +
-              strlen(http_request->resource) +
-              strlen(query_params) +
-              3 );
+          strlen(http_request->resource) +
+          strlen(query_params) +
+          3 );
     ret = snprintf(canonical_request_dest,
                    len + 1,
                    "%s\n%s\n%s\n",
                    http_request->verb,
                    http_request->resource,
                    query_params);
-    HDassert( ret > 0 );
-    HDassert( len == (size_t)ret );
+    if (ret == 0 || (size_t)ret > len)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "unable to compose canonical request first line");
 
     /* write in canonical headers, building signed headers concurrently
      */
@@ -2009,8 +2065,11 @@ H5FD_s3comms_aws_canonical_request(char  *canonical_request_dest,
                        "%s:%s\n",
                        node->lowername,
                        node->value);
-        HDassert( ret > 0 );
-        HDassert( join_len == (size_t)ret );
+        if (ret == 0 || (size_t)ret > join_len)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "unable to concatenate HTTP header %s:%s",
+                         node->lowername,
+                         node->value);
         strcat(canonical_request_dest, tmpstr);
 
         len += 1; /* semicolon */
@@ -2018,8 +2077,10 @@ H5FD_s3comms_aws_canonical_request(char  *canonical_request_dest,
                        len + 1,
                        "%s;",
                        node->lowername);
-        HDassert( ret > 0 );
-        HDassert( len == (size_t)ret );
+        if (ret == 0 || (size_t)ret > len)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "unable to append signed header %s",
+                        node->lowername);
         strcat(signed_headers_dest, tmpstr);
 
         node = node->next;
@@ -2116,11 +2177,16 @@ H5FD_s3comms_bytes_to_hex(char                *dest,
     }
 
     for (i = 0; i < msg_len; i++) {
-        HDassert( 2 == snprintf(&(dest[i * 2]),
-                                3, /* 'X', 'X', '\n' */
-                                (lowercase == TRUE) ? "%02x"
-                                                    : "%02X",
-                                msg[i]) );
+        int chars_written = 
+                snprintf(&(dest[i * 2]),
+                         3, /* 'X', 'X', '\n' */
+                         (lowercase == TRUE) ? "%02x"
+                                             : "%02X",
+                         msg[i]);
+        if (chars_written != 2)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "problem while writing hex chars for %c", 
+                        msg[i]);
     }
 
 done:
@@ -2639,15 +2705,16 @@ H5FD_s3comms_percent_encode_char(char                *repr,
                                  const unsigned char  c,
                                  size_t              *repr_len)
 {
-    unsigned int        acc        = 0;
-    unsigned int        i          = 0;
-    unsigned int        k          = 0;
-    unsigned int        stack[4]   = {0, 0, 0, 0};
-    unsigned int        stack_size = 0;
-    herr_t              ret_value  = SUCCEED;
+    unsigned int        acc           = 0;
+    unsigned int        i             = 0;
+    unsigned int        k             = 0;
+    unsigned int        stack[4]      = {0, 0, 0, 0};
+    unsigned int        stack_size    = 0;
+    int                 chars_written = 0;
+    herr_t              ret_value     = SUCCEED;
 #if S3COMMS_DEBUG
-    unsigned char       s[2]       = {c, 0}; 
-    unsigned char       hex[3]     = {0, 0, 0};
+    unsigned char       s[2]          = {c, 0}; 
+    unsigned char       hex[3]        = {0, 0, 0};
 #endif
 
 
@@ -2676,7 +2743,11 @@ H5FD_s3comms_percent_encode_char(char                *repr,
         HDfprintf(stdout, "    SINGLE-BYTE\n");
 #endif
         *repr_len = 3;
-        HDassert( 3 == snprintf(repr, 4, "%%%02X", c) );
+        chars_written = snprintf(repr, 4, "%%%02X", c);
+        if (chars_written != 3)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "cannot write char %c",
+                        c);
     } else {
         /* multi-byte, multi-percent representation
          */
@@ -2723,7 +2794,11 @@ H5FD_s3comms_percent_encode_char(char                *repr,
         acc += (stack_size > 2) ? 0x20 : 0; 
         acc += (stack_size > 3) ? 0x10 : 0;
         stack_size -= 1;
-        HDassert( 3 == snprintf(repr, 4, "%%%02X", acc + stack[stack_size]) );
+        chars_written = snprintf(repr, 4, "%%%02X", acc + stack[stack_size]);
+        if (chars_written != 3)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "cannot write char %c",
+                        c);
         *repr_len += 3;
 
         /************************
@@ -2732,10 +2807,14 @@ H5FD_s3comms_percent_encode_char(char                *repr,
 
         /* 10xxxxxx */
         for (i = 0; i < stack_size; i++) {
-            HDassert( 3 == snprintf(&repr[i*3 + 3], 
-                                    4,
-                                    "%%%02X",
-                                    128 + stack[stack_size - 1 - i]) );
+            chars_written = snprintf(&repr[i*3 + 3], 
+                                     4,
+                                     "%%%02X",
+                                     128 + stack[stack_size - 1 - i]);
+            if (chars_written != 3)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                            "cannot write char %c",
+                            c);
             *repr_len += 3;
         }
     }
@@ -2843,8 +2922,10 @@ H5FD_s3comms_signing_key(unsigned char *md,
     /* prepend "AWS4" to start of the secret key 
      */
     ret = snprintf(AWS4_secret, AWS4_secret_len,"%s%s", "AWS4", secret);
-    HDassert( ret > 0 );
-    HDassert( (AWS4_secret_len - 1) == (size_t)ret );
+    if ((size_t)ret != (AWS4_secret_len - 1))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "problem writing AWS4+secret `%s`",
+                    secret);
 
     /* hash_func, key, len(key), msg, len(msg), digest_dest, digest_len_dest
      * we know digest length, so ignore via NULL
@@ -2955,8 +3036,10 @@ H5FD_s3comms_tostringtosign(char       *dest,
     HDfprintf(stdout, "called H5FD_s3comms_tostringtosign.\n");
 #endif
 
-    HDassert( dest != NULL );
-
+    if (dest == NULL)  {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                    "destination buffer cannot be null.\n")
+    }
     if (req == NULL)  {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
                     "canonical request cannot be null.\n")
@@ -2982,8 +3065,9 @@ H5FD_s3comms_tostringtosign(char       *dest,
     strncpy(day, now, 8);
     day[8] = '\0';
     ret = snprintf(tmp, 127, "%s/%s/s3/aws4_request", day, region);
-    HDassert( ret > 0 );
-    HDassert( 127 > ret ); /* size of tmp buffer space */
+    if (ret <= 0 || ret >= 127)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "problem adding day and region to string")
 
 
 
@@ -3233,7 +3317,9 @@ H5FD_s3comms_uriencode(char       *dest,
         }
     }
 
-    HDassert( dest_off >= s_len );
+    if (dest_off < s_len)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "buffer overflow");
 
     *n_written = dest_off;
 

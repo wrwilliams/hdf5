@@ -525,11 +525,11 @@ test_aws_canonical_request(void)
         /* Create headers list from test case input
          */
         for (j = 0; j < C->listsize; j++) {
-            HDassert( SUCCEED ==
-                      H5FD_s3comms_hrb_node_set( 
-                              &node,
-                              C->list[j].name,
-                              C->list[j].value));
+            FAIL_IF( FAIL ==
+                     H5FD_s3comms_hrb_node_set( 
+                             &node,
+                             C->list[j].name,
+                             C->list[j].value));
         }
 
         hrb->first_header = node;
@@ -538,17 +538,17 @@ test_aws_canonical_request(void)
          */
         JSVERIFY( SUCCEED,
                   H5FD_s3comms_aws_canonical_request(cr_dest, sh_dest, hrb),
-                  "unable to compose canonical request" )
+                  " unable to compose canonical request" )
         JSVERIFY_STR( C->exp_headers, sh_dest, NULL )
         JSVERIFY_STR( C->exp_request, cr_dest, NULL )
 
         /* tear-down
          */
         while (node != NULL) 
-            HDassert(SUCCEED ==
+            FAIL_IF( FAIL ==
                      H5FD_s3comms_hrb_node_set(&node, node->name, NULL));
         HDassert(NULL == node);
-        HDassert( SUCCEED == H5FD_s3comms_hrb_destroy(&hrb));
+        FAIL_IF( FAIL == H5FD_s3comms_hrb_destroy(&hrb));
         HDassert(NULL == hrb);
 
     } /* for each test case */
@@ -569,7 +569,7 @@ test_aws_canonical_request(void)
     JSVERIFY( FAIL, H5FD_s3comms_aws_canonical_request(cr_dest, NULL, hrb),
               "signed headers destination cannot be null" )
 
-    HDassert( SUCCEED == H5FD_s3comms_hrb_destroy(&hrb) );
+    FAIL_IF( FAIL == H5FD_s3comms_hrb_destroy(&hrb) )
     HDassert( NULL == hrb );
 
     PASSED();
@@ -579,8 +579,7 @@ error:
 
     if (node != NULL) { 
         while (node != NULL)
-            HDassert( SUCCEED ==
-                      H5FD_s3comms_hrb_node_set(&node, node->name, NULL) );
+               (void)H5FD_s3comms_hrb_node_set(&node, node->name, NULL);
         HDassert( node == NULL );
     }
     if (hrb != NULL) 
@@ -1051,7 +1050,6 @@ test_hrb_node_set(void)
     for (test_i = 0; test_i < testcases_count; test_i++) {
         const hrb_node_t  *node = NULL;
         const testcase    *test = &(cases[test_i]);
-        const node_mock_t *mock = NULL;
         unsigned mock_i = 0;
 
         /*********
@@ -1110,7 +1108,7 @@ test_hrb_node_set(void)
 
 error:
     while (list != NULL) 
-        HDassert(SUCCEED == H5FD_s3comms_hrb_node_set(&list, list->name, NULL));
+        (void)H5FD_s3comms_hrb_node_set(&list, list->name, NULL);
 
     return -1;
 
@@ -1316,8 +1314,8 @@ test_nlowercase(void)
 
     JSVERIFY( FAIL,
               H5FD_s3comms_nlowercase(NULL, 
-                                      cases[i].in, 
-                                      cases[i].len),
+                                      cases[0].in, 
+                                      cases[0].len),
               "null distination should fail" )
 
     PASSED();
@@ -1562,7 +1560,7 @@ test_parse_url(void)
         /* per-test cleanup
          * well-behaved, even if `purl` is NULL 
          */
-        HDassert( SUCCEED == H5FD_s3comms_free_purl(purl) );
+        FAIL_IF( FAIL == H5FD_s3comms_free_purl(purl) )
         purl = NULL;
 
     } /* for each testcase */
@@ -1786,7 +1784,7 @@ test_s3r_open(void)
      */
     FAIL_IF( FAIL == H5FD_s3comms_parse_url(S3_TEST_BUCKET_URL, &purl) )
     if (purl->port == NULL) {
-        purl->port = H5MM_malloc(sizeof(char) * 5);
+        purl->port = (char *)H5MM_malloc(sizeof(char) * 5);
         FAIL_IF( purl->port == NULL );
         FAIL_IF( 5 < snprintf(purl->port, 5, "9000") )
     } else if (strcmp(purl->port, "9000") != 0) {
@@ -1802,24 +1800,23 @@ test_s3r_open(void)
                       purl->host,
                       purl->port,
                       "Poe_Raven.txt") );
-//TODO: nix all HDasserts
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl_ready = TRUE;
 
     now = gmnow();
-    HDassert(now != NULL);
-    HDassert(ISO8601NOW(iso8601now, now) == (ISO8601_SIZE - 1)); 
+    FAIL_IF( now == NULL )
+    FAIL_IF( ISO8601NOW(iso8601now, now) != (ISO8601_SIZE - 1) ); 
 
     /* It is desired to have means available to verify that signing_key
      * was set successfully and to an expected value.
      */
-    HDassert( SUCCEED ==
-              H5FD_s3comms_signing_key(
-                      signing_key, 
-                      (const char *)S3_TEST_ACCESS_KEY,
-                      (const char *)S3_TEST_REGION,
-                      (const char *)iso8601now) );
+    FAIL_IF( FAIL ==
+             H5FD_s3comms_signing_key(
+                     signing_key, 
+                     (const char *)S3_TEST_ACCESS_KEY,
+                     (const char *)S3_TEST_REGION,
+                     (const char *)iso8601now) );
 
     /*************************
      * OPEN NONEXISTENT FILE *
@@ -1991,7 +1988,6 @@ test_s3r_read(void)
 
     char           url_raven[S3_TEST_MAX_URL_SIZE];
     char           buffer[S3COMMS_TEST_BUFFER_SIZE];
-    char           buffer2[S3COMMS_TEST_BUFFER_SIZE];
     s3r_t         *handle     = NULL;
     hbool_t        curl_ready = FALSE;
     unsigned int   i          = 0;
@@ -2133,7 +2129,6 @@ test_s3r_read(void)
               "unable to close file" )
     handle = NULL;
 
-    HDassert( curl_ready == TRUE );
     curl_global_cleanup();
     curl_ready = FALSE;
 
@@ -2543,18 +2538,21 @@ test_uriencode(void)
     for (i = 0; i < ncases; i++) {
         str_len = cases[i].s_len;
         dest = (char *)malloc(sizeof(char) * str_len * 3 + 1);
-        HDassert(dest != NULL);
+        FAIL_IF( dest == NULL )
 
         JSVERIFY( SUCCEED,
-                  H5FD_s3comms_uriencode(dest, 
-                                         cases[i].str, 
-                                         str_len,
-                                         cases[i].encode_slash,
-                                         &dest_written),
+                  H5FD_s3comms_uriencode(
+                          dest, 
+                          cases[i].str, 
+                          str_len,
+                          cases[i].encode_slash,
+                          &dest_written),
                   NULL );
-
-        JSVERIFY( strlen(cases[i].expected), dest_written, NULL )
-        JSVERIFY( 0, strncmp(dest, cases[i].expected, dest_written),
+        JSVERIFY( strlen(cases[i].expected),
+                  dest_written,
+                  NULL )
+        JSVERIFY( 0,
+                  strncmp(dest, cases[i].expected, dest_written),
                   cases[i].expected );
 
         free(dest);
