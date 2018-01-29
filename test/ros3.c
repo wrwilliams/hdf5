@@ -1040,8 +1040,11 @@ test_H5FDread_without_eoa_set_fails(void)
     H5FD_t           *file_shakespeare = NULL;
     hid_t             fapl_id          = -1;
     hid_t             dxpl_id          = -1;
+#ifdef H5_DEBUG_BUILD
     H5FD_dxpl_type_t  dxpl_type_raw    = H5FD_RAWDATA_DXPL;
     H5P_genplist_t   *dxpl_plist       = NULL;
+#endif
+
 
 
 
@@ -1062,6 +1065,7 @@ test_H5FDread_without_eoa_set_fails(void)
     dxpl_id = H5Pcreate(H5P_DATASET_XFER);
     FAIL_IF( dxpl_id < 0 )
 
+#ifdef H5_DEBUG_BUILD
     dxpl_plist = (H5P_genplist_t *)H5I_object(dxpl_id);
     FAIL_IF( NULL == dxpl_plist )
     FAIL_IF( FAIL == H5P_set(dxpl_plist, H5FD_DXPL_TYPE_NAME, &dxpl_type_raw) )
@@ -1086,6 +1090,7 @@ test_H5FDread_without_eoa_set_fails(void)
                   "sanity check: dxpl types must match" )
 
     }
+#endif
 
     file_shakespeare = H5FDopen(
             url_text_restricted,
@@ -1246,8 +1251,10 @@ test_read(void)
     H5FD_t           *file_raven       = NULL;
     hid_t             fapl_id          = -1;
     hid_t             dxpl_id          = -1;
+#ifdef H5_DEBUG_BUILD
     H5FD_dxpl_type_t  dxpl_type_raw    = H5FD_RAWDATA_DXPL;
     H5P_genplist_t   *dxpl_plist       = NULL;
+#endif
 
 
 
@@ -1268,6 +1275,7 @@ test_read(void)
     dxpl_id = H5Pcreate(H5P_DATASET_XFER);
     FAIL_IF( dxpl_id < 0 )
 
+#ifdef H5_DEBUG_BUILD
     dxpl_plist = (H5P_genplist_t *)H5I_object(dxpl_id);
     FAIL_IF( NULL == dxpl_plist )
     FAIL_IF( FAIL == H5P_set(dxpl_plist, H5FD_DXPL_TYPE_NAME, &dxpl_type_raw) )
@@ -1287,6 +1295,7 @@ test_read(void)
 
         FAIL_IF( H5FD_RAWDATA_DXPL != test_dxpl_type )
     }
+#endif
 
     /* open file 
      */
@@ -1419,9 +1428,11 @@ test_noops_and_autofails(void)
     hid_t             fapl_id    = -1;
     H5FD_t           *file       = NULL;
     hid_t             dxpl_id    = -1;
+    const char        data[36]   = "The Force shall be with you, always";
+#ifdef H5_DEBUG_BUILD
     H5P_genplist_t   *dxpl_plist = NULL;
     H5FD_dxpl_type_t  dxpl_type  = H5FD_RAWDATA_DXPL;
-    const char        data[36]   = "The Force shall be with you, always";
+#endif
 
 
 
@@ -1444,11 +1455,14 @@ test_noops_and_autofails(void)
      */
     dxpl_id = H5Pcreate(H5P_DATASET_XFER);
     FAIL_IF( dxpl_id < 0 )
+
+#ifdef H5_DEBUG_BUILD
     dxpl_plist = (H5P_genplist_t *)H5I_object(dxpl_id);
     FAIL_IF( NULL == dxpl_plist )
     JSVERIFY( SUCCEED,
               H5P_set(dxpl_plist, H5FD_DXPL_TYPE_NAME, &dxpl_type),
               "unable to set dxpl" )
+#endif
 
     /* open file
      */
@@ -1695,9 +1709,8 @@ test_H5F_integration(void)
      * test-local variables *
      ************************/
 
-    hid_t             file       = -1;
-    hbool_t           curl_ready = FALSE;
-    hid_t             fapl_id    = -1;
+    hid_t file    = -1;
+    hid_t fapl_id = -1;
 
 
 
@@ -1707,18 +1720,15 @@ test_H5F_integration(void)
      * SETUP *
      *********/
 
-    FAIL_IF( CURLE_OK != curl_global_init(CURL_GLOBAL_DEFAULT) )
-    curl_ready = TRUE;
-
     fapl_id = H5Pcreate(H5P_FILE_ACCESS);
     FAIL_IF( 0 > fapl_id )
-    JSVERIFY( SUCCEED, H5Pset_fapl_ros3(fapl_id, &restricted_access_fa), NULL )
+    FAIL_IF( FAIL == H5Pset_fapl_ros3(fapl_id, &restricted_access_fa) )
 
     /*********
      * TESTS *
      *********/
 
-    /* Read-Write access is not allowed with this file driver.
+    /* Read-Write Open access is not allowed with this file driver.
      */
     H5E_BEGIN_TRY {
         FAIL_IF( 0 <= H5Fopen(
@@ -1739,24 +1749,26 @@ test_H5F_integration(void)
     
     /* Successful open.
      */
+HDprintf("\ntrying successful"); fflush(stdout);
     file = H5Fopen(
             url_h5_public,
             H5F_ACC_RDONLY,
             fapl_id);
+HDprintf("\ngot file"); fflush(stdout);
     FAIL_IF( file < 0 )
+HDprintf("\npassed inspection"); fflush(stdout);
 
     /************
      * TEARDOWN *
      ************/
 
+HDprintf("\ntrying H5Fclose"); fflush(stdout);
     FAIL_IF( FAIL == H5Fclose(file) )
     file = -1;
 
+HDprintf("\ntrying fapl close"); fflush(stdout);
     FAIL_IF( FAIL == H5Pclose(fapl_id) )
     fapl_id = -1;
-
-    curl_global_cleanup();
-    curl_ready = FALSE;
 
     PASSED();
     return 0;
@@ -1765,14 +1777,15 @@ error:
     /***********
      * CLEANUP *
      ***********/
+HDprintf("\nerror!"); fflush(stdout);
 
     if (fapl_id >= 0) {
         H5E_BEGIN_TRY {
            (void)H5Pclose(fapl_id);
         } H5E_END_TRY;
     }
-    if (file > 0)           { (void)H5Fclose(file);  }
-    if (curl_ready == TRUE) { curl_global_cleanup(); }
+    if (file > 0)
+        (void)H5Fclose(file);
 
     return 1;
 

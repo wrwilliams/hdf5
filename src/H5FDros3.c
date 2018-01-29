@@ -417,7 +417,7 @@ H5Pset_fapl_ros3(hid_t             fapl_id,
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "i*x", fapl_id, fa);
 
-    HDassert(fa); /* fa cannot be null? */
+    HDassert(fa != NULL);
 
 #if ROS3_DEBUG
     HDfprintf(stdout, "H5Pset_fapl_ros3() called.\n");
@@ -472,7 +472,7 @@ H5FD_ros3_validate_config(const H5FD_ros3_fapl_t * fa)
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    HDassert(fa);
+    HDassert(fa != NULL);
 
     if ( fa->version != H5FD__CURR_ROS3_FAPL_T_VERSION ) {
          HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
@@ -528,6 +528,9 @@ H5Pget_fapl_ros3(hid_t             fapl_id,
     HDfprintf(stdout, "H5Pget_fapl_ros3() called.\n");
 #endif
 
+    if (fa_out == NULL)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "fa_out is NULL")
+
     plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS);
     if (plist == NULL) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access list")
@@ -541,9 +544,6 @@ H5Pget_fapl_ros3(hid_t             fapl_id,
     if (fa == NULL) {
         HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "bad VFL driver info")
     }
-
-    if (fa_out == NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "fa_out is NULL")
 
     /* Copy the ros3 fapl data out */
     HDmemcpy(fa_out, fa, sizeof(H5FD_ros3_fapl_t));
@@ -668,7 +668,7 @@ H5FD_ros3_fapl_free(void *_fa)
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    HDassert(fa); /* sanity check */ 
+    HDassert(fa != NULL); /* sanity check */ 
 
     H5MM_xfree(fa);
 
@@ -782,7 +782,7 @@ H5FD_ros3_open(const char *url,
     char              iso8601now[ISO8601_SIZE];
     unsigned char     signing_key[SHA256_DIGEST_LENGTH];
     s3r_t            *handle    = NULL;
-    H5FD_ros3_fapl_t *plist     = NULL;
+    H5FD_ros3_fapl_t  fa;
     H5FD_t           *ret_value = NULL;
 
 
@@ -793,57 +793,73 @@ H5FD_ros3_open(const char *url,
     HDfprintf(stdout, "H5FD_ros3_open() called.\n");
 #endif
 
+HDfprintf(stdout, "H5FD_ros3_open() called.\n"); fflush(stdout);
+
     /* Sanity check on file offsets */
     HDcompile_assert(sizeof(HDoff_t) >= sizeof(size_t));
 
     /* Check arguments */
-    if(!url || !*url)
+    if (!url || !*url)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid file name")
-    if(0 == maxaddr || HADDR_UNDEF == maxaddr)
+    if (0 == maxaddr || HADDR_UNDEF == maxaddr)
         HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "bogus maxaddr")
-    if(ADDR_OVERFLOW(maxaddr))
+    if (ADDR_OVERFLOW(maxaddr))
         HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, NULL, "bogus maxaddr")
-    if (flags != H5F_ACC_RDONLY) {
+    if (flags != H5F_ACC_RDONLY)
         HGOTO_ERROR(H5E_ARGS, H5E_UNSUPPORTED, NULL,
                     "only Read-Only access allowed")
-    }
+HDfprintf(stdout, "arguments checked\n"); fflush(stdout);
 
-    plist = (H5FD_ros3_fapl_t *)malloc(sizeof(H5FD_ros3_fapl_t));
-    if (plist == NULL) { 
+#if 0
+    fa = (H5FD_ros3_fapl_t *)H5MM_malloc(sizeof(H5FD_ros3_fapl_t));
+    if (fa == NULL) { 
         HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, NULL, 
                     "can't allocate space for ros3 property list copy")
     }
-    if (FAIL == H5Pget_fapl_ros3(fapl_id, plist)) {
+#endif
+    if (FAIL == H5Pget_fapl_ros3(fapl_id, &fa)) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "can't get property list")
     }
+HDfprintf(stdout, "fapl ready\n"); fflush(stdout);
 
 /* TODO: curl_global_cleanup once and only once per global init */
 /* TODO: move this global init away from here... to where is open question */
 /* TODO: coordinate curl global cleanup--it is not thread-safe */
 /* TODO: interim: global cleanup on open error? */
-    HDassert( CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT) );
+    if (CURLE_OK != curl_global_init(CURL_GLOBAL_DEFAULT)) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
+                    "unable to initialize curl global (placeholder flags)")
+    }
+HDfprintf(stdout, "curl global init called\n"); fflush(stdout);
 
     /* open file; procedure depends on whether or not the fapl instructs to
      * authenticate requests or not.
      */
-    if (plist->authenticate == TRUE) {
+    if (fa.authenticate == TRUE) {
+HDfprintf(stdout, "authenticating...\n"); fflush(stdout);
         /* compute signing key (part of AWS/S3 REST API)
          * can be re-used by user/key for 7 days after creation.
          * find way to re-use/share
          */
         now = gmnow();
         HDassert( now != NULL );
-        HDassert( ISO8601NOW(iso8601now, now) == (ISO8601_SIZE - 1) );
-        HDassert( SUCCEED ==
-                  H5FD_s3comms_signing_key(signing_key,
-                                          (const char *)plist->secret_key,
-                                          (const char *)plist->aws_region,
-                                          (const char *)iso8601now) );
+        if (ISO8601NOW(iso8601now, now) != (ISO8601_SIZE - 1)) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
+                        "problem while writing iso8601 timestamp")
+        }
+        if (FAIL == H5FD_s3comms_signing_key(signing_key,
+                                             (const char *)fa.secret_key,
+                                             (const char *)fa.aws_region,
+                                             (const char *)iso8601now) ) 
+        {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
+                        "problem while computing signing key")
+        }
 
         handle = H5FD_s3comms_s3r_open(
                  url,
-                 (const char *)plist->aws_region,
-                 (const char *)plist->secret_id,
+                 (const char *)fa.aws_region,
+                 (const char *)fa.secret_id,
                  (const unsigned char *)signing_key);
     } else {
         handle = H5FD_s3comms_s3r_open(url, NULL, NULL, NULL);
@@ -856,6 +872,7 @@ H5FD_ros3_open(const char *url,
          */ 
         HGOTO_ERROR(H5E_VFL, H5E_CANTOPENFILE, NULL, "could not open");
     }
+HDfprintf(stdout, "s3 handle ready\n"); fflush(stdout);
 
     /* create new file struct 
      */
@@ -864,28 +881,44 @@ H5FD_ros3_open(const char *url,
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, 
                     "unable to allocate file struct")
     }
+HDfprintf(stdout, "file created\n"); fflush(stdout);
 
     file->s3r_handle = handle;
 
 #if ROS3_STATS
-     HDassert( SUCCEED == ros3_reset_stats(file) );
+    if (FAIL == ros3_reset_stats(file)) {
+        HGOTO_ERROR(H5E_INTERNAL, H5E_UNINITIALIZED, NULL, 
+                    "unable to reset file statistics")
+    }
 #endif /* ROS3_STATS */
 
     ret_value = (H5FD_t*)file;
 
 done:
-    if (plist) { 
-        free(plist); 
+HDfprintf(stdout, "DONE... "); fflush(stdout);
+#if 0
+    if (fa != NULL) {
+HDfprintf(stdout, "freeing fa\n"); fflush(stdout);
+        H5MM_xfree(fa); 
     }
-    if (NULL == ret_value) {
-        if (handle) { 
-            HDassert(SUCCEED == H5FD_s3comms_s3r_close(handle)); 
+#endif
+    if (ret_value == NULL) {
+HDfprintf(stdout, "error??\n"); fflush(stdout);
+        if (handle != NULL) { 
+HDfprintf(stdout, "releasing s3 handle\n"); fflush(stdout);
+            if (FAIL == H5FD_s3comms_s3r_close(handle)) {
+HDfprintf(stdout, "error?!?\n"); fflush(stdout);
+                HDONE_ERROR(H5E_VFL, H5E_CANTCLOSEFILE, NULL, 
+                            "unable to close s3 file handle")
+            }
         }
-        if (file) {
+        if (file != NULL) {
+HDfprintf(stdout, "releasing file\n"); fflush(stdout);
             file = H5FL_FREE(H5FD_ros3_t, file);
         }
         curl_global_cleanup(); /* early cleanup because open failed */
     } /* if null return value (error) */
+HDfprintf(stdout, "RETURNING\n"); fflush(stdout);
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -1219,8 +1252,8 @@ H5FD_ros3_close(H5FD_t *_file)
 
     /* Sanity checks 
      */
-    HDassert(file);
-    HDassert(file->s3r_handle);
+    HDassert(file != NULL);
+    HDassert(file->s3r_handle != NULL);
 
     /* Close the underlying request handle 
      */
@@ -1231,7 +1264,10 @@ H5FD_ros3_close(H5FD_t *_file)
 
 #if ROS3_STATS
     /* TODO: mechanism to re-target stats printout */
-    HDassert( SUCCEED == ros3_fprint_stats(stdout, file) );
+    if (FAIL == ros3_fprint_stats(stdout, file)) {
+        HGOTO_ERROR(H5E_INTERNAL, H5E_ERROR, FAIL, 
+                    "problem while writing file statistics")
+    }
 #endif /* ROS3_STATS */
 
     /* Release the file info 
@@ -1302,17 +1338,17 @@ H5FD_ros3_cmp(const H5FD_t *_f1,
     HDfprintf(stdout, "H5FD_ros3_cmp() called.\n");
 #endif
 
-    HDassert(f1->s3r_handle);
-    HDassert(f2->s3r_handle);
+    HDassert(f1->s3r_handle != NULL);
+    HDassert(f2->s3r_handle != NULL);
 
     purl1 = (const parsed_url_t *)f1->s3r_handle->purl;
     purl2 = (const parsed_url_t *)f2->s3r_handle->purl;
-    HDassert(purl1);
-    HDassert(purl2);
-    HDassert(purl1->scheme);
-    HDassert(purl2->scheme);
-    HDassert(purl1->host);
-    HDassert(purl2->host);
+    HDassert(purl1 != NULL);
+    HDassert(purl2 != NULL);
+    HDassert(purl1->scheme != NULL);
+    HDassert(purl2->scheme != NULL);
+    HDassert(purl1->host != NULL);
+    HDassert(purl2->host != NULL);
 
     /* URL: SCHEME */
     ret_value = strcmp(purl1->scheme, purl2->scheme);
@@ -1639,9 +1675,9 @@ H5FD_ros3_read(H5FD_t                    *_file,
     HDfprintf(stdout, "H5FD_ros3_read() called.\n");
 #endif
 
-    HDassert(file);
-    HDassert(file->s3r_handle);
-    HDassert(buf);
+    HDassert(file != NULL);
+    HDassert(file->s3r_handle != NULL);
+    HDassert(buf != NULL);
 
     filesize = H5FD_s3comms_s3r_get_filesize(file->s3r_handle);
 
