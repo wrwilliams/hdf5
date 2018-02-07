@@ -3258,6 +3258,7 @@
 ./testpar/Makefile.in
 ./tools/Makefile.in
 ./tools/lib/Makefile.in
+./tools/libtest/Makefile.in
 ./tools/src/Makefile.in
 ./tools/src/h5copy/Makefile.in
 ./tools/src/h5diff/Makefile.in
