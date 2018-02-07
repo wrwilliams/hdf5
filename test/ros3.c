@@ -163,11 +163,13 @@ if (condition) {           \
  *
  *----------------------------------------------------------------------------
  */
+#if 0 /* UNUSED */
 #define FAIL_UNLESS(condition) \
 if (!(condition)) {            \
     JSFAILED_AT()              \
     goto error;                \
 }
+#endif
 
 
 /*----------------------------------------------------------------------------
@@ -376,10 +378,18 @@ if (strcmp((actual), (expected)) != 0) {       \
  */
 #define MAXADDR (((haddr_t)1<<(8*sizeof(HDoff_t)-1))-1)
 
+#if 1
 #define S3_TEST_BUCKET_URL "https://s3.us-east-2.amazonaws.com/hdf5ros3"
 #define S3_TEST_REGION "us-east-2"
 #define S3_TEST_ACCESS_ID "AKIAIMC3D3XLYXLN5COA"
 #define S3_TEST_ACCESS_KEY "ugs5aVVnLFCErO/8uW14iWE3K5AgXMpsMlWneO/+"
+#else
+#define S3_TEST_BUCKET_URL "http://minio.ad.hdfgroup.org:9000/minio/shakespeare"
+#define S3_TEST_REGION "us-east-1"
+#define S3_TEST_ACCESS_ID "HDFGROUP0"
+#define S3_TEST_ACCESS_KEY "HDFGROUP0"
+#endif
+
 #define S3_TEST_MAX_URL_SIZE 256
 
 #define S3_TEST_RESOURCE_TEXT_RESTRICTED "t8.shakespeare.txt"
@@ -730,45 +740,94 @@ test_vfd_open(void)
      * test-local macros *
      *********************/
 
-    /*------------------------------------------------------------------------
-     * VFD_OPEN_VERIFY_NULL()
-     *
-     * - Wrapper to clarify tests where H5FDopen() should fail with given 
-     *   arguments: returns NULL.
-     * - Uses `H5E_BEGIN_TRY` and `H5E_END_TRY` to mute stack trace from 
-     *   expected error during open.
-     *
-     * - If `H5FDopen()` does _not_ return NULL with the given arguments,
-     *   verication fails and prints FAILED message. (see `JSFAILED_AT()`)
-     * - If `reason` is not NULL, it is printed after the *FAILED* output.
-     *
-     * Uses variable `H5FD_t *fd` for `H5FDopen()` return value.
-     *
-     * Jacob Smith 2017-10-27
-     *------------------------------------------------------------------------
-     */
-#define VFD_OPEN_VERIFY_NULL(reason, fname, flags, fapl_id, maxaddr) \
-{   H5E_BEGIN_TRY {                                                  \
-        fd = H5FDopen((fname), (flags), (fapl_id), (maxaddr));       \
-    } H5E_END_TRY;                                                   \
-    if (NULL != fd) {                                                \
-        JSFAILED_AT()                                                \
-        if (reason != NULL) HDprintf(reason);                        \
-        goto error;                                                  \
-    }                                                                \
-} /* VFD_OPEN_VERIFY_NULL */
+#define FAPL_H5P_DEFAULT -2
+#define FAPL_FILE_ACCESS -3
+#define FAPL_ROS3_ANON   -4
 
     /*************************
      * test-local structures *
      *************************/
 
+    struct test_condition {
+        const char *message;
+        const char *url;
+        unsigned    flags;
+        int         which_fapl;
+        haddr_t     maxaddr;
+    };
+
     /************************
      * test-local variables *
      ************************/
 
-    H5FD_t  *fd         = NULL;
-    hbool_t  curl_ready = FALSE;
-    hid_t    fapl_id    = -1;
+    struct test_condition tests[] = {
+        {   "default property list (H5P_DEFAULT) is invalid",
+            url_text_public,
+            H5F_ACC_RDONLY,
+            FAPL_H5P_DEFAULT,
+            MAXADDR,
+        },
+        {   "generic file access property list is invalid",
+            url_text_public,
+            H5F_ACC_RDONLY,
+            FAPL_FILE_ACCESS,
+            MAXADDR,
+        },
+        {   "filename cannot be null",
+            NULL,
+            H5F_ACC_RDONLY,
+            FAPL_ROS3_ANON,
+            MAXADDR,
+        },
+        {   "filename cannot be empty",
+            "",
+            H5F_ACC_RDONLY,
+            FAPL_ROS3_ANON,
+            MAXADDR,
+        },
+        {   "filename must exist",
+            url_missing,
+            H5F_ACC_RDONLY,
+            FAPL_ROS3_ANON,
+            MAXADDR,
+        },
+        {   "read-write flag not supported",
+            url_text_public,
+            H5F_ACC_RDWR,
+            FAPL_ROS3_ANON,
+            MAXADDR,
+        },
+        {   "truncate flag not supported",
+            url_text_public,
+            H5F_ACC_TRUNC,
+            FAPL_ROS3_ANON,
+            MAXADDR,
+        },
+        {   "create flag not supported",
+            url_text_public,
+            H5F_ACC_CREAT,
+            FAPL_ROS3_ANON,
+            MAXADDR,
+        },
+        {   "EXCL flag not supported",
+            url_text_public,
+            H5F_ACC_EXCL,
+            FAPL_ROS3_ANON,
+            MAXADDR,
+        },
+        {   "maxaddr cannot be 0 (caught in `H5FD_open()`)",
+            url_text_public,
+            H5F_ACC_RDONLY,
+            FAPL_ROS3_ANON,
+            0,
+        },
+    };
+    H5FD_t   *fd         = NULL;
+    hbool_t   curl_ready = FALSE;
+    hid_t     fapl_id    = -1;
+    hid_t     fapl_file_access = -1;
+    unsigned  i                = 0;
+    unsigned  tests_count      = 10;
 
 
 
@@ -777,67 +836,38 @@ test_vfd_open(void)
     FAIL_IF( CURLE_OK != curl_global_init(CURL_GLOBAL_DEFAULT) )
     curl_ready = TRUE;
 
+    fapl_file_access = H5Pcreate(H5P_FILE_ACCESS);
+    FAIL_IF( fapl_file_access < 0 )
+
+    fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+    FAIL_IF( fapl_id < 0 )
+    FAIL_IF( FAIL == H5Pset_fapl_ros3(fapl_id, &anonymous_fa) )
+
     /*********
      * TESTS *
      *********/
 
-    VFD_OPEN_VERIFY_NULL(
-            "default _property list_ is not allowed",
-            url_text_public,
-            H5F_ACC_RDONLY, H5P_DEFAULT, MAXADDR )
-
-    fapl_id = H5Pcreate(H5P_FILE_ACCESS);
-    FAIL_IF( fapl_id < 0 ) /* sanity-check */
-
-    VFD_OPEN_VERIFY_NULL(
-            "generic file access property list is not allowed",
-            url_text_public,
-            H5F_ACC_RDONLY, H5P_DEFAULT, MAXADDR )
-
-    /* sanity check while setting fapl
+    /* all the test cases that will _not_ open
      */
-    FAIL_IF( FAIL == H5Pset_fapl_ros3(fapl_id, &anonymous_fa) )
+    for (i = 0; i < tests_count; i++) {
+        struct test_condition T = tests[i];
+        hid_t _fapl_id = H5P_DEFAULT;
+        
+        fd = NULL;
 
-    /* filename must be valid
-     */
-    VFD_OPEN_VERIFY_NULL(
-            "filename cannot be null",
-            NULL, H5F_ACC_RDONLY, fapl_id, MAXADDR )
-    VFD_OPEN_VERIFY_NULL(
-            "filename cannot be empty", 
-            "", H5F_ACC_RDONLY, fapl_id, MAXADDR )
+        if (T.which_fapl == FAPL_FILE_ACCESS)
+            _fapl_id = fapl_file_access;
+        else if (T.which_fapl == FAPL_ROS3_ANON)
+            _fapl_id = fapl_id;
 
-    /* File must exist at given URL/URI */
-    VFD_OPEN_VERIFY_NULL(
-            "file must exist",
-            url_missing,
-            H5F_ACC_RDWR, fapl_id, MAXADDR )
+        H5E_BEGIN_TRY {
+            fd = H5FDopen(T.url, T.flags, _fapl_id, T.maxaddr);
+        } H5E_END_TRY;
+        if (NULL != fd)
+            JSVERIFY(1, 0, T.message); /* wrapper to print message and fail */
+    }
 
-    /* only supported flag is "Read-Only"
-     */
-    VFD_OPEN_VERIFY_NULL(
-            "read-write flag not supported",
-            url_text_public,
-            H5F_ACC_RDWR, fapl_id, MAXADDR )
-    VFD_OPEN_VERIFY_NULL(
-            "truncate flag not supported",
-            url_text_public,
-            H5F_ACC_TRUNC, fapl_id, MAXADDR )
-    VFD_OPEN_VERIFY_NULL(
-            "create flag not supported",
-            url_text_public,
-            H5F_ACC_CREAT, fapl_id, MAXADDR )
-    VFD_OPEN_VERIFY_NULL(
-            "EXCL flag not supported",
-            url_text_public,
-            H5F_ACC_EXCL, fapl_id, MAXADDR )
-
-    /* maxaddr limitations
-     */
-    VFD_OPEN_VERIFY_NULL(
-            "MAXADDR cannot be 0 (caught in `H5FD_open()`)",
-            url_text_public,
-            H5F_ACC_RDONLY, fapl_id, 0 )
+    FAIL_IF( NULL != fd )
 
     /* finally, show that a file can be opened 
      */
@@ -858,6 +888,9 @@ test_vfd_open(void)
     FAIL_IF( FAIL == H5Pclose(fapl_id) )
     fapl_id = -1;
 
+    FAIL_IF( FAIL == H5Pclose(fapl_file_access) )
+    fapl_file_access = -1;
+
     curl_global_cleanup();
     curl_ready = FALSE;
 
@@ -877,13 +910,20 @@ error:
             (void)H5Pclose(fapl_id);
         } H5E_END_TRY;
     }
+    if (fapl_file_access >= 0) {
+        H5E_BEGIN_TRY {
+            (void)H5Pclose(fapl_file_access);
+        } H5E_END_TRY;
+    }
     if (curl_ready == TRUE) {
         curl_global_cleanup();
     }
 
     return 1;
 
-#undef VFD_OPEN_VERIFY_NULL
+#undef FAPL_FILE_ACCESS
+#undef FAPL_H5P_DEFAULT
+#undef FAPL_ROS3_ANON
 
 } /* test_vfd_open */
 
@@ -1202,7 +1242,7 @@ test_read(void)
         {   "successful range-get",
             6464,
             5691,
-            31,
+            32, /* fancy quotes are three bytes each(?) */
             SUCCEED,
             "Quoth the Raven “Nevermore.”",
         },
@@ -1300,13 +1340,13 @@ test_read(void)
     /* open file 
      */
     file_raven = H5FDopen( /* will open with "authenticating" fapl */
-            url_text_public,
+            url_text_public, /* TODO: check return state: anon access of restricted says OK? (not NULL) */
             H5F_ACC_RDONLY,
             fapl_id,
             HADDR_UNDEF); /* Demonstrate success with "automatic" value */
     FAIL_IF( NULL == file_raven )
 
-    FAIL_IF( 6464 != H5FDget_eof(file_raven, H5FD_MEM_DEFAULT) )
+    JSVERIFY( 6464, H5FDget_eof(file_raven, H5FD_MEM_DEFAULT), NULL )
 
     /*********
      * TESTS *
@@ -1746,27 +1786,22 @@ test_H5F_integration(void)
                       H5P_DEFAULT,
                       fapl_id) )
     } H5E_END_TRY;
-    
+
     /* Successful open.
      */
-HDprintf("\ntrying successful"); fflush(stdout);
     file = H5Fopen(
             url_h5_public,
             H5F_ACC_RDONLY,
             fapl_id);
-HDprintf("\ngot file"); fflush(stdout);
     FAIL_IF( file < 0 )
-HDprintf("\npassed inspection"); fflush(stdout);
 
     /************
      * TEARDOWN *
      ************/
 
-HDprintf("\ntrying H5Fclose"); fflush(stdout);
     FAIL_IF( FAIL == H5Fclose(file) )
     file = -1;
 
-HDprintf("\ntrying fapl close"); fflush(stdout);
     FAIL_IF( FAIL == H5Pclose(fapl_id) )
     fapl_id = -1;
 

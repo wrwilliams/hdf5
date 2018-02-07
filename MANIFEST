@@ -621,6 +621,8 @@
 ./src/H5FDpkg.h
 ./src/H5FDprivate.h
 ./src/H5FDpublic.h
+./src/H5FDs3comms.h
+./src/H5FDs3comms.c
 ./src/H5FDsec2.c
 ./src/H5FDsec2.h
 ./src/H5FDspace.c
@@ -1033,7 +1035,9 @@
 ./test/paged_persist.h5
 ./test/plugin.c
 ./test/reserved.c
+./test/ros3.c
 ./test/pool.c
+./test/s3comms.c
 ./test/set_extent.c
 # ====distribute this for now. See HDFFV-8236====
 ./test/space_overflow.c
@@ -1459,6 +1463,9 @@
 ./tools/lib/h5tools_error.h
 ./tools/lib/io_timer.c
 ./tools/lib/io_timer.h
+
+./tools/libtest/Makefile.am
+./tools/libtest/h5tools_utils.c
 
 ./tools/src/misc/Makefile.am
 ./tools/src/misc/h5cc.in
@@ -2852,6 +2859,7 @@
 ./java/src/hdf/hdf5lib/structs/H5AC_cache_config_t.java
 ./java/src/hdf/hdf5lib/structs/H5E_error2_t.java
 ./java/src/hdf/hdf5lib/structs/H5F_info2_t.java
+./java/src/hdf/hdf5lib/structs/H5FD_ros3_fapl_t.java
 ./java/src/hdf/hdf5lib/structs/H5G_info_t.java
 ./java/src/hdf/hdf5lib/structs/H5L_info_t.java
 ./java/src/hdf/hdf5lib/structs/H5O_hdr_info_t.java

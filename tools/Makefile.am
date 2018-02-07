@@ -22,6 +22,6 @@ include $(top_srcdir)/config/commence.am
 CONFIG=ordered
 
 # All subdirectories
-SUBDIRS=lib src test
+SUBDIRS=lib libtest src test
 
 include $(top_srcdir)/config/conclude.am

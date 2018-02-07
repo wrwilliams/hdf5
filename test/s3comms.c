@@ -362,15 +362,24 @@ if (strcmp((actual), (expected)) != 0) {       \
 
 
 
+#if 1
 #define S3_TEST_BUCKET_URL "https://s3.us-east-2.amazonaws.com/hdf5ros3"
 #define S3_TEST_REGION "us-east-2"
 #define S3_TEST_ACCESS_ID "AKIAIMC3D3XLYXLN5COA"
 #define S3_TEST_ACCESS_KEY "ugs5aVVnLFCErO/8uW14iWE3K5AgXMpsMlWneO/+"
+#else
+#define S3_TEST_BUCKET_URL "http://minio.ad.hdfgroup.org:9000/minio/shakespeare"
+#define S3_TEST_REGION "us-east-1"
+#define S3_TEST_ACCESS_ID "HDFGROUP0"
+#define S3_TEST_ACCESS_KEY "HDFGROUP0"
+#endif
 
 #define S3_TEST_RESOURCE_TEXT_RESTRICTED "t8.shakespeare.txt"
+#if 0 /* UNUSED */
 #define S3_TEST_RESOURCE_TEXT_PUBLIC "Poe_Raven.txt"
 #define S3_TEST_RESOURCE_H5_PUBLIC "GMODO-SVM01.h5"
 #define S3_TEST_RESOURCE_MISSING "missing.csv"
+#endif 
 
 #define S3_TEST_RUN_TIMEOUT 0 /* run tests that might hand */
 #define S3_TEST_MAX_URL_SIZE 256 /* char array size */
@@ -1688,10 +1697,8 @@ test_s3r_get_filesize(void)
 
     TESTING("s3r_get_filesize");
 
-    /******************
-     * pre-test setup *
-     ******************/
-
+    /* setup -- compose url to target resource
+     */
     FAIL_IF( S3_TEST_MAX_URL_SIZE <
              snprintf(url_raven,
                       S3_TEST_MAX_URL_SIZE,
@@ -1836,9 +1843,9 @@ test_s3r_open(void)
              (const unsigned char *)signing_key);
     FAIL_IF( handle != NULL );
 
-    /**************************
-     * INACTIVE PORT  ON HOST *
-     **************************/
+    /*************************
+     * INACTIVE PORT ON HOST *
+     *************************/
 
 #if S3_TEST_RUN_TIMEOUT
 printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
@@ -2029,14 +2036,14 @@ test_s3r_read(void)
               H5FD_s3comms_s3r_read(
                       handle,
                       (haddr_t)0,
-                      (size_t)117,
+                      (size_t)118,
                       buffer),
               NULL )
-    JSVERIFY( 0,
-              strncmp(buffer,
-                      "Once upon a midnight dreary, while I pondered, weak and weary,\nOver many a quaint and curious volume of forgotten lore",
-                      117),
-              buffer )
+    JSVERIFY_STR ( 
+            "Once upon a midnight dreary, while I pondered, weak and weary,\n" \
+            "Over many a quaint and curious volume of forgotten lore",
+            buffer,
+            NULL )
 
     for (i = 0; i < S3COMMS_TEST_BUFFER_SIZE; i++) 
         buffer[i] = '\0';
@@ -2049,14 +2056,29 @@ test_s3r_read(void)
               H5FD_s3comms_s3r_read(
                       handle,
                       (haddr_t)2540,
-                      (size_t)53,
+                      (size_t)54,
                       buffer),
               NULL )
-    JSVERIFY( 0,
-              strncmp(buffer,
-                      "the grave and stern decorum of the countenance it wore",
-                      53),
-              buffer )
+    JSVERIFY_STR( "the grave and stern decorum of the countenance it wore",
+                  buffer,
+                  NULL )
+
+    for (i = 0; i < S3COMMS_TEST_BUFFER_SIZE; i++) 
+        buffer[i] = '\0';
+
+    /**********************
+     * read one character *
+     **********************/
+
+    JSVERIFY(SUCCEED,
+             H5FD_s3comms_s3r_read(
+                      handle,
+                      (haddr_t)2540,
+                      (size_t)1,
+                      buffer),
+              NULL )
+    JSVERIFY_STR( "t", buffer, NULL )
+
 
     for (i = 0; i < S3COMMS_TEST_BUFFER_SIZE; i++) 
         buffer[i] = '\0';
@@ -2075,7 +2097,7 @@ test_s3r_read(void)
     JSVERIFY( 0,
               strncmp(buffer,
                       "And my soul from out that shadow that lies floating on the floor\nShall be lifted—nevermore!\n",
-                      64),
+                      94),
               buffer )
 
     for (i = 0; i < S3COMMS_TEST_BUFFER_SIZE; i++) 

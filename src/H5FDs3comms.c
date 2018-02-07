@@ -66,7 +66,7 @@
 
 /* size to allocate for "bytes=<first_byte>[-<last_byte>]" HTTP Range value
  */
-#define MAX_RANGE_BYTES_STR_LEN 128
+#define S3COMMS_MAX_RANGE_STRING_SIZE 128
 
 /******************/
 /* Local Typedefs */
@@ -81,9 +81,11 @@
  * pointer to data region and record of bytes written (offset)
  */
 struct s3r_datastruct {
-    char   *data;
-    size_t  size;
+    unsigned long  magic;
+    char          *data;
+    size_t         size;
 };
+#define S3COMMS_CALLBACK_DATASTRUCT_MAGIC 0x28c2b2ul
 
 /********************/
 /* Local Prototypes */
@@ -147,6 +149,9 @@ curlwritecallback(char   *ptr,
     struct s3r_datastruct *sds     = (struct s3r_datastruct *)userdata;
     size_t                 product = (size * nmemb);
     size_t                 written = 0;
+
+    if (sds->magic != S3COMMS_CALLBACK_DATASTRUCT_MAGIC) 
+        return written;
 
     if (size > 0) {
         HDmemcpy(&(sds->data[sds->size]), ptr, product);
@@ -226,14 +231,14 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
                           const char  *value)
 {
     size_t      i          = 0;
-    hbool_t     is_looking = TRUE;
-    char       *nvcat      = NULL;
-    char       *lowername  = NULL;
+    char       *valuecpy   = NULL;
     char       *namecpy    = NULL;
     size_t      namelen    = 0;
+    char       *lowername  = NULL;
+    char       *nvcat      = NULL;
+    hrb_node_t *node_ptr   = NULL;
     hrb_node_t *new_node   = NULL;
-    hrb_node_t *ptr        = NULL;
-    char       *valuecpy   = NULL;
+    hbool_t     is_looking = TRUE;
     herr_t      ret_value  = SUCCEED;
 
 
@@ -242,6 +247,14 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
 
 #if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_hrb_node_set.\n");
+    HDprintf("NAME: %s\n", name);
+    HDprintf("VALUE: %s\n", value);
+    HDprintf("LIST:\n->");
+    for (node_ptr = (*L); node_ptr != NULL; node_ptr = node_ptr->next)
+        HDfprintf(stdout, "{%s}\n->", node_ptr->cat);
+    HDprintf("(null)\n");
+    fflush(stdout);
+    node_ptr = NULL; 
 #endif
 
     if (name == NULL) {
@@ -253,6 +266,18 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
     /***********************
      * PREPARE ALL STRINGS *
      **********************/
+
+    /* copy and lowercase name
+     */
+    lowername = (char *)H5MM_malloc(sizeof(char) * (namelen + 1));
+    if (lowername == NULL) {
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, 
+                    "cannot make space for lowercase name copy.\n");
+    }
+    for (i = 0; i < namelen; i++) {
+        lowername[i] = (char)tolower((int)name[i]);
+    }
+    lowername[namelen] = 0;
 
     /* If value supplied, copy name, value, and concatenated "name: value".
      * If NULL, we will be removing a node or doing nothing, so no need for
@@ -304,18 +329,6 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
         new_node->next      = NULL;
     }
 
-    /* copy and lowercase name
-     */
-    lowername = (char *)H5MM_malloc(sizeof(char) * (namelen + 1));
-    if (lowername == NULL) {
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, 
-                    "cannot make space for lowercase name copy.\n");
-    }
-    for (i = 0; i < namelen; i++) {
-        lowername[i] = (char)tolower((int)name[i]);
-    }
-    lowername[namelen] = 0;
-
     /***************
      * ACT ON LIST *
      ***************/
@@ -325,6 +338,9 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "trying to remove node from empty list");
         } else {
+#if S3COMMS_DEBUG
+HDprintf("CREATE NEW\n"); fflush(stdout);
+#endif
             /*******************
              * CREATE NEW LIST *
              *******************/
@@ -343,51 +359,79 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
      */
     HDassert( (*L) != NULL );
     HDassert( (*L)->magic == S3COMMS_HRB_NODE_MAGIC );
-    ptr = (*L);
+    node_ptr = (*L);
 
     /* Check whether to modify/remove first node in list
      */
-    if (strcmp(lowername, ptr->lowername) == 0) {
+    if (strcmp(lowername, node_ptr->lowername) == 0) {
 
         is_looking = FALSE;
 
         if (value == NULL) {
+#if S3COMMS_DEBUG
+HDprintf("REMOVE HEAD\n"); fflush(stdout);
+#endif
             /***************
              * REMOVE HEAD *
              ***************/
 
-            *L = ptr->next;
+            *L = node_ptr->next;
 
-            H5MM_xfree(ptr->cat);
-            H5MM_xfree(ptr->lowername);
-            H5MM_xfree(ptr->name);
-            H5MM_xfree(ptr->value);
-            HDassert( ptr->magic == S3COMMS_HRB_NODE_MAGIC );
-            ptr->magic = (unsigned long)(~S3COMMS_HRB_NODE_MAGIC);
-            H5MM_xfree(ptr);
+#if S3COMMS_DEBUG
+HDprintf("FREEING CAT (node)\n"); fflush(stdout);
+#endif
+            H5MM_xfree(node_ptr->cat);
+#if S3COMMS_DEBUG
+HDprintf("FREEING LOWERNAME (node)\n"); fflush(stdout);
+#endif
+            H5MM_xfree(node_ptr->lowername);
+#if S3COMMS_DEBUG
+HDprintf("FREEING NAME (node)\n"); fflush(stdout);
+#endif
+            H5MM_xfree(node_ptr->name);
+#if S3COMMS_DEBUG
+HDprintf("FREEING VALUE (node)\n"); fflush(stdout);
+#endif
+            H5MM_xfree(node_ptr->value);
+#if S3COMMS_DEBUG
+HDprintf("MAGIC OK? %s\n", 
+        (node_ptr->magic == S3COMMS_HRB_NODE_MAGIC) ? "YES" : "NO");
+fflush(stdout);
+#endif
+            HDassert( node_ptr->magic == S3COMMS_HRB_NODE_MAGIC );
+            node_ptr->magic += 1ul;
+#if S3COMMS_DEBUG
+HDprintf("FREEING POINTER\n"); fflush(stdout);
+#endif
+            H5MM_xfree(node_ptr);
 
+#if S3COMMS_DEBUG
+HDprintf("FREEING WORKING LOWERNAME\n"); fflush(stdout);
+#endif
             H5MM_xfree(lowername); lowername = NULL;
-            H5MM_xfree(namecpy);   namecpy   = NULL;
-            H5MM_xfree(new_node);  new_node  = NULL;
-            H5MM_xfree(nvcat);     nvcat     = NULL;
-            H5MM_xfree(valuecpy);  valuecpy  = NULL;
         } else {
+#if S3COMMS_DEBUG
+HDprintf("MODIFY HEAD\n"); fflush(stdout);
+#endif
             /***************
              * MODIFY HEAD *
              ***************/
 
-            H5MM_xfree(ptr->cat);
-            H5MM_xfree(ptr->name);
-            H5MM_xfree(ptr->value);
+            H5MM_xfree(node_ptr->cat);
+            H5MM_xfree(node_ptr->name);
+            H5MM_xfree(node_ptr->value);
 
-            ptr->name = namecpy;
-            ptr->value = valuecpy;
-            ptr->cat = nvcat;
+            node_ptr->name = namecpy;
+            node_ptr->value = valuecpy;
+            node_ptr->cat = nvcat;
 
-            H5MM_xfree(lowername); lowername = NULL;
-            H5MM_xfree(new_node);  new_node  = NULL;
+            H5MM_xfree(lowername);
+            lowername = NULL;
+            new_node->magic += 1ul;
+            H5MM_xfree(new_node);
+            new_node  = NULL;
         }
-    } else if (strcmp(lowername, ptr->lowername) < 0) {
+    } else if (strcmp(lowername, node_ptr->lowername) < 0) {
 
         is_looking = FALSE;
 
@@ -395,6 +439,9 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "trying to remove a node 'before' head");
         } else {
+#if S3COMMS_DEBUG
+HDprintf("PREPEND NEW HEAD\n"); fflush(stdout);
+#endif
             /*******************
              * INSERT NEW HEAD *
              *******************/
@@ -403,7 +450,7 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
             new_node->value     = valuecpy;
             new_node->lowername = lowername;
             new_node->cat       = nvcat;
-            new_node->next      = ptr;
+            new_node->next      = node_ptr;
             *L = new_node;
         }
     }
@@ -413,7 +460,7 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
      ***************/
 
     while (is_looking) {
-        if (ptr->next == NULL) {
+        if (node_ptr->next == NULL) {
 
             is_looking = FALSE;
 
@@ -421,18 +468,21 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                             "trying to remove absent node");
             } else {
+#if S3COMMS_DEBUG
+HDprintf("APPEND A NODE\n"); fflush(stdout);
+#endif
                 /*******************
                  * APPEND NEW NODE *
                  *******************/
 
-                HDassert( strcmp(lowername, ptr->lowername) > 0 );
+                HDassert( strcmp(lowername, node_ptr->lowername) > 0 );
                 new_node->name      = namecpy;
                 new_node->value     = valuecpy;
                 new_node->lowername = lowername;
                 new_node->cat       = nvcat;
-                ptr->next = new_node;
+                node_ptr->next      = new_node;
             }
-        } else if (strcmp(lowername, ptr->next->lowername) < 0) {
+        } else if (strcmp(lowername, node_ptr->next->lowername) < 0) {
 
             is_looking = FALSE;
  
@@ -440,19 +490,22 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                             "trying to remove absent node");
             } else {
+#if S3COMMS_DEBUG
+HDprintf("INSERT A NODE\n"); fflush(stdout);
+#endif
                 /*******************
                  * INSERT NEW NODE *
                  *******************/
 
-                HDassert( strcmp(lowername, ptr->lowername) > 0 );
+                HDassert( strcmp(lowername, node_ptr->lowername) > 0 );
                 new_node->name      = namecpy;
                 new_node->value     = valuecpy;
                 new_node->lowername = lowername;
                 new_node->cat       = nvcat;
-                new_node->next      = ptr->next;
-                ptr->next = new_node;
+                new_node->next      = node_ptr->next;
+                node_ptr->next      = new_node;
             }
-        } else if (strcmp(lowername, ptr->next->lowername) == 0) {
+        } else if (strcmp(lowername, node_ptr->next->lowername) == 0) {
 
             is_looking = FALSE;
 
@@ -461,47 +514,53 @@ H5FD_s3comms_hrb_node_set(hrb_node_t **L,
                  * REMOVE A NODE *
                  *****************/
 
-                hrb_node_t *tmp = ptr->next;
-                ptr->next = tmp->next;
+                hrb_node_t *tmp = node_ptr->next;
+                node_ptr->next = tmp->next;
 
+#if S3COMMS_DEBUG
+HDprintf("REMOVE A NODE\n"); fflush(stdout);
+#endif
                 H5MM_xfree(tmp->cat);
                 H5MM_xfree(tmp->lowername);
                 H5MM_xfree(tmp->name);
                 H5MM_xfree(tmp->value);
+
                 HDassert( tmp->magic == S3COMMS_HRB_NODE_MAGIC );
-                tmp->magic = (unsigned long)(~S3COMMS_HRB_NODE_MAGIC);
+                tmp->magic += 1ul;
                 H5MM_xfree(tmp);
 
-                H5MM_xfree(lowername); lowername = NULL;
-                H5MM_xfree(namecpy);   namecpy   = NULL;
-                H5MM_xfree(new_node);  new_node  = NULL;
-                H5MM_xfree(nvcat);     nvcat     = NULL;
-                H5MM_xfree(valuecpy);  valuecpy  = NULL;
+                H5MM_xfree(lowername);
+                lowername = NULL;
             } else {
+#if S3COMMS_DEBUG
+HDprintf("MODIFY A NODE\n"); fflush(stdout);
+#endif
                 /*****************
                  * MODIFY A NODE *
                  *****************/
 
-                ptr = ptr->next;
-                H5MM_xfree(ptr->name);
-                H5MM_xfree(ptr->value);
-                H5MM_xfree(ptr->cat);
+                node_ptr = node_ptr->next;
+                H5MM_xfree(node_ptr->name);
+                H5MM_xfree(node_ptr->value);
+                H5MM_xfree(node_ptr->cat);
 
                 HDassert( new_node->magic == S3COMMS_HRB_NODE_MAGIC );
-                new_node->magic = (unsigned long)(~S3COMMS_HRB_NODE_MAGIC);
-                H5MM_xfree(new_node);  new_node  = NULL;
-                H5MM_xfree(lowername); lowername = NULL;
+                new_node->magic += 1ul;
+                H5MM_xfree(new_node);
+                H5MM_xfree(lowername);
+                new_node  = NULL;
+                lowername = NULL;
 
-                ptr->name = namecpy;
-                ptr->value = valuecpy;
-                ptr->cat = nvcat;
+                node_ptr->name  = namecpy;
+                node_ptr->value = valuecpy;
+                node_ptr->cat   = nvcat;
             }
         } else {
             /****************
              * KEEP LOOKING *
              ****************/
 
-             ptr = ptr->next;
+             node_ptr = node_ptr->next;
         }
     }
 
@@ -515,7 +574,7 @@ done:
         if (valuecpy  != NULL) H5MM_xfree(valuecpy);
         if (new_node  != NULL) {
             HDassert( new_node->magic == S3COMMS_HRB_NODE_MAGIC );
-            new_node->magic = (unsigned long)(~S3COMMS_HRB_NODE_MAGIC);
+            new_node->magic += 1ul;
             H5MM_xfree(new_node);
         }
     }
@@ -599,7 +658,7 @@ H5FD_s3comms_hrb_destroy(hrb_t **_buf)
         H5MM_xfree(buf->verb);
         H5MM_xfree(buf->version);
         H5MM_xfree(buf->resource);
-        buf->magic = (unsigned long)(~S3COMMS_HRB_MAGIC);
+        buf->magic += 1ul;
         H5MM_xfree(buf);
         *_buf = NULL;
     }
@@ -946,9 +1005,12 @@ H5FD_s3comms_s3r_getsize(s3r_t *handle)
     unsigned long int      content_length = 0;
     CURL                  *curlh          = NULL;
     char                  *end            = NULL;
-    char                   headerresponse[CURL_MAX_HTTP_HEADER];
+    char                  *headerresponse = NULL;
     herr_t                 ret_value      = SUCCEED;
-    struct s3r_datastruct  sds            = { headerresponse, 0 };
+    struct s3r_datastruct  sds            = { 
+            S3COMMS_CALLBACK_DATASTRUCT_MAGIC,
+            NULL,
+            0 };
     char                  *start          = NULL;
 
 
@@ -999,12 +1061,19 @@ H5FD_s3comms_s3r_getsize(s3r_t *handle)
     }
 
     HDassert( handle->httpverb == NULL );
-    handle->httpverb = (char *)H5MM_malloc(sizeof(char) * 8);
+    handle->httpverb = (char *)H5MM_malloc(sizeof(char) * 16);
     if (handle->httpverb == NULL) {
         HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
                     "unable to allocate space for S3 request HTTP verb");
     }
     HDmemcpy(handle->httpverb, "HEAD", 5);
+
+    headerresponse = (char *)H5MM_malloc(sizeof(char) * CURL_MAX_HTTP_HEADER);
+    if (headerresponse == NULL) {
+        HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
+                    "unable to allocate space for curl header response");
+    }
+    sds.data = headerresponse;
 
     /*******************
      * PERFORM REQUEST *
@@ -1020,6 +1089,19 @@ H5FD_s3comms_s3r_getsize(s3r_t *handle)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "problem in reading during getsize.\n");
     }
+
+    if (sds.size > CURL_MAX_HTTP_HEADER) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "HTTP metadata buffer overrun\n");
+    } else if (sds.size == 0) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "No HTTP metadata\n");
+#if S3COMMS_DEBUG
+    } else {
+        HDfprintf(stderr, "GETSIZE: OK\n");
+#endif
+    }
+       
 
     /******************
      * PARSE RESPONSE *
@@ -1084,6 +1166,9 @@ H5FD_s3comms_s3r_getsize(s3r_t *handle)
     }
 
 done:
+    H5MM_xfree(headerresponse);
+    sds.magic += 1; /* set to bad magic */
+
     FUNC_LEAVE_NOAPI(ret_value);
 
 } /* H5FD_s3comms_s3r_getsize */
@@ -1489,6 +1574,7 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
                         "could not malloc destination datastructure.\n");
         }
 
+        sds->magic = S3COMMS_CALLBACK_DATASTRUCT_MAGIC;
         sds->data = (char *)dest;
         sds->size = 0;
         if (CURLE_OK !=
@@ -1508,31 +1594,31 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
 
     if (len > 0) {
         rangebytesstr = (char *)H5MM_malloc(sizeof(char) * \
-                                            MAX_RANGE_BYTES_STR_LEN );
+                                            S3COMMS_MAX_RANGE_STRING_SIZE );
         if (rangebytesstr == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
                         "could not malloc range format string.\n");
         }
         ret = snprintf(rangebytesstr, 
-                       (MAX_RANGE_BYTES_STR_LEN),
+                       (S3COMMS_MAX_RANGE_STRING_SIZE),
                        "bytes="H5_PRINTF_HADDR_FMT"-"H5_PRINTF_HADDR_FMT,
                        offset,
-                       offset + len);
-        if (ret == 0 || ret >= MAX_RANGE_BYTES_STR_LEN)
+                       offset + len - 1);
+        if (ret == 0 || ret >= S3COMMS_MAX_RANGE_STRING_SIZE)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "unable to format HTTP Range value");
     } else if (offset > 0) {
         rangebytesstr = (char *)H5MM_malloc(sizeof(char) * \
-                                            MAX_RANGE_BYTES_STR_LEN);
+                                            S3COMMS_MAX_RANGE_STRING_SIZE);
         if (rangebytesstr == NULL) {
             HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, FAIL,
                         "could not malloc range format string.\n");
         }
         ret = snprintf(rangebytesstr, 
-                       (MAX_RANGE_BYTES_STR_LEN),
+                       (S3COMMS_MAX_RANGE_STRING_SIZE),
                       "bytes="H5_PRINTF_HADDR_FMT"-",
                       offset);
-        if (ret == 0 || ret >= MAX_RANGE_BYTES_STR_LEN)
+        if (ret == 0 || ret >= S3COMMS_MAX_RANGE_STRING_SIZE)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "unable to format HTTP Range value");
     }
@@ -1632,60 +1718,10 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
         HDassert( request->magic == S3COMMS_HRB_MAGIC );
 
         now = gmnow();
-        if ( ISO8601NOW(iso8601now, now) != (ISO8601_SIZE - 1)) {
+        if (ISO8601NOW(iso8601now, now) != (ISO8601_SIZE - 1)) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "could not format ISO8601 time.\n");
         }
-
-        if (FAIL == 
-            H5FD_s3comms_hrb_node_set(
-                    &headers, 
-                    "Host",
-                    (const char *)handle->purl->host) )
-        {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "unable to set host header")
-        }
-        if (headers == NULL) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "problem building headers list. "
-                        "(placeholder flags)\n");
-        }
-        HDassert( headers->magic == S3COMMS_HRB_NODE_MAGIC );
-
-        if (rangebytesstr != NULL) {
-
-            if (FAIL ==
-                H5FD_s3comms_hrb_node_set(
-                        &headers, 
-                        "Range", 
-                        (const char *)rangebytesstr) )
-            {
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                            "unable to set range header")
-            }
-            if (headers == NULL) {
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                            "problem building headers list. "
-                            "(placeholder flags)\n");
-            }
-            HDassert( headers->magic == S3COMMS_HRB_NODE_MAGIC );
-        }
-        if (FAIL ==
-            H5FD_s3comms_hrb_node_set(
-                    &headers, 
-                    "x-amz-content-sha256", 
-                    (const char *)EMPTY_SHA256) )
-        {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "unable to set x-amz-content-sha256 header")
-        }
-        if (headers == NULL) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "problem building headers list. "
-                        "(placeholder flags)\n");
-        }
-        HDassert( headers->magic == S3COMMS_HRB_NODE_MAGIC );
 
         if (FAIL ==
             H5FD_s3comms_hrb_node_set(
@@ -1702,6 +1738,56 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
                         "(placeholder flags)\n");
         }
         HDassert( headers->magic == S3COMMS_HRB_NODE_MAGIC );
+
+        if (FAIL ==
+            H5FD_s3comms_hrb_node_set(
+                    &headers, 
+                    "x-amz-content-sha256", 
+                    (const char *)EMPTY_SHA256) )
+        {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "unable to set x-amz-content-sha256 header")
+        }
+        if (headers == NULL) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "problem building headers list. "
+                        "(placeholder flags)\n");
+        }
+        HDassert( headers->magic == S3COMMS_HRB_NODE_MAGIC );
+
+        if (rangebytesstr != NULL) {
+            if (FAIL ==
+                H5FD_s3comms_hrb_node_set(
+                        &headers, 
+                        "Range", 
+                        (const char *)rangebytesstr) )
+            {
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                            "unable to set range header")
+            }
+            if (headers == NULL) {
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                            "problem building headers list. "
+                            "(placeholder flags)\n");
+            }
+            HDassert( headers->magic == S3COMMS_HRB_NODE_MAGIC );
+        }
+
+	if (FAIL == 
+	    H5FD_s3comms_hrb_node_set(
+		    &headers, 
+		    "Host",
+		    (const char *)handle->purl->host) )
+	{
+	    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+			"unable to set host header")
+	}
+	if (headers == NULL) {
+	    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+			"problem building headers list. "
+			"(placeholder flags)\n");
+	}
+	HDassert( headers->magic == S3COMMS_HRB_NODE_MAGIC );
 
         request->first_header = headers;
 
@@ -1860,17 +1946,44 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
 
     if (p_status != CURLE_OK) {
         HGOTO_ERROR(H5E_VFL, H5E_CANTOPENFILE, FAIL,
-                    "problem while performing request.\n");
+                    "curl cannot perform request\n")
+    }
+#endif
+
+#if S3COMMS_DEBUG
+    if (dest != NULL) {
+        HDfprintf(stderr, "len: %d\n", (int)len);
+        HDfprintf(stderr, "CHECKING FOR BUFFER OVERFLOW\n");
+        if (sds == NULL) {
+            HDfprintf(stderr, "sds is NULL!\n");
+        } else {
+            HDfprintf(stderr, "sds: 0x%lx\n", (long long)sds);
+            HDfprintf(stderr, "sds->size: %d\n", (int)sds->size);
+            if (len > sds->size) {
+                HDfprintf(stderr, "buffer overwrite\n");
+            }
+        }
+    } else {
+        HDfprintf(stderr, "performed on entire file\n");
     }
 #endif
 
 done:
     /* clean any malloc'd resources
      */
-    if (curlheaders   != NULL) curl_slist_free_all(curlheaders);
-    if (rangebytesstr != NULL) H5MM_xfree(rangebytesstr);
-    if (sds           != NULL) H5MM_xfree(sds);
-    if (request       != NULL) {
+    if (curlheaders != NULL) {
+        curl_slist_free_all(curlheaders);
+        curlheaders = NULL;
+    }
+    if (rangebytesstr != NULL) {
+        H5MM_xfree(rangebytesstr);
+        rangebytesstr = NULL;
+    }
+    if (sds != NULL) {
+        H5MM_xfree(sds);
+        sds = NULL;
+    }
+    if (request != NULL) {
         while (headers != NULL) 
             if (FAIL == 
                 H5FD_s3comms_hrb_node_set(&headers, headers->name, NULL))
@@ -2232,7 +2345,7 @@ H5FD_s3comms_free_purl(parsed_url_t *purl)
         if (purl->port   != NULL) H5MM_xfree(purl->port);
         if (purl->path   != NULL) H5MM_xfree(purl->path);
         if (purl->query  != NULL) H5MM_xfree(purl->query);
-        purl->magic = (unsigned long)(~S3COMMS_PARSED_URL_MAGIC);
+        purl->magic += 1ul;
         H5MM_xfree(purl);
     }
 
@@ -2961,6 +3074,7 @@ H5FD_s3comms_signing_key(unsigned char *md,
 
 done:
     H5MM_xfree(AWS4_secret);
+
     FUNC_LEAVE_NOAPI(ret_value);
 
 } /* H5FD_s3comms_signing_key */

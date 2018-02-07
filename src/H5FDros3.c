@@ -594,9 +594,8 @@ H5FD_ros3_fapl_get(H5FD_t *_file)
 
 done:
     if (ret_value == NULL) {
-        if (fa != NULL) {
+        if (fa != NULL)
             H5MM_xfree(fa); 
-        }
     }
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -793,7 +792,6 @@ H5FD_ros3_open(const char *url,
     HDfprintf(stdout, "H5FD_ros3_open() called.\n");
 #endif
 
-HDfprintf(stdout, "H5FD_ros3_open() called.\n"); fflush(stdout);
 
     /* Sanity check on file offsets */
     HDcompile_assert(sizeof(HDoff_t) >= sizeof(size_t));
@@ -808,35 +806,20 @@ HDfprintf(stdout, "H5FD_ros3_open() called.\n"); fflush(stdout);
     if (flags != H5F_ACC_RDONLY)
         HGOTO_ERROR(H5E_ARGS, H5E_UNSUPPORTED, NULL,
                     "only Read-Only access allowed")
-HDfprintf(stdout, "arguments checked\n"); fflush(stdout);
 
-#if 0
-    fa = (H5FD_ros3_fapl_t *)H5MM_malloc(sizeof(H5FD_ros3_fapl_t));
-    if (fa == NULL) { 
-        HGOTO_ERROR(H5E_ARGS, H5E_CANTALLOC, NULL, 
-                    "can't allocate space for ros3 property list copy")
-    }
-#endif
     if (FAIL == H5Pget_fapl_ros3(fapl_id, &fa)) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "can't get property list")
     }
-HDfprintf(stdout, "fapl ready\n"); fflush(stdout);
 
-/* TODO: curl_global_cleanup once and only once per global init */
-/* TODO: move this global init away from here... to where is open question */
-/* TODO: coordinate curl global cleanup--it is not thread-safe */
-/* TODO: interim: global cleanup on open error? */
     if (CURLE_OK != curl_global_init(CURL_GLOBAL_DEFAULT)) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
                     "unable to initialize curl global (placeholder flags)")
     }
-HDfprintf(stdout, "curl global init called\n"); fflush(stdout);
 
     /* open file; procedure depends on whether or not the fapl instructs to
      * authenticate requests or not.
      */
     if (fa.authenticate == TRUE) {
-HDfprintf(stdout, "authenticating...\n"); fflush(stdout);
         /* compute signing key (part of AWS/S3 REST API)
          * can be re-used by user/key for 7 days after creation.
          * find way to re-use/share
@@ -872,7 +855,6 @@ HDfprintf(stdout, "authenticating...\n"); fflush(stdout);
          */ 
         HGOTO_ERROR(H5E_VFL, H5E_CANTOPENFILE, NULL, "could not open");
     }
-HDfprintf(stdout, "s3 handle ready\n"); fflush(stdout);
 
     /* create new file struct 
      */
@@ -881,9 +863,9 @@ HDfprintf(stdout, "s3 handle ready\n"); fflush(stdout);
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, 
                     "unable to allocate file struct")
     }
-HDfprintf(stdout, "file created\n"); fflush(stdout);
 
     file->s3r_handle = handle;
+    HDmemcpy(&(file->fa), &fa, sizeof(H5FD_ros3_fapl_t));
 
 #if ROS3_STATS
     if (FAIL == ros3_reset_stats(file)) {
@@ -895,30 +877,18 @@ HDfprintf(stdout, "file created\n"); fflush(stdout);
     ret_value = (H5FD_t*)file;
 
 done:
-HDfprintf(stdout, "DONE... "); fflush(stdout);
-#if 0
-    if (fa != NULL) {
-HDfprintf(stdout, "freeing fa\n"); fflush(stdout);
-        H5MM_xfree(fa); 
-    }
-#endif
     if (ret_value == NULL) {
-HDfprintf(stdout, "error??\n"); fflush(stdout);
         if (handle != NULL) { 
-HDfprintf(stdout, "releasing s3 handle\n"); fflush(stdout);
             if (FAIL == H5FD_s3comms_s3r_close(handle)) {
-HDfprintf(stdout, "error?!?\n"); fflush(stdout);
                 HDONE_ERROR(H5E_VFL, H5E_CANTCLOSEFILE, NULL, 
                             "unable to close s3 file handle")
             }
         }
         if (file != NULL) {
-HDfprintf(stdout, "releasing file\n"); fflush(stdout);
             file = H5FL_FREE(H5FD_ros3_t, file);
         }
         curl_global_cleanup(); /* early cleanup because open failed */
     } /* if null return value (error) */
-HDfprintf(stdout, "RETURNING\n"); fflush(stdout);
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -1664,8 +1634,8 @@ H5FD_ros3_read(H5FD_t                    *_file,
     herr_t       ret_value = SUCCEED;                  /* Return value */
 #if ROS3_STATS
     /* working variables for storing stats */
-    ros3_statsbin      *bin   = NULL;
-    unsigned            bin_i = 0;
+    ros3_statsbin *bin   = NULL;
+    unsigned       bin_i = 0;
 #endif /* ROS3_STATS */
     
 
