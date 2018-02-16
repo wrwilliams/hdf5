@@ -524,9 +524,18 @@ test_parse_tuple(void)
             6,
             {"(4","e","a)","(6","2","a)"},
         },
+        {   "real-world use case",
+            "(us-east-2,AKIAIMC3D3XLYXLN5COA,ugs5aVVnLFCErO/8uW14iWE3K5AgXMpsMlWneO/+)",
+            ',',
+            SUCCEED,
+            3,
+            {"us-east-2",
+             "AKIAIMC3D3XLYXLN5COA",
+             "ugs5aVVnLFCErO/8uW14iWE3K5AgXMpsMlWneO/+"},
+        }
     };
     struct testcase   tc;
-    unsigned          n_tests       = 13;
+    unsigned          n_tests       = 14;
     unsigned          i             = 0;
     unsigned          count         = 0;
     unsigned          elem_i        = 0;
@@ -637,7 +646,7 @@ test_populate_ros3_fa(void)
     show_progress = TRUE;
 #endif
 
-    bad_version |= H5FD__CURR_ROS3_FAPL_T_VERSION;
+    bad_version = H5FD__CURR_ROS3_FAPL_T_VERSION;
     HDassert(bad_version != H5FD__CURR_ROS3_FAPL_T_VERSION);
 
     /*********
@@ -937,6 +946,22 @@ test_populate_ros3_fa(void)
         JSVERIFY_STR( "x", fa.aws_region, NULL )
         JSVERIFY_STR( "y", fa.secret_id, NULL )
         JSVERIFY_STR( "", fa.secret_key,  NULL )
+    }
+
+    /* use case
+     */
+    {
+        H5FD_ros3_fapl_t fa = {0, 0, "", "", ""};
+        const char *values[] = {
+                "us-east-2",
+                "AKIAIMC3D3XLYXLN5COA",
+                "ugs5aVVnLFCErO/8uW14iWE3K5AgXMpsMlWneO/+"
+        };
+        JSVERIFY( 1,
+                  h5tools_populate_ros3_fapl(&fa, values),
+                  "unable to set use case" )
+        JSVERIFY( 1, fa.version, "version check" )
+        JSVERIFY( 1, fa.authenticate, "should authenticate" )
     }
 
     PASSED();

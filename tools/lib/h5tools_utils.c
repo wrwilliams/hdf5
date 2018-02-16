@@ -1284,7 +1284,7 @@ h5tools_populate_ros3_fapl(H5FD_ros3_fapl_t  *fa,
             }
 
 
-            if (strlen(values[1]) > H5FD__ROS3_MAX_REGION_LEN) {
+            if (strlen(values[1]) > H5FD__ROS3_MAX_SECRET_ID_LEN) {
                 if (show_progress) {
                     HDprintf("  ERROR: secret_id value too long\n");
                 }
@@ -1298,7 +1298,7 @@ h5tools_populate_ros3_fapl(H5FD_ros3_fapl_t  *fa,
                 HDprintf("  secret_id set\n");
             }
 
-            if (strlen(values[2]) > H5FD__ROS3_MAX_REGION_LEN) {
+            if (strlen(values[2]) > H5FD__ROS3_MAX_SECRET_KEY_LEN) {
                 if (show_progress) {
                     HDprintf("  ERROR: secret_key value too long\n");
                 }
