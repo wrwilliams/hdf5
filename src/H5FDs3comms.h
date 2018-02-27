@@ -604,6 +604,11 @@ herr_t H5FD_s3comms_HMAC_SHA256(const unsigned char *key,
                                 size_t               msg_len,
                                 char                *dest);
 
+herr_t H5FD_s3comms_load_aws_profile(const char *name,
+                                     char       *key_id_out,
+                                     char       *secret_access_key_out,
+                                     char       *aws_region_out);
+
 herr_t H5FD_s3comms_nlowercase(char       *dest,
                                const char *s,
                                size_t      len);

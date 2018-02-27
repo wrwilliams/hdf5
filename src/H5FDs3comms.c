@@ -2443,6 +2443,286 @@ done:
 } /* H5FD_s3comms_HMAC_SHA256 */
 
 
+/*-----------------------------------------------------------------------------
+ *
+ * Function : load_aws_creds_from_file()
+ *
+ * Purpose:
+ *
+ *     Extract AWS configuration information from a target file.
+ *
+ *     Given a file and a profile name, e.g. "ros3_vfd_test", attempt to locate
+ *     that region in the file. If not found, returns in error and output
+ *     pointers are not modified.
+ *
+ *     If the profile label is found, attempts to locate and parse configuration
+ *     data, stopping at the first line where:
+ *     + reached end of file
+ *     + line does not start with a recognized setting name
+ *
+ *     Following AWS documentation, looks for any of:
+ *     + aws_access_key_id
+ *     + aws_secret_access_key
+ *     + aws_session_token
+ *     + region
+ *
+ *     To be valid, the setting must begin the line with one of the keywords,
+ *     followed immediately by an equals sign '=', and have some data before
+ *     newline at end of line.
+ *     + `spam=eggs` would be INVALID because name is unrecognized
+ *     + `region = us-east-2` would be INVALID because of spaces
+ *     + `region=` would be INVALID because no data.
+ *
+ *     Upon successful parsing of a setting line, will store the result in the
+ *     corresponding ouput pointer. If the output pointer is NULL, will skip
+ *     any matching setting line while parsing -- useful to prevent overwrite
+ *     when reading from multiple files.
+ *
+ * Return:
+ *
+ *     + SUCCESS: `SUCCEED` 
+ *         + no error. settings may or may not have been loaded.
+ *     + FAILURE: `FAIL`
+ *         + internal error occurred.
+ *         + -1 :: unable to format profile label
+ *         + -2 :: profile name/label not found in file
+ *     + -3 :: some other error
+ *
+ * Programmer: Jacob Smith
+ *             2018-02-27
+ *
+ * Changes: None
+ *
+ *-----------------------------------------------------------------------------
+ */
+static herr_t
+load_aws_creds_from_file(
+        FILE       *file,
+        const char *profile_name,
+        char       *key_id,
+        char       *access_key,
+        char       *aws_region)
+{
+    char        profile_line[32];
+    char        buffer[128];
+    const char *setting_names[] = {
+        "region",
+        "aws_access_key_id",
+        "aws_secret_access_key",
+    };
+    char * const setting_pointers[] = {
+        aws_region,
+        key_id,
+        access_key,
+    };
+    unsigned  setting_count = 3;
+    herr_t    ret_value     = SUCCEED;
+    unsigned  buffer_i      = 0;
+    unsigned  setting_i     = 0;
+    int       found_setting = 0;
+    char     *line_buffer   = &(buffer[0]);
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+#if S3COMMS_DEBUG
+    HDfprintf(stdout, "called load_aws_creds_from_file.\n");
+#endif
+
+    /* format target line for start of profile */
+    if (32 < snprintf(profile_line, 32, "[%s]\n", profile_name))
+        HGOTO_ERROR(H5E_ARGS, H5E_CANTCOPY, FAIL,
+                    "unable to format profile label")
+
+    /* look for start of profile */
+    do {
+        /* clear buffer */
+        for (buffer_i=0; buffer_i < 128; buffer_i++) buffer[buffer_i] = 0;
+
+        line_buffer = fgets(line_buffer, 128, file);
+        if (line_buffer == NULL) /* reached end of file */
+            goto done;
+    } while (strncmp(line_buffer, profile_line, strlen(profile_line)));
+
+    /* extract credentials from lines */
+    do {
+        unsigned    setting_name_len = 0;
+        const char *setting_name     = NULL;
+        char        line_prefix[128];
+
+        /* clear buffer */
+        for (buffer_i=0; buffer_i < 128; buffer_i++) buffer[buffer_i] = 0;
+
+        /* collect a line from file */
+        line_buffer = fgets(line_buffer, 128, file);
+        if (line_buffer == NULL)
+            goto done; /* end of file */
+
+        /* loop over names to see if line looks like asignment */
+        for (setting_i = 0; setting_i < setting_count; setting_i++) {
+            setting_name = setting_names[setting_i];
+            setting_name_len = strlen(setting_name);
+            if (128 < snprintf(
+                    line_prefix,
+                    setting_name_len+2,
+                    "%s=",
+                    setting_name))
+                HGOTO_ERROR(H5E_ARGS, H5E_CANTCOPY, FAIL,
+                            "unable to format line prefix")
+
+            /* found a matching name? */
+            if (!strncmp(line_buffer, line_prefix, setting_name_len + 1)) {
+                char scan_str[128];
+
+                found_setting = 1;
+
+                /* skip NULL destination buffer */
+                if (setting_pointers[setting_i] == NULL)
+                   break;
+
+                /* advance to end fo name in string */
+                do {
+                    line_buffer++;
+                } while (*line_buffer != 0 && *line_buffer != '=');
+
+                if (*line_buffer == 0 || *(line_buffer+1) == 0)
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "incomplete assigment in file")
+                line_buffer++; /* was pointing at '='; advance */
+
+                /* copy line buffer into out pointer */
+                strcpy(setting_pointers[setting_i], (const char *)line_buffer);
+
+                /* "trim" tailing whitespace by replacing with null terminator*/
+                buffer_i = 0;
+                while (!isspace(setting_pointers[setting_i][buffer_i]))
+                    buffer_i++;
+                setting_pointers[setting_i][buffer_i] = '\0';
+
+                break; /* have read setting; don't compare with others */
+            }
+        }
+    } while (found_setting);
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
+
+} /* load_aws_creds_from_file */
+
+
+/*----------------------------------------------------------------------------
+ *
+ * Function: H5FD_s3comms_load_aws_profile()
+ *
+ * Purpose :
+ *
+ *     Read aws profile elements from standard location on system and store
+ *     settings in memory.
+ *
+ *     Looks for both `~/.aws/config` and `~/.aws/credentials`, the standard 
+ *     files for AWS tools. If a file exists (can be opened), looks for the
+ *     given profile name and reads the settings into the relevant buffer.
+ *
+ *     Any setting duplicated in both files will be set to that from 
+ *     `credentials`.
+ *
+ *     Settings are stored in the supplied buffers as null-terminated strings.
+ *
+ * Return:
+ *
+ *     + SUCCESS: `SUCCEED` (0)
+ *         + no error occurred and all settings were populated
+ *     + FAILURE: `FAIL` (-1)
+ *         + internal error occurred
+ *         + unable to locate profile
+ *         + region, key id, and secret key were not all found and set
+ *
+ * Programmer: Jacob Smith
+ *             2018-02-27
+ *
+ * Changes: None
+ *
+ *----------------------------------------------------------------------------
+ */
+herr_t
+H5FD_s3comms_load_aws_profile(const char *profile_name,
+                              char       *key_id_out,
+                              char       *secret_access_key_out,
+                              char       *aws_region_out)
+{
+    herr_t ret_value = SUCCEED;
+    FILE *credfile = NULL;
+    char awspath[117];
+    char filepath[128];
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+#if S3COMMS_DEBUG
+    HDfprintf(stdout, "called H5FD_s3comms_load_aws_profile.\n");
+#endif
+
+    /* TODO: Windows and other pathing gotchas */
+    if (117 < snprintf(awspath, 117, "%s/.aws/", getenv("HOME")))
+        HGOTO_ERROR(H5E_ARGS, H5E_CANTCOPY, FAIL,
+                    "unable to format home-aws path")
+    if (128 < snprintf(filepath, 128, "%s%s", awspath, "credentials"))
+        HGOTO_ERROR(H5E_ARGS, H5E_CANTCOPY, FAIL,
+                    "unable to format credentials path")
+
+    credfile = fopen(filepath, "r");
+    if (credfile != NULL) {
+        if (FAIL == load_aws_creds_from_file(
+                credfile,
+                profile_name,
+                key_id_out,
+                secret_access_key_out,
+                aws_region_out))
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "unable to load from aws credentials")
+        if (EOF == fclose(credfile))
+            HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL,
+                        "unable to close credentials file")
+        credfile = NULL;
+    }
+
+    if (128 < snprintf(filepath, 128, "%s%s", awspath, "config"))
+        HGOTO_ERROR(H5E_ARGS, H5E_CANTCOPY, FAIL,
+                    "unable to format config path")
+    credfile = fopen(filepath, "r");
+    if (credfile != NULL) {
+        if (FAIL == load_aws_creds_from_file(
+                credfile,
+                profile_name,
+                (*key_id_out == 0) ? key_id_out : NULL,
+                (*secret_access_key_out == 0) ? secret_access_key_out : NULL,
+                (*aws_region_out == 0) ? aws_region_out : NULL))
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "unable to load from aws config")
+        if (EOF == fclose(credfile))
+            HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL,
+                        "unable to close config file")
+        credfile = NULL;
+    }
+
+    /* fail if not all three settings were loaded */
+    if (*key_id_out == 0 ||
+        *secret_access_key_out == 0 ||
+        *aws_region_out == 0)
+    {
+        ret_value = FAIL;
+    }
+
+done:
+    if (credfile != NULL) {
+        if (EOF == fclose(credfile))
+            HDONE_ERROR(H5E_ARGS, H5E_ARGS, FAIL,
+                        "problem error-closing aws configuration file")
+    }
+
+    FUNC_LEAVE_NOAPI(ret_value);
+
+} /* H5FD_s3comms_load_aws_profile */
+
+
 /*----------------------------------------------------------------------------
  *
  * Function: H5FD_s3comms_nlowercase()

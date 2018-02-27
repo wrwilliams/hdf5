@@ -30,6 +30,7 @@
 #include "H5Iprivate.h"  /* for dxpl creation */
 #include "H5Pprivate.h"  /* for dxpl creation */
 #include "H5FDros3.h"    /* this file driver's utilities */
+#include "H5FDs3comms.h" /* for loading of credentials */
 #include <curl/curl.h>   /* for CURL global init/cleanup */
 
 
@@ -378,16 +379,12 @@ if (strcmp((actual), (expected)) != 0) {       \
  */
 #define MAXADDR (((haddr_t)1<<(8*sizeof(HDoff_t)-1))-1)
 
+#define S3_TEST_PROFILE_NAME "ros3_vfd_test"
+
 #if 1
 #define S3_TEST_BUCKET_URL "https://s3.us-east-2.amazonaws.com/hdf5ros3"
-#define S3_TEST_REGION "us-east-2"
-#define S3_TEST_ACCESS_ID "AKIAIMC3D3XLYXLN5COA"
-#define S3_TEST_ACCESS_KEY "ugs5aVVnLFCErO/8uW14iWE3K5AgXMpsMlWneO/+"
 #else
 #define S3_TEST_BUCKET_URL "http://minio.ad.hdfgroup.org:9000/minio/shakespeare"
-#define S3_TEST_REGION "us-east-1"
-#define S3_TEST_ACCESS_ID "HDFGROUP0"
-#define S3_TEST_ACCESS_KEY "HDFGROUP0"
 #endif
 
 #define S3_TEST_MAX_URL_SIZE 256
@@ -395,6 +392,9 @@ if (strcmp((actual), (expected)) != 0) {       \
 #define S3_TEST_RESOURCE_TEXT_RESTRICTED "t8.shakespeare.txt"
 #define S3_TEST_RESOURCE_TEXT_PUBLIC "Poe_Raven.txt"
 #define S3_TEST_RESOURCE_H5_PUBLIC "GMODO-SVM01.h5"
+#if 0 /* UNUSED */
+#define S3_TEST_RESOURCE_H5_RESTRICTED "GMODO-SVM01_restricted.h5"
+#endif
 #define S3_TEST_RESOURCE_MISSING "missing.csv"
 
 static char url_text_restricted[S3_TEST_MAX_URL_SIZE];
@@ -402,12 +402,22 @@ static char url_text_public[S3_TEST_MAX_URL_SIZE];
 static char url_h5_public[S3_TEST_MAX_URL_SIZE];
 static char url_missing[S3_TEST_MAX_URL_SIZE];
 
+/* Global variables for aws test profile.
+ * An attempt is made to read ~/.aws/credentials and ~/.aws/config upon test
+ * startup -- if unable to open either file or cannot load region, id, and key,
+ * tests connecting with S3 will not be run
+ */
+static int  s3_test_credentials_loaded = 0;
+static char s3_test_aws_region[16];
+static char s3_test_aws_access_key_id[64];
+static char s3_test_aws_secret_access_key[128];
+
 H5FD_ros3_fapl_t restricted_access_fa = {
             H5FD__CURR_ROS3_FAPL_T_VERSION, /* fapl version      */
             TRUE,                           /* authenticate      */
-            S3_TEST_REGION,                 /* aws region        */
-            S3_TEST_ACCESS_ID,              /* access key id     */
-            S3_TEST_ACCESS_KEY };           /* secret access key */
+            "",             /* aws region        */
+            "",      /* access key id     */
+            ""}; /* secret access key */
 
 H5FD_ros3_fapl_t anonymous_fa = {
             H5FD__CURR_ROS3_FAPL_T_VERSION,
@@ -969,6 +979,13 @@ test_eof_eoa(void)
 
     TESTING("ROS3 eof/eoa gets and sets");
 
+    if (s3_test_credentials_loaded == 0) {
+        SKIPPED();
+        puts("    s3 credentials are not loaded");
+        fflush(stdout);
+        return 0;
+    }
+
     /*********
      * SETUP *
      *********/
@@ -1089,6 +1106,13 @@ test_H5FDread_without_eoa_set_fails(void)
 
 
     TESTING("ROS3 VFD read-eoa temporal coupling library limitation ");
+
+    if (s3_test_credentials_loaded == 0) {
+        SKIPPED();
+        puts("    s3 credentials are not loaded");
+        fflush(stdout);
+        return 0;
+    }
 
     /*********
      * SETUP *
@@ -1299,6 +1323,13 @@ test_read(void)
 
 
     TESTING("ROS3 VFD read/range-gets");
+
+    if (s3_test_credentials_loaded == 0) {
+        SKIPPED();
+        puts("    s3 credentials are not loaded");
+        fflush(stdout);
+        return 0;
+    }
 
     /*********
      * SETUP *
@@ -1637,6 +1668,13 @@ test_cmp(void)
 
     TESTING("ROS3 cmp (comparison)");
 
+    if (s3_test_credentials_loaded == 0) {
+        SKIPPED();
+        puts("    s3 credentials are not loaded");
+        fflush(stdout);
+        return 0;
+    }
+
     /*********
      * SETUP *
      *********/
@@ -1755,6 +1793,13 @@ test_H5F_integration(void)
 
 
     TESTING("S3 file access through HD5F library (H5F API)");
+
+    if (s3_test_credentials_loaded == 0) {
+        SKIPPED();
+        puts("    s3 credentials are not loaded");
+        fflush(stdout);
+        return 0;
+    }
 
     /*********
      * SETUP *
@@ -1891,6 +1936,33 @@ main(void)
     {
         HDprintf("* ros3 setup failed (missing) ! *\n");
         return 1;
+    }
+
+    /**************************************
+     * load credentials and prepare fapls *
+     **************************************/
+
+    /* "clear" profile data strings */
+    s3_test_aws_access_key_id[0]     = '\0';
+    s3_test_aws_secret_access_key[0] = '\0';
+    s3_test_aws_region[0]            = '\0';
+
+    if (SUCCEED == H5FD_s3comms_load_aws_profile(
+            S3_TEST_PROFILE_NAME,
+            s3_test_aws_access_key_id,
+            s3_test_aws_secret_access_key,
+            s3_test_aws_region))
+    {
+        s3_test_credentials_loaded = 1;
+        strncpy(restricted_access_fa.aws_region,
+                (const char *)s3_test_aws_region,
+                H5FD__ROS3_MAX_REGION_LEN);
+        strncpy(restricted_access_fa.secret_id,
+                (const char *)s3_test_aws_access_key_id,
+                H5FD__ROS3_MAX_SECRET_ID_LEN);
+        strncpy(restricted_access_fa.secret_key,
+                (const char *)s3_test_aws_secret_access_key,
+                H5FD__ROS3_MAX_SECRET_KEY_LEN);
     }
 
     /******************

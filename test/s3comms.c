@@ -361,17 +361,12 @@ if (strcmp((actual), (expected)) != 0) {       \
 #endif /* ifdef/else JSVERIFY_EXP_ACT */
 
 
+#define S3_TEST_PROFILE_NAME "ros3_vfd_test"
 
 #if 1
 #define S3_TEST_BUCKET_URL "https://s3.us-east-2.amazonaws.com/hdf5ros3"
-#define S3_TEST_REGION "us-east-2"
-#define S3_TEST_ACCESS_ID "AKIAIMC3D3XLYXLN5COA"
-#define S3_TEST_ACCESS_KEY "ugs5aVVnLFCErO/8uW14iWE3K5AgXMpsMlWneO/+"
 #else
 #define S3_TEST_BUCKET_URL "http://minio.ad.hdfgroup.org:9000/minio/shakespeare"
-#define S3_TEST_REGION "us-east-1"
-#define S3_TEST_ACCESS_ID "HDFGROUP0"
-#define S3_TEST_ACCESS_KEY "HDFGROUP0"
 #endif
 
 #define S3_TEST_RESOURCE_TEXT_RESTRICTED "t8.shakespeare.txt"
@@ -381,8 +376,18 @@ if (strcmp((actual), (expected)) != 0) {       \
 #define S3_TEST_RESOURCE_MISSING "missing.csv"
 #endif 
 
-#define S3_TEST_RUN_TIMEOUT 0 /* run tests that might hand */
+#define S3_TEST_RUN_TIMEOUT 0 /* run tests that might hang */
 #define S3_TEST_MAX_URL_SIZE 256 /* char array size */
+
+/* Global variables for aws test profile.
+ * An attempt is made to read ~/.aws/credentials and ~/.aws/config upon test
+ * startup -- if unable to open either file or cannot load region, id, and key,
+ * tests connecting with S3 will not be run
+ */
+static int  s3_test_credentials_loaded = 0;
+static char s3_test_aws_region[16];
+static char s3_test_aws_access_key_id[64];
+static char s3_test_aws_secret_access_key[128];
 
 
 
@@ -1761,6 +1766,13 @@ test_s3r_open(void)
 
     TESTING("s3r_open");
 
+    if (s3_test_credentials_loaded == 0) {
+        SKIPPED();
+        puts("    s3 credentials are not loaded");
+        fflush(stdout);
+        return 0;
+    }
+
     /******************
      * PRE-TEST SETUP *
      ******************/
@@ -1821,8 +1833,8 @@ test_s3r_open(void)
     FAIL_IF( FAIL ==
              H5FD_s3comms_signing_key(
                      signing_key, 
-                     (const char *)S3_TEST_ACCESS_KEY,
-                     (const char *)S3_TEST_REGION,
+                     (const char *)s3_test_aws_secret_access_key,
+                     (const char *)s3_test_aws_region,
                      (const char *)iso8601now) );
 
     /*************************
@@ -1838,8 +1850,8 @@ test_s3r_open(void)
      */
     handle = H5FD_s3comms_s3r_open(
              url_missing,
-             (const char *)S3_TEST_REGION,
-             (const char *)S3_TEST_ACCESS_ID,
+             (const char *)s3_test_aws_region,
+             (const char *)s3_test_aws_access_key_id,
              (const unsigned char *)signing_key);
     FAIL_IF( handle != NULL );
 
@@ -1866,7 +1878,7 @@ printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
      */
     handle = H5FD_s3comms_s3r_open(
              url_shakespeare,
-             (const char *)S3_TEST_REGION,
+             (const char *)s3_test_aws_region,
              "I_MADE_UP_MY_ID",
              (const unsigned char *)signing_key);
     FAIL_IF( handle != NULL );
@@ -1875,8 +1887,8 @@ printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
      */
     handle = H5FD_s3comms_s3r_open(
              url_shakespeare,
-             (const char *)S3_TEST_REGION,
-             (const char *)S3_TEST_ACCESS_ID,
+             (const char *)s3_test_aws_region,
+             (const char *)s3_test_aws_access_key_id,
              (const unsigned char *)EMPTY_SHA256);
     FAIL_IF( handle != NULL );
 
@@ -1895,12 +1907,13 @@ printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
               "unable to close file" )
     handle = NULL;
     
+#if 0
     /* authenticating
      */
     handle = H5FD_s3comms_s3r_open(
                      url_shakespeare,
-                     (const char *)S3_TEST_REGION,
-                     (const char *)S3_TEST_ACCESS_ID,
+                     (const char *)s3_test_aws_region,
+                     (const char *)s3_test_aws_access_key_id,
                      (const unsigned char *)signing_key);
     FAIL_IF( handle == NULL );
     JSVERIFY( 5458199, H5FD_s3comms_s3r_get_filesize(handle), 
@@ -1909,13 +1922,14 @@ printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
               H5FD_s3comms_s3r_close(handle),
               "unable to close file" )
     handle = NULL;
+#endif
 
     /* using authentication on anonymously-accessible file?
      */
     handle = H5FD_s3comms_s3r_open(
              url_raven,
-             (const char *)S3_TEST_REGION,
-             (const char *)S3_TEST_ACCESS_ID,
+             (const char *)s3_test_aws_region,
+             (const char *)s3_test_aws_access_key_id,
              (const unsigned char *)signing_key);
     FAIL_IF( handle == NULL );
     JSVERIFY( 6464, H5FD_s3comms_s3r_get_filesize(handle), NULL )
@@ -1928,8 +1942,8 @@ printf("Opening on inactive port may hang for a minute; waiting for timeout\n");
      */
     handle = H5FD_s3comms_s3r_open(
                      url_shakespeare,
-                     (const char *)S3_TEST_REGION,
-                     (const char *)S3_TEST_ACCESS_ID,
+                     (const char *)s3_test_aws_region,
+                     (const char *)s3_test_aws_access_key_id,
                      (const unsigned char *)signing_key);
     FAIL_IF( handle == NULL );
     JSVERIFY( 5458199, H5FD_s3comms_s3r_get_filesize(handle), NULL )
@@ -2637,6 +2651,32 @@ main(void)
     h5_reset();
 
     HDprintf("Testing S3Communications functionality.\n");
+
+    /* "clear" profile data strings */
+    s3_test_aws_access_key_id[0]     = '\0';
+    s3_test_aws_secret_access_key[0] = '\0';
+    s3_test_aws_region[0]            = '\0';
+
+/* TODO: unit/regression test for H5FD_s3comms_load_aws_profile()
+ * requires a few test files and/or manipulation of default path
+ */
+
+    if (SUCCEED == H5FD_s3comms_load_aws_profile(
+            S3_TEST_PROFILE_NAME,
+            s3_test_aws_access_key_id,
+            s3_test_aws_secret_access_key,
+            s3_test_aws_region))
+    {
+        s3_test_credentials_loaded = 1;
+    }
+
+#if 0
+HDprintf("loaded?: %d\n", s3_test_credentials_loaded);
+HDprintf("region: %s\n", s3_test_aws_region);
+HDprintf("access key id: %s\n", s3_test_aws_access_key_id);
+HDprintf("secret access key: %s\n", s3_test_aws_secret_access_key);
+H5Eprint2(H5E_DEFAULT, stdout);
+#endif
 
     /* tests ordered rougly by dependence */
     nerrors += test_macro_format_credential() < 0 ? 1 : 0;
