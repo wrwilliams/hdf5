@@ -2445,7 +2445,7 @@ done:
 
 /*-----------------------------------------------------------------------------
  *
- * Function : load_aws_creds_from_file()
+ * Function: H5FD__s3comms_load_aws_creds_from_file()
  *
  * Purpose:
  *
@@ -2496,7 +2496,7 @@ done:
  *-----------------------------------------------------------------------------
  */
 static herr_t
-load_aws_creds_from_file(
+H5FD__s3comms_load_aws_creds_from_file(
         FILE       *file,
         const char *profile_name,
         char       *key_id,
@@ -2529,7 +2529,7 @@ load_aws_creds_from_file(
 #endif
 
     /* format target line for start of profile */
-    if (32 < snprintf(profile_line, 32, "[%s]\n", profile_name))
+    if (32 < snprintf(profile_line, 32, "[%s]", profile_name))
         HGOTO_ERROR(H5E_ARGS, H5E_CANTCOPY, FAIL,
                     "unable to format profile label")
 
@@ -2545,7 +2545,7 @@ load_aws_creds_from_file(
 
     /* extract credentials from lines */
     do {
-        unsigned    setting_name_len = 0;
+        size_t      setting_name_len = 0;
         const char *setting_name     = NULL;
         char        line_prefix[128];
 
@@ -2571,8 +2571,6 @@ load_aws_creds_from_file(
 
             /* found a matching name? */
             if (!strncmp(line_buffer, line_prefix, setting_name_len + 1)) {
-                char scan_str[128];
-
                 found_setting = 1;
 
                 /* skip NULL destination buffer */
@@ -2606,7 +2604,7 @@ load_aws_creds_from_file(
 done:
     FUNC_LEAVE_NOAPI(ret_value);
 
-} /* load_aws_creds_from_file */
+} /* H5FD__s3comms_load_aws_creds_from_file */
 
 
 /*----------------------------------------------------------------------------
@@ -2670,7 +2668,7 @@ H5FD_s3comms_load_aws_profile(const char *profile_name,
 
     credfile = fopen(filepath, "r");
     if (credfile != NULL) {
-        if (FAIL == load_aws_creds_from_file(
+        if (FAIL == H5FD__s3comms_load_aws_creds_from_file(
                 credfile,
                 profile_name,
                 key_id_out,
@@ -2689,7 +2687,7 @@ H5FD_s3comms_load_aws_profile(const char *profile_name,
                     "unable to format config path")
     credfile = fopen(filepath, "r");
     if (credfile != NULL) {
-        if (FAIL == load_aws_creds_from_file(
+        if (FAIL == H5FD__s3comms_load_aws_creds_from_file(
                 credfile,
                 profile_name,
                 (*key_id_out == 0) ? key_id_out : NULL,

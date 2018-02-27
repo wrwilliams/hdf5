@@ -2670,14 +2670,6 @@ main(void)
         s3_test_credentials_loaded = 1;
     }
 
-#if 0
-HDprintf("loaded?: %d\n", s3_test_credentials_loaded);
-HDprintf("region: %s\n", s3_test_aws_region);
-HDprintf("access key id: %s\n", s3_test_aws_access_key_id);
-HDprintf("secret access key: %s\n", s3_test_aws_secret_access_key);
-H5Eprint2(H5E_DEFAULT, stdout);
-#endif
-
     /* tests ordered rougly by dependence */
     nerrors += test_macro_format_credential() < 0 ? 1 : 0;
     nerrors += test_trim()                    < 0 ? 1 : 0;
