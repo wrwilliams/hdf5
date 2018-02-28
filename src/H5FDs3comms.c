@@ -2463,7 +2463,6 @@ done:
  *     Following AWS documentation, looks for any of:
  *     + aws_access_key_id
  *     + aws_secret_access_key
- *     + aws_session_token
  *     + region
  *
  *     To be valid, the setting must begin the line with one of the keywords,

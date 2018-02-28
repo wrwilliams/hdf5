@@ -1947,6 +1947,9 @@ main(void)
     s3_test_aws_secret_access_key[0] = '\0';
     s3_test_aws_region[0]            = '\0';
 
+    /* attempt to load test credentials
+     * if unable, certain tests will be skipped
+     */
     if (SUCCEED == H5FD_s3comms_load_aws_profile(
             S3_TEST_PROFILE_NAME,
             s3_test_aws_access_key_id,

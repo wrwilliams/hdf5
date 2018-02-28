@@ -2660,7 +2660,9 @@ main(void)
 /* TODO: unit/regression test for H5FD_s3comms_load_aws_profile()
  * requires a few test files and/or manipulation of default path
  */
-
+    /* attempt to load test credentials
+     * if unable, certain tests will be skipped
+     */
     if (SUCCEED == H5FD_s3comms_load_aws_profile(
             S3_TEST_PROFILE_NAME,
             s3_test_aws_access_key_id,
