@@ -5,12 +5,10 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifdef OLD_HEADER_FILENAME
@@ -470,7 +468,7 @@ hssize_t DataSpace::getSelectElemNpoints () const
 ///\par Description
 ///             For more information, please refer to the C layer Reference
 ///             Manual at:
-/// http://www.hdfgroup.org/HDF5/doc/RM/RM_H5S.html#Dataspace-SelectElemPointList
+/// https://support.hdfgroup.org/HDF5/doc/RM/RM_H5S.html#Dataspace-SelectElemPointList
 // Programmer   Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void DataSpace::getSelectElemPointlist (hsize_t startpoint, hsize_t numpoints, hsize_t *buf) const
@@ -494,7 +492,7 @@ void DataSpace::getSelectElemPointlist (hsize_t startpoint, hsize_t numpoints, h
 ///\par Description
 ///             For more information, please refer to the C layer Reference
 ///             Manual at:
-/// http://www.hdfgroup.org/HDF5/doc/RM/RM_H5S.html#Dataspace-SelectBounds
+/// https://support.hdfgroup.org/HDF5/doc/RM/RM_H5S.html#Dataspace-SelectBounds
 // Programmer   Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void DataSpace::getSelectBounds (hsize_t* start, hsize_t* end) const
@@ -520,7 +518,7 @@ void DataSpace::getSelectBounds (hsize_t* start, hsize_t* end) const
 ///\par Description
 ///             For more information, please refer to the C layer Reference
 ///             Manual at:
-/// http://www.hdfgroup.org/HDF5/doc/RM/RM_H5S.html#Dataspace-SelectElements
+/// https://support.hdfgroup.org/HDF5/doc/RM/RM_H5S.html#Dataspace-SelectElements
 // Programmer   Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void DataSpace::selectElements (H5S_seloper_t op, const size_t num_elements, const hsize_t *coord) const
@@ -602,7 +600,7 @@ bool DataSpace::selectValid () const
 ///\par Description
 ///             For more information, please refer to the C layer Reference
 ///             Manual at:
-/// http://www.hdfgroup.org/HDF5/doc/RM/RM_H5S.html#Dataspace-SelectHyperslab
+/// https://support.hdfgroup.org/HDF5/doc/RM/RM_H5S.html#Dataspace-SelectHyperslab
 // Programmer   Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void DataSpace::selectHyperslab(H5S_seloper_t op, const hsize_t *count, const hsize_t *start, const hsize_t *stride, const hsize_t *block) const

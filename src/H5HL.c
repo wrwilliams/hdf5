@@ -5,12 +5,10 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -402,18 +400,20 @@ END_FUNC(PRIV) /* end H5HL_protect() */
  *
  *-------------------------------------------------------------------------
  */
-BEGIN_FUNC(PRIV, NOERR,
-void *, NULL, -,
+BEGIN_FUNC(PRIV, ERR,
+void *, NULL, NULL,
 H5HL_offset_into(const H5HL_t *heap, size_t offset))
 
     /* Sanity check */
     HDassert(heap);
-    HDassert(offset < heap->dblk_size);
+    if(offset >= heap->dblk_size)
+       H5E_THROW(H5E_CANTGET, "unable to offset into local heap data block");
 
     ret_value = heap->dblk_image + offset;
 
+CATCH
+    /* No special processing on errors */
 END_FUNC(PRIV) /* end H5HL_offset_into() */
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5HL_unprotect

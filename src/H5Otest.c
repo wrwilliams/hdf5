@@ -5,12 +5,10 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* Programmer:  Quincey Koziol <koziol@hdfgroup.org>
@@ -733,7 +731,7 @@ H5O_msg_move_to_new_chunk_test(hid_t oid, unsigned msg_type)
 
             /* Allocate and initialize new chunk in the file, moving the found message */
             /* (*new_idx returned from this routine is unused here) */
-            if(H5O__alloc_chunk(loc->file, H5AC_ind_read_dxpl_id, oh, 40, oh->nmesgs, &found_msg, &new_idx) < 0)
+            if(H5O__alloc_chunk(loc->file, H5AC_ind_read_dxpl_id, oh, (curr_msg->raw_size + H5O_SIZEOF_MSGHDR_OH(oh)), oh->nmesgs, &found_msg, &new_idx) < 0)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTALLOC, FAIL, "can't allocate new object header chunk")
 
             /* Break out of loop, the message was found */

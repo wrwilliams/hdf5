@@ -5,12 +5,10 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -132,27 +130,27 @@ H5FS_section_class_t H5MF_FSPACE_SECT_CLS_SIMPLE[1] = {{
 /* Class info for "small" free space sections */
 H5FS_section_class_t H5MF_FSPACE_SECT_CLS_SMALL[1] = {{
     /* Class variables */
-    H5MF_FSPACE_SECT_SMALL,		/* Section type                 */
-    0,					/* Extra serialized size        */
-    H5FS_CLS_MERGE_SYM | H5FS_CLS_ADJUST_OK, /* Class flags                  */
-    NULL,				/* Class private info           */
+    H5MF_FSPACE_SECT_SMALL,     /* Section type                 */
+    0,                          /* Extra serialized size        */
+    H5FS_CLS_MERGE_SYM | H5FS_CLS_ADJUST_OK,    /* Class flags                  */
+    NULL,                       /* Class private info           */
 
     /* Class methods */
-    NULL,				/* Initialize section class     */
-    NULL,				/* Terminate section class      */
+    NULL,                       /* Initialize section class     */
+    NULL,                       /* Terminate section class      */
 
     /* Object methods */
-    H5MF_sect_small_add,		/* Add section                  */
-    NULL,				/* Serialize section            */
+    H5MF_sect_small_add,        /* Add section                  */
+    NULL,                       /* Serialize section            */
     H5MF_sect_deserialize,		/* Deserialize section          */
-    H5MF_sect_small_can_merge,		/* Can sections merge?          */
-    H5MF_sect_small_merge,		/* Merge sections               */
-    H5MF_sect_small_can_shrink,		/* Can section shrink container?*/
-    H5MF_sect_small_shrink,		/* Shrink container w/section   */
-    H5MF_sect_free,			/* Free section                 */
-    H5MF_sect_valid,			/* Check validity of section    */
-    H5MF_sect_split,			/* Split section node for alignment */
-    NULL,				/* Dump debugging for section   */
+    H5MF_sect_small_can_merge,  /* Can sections merge?          */
+    H5MF_sect_small_merge,      /* Merge sections               */
+    NULL,		                /* Can section shrink container?*/
+    NULL,		                /* Shrink container w/section   */
+    H5MF_sect_free,             /* Free section                 */
+    H5MF_sect_valid,            /* Check validity of section    */
+    H5MF_sect_split,            /* Split section node for alignment */
+    NULL,                       /* Dump debugging for section   */
 }};
 
 /* Class info for "large" free space sections */
@@ -362,7 +360,7 @@ H5MF_sect_valid(const H5FS_section_class_t H5_ATTR_UNUSED *cls,
 static H5FS_section_info_t *
 H5MF_sect_split(H5FS_section_info_t *sect, hsize_t frag_size)
 {
-    H5MF_free_section_t *ret_value;     /* Return value */
+    H5MF_free_section_t *ret_value = NULL;      /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
 
@@ -676,7 +674,7 @@ HDfprintf(stderr, "%s: Entering, section {%a, %Hu}\n", FUNC, (*sect)->sect_info.
 HDfprintf(stderr, "%s: section is dropped\n", FUNC);
 #endif /* H5MF_ALLOC_DEBUG_MORE */
     } /* end if */
-    /* Adjust the section if it is not at page end but its size + pgend threshold is at page end */
+    /* Adjust the section if it is not at page end but its size + prem is at page end */
     else
         if(prem <= H5F_PGEND_META_THRES(udata->f)) {
             (*sect)->sect_info.size += prem;

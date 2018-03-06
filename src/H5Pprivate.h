@@ -5,12 +5,10 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -18,6 +16,9 @@
  */
 #ifndef _H5Pprivate_H
 #define _H5Pprivate_H
+
+/* Early typedefs to avoid circular dependencies */
+typedef struct H5P_genplist_t H5P_genplist_t;
 
 /* Include package's public header */
 #include "H5Ppublic.h"
@@ -54,12 +55,7 @@ typedef enum H5P_coll_md_read_flag_t {
     H5P_USER_TRUE               = 1
 } H5P_coll_md_read_flag_t;
 
-/* Forward declarations (for prototypes & type definitions) */
-struct H5O_fill_t;
-struct H5T_t;
-
 /* Forward declarations for anonymous H5P objects */
-typedef struct H5P_genplist_t H5P_genplist_t;
 typedef struct H5P_genclass_t H5P_genclass_t;
 
 typedef enum H5P_plist_type_t {
@@ -146,6 +142,10 @@ H5_DLLVAR const struct H5P_libclass_t H5P_CLS_FACC[1];  /* File access */
 /******************************/
 /* Library Private Prototypes */
 /******************************/
+
+/* Forward declaration of structs used below */
+struct H5O_fill_t;
+struct H5T_t;
 
 /* Package initialization routine */
 H5_DLL herr_t H5P_init(void);

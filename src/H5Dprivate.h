@@ -5,12 +5,10 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -23,10 +21,10 @@
 #include "H5Dpublic.h"
 
 /* Private headers needed by this file */
-#include "H5FDprivate.h"	/* File drivers				*/
-#include "H5Oprivate.h"		/* Object headers		  	*/
-#include "H5Sprivate.h"		/* Dataspaces 				*/
-#include "H5Zprivate.h"		/* Data filters				*/
+#include "H5FDprivate.h"       /* File drivers                */
+#include "H5Oprivate.h"        /* Object headers              */
+#include "H5Sprivate.h"        /* Dataspaces                  */
+#include "H5Zprivate.h"        /* Data filters                */
 
 
 /**************************/
@@ -35,26 +33,27 @@
 
 /*
  * Feature: Define H5D_DEBUG on the compiler command line if you want to
- *	    debug dataset I/O. NDEBUG must not be defined in order for this
- *	    to have any effect.
+ *        debug dataset I/O. NDEBUG must not be defined in order for this
+ *        to have any effect.
  */
 #ifdef NDEBUG
 #  undef H5D_DEBUG
 #endif
 
 /* ========  Dataset creation property names ======== */
-#define H5D_CRT_LAYOUT_NAME        "layout"             /* Storage layout */
-#define H5D_CRT_FILL_VALUE_NAME    "fill_value"         /* Fill value */
+#define H5D_CRT_LAYOUT_NAME        "layout"              /* Storage layout */
+#define H5D_CRT_FILL_VALUE_NAME    "fill_value"          /* Fill value */
 #define H5D_CRT_ALLOC_TIME_STATE_NAME "alloc_time_state" /* Space allocation time state */
-#define H5D_CRT_EXT_FILE_LIST_NAME "efl"                /* External file list */
+#define H5D_CRT_EXT_FILE_LIST_NAME "efl"                 /* External file list */
 
 /* ========  Dataset access property names ======== */
-#define H5D_ACS_DATA_CACHE_NUM_SLOTS_NAME   "rdcc_nslots"   /* Size of raw data chunk cache(slots) */
-#define H5D_ACS_DATA_CACHE_BYTE_SIZE_NAME   "rdcc_nbytes"   /* Size of raw data chunk cache(bytes) */
-#define H5D_ACS_PREEMPT_READ_CHUNKS_NAME    "rdcc_w0"       /* Preemption read chunks first */
-#define H5D_ACS_VDS_VIEW_NAME               "vds_view"      /* VDS view option */
+#define H5D_ACS_DATA_CACHE_NUM_SLOTS_NAME   "rdcc_nslots"    /* Size of raw data chunk cache(slots) */
+#define H5D_ACS_DATA_CACHE_BYTE_SIZE_NAME   "rdcc_nbytes"    /* Size of raw data chunk cache(bytes) */
+#define H5D_ACS_PREEMPT_READ_CHUNKS_NAME    "rdcc_w0"        /* Preemption read chunks first */
+#define H5D_ACS_VDS_VIEW_NAME               "vds_view"       /* VDS view option */
 #define H5D_ACS_VDS_PRINTF_GAP_NAME         "vds_printf_gap" /* VDS printf gap size */
-#define H5D_ACS_APPEND_FLUSH_NAME    "append_flush"         /* Append flush actions */
+#define H5D_ACS_VDS_PREFIX_NAME             "vds_prefix"     /* VDS file prefix */
+#define H5D_ACS_APPEND_FLUSH_NAME           "append_flush"   /* Append flush actions */
 #define H5D_ACS_EFILE_PREFIX_NAME           "external file prefix" /* External file prefix */
 
 /* ======== Data transfer properties ======== */
@@ -77,11 +76,11 @@
 #define H5D_XFER_MPIO_CHUNK_OPT_RATIO_NAME "mpio_chunk_opt_ratio"
 #define H5D_MPIO_ACTUAL_CHUNK_OPT_MODE_NAME "actual_chunk_opt_mode"
 #define H5D_MPIO_ACTUAL_IO_MODE_NAME    "actual_io_mode"
-#define H5D_MPIO_LOCAL_NO_COLLECTIVE_CAUSE_NAME "local_no_collective_cause"  /* cause of broken collective I/O in each process */
+#define H5D_MPIO_LOCAL_NO_COLLECTIVE_CAUSE_NAME "local_no_collective_cause"    /* cause of broken collective I/O in each process */
 #define H5D_MPIO_GLOBAL_NO_COLLECTIVE_CAUSE_NAME "global_no_collective_cause"  /* cause of broken collective I/O in all processes */
-#define H5D_XFER_EDC_NAME               "err_detect"    /* EDC */
-#define H5D_XFER_FILTER_CB_NAME         "filter_cb"     /* Filter callback function */
-#define H5D_XFER_CONV_CB_NAME           "type_conv_cb"  /* Type conversion callback function */
+#define H5D_XFER_EDC_NAME               "err_detect"     /* EDC */
+#define H5D_XFER_FILTER_CB_NAME         "filter_cb"      /* Filter callback function */
+#define H5D_XFER_CONV_CB_NAME           "type_conv_cb"   /* Type conversion callback function */
 #define H5D_XFER_XFORM_NAME             "data_transform" /* Data transform */
 #ifdef H5_HAVE_INSTRUMENTED_LIBRARY
 /* Collective chunk instrumentation properties */
@@ -154,10 +153,10 @@ typedef struct H5D_copy_file_ud_t {
 
 /* Structure for dataset append flush property (H5Pset_append_flush) */
 typedef struct H5D_append_flush_t {
-    unsigned ndims;			/* The # of dimensions for "boundary" */
-    hsize_t boundary[H5S_MAX_RANK];	/* The dimension sizes for determining boundary */
-    H5D_append_cb_t func;		/* The callback function */
-    void *udata;			/* User data */
+    unsigned ndims;            /* The # of dimensions for "boundary" */
+    hsize_t boundary[H5S_MAX_RANK];    /* The dimension sizes for determining boundary */
+    H5D_append_cb_t func;        /* The callback function */
+    void *udata;            /* User data */
 } H5D_append_flush_t;
 
 

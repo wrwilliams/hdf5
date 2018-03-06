@@ -5,12 +5,10 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -30,7 +28,7 @@
 
 /* PRIVATE PROTOTYPES */
 static void *H5O_efl_decode(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh,
-    unsigned mesg_flags, unsigned *ioflags, const uint8_t *p);
+    unsigned mesg_flags, unsigned *ioflags, size_t p_size, const uint8_t *p);
 static herr_t H5O_efl_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mesg);
 static void *H5O_efl_copy(const void *_mesg, void *_dest);
 static size_t H5O_efl_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
@@ -69,17 +67,17 @@ const H5O_msg_class_t H5O_MSG_EFL[1] = {{
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5O_efl_decode
+ * Function:    H5O_efl_decode
  *
  * Purpose:	Decode an external file list message and return a pointer to
- *		the message (and some other data).
+ *          the message (and some other data).
  *
- * Return:	Success:	Ptr to a new message struct.
+ * Return:  Success:    Ptr to a new message struct.
  *
- *		Failure:	NULL
+ *          Failure:    NULL
  *
  * Programmer:	Robb Matzke
- *		Tuesday, November 25, 1997
+ *              Tuesday, November 25, 1997
  *
  * Modification:
  *              Raymond Lu
@@ -90,14 +88,15 @@ const H5O_msg_class_t H5O_MSG_EFL[1] = {{
  */
 static void *
 H5O_efl_decode(H5F_t *f, hid_t dxpl_id, H5O_t H5_ATTR_UNUSED *open_oh,
-    unsigned H5_ATTR_UNUSED mesg_flags, unsigned H5_ATTR_UNUSED *ioflags, const uint8_t *p)
+    unsigned H5_ATTR_UNUSED mesg_flags, unsigned H5_ATTR_UNUSED *ioflags,
+    size_t H5_ATTR_UNUSED p_size, const uint8_t *p)
 {
-    H5O_efl_t		*mesg = NULL;
-    int			version;
-    const char		*s = NULL;
-    H5HL_t              *heap;
-    size_t		u;                      /* Local index variable */
-    void                *ret_value = NULL;      /* Return value */
+    H5O_efl_t   *mesg = NULL;
+    int         version;
+    const char  *s = NULL;
+    H5HL_t      *heap;
+    size_t      u;                  /* Local index variable */
+    void        *ret_value = NULL;  /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
 
@@ -106,12 +105,12 @@ H5O_efl_decode(H5F_t *f, hid_t dxpl_id, H5O_t H5_ATTR_UNUSED *open_oh,
     HDassert(p);
 
     if(NULL == (mesg = (H5O_efl_t *)H5MM_calloc(sizeof(H5O_efl_t))))
-	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* Version */
     version = *p++;
     if(version != H5O_EFL_VERSION)
-	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad version number for external file list message")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad version number for external file list message")
 
     /* Reserved */
     p += 3;
@@ -143,24 +142,26 @@ H5O_efl_decode(H5F_t *f, hid_t dxpl_id, H5O_t H5_ATTR_UNUSED *open_oh,
     /* Decode the file list */
     mesg->slot = (H5O_efl_entry_t *)H5MM_calloc(mesg->nalloc * sizeof(H5O_efl_entry_t));
     if(NULL == mesg->slot)
-	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     if(NULL == (heap = H5HL_protect(f, dxpl_id, mesg->heap_addr, H5AC__READ_ONLY_FLAG)))
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, NULL, "unable to read protect link value")
     for(u = 0; u < mesg->nused; u++) {
-	/* Name */
-	H5F_DECODE_LENGTH (f, p, mesg->slot[u].name_offset);
+        /* Name */
+        H5F_DECODE_LENGTH (f, p, mesg->slot[u].name_offset);
 
-        s = (const char *)H5HL_offset_into(heap, mesg->slot[u].name_offset);
-	HDassert(s && *s);
-	mesg->slot[u].name = H5MM_xstrdup (s);
+        if((s = (const char *)H5HL_offset_into(heap, mesg->slot[u].name_offset)) == NULL)
+            HGOTO_ERROR(H5E_SYM, H5E_CANTGET, NULL, "unable to get external file name")
+        if(*s == (char)'\0')
+            HGOTO_ERROR(H5E_SYM, H5E_CANTGET, NULL, "invalid external file name")
+        mesg->slot[u].name = H5MM_xstrdup (s);
         HDassert(mesg->slot[u].name);
 
-	/* File offset */
-	H5F_DECODE_LENGTH (f, p, mesg->slot[u].offset);
+        /* File offset */
+        H5F_DECODE_LENGTH (f, p, mesg->slot[u].offset);
 
-	/* Size */
-	H5F_DECODE_LENGTH (f, p, mesg->slot[u].size);
+        /* Size */
+        H5F_DECODE_LENGTH (f, p, mesg->slot[u].size);
     } /* end for */
 
     if(H5HL_unprotect(heap) < 0)

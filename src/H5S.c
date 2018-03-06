@@ -5,12 +5,10 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /****************/
@@ -59,6 +57,12 @@ static htri_t H5S_is_simple(const H5S_t *sdim);
 /* Package initialization variable */
 hbool_t H5_PKG_INIT_VAR = FALSE;
 
+/* Format version bounds for dataspace */
+const unsigned H5O_sdspace_ver_bounds[] = {
+    H5O_SDSPACE_VERSION_1,      /* H5F_LIBVER_EARLIEST */
+    H5O_SDSPACE_VERSION_2,      /* H5F_LIBVER_V18 */
+    H5O_SDSPACE_VERSION_LATEST  /* H5F_LIBVER_LATEST */
+};
 
 /*****************************/
 /* Library Private Variables */
@@ -85,6 +89,7 @@ static const H5I_class_t H5I_DATASPACE_CLS[1] = {{
     2,				/* # of reserved IDs for class */
     (H5I_free_t)H5S_close	/* Callback routine for closing objects of this class */
 }};
+
 
 /* Flag indicating "top" of interface has been initialized */
 static hbool_t H5S_top_package_initialize_s = FALSE;
@@ -1545,7 +1550,7 @@ H5Sencode(hid_t obj_id, void *buf, size_t *nalloc)
     H5TRACE3("e", "i*x*z", obj_id, buf, nalloc);
 
     /* Check argument and retrieve object */
-    if (NULL==(dspace=(H5S_t *)H5I_object_verify(obj_id, H5I_DATASPACE)))
+    if (NULL == (dspace = (H5S_t *)H5I_object_verify(obj_id, H5I_DATASPACE)))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace")
 
     if(H5S_encode(dspace, (unsigned char **)&buf, nalloc)<0)
@@ -1724,8 +1729,8 @@ H5S_decode(const unsigned char **p)
 
     /* Decode the extent part of dataspace */
     /* (pass mostly bogus file pointer and bogus DXPL) */
-    if((extent = (H5S_extent_t *)H5O_msg_decode(f, H5P_DEFAULT, NULL, H5O_SDSPACE_ID, pp))==NULL)
-	HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDECODE, NULL, "can't decode object")
+    if((extent = (H5S_extent_t *)H5O_msg_decode(f, H5P_DEFAULT, NULL, H5O_SDSPACE_ID, extent_size, pp)) == NULL)
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDECODE, NULL, "can't decode object")
     pp += extent_size;
 
     /* Copy the extent into dataspace structure */
@@ -2168,30 +2173,42 @@ H5S_extent_nelem(const H5S_extent_t *ext)
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5S_set_latest_version
+ * Function:    H5S_set_version
  *
- * Purpose:     Set the encoding for a dataspace to the latest version.
+ * Purpose:     Set the version to encode a dataspace with.
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Quincey Koziol
- *              Tuesday, July 24, 2007
+ * Programmer:  Vailin Choi; December 2017
  *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5S_set_latest_version(H5S_t *ds)
+H5S_set_version(H5F_t *f, H5S_t *ds)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
+    unsigned version;           /* Message version */
+    herr_t ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity check */
+    HDassert(f);
     HDassert(ds);
 
-    /* Set encoding of extent to latest version */
-    ds->extent.version = H5O_SDSPACE_VERSION_LATEST;
+    /* Upgrade to the version indicated by the file's low bound if higher */
+    version = MAX(ds->extent.version, H5O_sdspace_ver_bounds[H5F_LOW_BOUND(f)]);
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5S_set_latest_version() */
+    /* Version bounds check */
+    if(version > H5O_sdspace_ver_bounds[H5F_HIGH_BOUND(f)])
+        HGOTO_ERROR(H5E_DATASET, H5E_BADRANGE, FAIL, "Dataspace version out of bounds")
+
+    /* Set the message version */
+    ds->extent.version = version;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* end H5S_set_version() */
 
 #ifndef H5_NO_DEPRECATED_SYMBOLS
 

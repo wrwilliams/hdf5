@@ -6,12 +6,10 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef __H5Location_H
@@ -28,16 +26,16 @@ namespace H5 {
     location identifier to specify the HDF5 object.  The location identifier
     can be either file, group, dataset, attribute, or named datatype.
     Wrappers for H5A functions stay in H5Object.
-
-    Inheritance: IdComponent
 */
-// Class forwarding
-class H5_DLLCPP ArrayType;
-class H5_DLLCPP LinkAccPropList;
-class H5_DLLCPP VarLenType;
+// Inheritance: IdComponent
 class H5_DLLCPP H5Location : public IdComponent {
    public:
         // Checks if a link of a given name exists in a location
+        bool nameExists(const char* name, const LinkAccPropList& lapl = LinkAccPropList::DEFAULT) const;
+        bool nameExists(const H5std_string& name, const LinkAccPropList& lapl = LinkAccPropList::DEFAULT) const;
+
+        // Checks if a link of a given name exists in a location
+        // Deprecated in favor of nameExists for better name.
         bool exists(const char* name, const LinkAccPropList& lapl = LinkAccPropList::DEFAULT) const;
         bool exists(const H5std_string& name, const LinkAccPropList& lapl = LinkAccPropList::DEFAULT) const;
 
@@ -116,6 +114,7 @@ class H5_DLLCPP H5Location : public IdComponent {
         H5std_string getLinkval(const H5std_string& link_name, size_t size=0) const;
 
         // Returns the number of objects in this group.
+        // Deprecated - moved to H5::Group in 1.10.2.
         hsize_t getNumObjs() const;
 
         // Retrieves the name of an object in this group, given the
@@ -196,7 +195,7 @@ class H5_DLLCPP H5Location : public IdComponent {
         // removal does not raise any problems in two 1.10 releases.
 
         // Creates a copy of an existing object giving the location id.
-        H5Location(const hid_t loc_id);
+        // H5Location(const hid_t loc_id);
 
         // Creates a reference to an HDF5 object or a dataset region.
         void p_reference(void* ref, const char* name, hid_t space_id, H5R_type_t ref_type) const;

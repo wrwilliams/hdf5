@@ -5,12 +5,10 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "H5Fmodule.h"          /* This source code file is part of the H5F module */
@@ -27,9 +25,6 @@
 #include "H5MMprivate.h"	/* Memory management			*/
 
 /* PRIVATE PROTOTYPES */
-static herr_t H5F_mount(H5G_loc_t *loc, const char *name, H5F_t *child,
-    hid_t plist_id, hid_t dxpl_id);
-static herr_t H5F_unmount(H5G_loc_t *loc, const char *name, hid_t dxpl_id);
 static void H5F_mount_count_ids_recurse(H5F_t *f, unsigned *nopen_files, unsigned *nopen_objs);
 
 
@@ -101,7 +96,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
+herr_t
 H5F_mount(H5G_loc_t *loc, const char *name, H5F_t *child,
 	  hid_t H5_ATTR_UNUSED plist_id, hid_t dxpl_id)
 {
@@ -267,7 +262,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
+herr_t
 H5F_unmount(H5G_loc_t *loc, const char *name, hid_t dxpl_id)
 {
     H5G_t	*child_group = NULL;	/* Child's group in parent mtab	*/

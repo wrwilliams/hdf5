@@ -5,12 +5,10 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <string>
@@ -138,6 +136,27 @@ ArrayType& ArrayType::operator=(const ArrayType& rhs)
         }
     }
     return(*this);
+}
+
+//--------------------------------------------------------------------------
+// Function:    ArrayType::decode
+///\brief       Returns an ArrayType object via DataType* by decoding the
+///             binary object description of this type.
+///\exception   H5::DataTypeIException
+// Programmer   Binh-Minh Ribler - Aug 2017
+//--------------------------------------------------------------------------
+DataType* ArrayType::decode() const
+{
+    hid_t encoded_arrtype_id = H5I_INVALID_HID;
+    try {
+        encoded_arrtype_id = p_decode();
+    }
+    catch (DataTypeIException &err) {
+        throw;
+    }
+    ArrayType *encoded_arrtype = new ArrayType;
+    encoded_arrtype->p_setId(encoded_arrtype_id);
+    return(encoded_arrtype);
 }
 
 //--------------------------------------------------------------------------

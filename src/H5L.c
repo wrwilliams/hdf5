@@ -5,12 +5,10 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /****************/
@@ -51,18 +49,6 @@ typedef struct {
     H5L_info_t      *linfo;             /* Buffer to return to user */
     hid_t           dxpl_id;            /* DXPL to use in callback */
 } H5L_trav_gi_t;
-
-/* User data for path traversal routine for getting link info by index */
-typedef struct {
-    /* In */
-    H5_index_t idx_type;               /* Index to use */
-    H5_iter_order_t order;              /* Order to iterate in index */
-    hsize_t n;                          /* Offset of link within index */
-    hid_t dxpl_id;                      /* DXPL to use in callback */
-
-    /* Out */
-    H5L_info_t      *linfo;             /* Buffer to return to user */
-} H5L_trav_gibi_t;
 
 /* User data for path traversal callback to creating a link */
 typedef struct {
@@ -110,46 +96,10 @@ typedef struct {
     void *buf;                          /* User buffer */
 } H5L_trav_gv_t;
 
-/* User data for path traversal routine for getting link value by index */
-typedef struct {
-    /* In */
-    H5_index_t idx_type;               /* Index to use */
-    H5_iter_order_t order;              /* Order to iterate in index */
-    hsize_t n;                          /* Offset of link within index */
-    hid_t dxpl_id;                      /* DXPL to use in callback */
-    size_t size;                        /* Size of user buffer */
-
-    /* Out */
-    void *buf;                          /* User buffer */
-} H5L_trav_gvbi_t;
-
 /* User data for path traversal routine for removing link */
 typedef struct {
     hid_t dxpl_id;                      /* DXPL to use in callback */
 } H5L_trav_rm_t;
-
-/* User data for path traversal routine for removing link by index */
-typedef struct {
-    /* In */
-    H5_index_t idx_type;               /* Index to use */
-    H5_iter_order_t order;              /* Order to iterate in index */
-    hsize_t n;                          /* Offset of link within index */
-    hid_t dxpl_id;                      /* DXPL to use in callback */
-} H5L_trav_rmbi_t;
-
-/* User data for path traversal routine for getting name by index */
-typedef struct {
-    /* In */
-    H5_index_t idx_type;                /* Index to use */
-    H5_iter_order_t order;              /* Order to iterate in index */
-    hsize_t n;                          /* Offset of link within index */
-    size_t size;                        /* Size of name buffer */
-    hid_t dxpl_id;                      /* DXPL to use in callback */
-
-    /* Out */
-    char *name;                         /* Buffer to return name to user */
-    ssize_t name_len;                   /* Length of full name */
-} H5L_trav_gnbi_t;
 
 /********************/
 /* Local Prototypes */
@@ -187,8 +137,6 @@ static herr_t H5L__exists_final_cb(H5G_loc_t *grp_loc/*in*/, const char *name,
 static herr_t H5L__exists_inter_cb(H5G_loc_t *grp_loc/*in*/, const char *name,
     const H5O_link_t *lnk, H5G_loc_t *obj_loc, void *_udata/*in,out*/,
     H5G_own_loc_t *own_loc/*out*/);
-static htri_t H5L__exists(const H5G_loc_t *loc, const char *name, hid_t lapl_id,
-    hid_t dxpl_id);
 static herr_t H5L_get_info_cb(H5G_loc_t *grp_loc/*in*/, const char *name,
     const H5O_link_t *lnk, H5G_loc_t *obj_loc, void *_udata/*in,out*/,
     H5G_own_loc_t *own_loc/*out*/);
@@ -868,17 +816,17 @@ H5Lexists(hid_t loc_id, const char *name, hid_t lapl_id)
 
     /* Check arguments */
     if(H5G_loc(loc_id, &loc))
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(!name || !*name)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name specified")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name specified")
 
     /* Verify access property list and get correct dxpl */
     if(H5P_verify_apl_and_dxpl(&lapl_id, H5P_CLS_LACC, &dxpl_id, loc_id, FALSE) < 0)
         HGOTO_ERROR(H5E_LINK, H5E_CANTSET, FAIL, "can't set access and transfer property lists")
 
     /* Check for the existence of the link */
-    if((ret_value = H5L__exists(&loc, name, lapl_id, dxpl_id)) < 0)
-	HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "unable to get link info")
+    if((ret_value = H5L_exists(&loc, name, lapl_id, dxpl_id)) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "unable to get link info")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1183,24 +1131,20 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Literate
+ * Function:    H5Literate
  *
- * Purpose:	Iterates over links in a group, with user callback routine,
+ * Purpose:     Iterates over links in a group, with user callback routine,
  *              according to the order within an index.
  *
  *              Same pattern of behavior as H5Giterate.
  *
- * Return:	Success:	The return value of the first operator that
- *				returns non-zero, or zero if all members were
- *				processed with no operator returning non-zero.
+ * Return:      Success:    The return value of the first operator that
+ *                          returns non-zero, or zero if all members were
+ *                          processed with no operator returning non-zero.
  *
- *		Failure:	Negative if something goes wrong within the
- *				library, or the negative value returned by one
- *				of the operators.
- *
- *
- * Programmer:	Quincey Koziol
- *              Thursday, November 16, 2006
+ *              Failure:    Negative if something goes wrong within the
+ *                          library, or the negative value returned by one
+ *                          of the operators.
  *
  *-------------------------------------------------------------------------
  */
@@ -1208,25 +1152,25 @@ herr_t
 H5Literate(hid_t grp_id, H5_index_t idx_type, H5_iter_order_t order,
     hsize_t *idx_p, H5L_iterate_t op, void *op_data)
 {
-    H5I_type_t  id_type;        /* Type of ID */
-    H5G_link_iterate_t lnk_op;  /* Link operator */
-    hsize_t     last_lnk;       /* Index of last object looked at */
-    hsize_t	idx;            /* Internal location to hold index */
-    herr_t ret_value;           /* Return value */
+    H5I_type_t          id_type;        /* Type of ID                       */
+    H5G_link_iterate_t  lnk_op;         /* Link operator                    */
+    hsize_t             last_lnk;       /* Index of last object looked at   */
+    hsize_t	            idx;            /* Internal location to hold index  */
+    herr_t              ret_value;      /* Return value                     */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE6("e", "iIiIo*hx*x", grp_id, idx_type, order, idx_p, op, op_data);
 
     /* Check arguments */
     id_type = H5I_get_type(grp_id);
-    if(!(H5I_GROUP == id_type || H5I_FILE == id_type))
+    if (!(H5I_GROUP == id_type || H5I_FILE == id_type))
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid argument")
-    if(idx_type <= H5_INDEX_UNKNOWN || idx_type >= H5_INDEX_N)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid index type specified")
-    if(order <= H5_ITER_UNKNOWN || order >= H5_ITER_N)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid iteration order specified")
-    if(!op)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no operator specified")
+    if (idx_type <= H5_INDEX_UNKNOWN || idx_type >= H5_INDEX_N)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid index type specified")
+    if (order <= H5_ITER_UNKNOWN || order >= H5_ITER_N)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid iteration order specified")
+    if (!op)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no operator specified")
 
     /* Set up iteration beginning/end info */
     idx = (idx_p == NULL ? 0 : *idx_p);
@@ -1237,8 +1181,8 @@ H5Literate(hid_t grp_id, H5_index_t idx_type, H5_iter_order_t order,
     lnk_op.op_func.op_new = op;
 
     /* Iterate over the links */
-    if((ret_value = H5G_iterate(grp_id, ".", idx_type, order, idx, &last_lnk, &lnk_op, op_data, H5P_DEFAULT, H5AC_ind_read_dxpl_id)) < 0)
-	HGOTO_ERROR(H5E_SYM, H5E_BADITER, FAIL, "link iteration failed")
+    if ((ret_value = H5G_iterate(grp_id, ".", idx_type, order, idx, &last_lnk, &lnk_op, op_data, H5P_DEFAULT, H5AC_ind_read_dxpl_id)) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_BADITER, FAIL, "link iteration failed")
 
     /* Set the index we stopped at */
     if(idx_p)
@@ -2351,9 +2295,11 @@ H5L_delete_cb(H5G_loc_t *grp_loc/*in*/, const char *name, const H5O_link_t *lnk,
     if(name == NULL)
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "name doesn't exist")
 
-    /* Check for removing '.' */
+    /* Check for non-existent (NULL) link.
+     * Note that this can also occur when attempting to remove '.'
+     */
     if(lnk == NULL)
-        HGOTO_ERROR(H5E_SYM, H5E_CANTDELETE, FAIL, "can't delete self")
+        HGOTO_ERROR(H5E_SYM, H5E_CANTDELETE, FAIL, "callback link pointer is NULL (specified link may be '.' or not exist)")
 
     /* Remove the link from the group */
     if(H5G_obj_remove(grp_loc->oloc, grp_loc->path->full_path_r, name, udata->dxpl_id) < 0)
@@ -2930,7 +2876,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5L__exists
+ * Function:	H5L_exists
  *
  * Purpose:	Returns whether a link exists in a group
  *
@@ -2944,13 +2890,13 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static htri_t
-H5L__exists(const H5G_loc_t *loc, const char *name, hid_t lapl_id, hid_t dxpl_id)
+htri_t
+H5L_exists(const H5G_loc_t *loc, const char *name, hid_t lapl_id, hid_t dxpl_id)
 {
     H5L_trav_le_t udata;        /* User data for traversal */
     htri_t ret_value = FAIL;    /* Return value */
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_NOAPI(FAIL)
 
     /* A path of "/" will always exist in a file */
     if(0 == HDstrcmp(name, "/"))
@@ -2966,7 +2912,7 @@ H5L__exists(const H5G_loc_t *loc, const char *name, hid_t lapl_id, hid_t dxpl_id
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5L__exists() */
+} /* H5L_exists() */
 
 
 /*-------------------------------------------------------------------------

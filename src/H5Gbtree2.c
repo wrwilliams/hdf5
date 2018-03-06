@@ -5,12 +5,10 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -157,7 +155,7 @@ const H5B2_class_t H5G_BT2_CORDER[1]={{ /* B-tree class information */
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5G_dense_fh_name_cmp(const void *obj, size_t H5_ATTR_UNUSED obj_len, void *_udata)
+H5G_dense_fh_name_cmp(const void *obj, size_t obj_len, void *_udata)
 {
     H5G_fh_ud_cmp_t *udata = (H5G_fh_ud_cmp_t *)_udata;         /* User data for 'op' callback */
     H5O_link_t *lnk;    /* Pointer to link created from heap object */
@@ -166,7 +164,7 @@ H5G_dense_fh_name_cmp(const void *obj, size_t H5_ATTR_UNUSED obj_len, void *_uda
     FUNC_ENTER_NOAPI_NOINIT
 
     /* Decode link information */
-    if(NULL == (lnk = (H5O_link_t *)H5O_msg_decode(udata->f, udata->dxpl_id, NULL, H5O_LINK_ID, (const unsigned char *)obj)))
+    if(NULL == (lnk = (H5O_link_t *)H5O_msg_decode(udata->f, udata->dxpl_id, NULL, H5O_LINK_ID, obj_len, (const unsigned char *)obj)))
         HGOTO_ERROR(H5E_SYM, H5E_CANTDECODE, FAIL, "can't decode link")
 
     /* Compare the string values */

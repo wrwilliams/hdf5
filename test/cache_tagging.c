@@ -1,14 +1,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Copyright by The HDF Group.                                               *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* Programmer:  Mike McGreevy
@@ -3632,11 +3631,14 @@ error:
 static unsigned
 check_invalid_tag_application(void)
 {
+#if H5C_DO_TAGGING_SANITY_CHECKS
     /* Variables */
     H5F_t * f = NULL;
-    hid_t fid, dxpl_id = -1;
+    hid_t fid = -1;
+    hid_t dxpl_id = -1;
     haddr_t addr;
     H5HL_t * lheap = NULL;
+#endif /* H5C_DO_TAGGING_SANITY_CHECKS */
 
     /* Testing Macro */
     TESTING("failure on invalid tag application");
@@ -3684,8 +3686,8 @@ check_invalid_tag_application(void)
     PASSED();
 #else
     SKIPPED();
-    printf("    test skipped because sanity checking on tag value is disabled.\n");
-#endif
+    HDprintf("    test skipped because sanity checking on tag value is disabled.\n");
+#endif /* H5C_DO_TAGGING_SANITY_CHECKS */
 
     return 0;
 
@@ -3792,10 +3794,10 @@ main(void)
     HDremove(FILENAME2);
 
     /* Return Errors */
-    return(nerrs > 0);
+    return nerrs > 0;
 
 error:
     /* Return with Error */
-    return(1);
+    return 1;
 
 } /* main */

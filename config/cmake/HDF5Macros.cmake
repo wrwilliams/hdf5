@@ -1,3 +1,14 @@
+#
+# Copyright by The HDF Group.
+# All rights reserved.
+#
+# This file is part of HDF5.  The full HDF5 copyright notice, including
+# terms governing use, modification, and redistribution, is contained in
+# the COPYING file, which can be found at the root of the source code
+# distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.
+# If you do not have access to either file, you may request a copy from
+# help@hdfgroup.org.
+#
 #-------------------------------------------------------------------------------
 macro (H5_SET_LIB_OPTIONS libtarget libname libtype)
   set (LIB_OUT_NAME "${libname}")
@@ -6,12 +17,12 @@ macro (H5_SET_LIB_OPTIONS libtarget libname libtype)
     if (ARGN)
       set (PACKAGE_SOVERSION ${ARGN})
     else ()
-      set (PACKAGE_SOVERSION ${HDF5_PACKAGE_SOVERSION})
+      set (PACKAGE_SOVERSION ${H5_SOVERS_MAJOR})
     endif ()
     if (WIN32)
       set (LIBHDF_VERSION ${HDF5_PACKAGE_VERSION_MAJOR})
     else ()
-      set (LIBHDF_VERSION ${HDF5_PACKAGE_VERSION})
+      set (LIBHDF_VERSION ${HDF5_PACKAGE_SOVERSION})
     endif ()
     set_target_properties (${libtarget} PROPERTIES VERSION ${LIBHDF_VERSION})
     if (WIN32)
