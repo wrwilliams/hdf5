@@ -12744,12 +12744,6 @@ test_space_update_diminfo(void)
    /* The start of the hyperslab */
    hsize_t start1[1], start3[3];
 
-    /* Allocate buffers */
-    wbuf = (int *)HDmalloc(sizeof(int) * SPACE10_DIM1);
-    CHECK_PTR(wbuf, "HDmalloc");
-    rbuf = (int *)HDcalloc(sizeof(int), SPACE10_DIM1);
-    CHECK_PTR(rbuf, "HDcalloc");
-
    /* The stride of the hyperslab */
    hsize_t stride1[1], stride3[3];
 
@@ -14966,7 +14960,7 @@ test_bug(void)
 
     /* Read selection from disk */
     ret = H5Dread(did, H5T_NATIVE_UCHAR, sid, mem_sid, H5P_DEFAULT, rbuf);
-    CHECK(ret, FAIL, "H5Dwrite");
+    CHECK(ret, FAIL, "H5Dread");
 
 
     /* Close everything */
