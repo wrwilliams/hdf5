@@ -24,7 +24,6 @@
 *
 *************************************************************/
 
-#include "hdf5.h"
 #include "h5test.h"
 #include "H5Iprivate.h"
 #include "H5VLprivate.h"        /* Virtual Object Layer                     */

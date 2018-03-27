@@ -1733,24 +1733,20 @@ H5VL_native_file_optional(void *obj, hid_t dxpl_id, void H5_ATTR_UNUSED **req, v
         /* H5Fget_filesize */
         case H5VL_FILE_GET_SIZE:
             {
-                haddr_t     eof;                    /* End of file address */
-                haddr_t     eoa;                    /* End of allocation address */
                 haddr_t     max_eof_eoa;            /* Maximum of the EOA & EOF */
                 haddr_t     base_addr;              /* Base address for the file */
-                hsize_t    *ret = va_arg(arguments, hsize_t *);
+                hsize_t    *size = va_arg(arguments, hsize_t *);
 
                 f = (H5F_t *)obj;
 
                 /* Go get the actual file size */
-                eof = H5FD_get_eof(f->shared->lf, H5FD_MEM_DEFAULT);
-                eoa = H5FD_get_eoa(f->shared->lf, H5FD_MEM_DEFAULT);
-                max_eof_eoa = MAX(eof, eoa);
-                if (HADDR_UNDEF == max_eof_eoa)
-                    HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "file get eof/eoa requests failed")
+                if (H5F__get_max_eof_eoa(f, &max_eof_eoa) < 0)
+                    HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "file can't get max eof/eoa ")
+
                 base_addr = H5FD_get_base_addr(f->shared->lf);
 
-                if (ret)
-                    *ret = (hsize_t)(max_eof_eoa + base_addr);     /* Convert relative base address for file to absolute address */
+                if (size)
+                    *size = (hsize_t)(max_eof_eoa + base_addr);     /* Convert relative base address for file to absolute address */
 
                 break;
             }

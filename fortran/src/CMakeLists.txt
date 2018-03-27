@@ -1,5 +1,5 @@
-cmake_minimum_required (VERSION 3.2.2)
-PROJECT (HDF5_F90_SRC C CXX Fortran)
+cmake_minimum_required (VERSION 3.10)
+project (HDF5_F90_SRC C CXX Fortran)
 
 #-----------------------------------------------------------------------------
 # configure def file for shared libs on windows
@@ -66,10 +66,10 @@ set_target_properties (H5_buildiface PROPERTIES
 
 if (BUILD_SHARED_LIBS)
   file (MAKE_DIRECTORY "${HDF5_F90_BINARY_DIR}/shared")
-  set (MODSH_BUILD_DIR ${CMAKE_Fortran_MODULE_DIRECTORY}/shared/${HDF5_CFG_BUILD_TYPE})
+  set (MODSH_BUILD_DIR ${CMAKE_Fortran_MODULE_DIRECTORY}/shared/${HDF_CFG_BUILD_TYPE})
 endif ()
 file (MAKE_DIRECTORY "${HDF5_F90_BINARY_DIR}/static")
-set (MOD_BUILD_DIR ${CMAKE_Fortran_MODULE_DIRECTORY}/static/${HDF5_CFG_BUILD_TYPE})
+set (MOD_BUILD_DIR ${CMAKE_Fortran_MODULE_DIRECTORY}/static/${HDF_CFG_BUILD_TYPE})
 
 INCLUDE_DIRECTORIES (${HDF5_F90_SOURCE_DIR} ${HDF5_F90_BINARY_DIR} ${CMAKE_Fortran_MODULE_DIRECTORY})
 
@@ -78,22 +78,20 @@ add_executable (H5match_types
     ${HDF5_F90_BINARY_DIR}/H5fort_type_defines.h
     ${HDF5_F90_SRC_SOURCE_DIR}/H5match_types.c
 )
-set (CMD $<TARGET_FILE:H5match_types>)
 add_custom_command (
     OUTPUT ${HDF5_F90_BINARY_DIR}/static/H5f90i_gen.h
            ${HDF5_F90_BINARY_DIR}/static/H5fortran_types.F90
-    COMMAND ${CMD}
+    COMMAND $<TARGET_FILE:H5match_types>
     WORKING_DIRECTORY ${HDF5_F90_BINARY_DIR}/static
     DEPENDS H5match_types
 )
 set_source_files_properties (${HDF5_F90_BINARY_DIR}/static/H5f90i_gen.h PROPERTIES GENERATED TRUE)
 set_source_files_properties (${HDF5_F90_BINARY_DIR}/static/H5fortran_types.F90 PROPERTIES GENERATED TRUE)
 if (BUILD_SHARED_LIBS)
-  set (CMDSH $<TARGET_FILE:H5match_types>)
   add_custom_command (
       OUTPUT ${HDF5_F90_BINARY_DIR}/shared/H5f90i_gen.h
              ${HDF5_F90_BINARY_DIR}/shared/H5fortran_types.F90
-      COMMAND ${CMDSH}
+      COMMAND $<TARGET_FILE:H5match_types>
       WORKING_DIRECTORY ${HDF5_F90_BINARY_DIR}/shared
       DEPENDS H5match_types
   )
@@ -171,10 +169,9 @@ set (f90_F_GEN_SOURCES
     ${HDF5_F90_SRC_SOURCE_DIR}/H5Dff.F90
     ${HDF5_F90_SRC_SOURCE_DIR}/H5Pff.F90
 )
-set (CMD $<TARGET_FILE:H5_buildiface>)
 add_custom_command (
     OUTPUT ${HDF5_F90_BINARY_DIR}/static/H5_gen.F90
-    COMMAND ${CMD}
+    COMMAND $<TARGET_FILE:H5_buildiface>
     WORKING_DIRECTORY ${HDF5_F90_BINARY_DIR}/static
     DEPENDS ${f90_F_GEN_SOURCES}
     COMMENT "Generating the H5_gen.F90 file"
@@ -185,10 +182,9 @@ add_custom_target (H5gen ALL
 set_source_files_properties (${HDF5_F90_BINARY_DIR}/static/H5_gen.F90 PROPERTIES GENERATED TRUE)
 
 if (BUILD_SHARED_LIBS)
-  set (CMDSH $<TARGET_FILE:H5_buildiface>)
   add_custom_command (
       OUTPUT ${HDF5_F90_BINARY_DIR}/shared/H5_gen.F90
-      COMMAND ${CMDSH}
+      COMMAND $<TARGET_FILE:H5_buildiface>
       WORKING_DIRECTORY ${HDF5_F90_BINARY_DIR}/shared
       DEPENDS ${f90_F_GEN_SOURCES}
       COMMENT "Generating the H5_gen.F90 shared file"
@@ -299,7 +295,7 @@ if (BUILD_SHARED_LIBS)
   )
   if (WIN32)
     set_property (TARGET ${HDF5_F90_LIBSH_TARGET}
-      APPEND PROPERTY COMPILE_DEFINITIONS "BUILD_HDF5_DLL;HDF5F90_WINDOWS"
+        APPEND PROPERTY COMPILE_DEFINITIONS "BUILD_HDF5_DLL;HDF5F90_WINDOWS"
     )
   endif ()
   set (install_targets ${install_targets} ${HDF5_F90_LIBSH_TARGET})

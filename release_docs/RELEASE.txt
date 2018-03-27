@@ -56,16 +56,49 @@ New Features
     -------------
     - CMake
 
+      Change minimum version to 3.10.
+
+      This change removes the need to support a copy of the FindMPI.cmake module,
+      which has been removed, along with its subfolder in the config/cmake_ext_mod
+      location.
+
+      (ADB - 2018/03/09)
+
+    - CMake
+
+      Add pkg-config file generation
+
+      Added pkg-config file generation for the C, C++, HL, and HL C++ libraries.
+      In addition, builds on linux will create h5cXXX scripts that use the pkg-config
+      files. This is a limited implementation of a script like autotools h5cc.
+
+      (ADB - 2018/03/08, HDFFV-4359)
+
+    - CMake
+
       Refactor use of CMAKE_BUILD_TYPE for new variable, which understands
       the type of generator in use.
 
-      Added new configuration macros to use new HDF5_BUILD_TYPE variable. This
+      Added new configuration macros to use new HDF_BUILD_TYPE variable. This
       variable is set correctly for the type of generator being used for the build.
 
       (ADB - 2018/01/08, HDFFV-10385, HDFFV-10296)
 
     Library:
     --------
+    - Add an enumerated value to H5F_libver_t for H5Pset_libver_bounds().
+
+      Currently, the library defines two values for H5F_libver_t and supports
+      only two pairs of (low, high) combinations as derived from these values.
+      Thus the bounds setting via H5Pset_libver_bounds() is rather restricted.
+
+      Add an enumerated value (H5F_LIBVER_V18) to H5F_libver_t and
+      H5Pset_libver_bounds() now supports five pairs of (low, high) combinations
+      as derived from these values.  This addition provides the user more
+      flexibility in setting bounds for object creation.
+
+      (VC - 2018/03/14)
+
     - Add prefix option to VDS files.
 
       Currently, VDS source files must be in the active directory to be
@@ -141,10 +174,101 @@ New Features
 
     C++ Library:
     ------------
-    -
+    - The following C++ API wrappers have been added to the C++ Library:
+      + H5Lcreate_soft:
+        // Creates a soft link from link_name to target_name.
+        void link(const char *target_name, const char *link_name,...)
+        void link(const H5std_string& target_name,...)
+
+      + H5Lcreate_hard:
+        // Creates a hard link from new_name to curr_name.
+        void link(const char *curr_name, const Group& new_loc,...)
+        void link(const H5std_string& curr_name, const Group& new_loc,...)
+
+        // Creates a hard link from new_name to curr_name in same location.
+        void link(const char *curr_name, const hid_t same_loc,...)
+        void link(const H5std_string& curr_name, const hid_t same_loc,...)
+
+        Note: previous version of H5Location::link will be deprecated.
+
+      + H5Lcopy:
+        // Copy an object from a group of file to another.
+        void copyLink(const char *src_name, const Group& dst,...)
+        void copyLink(const H5std_string& src_name, const Group& dst,...)
+
+        // Copy an object from a group of file to the same location.
+        void copyLink(const char *src_name, const char *dst_name,...)
+        void copyLink(const H5std_string& src_name,...)
+
+      + H5Lmove:
+        // Rename an object in a group or file to a new location.
+        void moveLink(const char* src_name, const Group& dst,...)
+        void moveLink(const H5std_string& src_name, const Group& dst,...)
+
+        // Rename an object in a group or file to the same location.
+        void moveLink(const char* src_name, const char* dst_name,...)
+        void moveLink(const H5std_string& src_name,...)
+
+        Note: previous version H5Location::move will be deprecated.
+
+      + H5Ldelete:
+        // Removes the specified link from this location.
+        void unlink(const char *link_name,
+            const LinkAccPropList& lapl = LinkAccPropList::DEFAULT)
+        void unlink(const H5std_string& link_name,
+            const LinkAccPropList& lapl = LinkAccPropList::DEFAULT)
+
+        Note: additional parameter is added to previous H5Location::unlink.
+
+      + H5Tencode and H5Tdecode:
+        // Creates a binary object description of this datatype.
+        void DataType::encode() - C API H5Tencode()
+
+        // Returns the decoded type from the binary object description.
+        DataType::decode() - C API H5Tdecode()
+        ArrayType::decode() - C API H5Tdecode()
+        CompType::decode() - C API H5Tdecode()
+        DataType::decode() - C API H5Tdecode()
+        EnumType::decode() - C API H5Tdecode()
+        FloatType::decode() - C API H5Tdecode()
+        IntType::decode() - C API H5Tdecode()
+        StrType::decode() - C API H5Tdecode()
+        VarLenType::decode() - C API H5Tdecode()
+
+      + H5Lget_info:
+        // Returns the information of the named link.
+        H5L_info_t getLinkInfo(const H5std_string& link_name,...)
+
+      (BMR - 2018/03/11, HDFFV-10149)
+
+    - Added class LinkCreatPropList for link create property list.
+
+      (BMR - 2018/03/11, HDFFV-10149)
+
+    - Added overloaded functions H5Location::createGroup to take a link
+      creation property list
+        Group createGroup(const char* name, const LinkCreatPropList& lcpl)
+        Group createGroup(const H5std_string& name, const LinkCreatPropList& lcpl)
+
+      (BMR - 2018/03/11, HDFFV-10149)
+
+    - A document is added to the HDF5 C++ API Reference Manual to show the
+      mapping from a C API to C++ wrappers.  It can be found from the main
+      page of the C++ API Reference Manual.
+
+      (BMR - 2017/10/17, HDFFV-10151)
+
 
     Java Library:
     ----------------
+    - Wrapper added for enabling the error stack.
+
+      H5error_off would disable the error stack reporting. In order
+      to re-enable the reporting, the error stack info needs to be
+      saved so that H5error_on can revert state.
+
+      (ADB - 2018/03/13, HDFFV-10412)
+
     - Wrappers added for the following APIs:
       H5Pset_evict_on_close
       H5Pget_evict_on_close
@@ -195,6 +319,55 @@ Bug Fixes since HDF5-1.10.1 release
 
     Library
     -------
+    - The data read after a direct chunk write to a chunked dataset
+      was incorrect. 
+
+      The problem was due to the passing of a null dataset pointer to
+      the insert callback for the chunk index in the routine
+      H5D__chunk_direct_write() in H5Dchunk.c
+      The dataset was a single-chunked dataset which will use the 
+      single chunk index when latest format was enabled on file creation.  
+      The single chunk index was the only index that used this pointer
+      in the insert callback.
+
+      Pass the dataset pointer to the insert callback for the chunk
+      index in H5D__chunk_direct_write().
+
+      (VC - 2018/03/20, HDFFV-10425)
+
+    - Add public routine H5DOread_chunk to the high-level C library
+
+      As we have H5DOwrite_chunk() to write an entire chunk to the file
+      directly, the customer requested to add this public routine to 
+      read an entire chunk from the file directly.
+
+      This public routine was added based on a patch from GE Healthcare.
+
+      (VC - 2017/05/19, HDFFV-9934)
+
+    - Freeing of object header in H5Ocache.c
+
+      It was discovered that the object header was not released properly
+      when the checksum verification failed and a re-load of the object
+      header was needed.
+
+      Free the object header that failed the chksum verification only
+      after the new object header is reloaded, deserialized and set up.
+
+      (VC - 2018/03/14, HDFFV-10209)
+
+    - H5Pset_evict_on_close in H5Pfapl.c
+
+      Changed the minor error number from H5E_CANTSET to H5E_UNSUPPORTED for
+      parallel library.
+             (ADB - 2018/03/6, HDFFV-10414)
+
+    - Utility function can not handle lowercase Windows drive letters
+
+      Added call to toupper function for drive letter.
+
+      (ADB - 2017/12/18, HDFFV-10307)
+
     - filter plugin handling in H5PL.c and H5Z.c
 
       It was discovered that the dynamic loading process used by
@@ -232,17 +405,121 @@ Bug Fixes since HDF5-1.10.1 release
 
       (DER - 2017/11/21, HDFFV-10330)
 
+    - If an HDF5 file contains a filter pipeline message with a 'number of
+      filters' field that exceeds the maximum number of allowed filters,
+      the error handling code will attempt to dereference a NULL pointer.
+
+      This issue was reported to The HDF Group as issue #CVE-2017-17505.
+
+      NOTE: The HDF5 C library cannot produce such a file. This condition
+            should only occur in a corrupt (or deliberately altered) file
+            or a file created by third-party software.
+
+      This problem arose because the error handling code assumed that
+      the 'number of filters' field implied that a dynamic array of that
+      size had already been created and that the cleanup code should
+      iterate over that array and clean up each element's resources. If
+      an error occurred before the array has been allocated, this will
+      not be true.
+
+      This has been changed so that the number of filters is set to
+      zero on errors. Additionally, the filter array traversal in the
+      error handling code now requires that the filter array not be NULL.
+
+      (DER - 2018/02/06, HDFFV-10354)
+
+    - If an HDF5 file contains a filter pipeline message which contains
+      a 'number of filters' field that exceeds the actual number of
+      filters in the message, the HDF5 C library will read off the end of
+      the read buffer.
+
+      This issue was reported to The HDF Group as issue #CVE-2017-17506.
+
+      NOTE: The HDF5 C library cannot produce such a file. This condition
+            should only occur in a corrupt (or deliberately altered) file
+            or a file created by third-party software.
+
+      The problem was fixed by passing the buffer size with the buffer
+      and ensuring that the pointer cannot be incremented off the end
+      of the buffer. A mismatch between the number of filters declared
+      and the actual number of filters will now invoke normal HDF5
+      error handling.
+
+      (DER - 2018/02/26, HDFFV-10355)
+
+    - If an HDF5 file contains a malformed compound datatype with a
+      suitably large offset, the type conversion code can run off
+      the end of the type conversion buffer, causing a segmentation
+      fault.
+
+      This issue was reported to The HDF Group as issue #CVE-2017-17507.
+
+      NOTE: The HDF5 C library cannot produce such a file. This condition
+            should only occur in a corrupt (or deliberately altered) file
+            or a file created by third-party software.
+
+      THE HDF GROUP WILL NOT FIX THIS BUG AT THIS TIME
+
+      Fixing this problem would involve updating the publicly visible
+      H5T_conv_t function pointer typedef and versioning the API calls
+      which use it. We normally only modify the public API during
+      major releases, so this bug will not be fixed at this time.
+
+      (DER - 2018/02/26, HDFFV-10356)
+
+    - If an HDF5 file contains a malformed compound type which contains
+      a member of size zero, a division by zero error will occur while
+      processing the type.
+
+      This issue was reported to The HDF Group as issue #CVE-2017-17508.
+
+      NOTE: The HDF5 C library cannot produce such a file. This condition
+            should only occur in a corrupt (or deliberately altered) file
+            or a file created by third-party software.
+
+      Checking for zero before dividing fixes the problem. Instead of the
+      division by zero, the normal HDF5 error handling is invoked.
+
+      (DER - 2018/02/26, HDFFV-10357)
+
+    - If an HDF5 file contains a malformed symbol table node that declares
+      it contains more symbols than it actually contains, the library
+      can run off the end of the metadata cache buffer while processing
+      the symbol table node.
+
+      This issue was reported to The HDF Group as issue #CVE-2017-17509.
+
+      NOTE: The HDF5 C library cannot produce such a file. This condition
+            should only occur in a corrupt (or deliberately altered) file
+            or a file created by third-party software.
+
+      Performing bounds checks on the buffer while processing fixes the
+      problem. Instead of the segmentation fault, the normal HDF5 error
+      handling is invoked.
+
+      (DER - 2018/03/12, HDFFV-10358)
+
     Configuration
     -------------
     - CMake
 
-      Correct usuage of CMAKE_BUILD_TYPE variable.
+      Update CMake commands configuration.
+
+      A number of improvements were made to the CMake commands. Most
+      changes simplify usage or eliminate unused constructs. Also,
+      some changes support better cross-platform support.
+
+      (ADB - 2018/02/01, HDFFV-10398)
+
+    - CMake
+
+      Correct usage of CMAKE_BUILD_TYPE variable.
 
       The use of the CMAKE_BUILD_TYPE is incorrect for multi-config
       generators (Visual Studio and XCode) and is optional for single
       config generators. Created a new macro to check
         GLOBAL PROPERTY -> GENERATOR_IS_MULTI_CONFIG
-      Created two new HDF variable, HDF5_BUILD_TYPE and HDF5_CFG_BUILD_TYPE.
+      Created two new HDF variable, HDF_BUILD_TYPE and HDF_CFG_BUILD_TYPE.
       Defaults for these variables is "Release".
 
       (ADB - 2018/01/10, HDFFV-10385)
@@ -300,6 +577,80 @@ Bug Fixes since HDF5-1.10.1 release
 
     Tools
     -----
+    - h5clear
+
+      An enhancement to the tool in setting a file's stored EOA.
+
+      It was discovered that a crashed file's stored EOA in the superblock
+      was smaller than the actual file's EOF.  When the file was reopened
+      and closed, the library truncated the file to the stored EOA.
+
+      Add an option to the tool in setting the file's stored EOA in the
+      superblock to the maximum of (EOA, EOF) + increment.
+      Another option is also added to print the file's EOA and EOF.
+
+      (VC - 2018/03/14, HDFFV-10360)
+
+    - h5repack
+
+      h5repack changes the chunk parameters when a change of layout is not
+      specified and a filter is applied.
+
+      HDFFV-10297, HDFFV-10319 reworked code for h5repack and h5diff code
+      in the tools library. The check for an existing layout was incorrectly
+      placed into an if block and not executed. The check was moved into
+      the normal path of the function.
+
+      (ADB - 2018/02/21, HDFFV-10412)
+
+    - h5dump
+
+      the tools library will hide the error stack during file open.
+
+      While this is preferable almost always, there are reasons to enable
+      display of the error stack when a tool will not open a file. Adding an
+      optional argument to the --enable-error-stack will provide this use case.
+      As an optional argument it will not affect the operation of the
+      --enable-error-stack. h5dump is the only tool to implement this change.
+
+      (ADB - 2018/02/15, HDFFV-10384)
+
+    - h5dump
+
+      h5dump would output an indented blank line in the filters section.
+
+      h5dump overused the h5tools_simple_prefix function, which is a
+      function intended to account for the data index (x,y,z) option.
+      Removed the function call for header information.
+
+      (ADB - 2018/01/25, HDFFV-10396)
+
+    - h5repack
+
+      h5repack incorrectly searched internal object table for name.
+
+      h5repack would search the table of objects for a name, if the
+      name did not match it tried to determine if the name without a
+      leading slash would match. The logic was flawed! The table
+      stored names(paths) without a leading slash and did a strstr
+      of the table path to the name.
+      The assumption was that if there was a difference of one then
+      it was a match, however "pressure" would match "/pressure" as
+      well as "/pressure1", "/pressure2", etc. Changed logic to remove
+      any leading slash and then do a full compare of the name.
+
+      (ADB - 2018/01/18, HDFFV-10393)
+
+    - h5repack
+
+      h5repack failed to handle more then 9 chars for int conversion.
+
+      User defined filter parameter conversions would fail for integers
+      larger then 9 characters. Increased local variable array for storing
+      the current command line parameter to prevent buffer overflows.
+
+      (ADB - 2018/01/17, HDFFV-10392)
+
     - h5diff
 
       h5diff seg faulted if comparing VL strings against fixed strings.
@@ -423,11 +774,20 @@ Bug Fixes since HDF5-1.10.1 release
 
     C++ APIs
     --------
-    -
+    - Removal of memory leaks
+
+      A private function was inadvertently called, causing memory leaks.  This
+      is now fixed.
+
+      (BMR - 2018/03/12 - User's reported in email)
 
     Testing
     -------
-    -
+    - Memory for three variables in testphdf5's coll_write_test was malloced
+      but not freed, leaking memory when running the test.  The variables'
+      memory is now freed.
+
+      (LRK - 2018/03/12, HDFFV-10397)
 
 Supported Platforms
 ===================
