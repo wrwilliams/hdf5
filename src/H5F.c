@@ -1384,7 +1384,6 @@ H5Fget_metadata_read_retry_info(hid_t file_id, H5F_retry_info_t *info)
                           H5_REQUEST_NULL, H5VL_FILE_GET_METADATA_READ_RETRY_INFO, info) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't get metadata read retry info")
 
-
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Fget_metadata_read_retry_info() */
@@ -1501,7 +1500,7 @@ done:
 herr_t
 H5Fstart_swmr_write(hid_t file_id)
 {
-    H5VL_object_t   *file;                          /* File info */
+    H5VL_object_t   *file = NULL;                   /* File info */
     herr_t          ret_value = SUCCEED;            /* Return value */
 
     FUNC_ENTER_API(FAIL)
@@ -1514,7 +1513,6 @@ H5Fstart_swmr_write(hid_t file_id)
     /* start SWMR writing */
     if (H5VL_file_optional(file->vol_obj, file->vol_info->vol_cls, H5AC_ind_read_dxpl_id, 
                           H5_REQUEST_NULL, H5VL_FILE_START_SWMR_WRITE) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "unable to start SWMR writing")
 
 done:
     FUNC_LEAVE_API(ret_value)

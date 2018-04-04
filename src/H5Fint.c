@@ -3185,18 +3185,17 @@ H5F_start_swmr_write(H5F_t *file)
     if ((H5F_INTENT(file) & H5F_ACC_RDWR) == 0)
         HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "no write intent on file")
 
+    /* Check superblock version */
     if (file->shared->sblock->super_vers < HDF5_SUPERBLOCK_VERSION_3)
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "file superblock version should be at least 3")
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "file superblock version - should be at least 3")
 
-    /* XXX: Change this to actual error handling */
-    HDassert((file->shared->low_bound == H5F_LIBVER_V110) && (file->shared->high_bound == H5F_LIBVER_V110));
+    /* Check for correct file format version */
+    if ((file->shared->low_bound != H5F_LIBVER_V110) || (file->shared->high_bound != H5F_LIBVER_V110))
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "file format version does not support SWMR - needs to be 1.10 or greater")
 
     /* Should not be marked for SWMR writing mode already */
     if (file->shared->sblock->status_flags & H5F_SUPER_SWMR_WRITE_ACCESS)
         HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "file already in SWMR writing mode")
-
-    /* XXX: Change this to actual error handling */
-    HDassert(file->shared->sblock->status_flags & H5F_SUPER_WRITE_ACCESS);
 
     /* Check to see if cache image is enabled.  Fail if so */
     if (H5C_cache_image_status(file, &ci_load, &ci_write) < 0)
@@ -3224,18 +3223,18 @@ H5F_start_swmr_write(H5F_t *file)
 
     if (grp_dset_count) {
         /* Allocate space for group and object locations */
-    if ((obj_ids = (hid_t *) H5MM_malloc(grp_dset_count * sizeof(hid_t))) == NULL)
-        HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for hid_t")
-    if ((obj_glocs = (H5G_loc_t *) H5MM_malloc(grp_dset_count * sizeof(H5G_loc_t))) == NULL)
-        HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for H5G_loc_t")
-    if ((obj_olocs = (H5O_loc_t *) H5MM_malloc(grp_dset_count * sizeof(H5O_loc_t))) == NULL)
-        HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for H5O_loc_t")
-    if ((obj_paths = (H5G_name_t *) H5MM_malloc(grp_dset_count * sizeof(H5G_name_t))) == NULL)
-        HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for H5G_name_t")
+        if ((obj_ids = (hid_t *) H5MM_malloc(grp_dset_count * sizeof(hid_t))) == NULL)
+            HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for hid_t")
+        if ((obj_glocs = (H5G_loc_t *) H5MM_malloc(grp_dset_count * sizeof(H5G_loc_t))) == NULL)
+            HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for H5G_loc_t")
+        if ((obj_olocs = (H5O_loc_t *) H5MM_malloc(grp_dset_count * sizeof(H5O_loc_t))) == NULL)
+            HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for H5O_loc_t")
+        if ((obj_paths = (H5G_name_t *) H5MM_malloc(grp_dset_count * sizeof(H5G_name_t))) == NULL)
+            HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for H5G_name_t")
 
-    /* Get the list of opened object ids (groups & datasets) */
-    if (H5F_get_obj_ids(file, H5F_OBJ_GROUP|H5F_OBJ_DATASET, grp_dset_count, obj_ids, FALSE, &grp_dset_count) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "H5F_get_obj_ids failed")
+        /* Get the list of opened object ids (groups & datasets) */
+        if (H5F_get_obj_ids(file, H5F_OBJ_GROUP|H5F_OBJ_DATASET, grp_dset_count, obj_ids, FALSE, &grp_dset_count) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "H5F_get_obj_ids failed")
 
         /* Refresh opened objects (groups, datasets) in the file */
         for (u = 0; u < grp_dset_count; u++) {
@@ -3315,8 +3314,6 @@ H5F_start_swmr_write(H5F_t *file)
 
 done:
     if(ret_value < 0 && setup) {
-        /* XXX: Probably don't want asserts in public API calls */
-        HDassert(file);
 
         /* Re-enable accumulator */
         file->shared->feature_flags |= (unsigned)H5FD_FEAT_ACCUMULATE_METADATA;
