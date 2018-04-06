@@ -347,7 +347,7 @@ done:
     if(!ret_value && fill) {
         if(fill->buf)
             H5MM_xfree(fill->buf);
-	    fill = H5FL_FREE(H5O_fill_t, fill);
+        fill = H5FL_FREE(H5O_fill_t, fill);
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)

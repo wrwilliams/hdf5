@@ -741,7 +741,6 @@ test_open_twice_diff(hid_t fapl_id, H5FA_create_t *cparam, farray_test_param_t *
     H5FA_t         *fa      = NULL;             /* Fixed array wrapper          */
     H5FA_t         *fa2     = NULL;             /* Fixed array wrapper          */
     haddr_t         fa_addr = HADDR_UNDEF;      /* Array address in file        */
-    H5VL_object_t  *obj     = NULL;             /* VOL object                   */
 
     /* Display testing message */
     TESTING("open fixed array twice, through different file handles");

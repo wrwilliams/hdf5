@@ -215,14 +215,19 @@ struct H5VL_loc_by_ref {
 };
 
 /* Structure to hold parameters for object locations. 
-   either: BY_ID, BY_NAME, BY_IDX, BY_ADDR, BY_REF */
+ * either: BY_ADDR, BY_ID, BY_NAME, BY_IDX, BY_REF
+ *
+ * Note: Leave loc_by_addr as the first union member so we
+ *       can perform the simplest initialization of the struct
+ *       without raising warnings.
+ */
 typedef struct H5VL_loc_params_t {
     H5I_type_t      obj_type;
     H5VL_loc_type_t type;
     union{
+        struct H5VL_loc_by_addr loc_by_addr;
         struct H5VL_loc_by_name loc_by_name;
         struct H5VL_loc_by_idx  loc_by_idx;
-        struct H5VL_loc_by_addr loc_by_addr;
         struct H5VL_loc_by_ref  loc_by_ref;
     } loc_data;
 } H5VL_loc_params_t;

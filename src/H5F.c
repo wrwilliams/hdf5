@@ -1513,6 +1513,7 @@ H5Fstart_swmr_write(hid_t file_id)
     /* start SWMR writing */
     if (H5VL_file_optional(file->vol_obj, file->vol_info->vol_cls, H5AC_ind_read_dxpl_id, 
                           H5_REQUEST_NULL, H5VL_FILE_START_SWMR_WRITE) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "unable to start SWMR writing")
 
 done:
     FUNC_LEAVE_API(ret_value)

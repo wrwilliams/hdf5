@@ -516,7 +516,7 @@ done:
 
 
 /*--------------------------------------------------------------------------
- * Function: H5F__getenv_prefix_name --
+ * Function: H5F__getenv_prefix_name
  *
  * Purpose:  Get the first pathname in the list of pathnames stored in env_prefix,
  *           which is separated by the environment delimiter.
@@ -528,16 +528,18 @@ done:
 static char *
 H5F__getenv_prefix_name(char **env_prefix/*in,out*/)
 {
-    char        *retptr=NULL;
-    char        *strret=NULL;
+    char        *retptr = NULL;
+    char        *strret = NULL;
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_STATIC_NOERR
 
     strret = HDstrchr(*env_prefix, H5_COLON_SEPC);
+
     if (strret == NULL) {
         retptr = *env_prefix;
         *env_prefix = strret;
-    } else {
+    }
+    else {
         retptr = *env_prefix;
         *env_prefix = strret + 1;
         *strret = '\0';
