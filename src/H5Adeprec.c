@@ -343,7 +343,7 @@ H5Aget_num_attrs(hid_t loc_id)
                             H5_REQUEST_NULL, H5VL_OBJECT_GET_INFO, loc_params, &oinfo) < 0)
         HGOTO_ERROR(H5E_INTERNAL, H5E_CANTGET, FAIL, "unable to get group info")
 
-    ret_value = oinfo.num_attrs;
+    H5_CHECKED_ASSIGN(ret_value, int, oinfo.num_attrs, hsize_t);
 
 done:
     FUNC_LEAVE_API(ret_value)

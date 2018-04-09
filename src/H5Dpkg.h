@@ -562,6 +562,9 @@ H5_DLLVAR const H5D_chunk_ops_t H5D_COPS_BT2[1];
 H5_DLLVAR const H5B2_class_t H5D_BT2[1];
 H5_DLLVAR const H5B2_class_t H5D_BT2_FILT[1];
 
+/*  Array of versions for Layout */
+H5_DLLVAR const unsigned H5O_layout_ver_bounds[H5F_LIBVER_NBOUNDS];
+
 
 /******************************/
 /* Package Private Prototypes */
@@ -634,8 +637,7 @@ H5_DLL herr_t H5D__scatgath_write(const H5D_io_info_t *io_info,
 H5_DLL herr_t H5D__layout_set_io_ops(const H5D_t *dataset);
 H5_DLL size_t H5D__layout_meta_size(const H5F_t *f, const H5O_layout_t *layout,
     hbool_t include_compact_data);
-H5_DLL herr_t H5D__layout_set_latest_version(H5O_layout_t *layout,
-    const H5S_t *space, const H5D_dcpl_cache_t *dcpl_cache);
+H5_DLL herr_t H5D__layout_set_version(H5F_t *f, H5O_layout_t *layout);
 H5_DLL herr_t H5D__layout_set_latest_indexing(H5O_layout_t *layout,
     const H5S_t *space, const H5D_dcpl_cache_t *dcpl_cache);
 H5_DLL herr_t H5D__layout_oh_create(H5F_t *file, hid_t dxpl_id, H5O_t *oh,

@@ -127,7 +127,6 @@ H5F_get_access_plist(H5F_t *f, hbool_t app_ref)
     H5FD_driver_prop_t driver_prop;         /* Property for driver ID & info */
     hbool_t driver_prop_copied = FALSE;     /* Whether the driver property has been set up */
     unsigned   efc_size = 0;
-    hbool_t    latest_format = FALSE;       /* Always use the latest format? */
     hid_t      ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -164,10 +163,10 @@ H5F_get_access_plist(H5F_t *f, hbool_t app_ref)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't sieve buffer size")
     if(H5P_set(new_plist, H5F_ACS_SDATA_BLOCK_SIZE_NAME, &(f->shared->sdata_aggr.alloc_size)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'small data' cache size")
-    if(f->shared->latest_flags > 0)
-        latest_format = TRUE;
-    if(H5P_set(new_plist, H5F_ACS_LATEST_FORMAT_NAME, &latest_format) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'latest format' flag")
+    if(H5P_set(new_plist, H5F_ACS_LIBVER_LOW_BOUND_NAME, &f->shared->low_bound) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'low' bound for library format versions")
+    if(H5P_set(new_plist, H5F_ACS_LIBVER_HIGH_BOUND_NAME, &f->shared->high_bound) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'high' bound for library format versions")
     if(H5P_set(new_plist, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, &(f->shared->read_attempts)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'read attempts ' flag")
     if(H5P_set(new_plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &(f->shared->object_flush)) < 0)
@@ -517,7 +516,7 @@ done:
 
 
 /*--------------------------------------------------------------------------
- * Function: H5F__getenv_prefix_name --
+ * Function: H5F__getenv_prefix_name
  *
  * Purpose:  Get the first pathname in the list of pathnames stored in env_prefix,
  *           which is separated by the environment delimiter.
@@ -529,16 +528,18 @@ done:
 static char *
 H5F__getenv_prefix_name(char **env_prefix/*in,out*/)
 {
-    char        *retptr=NULL;
-    char        *strret=NULL;
+    char        *retptr = NULL;
+    char        *strret = NULL;
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_STATIC_NOERR
 
     strret = HDstrchr(*env_prefix, H5_COLON_SEPC);
+
     if (strret == NULL) {
         retptr = *env_prefix;
         *env_prefix = strret;
-    } else {
+    }
+    else {
         retptr = *env_prefix;
         *env_prefix = strret + 1;
         *strret = '\0';
@@ -830,7 +831,6 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
     else {
         H5P_genplist_t *plist;          /* Property list */
         unsigned efc_size;              /* External file cache size */
-        hbool_t latest_format;          /* Always use the latest format?    */
         size_t u;                       /* Local index variable */
 
         HDassert(lf != NULL);
@@ -911,13 +911,10 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get garbage collect reference")
         if (H5P_get(plist, H5F_ACS_SIEVE_BUF_SIZE_NAME, &(f->shared->sieve_buf_size)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get sieve buffer size")
-        if (H5P_get(plist, H5F_ACS_LATEST_FORMAT_NAME, &latest_format) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get 'latest format' flag")
-        /* For latest format or SWMR_WRITE, activate all latest version support */
-        if (latest_format)
-            f->shared->latest_flags |= H5F_LATEST_ALL_FLAGS;
-        else if (H5F_INTENT(f) & H5F_ACC_SWMR_WRITE)
-            f->shared->latest_flags |= H5F_LATEST_LAYOUT_MSG;
+        if (H5P_get(plist, H5F_ACS_LIBVER_LOW_BOUND_NAME, &(f->shared->low_bound)) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get 'low' bound for library format versions")
+        if (H5P_get(plist, H5F_ACS_LIBVER_HIGH_BOUND_NAME, &(f->shared->high_bound)) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get 'high' bound for library format versions")
         if (H5P_get(plist, H5F_ACS_USE_MDC_LOGGING_NAME, &(f->shared->use_mdc_logging)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get 'use mdc logging' flag")
         if (H5P_get(plist, H5F_ACS_START_MDC_LOG_ON_ACCESS_NAME, &(f->shared->start_mdc_log_on_access)) < 0)
@@ -1613,7 +1610,7 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
     } /* end if */
     else if (1 == shared->nrefs) {
         /* Read the superblock if it hasn't been read before. */
-        if(H5F__super_read(file, meta_dxpl_id, raw_dxpl_id, TRUE) < 0)
+        if(H5F__super_read(file, meta_dxpl_id, raw_dxpl_id, fapl_id, TRUE) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_READERROR, NULL, "unable to read superblock")
 
         /* Create the page buffer before initializing the superblock */
@@ -1801,7 +1798,16 @@ H5F__flush_phase2(H5F_t *f, hid_t meta_dxpl_id, hid_t raw_dxpl_id, hbool_t closi
         HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush metadata cache")
 
     /* Truncate the file to the current allocated size */
-    if (H5FD_truncate(f->shared->lf, meta_dxpl_id, closing) < 0)
+#ifdef H5_HAVE_PARALLEL
+    if(H5F_HAS_FEATURE(f, H5FD_FEAT_HAS_MPI)) {
+        /* Since we just returned from a call to H5AC_flush(), we just 
+         * passed through a barrier.  Hence we can skip the barrier on 
+         * entry to the mpio file driver call below.
+         */
+        H5FD_mpio_mark_pre_trunc_barrier_unecessary(f->shared->lf);
+    }
+#endif /* H5_HAVE_PARALLEL */
+    if(H5FD_truncate(f->shared->lf, meta_dxpl_id, closing) < 0)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "low level truncate failed")
 
@@ -2625,6 +2631,38 @@ H5F_set_store_msg_crt_idx(H5F_t *f, hbool_t flag)
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5F_set_store_msg_crt_idx() */
 
+/*-------------------------------------------------------------------------
+ * Function:    H5F_set_libver_bounds()
+ *
+ * Purpose:     Set the file's low and high bound to the input parameters
+ *              'low' and 'high' respectively.
+ *              This is done only if the existing setting is different
+ *              from the inputs.
+ *
+ * Return:      SUCCEED on success, and FAIL on failure.
+ *
+ * Programmer:  Vailin Choi; December 2017
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5F_set_libver_bounds(H5F_t * f, H5F_libver_t low, H5F_libver_t high)
+{
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    /* Sanity checks */
+    HDassert(f);
+    HDassert(f->shared);
+
+    /* Set the bounds only if the existing setting is different from the inputs */
+    if(f->shared->low_bound != low || f->shared->high_bound != high) {
+        f->shared->low_bound = low;
+        f->shared->high_bound = high;
+    }
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+} /* H5F_set_libver_bounds() */
+
 
 /*-------------------------------------------------------------------------
  * Function:    H5F_get_file_image
@@ -2937,6 +2975,43 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F__set_paged_aggr() */
 
+/*-------------------------------------------------------------------------
+ * Function: H5F__get_max_eof_eoa
+ *
+ * Purpose:  Determine the maximum of (EOA, EOF) for the file
+ *
+ * Return:   Non-negative on success/Negative on failure
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5F__get_max_eof_eoa(const H5F_t *f, haddr_t *max_eof_eoa)
+{
+    haddr_t eof;                /* Relative address for EOF */
+    haddr_t eoa;                /* Relative address for EOA */
+    haddr_t tmp_max;
+    herr_t ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_PACKAGE
+
+    /* Sanity checks */
+    HDassert(f);
+    HDassert(f->shared);
+
+    /* Get the relative EOA and EOF */
+    eoa = H5FD_get_eoa(f->shared->lf, H5FD_MEM_DEFAULT);
+    eof = H5FD_get_eof(f->shared->lf, H5FD_MEM_DEFAULT);
+
+    /* Determine the maximum */
+    tmp_max = MAX(eof, eoa);
+    if(HADDR_UNDEF == tmp_max)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "file get eof/eoa requests failed")
+
+    *max_eof_eoa = tmp_max;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5F__get_max_eof_eoa() */
+
 #ifdef H5_HAVE_PARALLEL
 
 /*-------------------------------------------------------------------------
@@ -2962,32 +3037,6 @@ H5F_set_coll_md_read(H5F_t *f, H5P_coll_md_read_flag_t cmr)
     FUNC_LEAVE_NOAPI_VOID
 } /* H5F_set_coll_md_read() */
 #endif /* H5_HAVE_PARALLEL */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5F_set_latest_flags
- *
- * Purpose:     Set the latest_flags field with a new value.
- *
- * Return:      Success:        SUCCEED
- *              Failure:        FAIL
- *-------------------------------------------------------------------------
- */
-herr_t
-H5F_set_latest_flags(H5F_t *f, unsigned flags)
-{
-    /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
-
-    /* Sanity check */
-    HDassert(f);
-    HDassert(f->shared);
-    HDassert(0 == ((~flags) & H5F_LATEST_ALL_FLAGS));
-
-    f->shared->latest_flags = flags;
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* H5F_set_latest_flags() */
 
 
 /*-------------------------------------------------------------------------
@@ -3138,16 +3187,17 @@ H5F_start_swmr_write(H5F_t *file)
     if ((H5F_INTENT(file) & H5F_ACC_RDWR) == 0)
         HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "no write intent on file")
 
+    /* Check superblock version */
     if (file->shared->sblock->super_vers < HDF5_SUPERBLOCK_VERSION_3)
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "file superblock version should be at least 3")
-    /* XXX: Change this to actual error handling */
-    HDassert((file->shared->latest_flags | H5F_LATEST_LAYOUT_MSG) > 0);
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "file superblock version - should be at least 3")
+
+    /* Check for correct file format version */
+    if ((file->shared->low_bound != H5F_LIBVER_V110) || (file->shared->high_bound != H5F_LIBVER_V110))
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "file format version does not support SWMR - needs to be 1.10 or greater")
 
     /* Should not be marked for SWMR writing mode already */
     if (file->shared->sblock->status_flags & H5F_SUPER_SWMR_WRITE_ACCESS)
         HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "file already in SWMR writing mode")
-    /* XXX: Change this to actual error handling */
-    HDassert(file->shared->sblock->status_flags & H5F_SUPER_WRITE_ACCESS);
 
     /* Check to see if cache image is enabled.  Fail if so */
     if (H5C_cache_image_status(file, &ci_load, &ci_write) < 0)
@@ -3175,18 +3225,18 @@ H5F_start_swmr_write(H5F_t *file)
 
     if (grp_dset_count) {
         /* Allocate space for group and object locations */
-    if ((obj_ids = (hid_t *) H5MM_malloc(grp_dset_count * sizeof(hid_t))) == NULL)
-        HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for hid_t")
-    if ((obj_glocs = (H5G_loc_t *) H5MM_malloc(grp_dset_count * sizeof(H5G_loc_t))) == NULL)
-        HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for H5G_loc_t")
-    if ((obj_olocs = (H5O_loc_t *) H5MM_malloc(grp_dset_count * sizeof(H5O_loc_t))) == NULL)
-        HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for H5O_loc_t")
-    if ((obj_paths = (H5G_name_t *) H5MM_malloc(grp_dset_count * sizeof(H5G_name_t))) == NULL)
-        HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for H5G_name_t")
+        if ((obj_ids = (hid_t *) H5MM_malloc(grp_dset_count * sizeof(hid_t))) == NULL)
+            HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for hid_t")
+        if ((obj_glocs = (H5G_loc_t *) H5MM_malloc(grp_dset_count * sizeof(H5G_loc_t))) == NULL)
+            HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for H5G_loc_t")
+        if ((obj_olocs = (H5O_loc_t *) H5MM_malloc(grp_dset_count * sizeof(H5O_loc_t))) == NULL)
+            HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for H5O_loc_t")
+        if ((obj_paths = (H5G_name_t *) H5MM_malloc(grp_dset_count * sizeof(H5G_name_t))) == NULL)
+            HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, FAIL, "can't allocate buffer for H5G_name_t")
 
-    /* Get the list of opened object ids (groups & datasets) */
-    if (H5F_get_obj_ids(file, H5F_OBJ_GROUP|H5F_OBJ_DATASET, grp_dset_count, obj_ids, FALSE, &grp_dset_count) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "H5F_get_obj_ids failed")
+        /* Get the list of opened object ids (groups & datasets) */
+        if (H5F_get_obj_ids(file, H5F_OBJ_GROUP|H5F_OBJ_DATASET, grp_dset_count, obj_ids, FALSE, &grp_dset_count) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "H5F_get_obj_ids failed")
 
         /* Refresh opened objects (groups, datasets) in the file */
         for (u = 0; u < grp_dset_count; u++) {
@@ -3266,8 +3316,6 @@ H5F_start_swmr_write(H5F_t *file)
 
 done:
     if(ret_value < 0 && setup) {
-        /* XXX: Probably don't want asserts in public API calls */
-        HDassert(file);
 
         /* Re-enable accumulator */
         file->shared->feature_flags |= (unsigned)H5FD_FEAT_ACCUMULATE_METADATA;

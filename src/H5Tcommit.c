@@ -386,10 +386,9 @@ H5T__commit(H5F_t *file, H5T_t *type, hid_t tcpl_id, hid_t dxpl_id)
         HGOTO_ERROR(H5E_SYM, H5E_CANTRESET, FAIL, "unable to initialize path")
     loc_init = TRUE;
 
-    /* Set the latest format, if requested */
-    if(H5F_USE_LATEST_FLAGS(file, H5F_LATEST_DATATYPE))
-        if(H5T_set_latest_version(type) < 0)
-            HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "can't set latest version of datatype")
+    /* Set the version for datatype */
+    if(H5T_set_version(file, type) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "can't set version of datatype")
 
     /* Calculate message size infomation, for creating object header */
     dtype_size = H5O_msg_size_f(file, tcpl_id, H5O_DTYPE_ID, type, (size_t)0);
@@ -868,7 +867,7 @@ H5T_construct_datatype(H5VL_object_t *dt_obj)
                          H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, &nalloc, buf, (size_t)nalloc) < 0)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, NULL, "unable to get serialized datatype")
 
-    if (NULL == (dt = H5T_decode((const unsigned char *)buf)))
+    if (NULL == (dt = H5T_decode((size_t)nalloc, (const unsigned char *)buf)))
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, NULL, "can't decode datatype")
 
     dt->vol_obj = dt_obj;

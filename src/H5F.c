@@ -1384,7 +1384,6 @@ H5Fget_metadata_read_retry_info(hid_t file_id, H5F_retry_info_t *info)
                           H5_REQUEST_NULL, H5VL_FILE_GET_METADATA_READ_RETRY_INFO, info) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't get metadata read retry info")
 
-
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Fget_metadata_read_retry_info() */
@@ -1501,7 +1500,7 @@ done:
 herr_t
 H5Fstart_swmr_write(hid_t file_id)
 {
-    H5VL_object_t   *file;                          /* File info */
+    H5VL_object_t   *file = NULL;                   /* File info */
     herr_t          ret_value = SUCCEED;            /* Return value */
 
     FUNC_ENTER_API(FAIL)
@@ -1624,9 +1623,12 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5Fset_latest_format
+ * Function:    H5Fset_libver_bounds
  *
- * Purpose:     Enable switching the "latest format" flag while a file is open.
+ * Purpose:     Set to a different low and high bounds while a file is open.
+ *              This public routine is introduced in place of 
+ *              H5Fset_latest_format() starting release 1.10.2.
+ *              See explanation for H5Fset_latest_format() in H5Fdeprec.c.
  *
  * Return:      SUCCEED/FAIL
  *
@@ -1636,35 +1638,27 @@ done:
  *      goign to hack it for now.
  */
 herr_t
-H5Fset_latest_format(hid_t file_id, hbool_t latest_format)
+H5Fset_libver_bounds(hid_t file_id, H5F_libver_t low, H5F_libver_t high)
 {
     H5VL_object_t *obj;                 /* File as VOL object           */
-    H5F_t *f;                           /* File                         */
-    unsigned latest_flags;              /* Latest format flags for file */
-    herr_t ret_value = SUCCEED;         /* Return value                 */
+    H5F_t *f;                           /* File 						*/
+    herr_t ret_value = SUCCEED;         /* Return value 				*/
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE2("e", "ib", file_id, latest_format);
+    H5TRACE3("e", "iFvFv", file_id, low, high);
 
     /* Check args */
     if (NULL == (obj = (H5VL_object_t *)H5I_object_verify(file_id, H5I_FILE)))
         HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "not a file ID")
     f = (H5F_t *)(obj->vol_obj);
 
-    /* Check if the value is changing */
-    latest_flags = H5F_USE_LATEST_FLAGS(f, H5F_LATEST_ALL_FLAGS);
-    if (latest_format != (H5F_LATEST_ALL_FLAGS == latest_flags)) {
-        /* Call the flush routine, for this file */
-        if (H5F__flush(f, H5AC_ind_read_dxpl_id, H5AC_rawdata_dxpl_id, FALSE) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "unable to flush file's cached information")
-
-        /* Toggle the 'latest format' flag */
-        H5F_SET_LATEST_FLAGS(f, latest_format ? H5F_LATEST_ALL_FLAGS : 0);
-    }
+    /* Call private set_libver_bounds function */
+    if (H5F_set_libver_bounds(f, low, high) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "cannot set low/high bounds")
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Fset_latest_format() */
+} /* end H5Fset_libver_bounds() */
 
 
 /*-------------------------------------------------------------------------
@@ -1843,3 +1837,87 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* H5Fget_mdc_image_info() */
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Fget_eoa
+ *
+ * Purpose:     Returns the address of the first byte after the last
+ *              allocated memory in the file.
+ *              (See H5FDget_eoa() in H5FD.c)
+ *
+ * Return:      Success:    First byte after allocated memory.
+ *              Failure:    HADDR_UNDEF
+ *
+ * Return:      Non-negative on success/Negative on errors
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Fget_eoa(hid_t file_id, haddr_t *eoa)
+{
+    H5F_t *file;                    /* File object for file ID */
+    haddr_t rel_eoa;                /* Relative address of EOA */
+    herr_t ret_value = SUCCEED;     /* Return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE2("e", "i*a", file_id, eoa);
+
+    /* Check args */
+    if(NULL == (file = (H5F_t *)H5I_object_verify(file_id, H5I_FILE)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "hid_t identifier is not a file ID")
+
+    /* This public routine will work only for drivers with this feature enabled.*/
+    /* We might introduce a new feature flag in the future */
+    if(!H5F_HAS_FEATURE(file, H5FD_FEAT_SUPPORTS_SWMR_IO))
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "must use a SWMR-compatible VFD for this public routine")
+
+    /* The real work */
+    if(HADDR_UNDEF == (rel_eoa = H5FD_get_eoa(file->shared->lf, H5FD_MEM_DEFAULT)))
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "get_eoa request failed")
+
+    /* (Note compensating for base address subtraction in internal routine) */
+    if(eoa)
+        *eoa = rel_eoa + H5FD_get_base_addr(file->shared->lf);
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Fget_eoa() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Fincrement_filesize
+ *
+ * Purpose:     Set the EOA for the file to the maximum of (EOA, EOF) + increment
+ *
+ * Return:      Non-negative on success/Negative on errors
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Fincrement_filesize(hid_t file_id, hsize_t increment)
+{
+    H5F_t *file;                /* File object for file ID */
+    haddr_t max_eof_eoa;        /* Maximum of the relative EOA & EOF */
+    herr_t ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE2("e", "ih", file_id, increment);
+
+    /* Check args */
+    if(NULL == (file = (H5F_t *)H5I_object_verify(file_id, H5I_FILE)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "hid_t identifier is not a file ID")
+
+    /* This public routine will work only for drivers with this feature enabled.*/
+    /* We might introduce a new feature flag in the future */
+    if(!H5F_HAS_FEATURE(file, H5FD_FEAT_SUPPORTS_SWMR_IO))
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "must use a SWMR-compatible VFD for this public routine")
+
+    /* Get the maximum of EOA and EOF */
+    if(H5F__get_max_eof_eoa(file, &max_eof_eoa) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "file can't get max eof/eoa ")
+
+    /* Set EOA to the maximum value + increment */
+    /* H5FD_set_eoa() will add base_addr to max_eof_eoa */
+    if(H5FD_set_eoa(file->shared->lf, H5FD_MEM_DEFAULT, max_eof_eoa + increment) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "driver set_eoa request failed")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Fincrement_filesize() */
