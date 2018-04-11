@@ -433,7 +433,7 @@ H5Fget_obj_ids(hid_t file_id, unsigned types, size_t max_objs, hid_t *oid_list)
 {
     /* XXX: Note the type mismatch - you can ask for more objects than can be returned */
 
-    ssize_t     ret_value;          /* Return value */
+    ssize_t     ret_value = 0;          /* Return value */
 
     FUNC_ENTER_API((-1))
     H5TRACE4("Zs", "iIuz*i", file_id, types, max_objs, oid_list);
