@@ -1104,7 +1104,8 @@ H5D_t *
 H5D__create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
     hid_t dapl_id, hid_t dxpl_id)
 {
-    const H5T_t        *type;                   /* Datatype for dataset */
+    const H5T_t        *type = NULL;            /* Datatype for dataset (VOL pointer) */
+    H5T_t              *dt = NULL;              /* Datatype for dataset (non-VOL pointer) */
     H5D_t              *new_dset = NULL;
     H5P_genplist_t     *dc_plist = NULL;        /* New Property list */
     hbool_t             has_vl_type = FALSE;    /* Flag to indicate a VL-type for dataset */
@@ -1126,8 +1127,10 @@ H5D__create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
     HDassert(H5I_GENPROP_LST == H5I_get_type(dxpl_id));
 
     /* Get the dataset's datatype */
-    if(NULL == (type = (const H5T_t *)H5I_object(type_id)))
+    if(NULL == (dt = (const H5T_t *)H5I_object(type_id)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a datatype")
+    /* If this is a named datatype, get the pointer via the VOL driver */
+    type = (const H5T_t *)H5T_get_actual_type(dt);
 
     /* Check if the datatype is "sensible" for use in a dataset */
     if(H5T_is_sensible(type) != TRUE)

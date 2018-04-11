@@ -322,7 +322,7 @@ H5F__get_all_count_cb(void H5_ATTR_UNUSED *obj_ptr, hid_t H5_ATTR_UNUSED obj_id,
 ssize_t
 H5Fget_obj_count(hid_t file_id, unsigned types)
 {
-    ssize_t  ret_value;         /* Return value */
+    ssize_t  ret_value = 0;         /* Return value */
 
     FUNC_ENTER_API((-1))
     H5TRACE2("Zs", "iIu", file_id, types);

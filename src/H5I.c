@@ -1950,8 +1950,8 @@ done:
  *              function, and then sets return value, based on the result of
  *              that callback.
  *
- * Return:      Success:    Non-negative on success
- *              Failure:    Negative
+ * Return:      Success:    H5_ITER_CONT (0) or H5_ITER_STOP (1)
+ *              Failure:    H5_ITER_ERROR (-1)
  *
  *-------------------------------------------------------------------------
  */
@@ -2029,7 +2029,6 @@ H5I_iterate(H5I_type_t type, H5I_search_func_t func, void *udata, hbool_t app_re
     /* Only iterate through ID list if it is initialized and there are IDs in type */
     if (type_ptr && type_ptr->init_count > 0 && type_ptr->id_count > 0) {
         H5I_iterate_ud_t iter_udata;    /* User data for iteration callback */
-        herr_t iter_status;             /* Iteration status */
 
         /* Set up iterator user data */
         iter_udata.user_func    = func;
@@ -2038,7 +2037,7 @@ H5I_iterate(H5I_type_t type, H5I_search_func_t func, void *udata, hbool_t app_re
         iter_udata.obj_type     = type;
 
         /* Iterate over IDs */
-        if ((iter_status = H5SL_iterate(type_ptr->ids, H5I__iterate_cb, &iter_udata)) < 0)
+        if ((ret_value = H5SL_iterate(type_ptr->ids, H5I__iterate_cb, &iter_udata)) < 0)
             HGOTO_ERROR(H5E_ATOM, H5E_BADITER, FAIL, "iteration failed")
     }
 
