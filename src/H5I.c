@@ -2094,11 +2094,11 @@ done:
  *              Failure:    -1
  *
  * Comments: Public function
- *  If `name' is non-NULL then write up to `size' bytes into that
+ *  If 'name' is non-NULL then write up to 'size' bytes into that
  *  buffer and always return the length of the entry name.
- *  Otherwise `size' is ignored and the function does not store the name,
+ *  Otherwise 'size' is ignored and the function does not store the name,
  *  just returning the number of characters required to store the name.
- *  If an error occurs then the buffer pointed to by `name' (NULL or non-NULL)
+ *  If an error occurs then the buffer pointed to by 'name' (NULL or non-NULL)
  *  is unchanged and the function returns a negative value.
  *  If a zero is returned for the name's length, then there is no name
  *  associated with the ID.

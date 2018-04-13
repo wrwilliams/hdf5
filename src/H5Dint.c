@@ -30,7 +30,7 @@
 #include "H5Lprivate.h"       /* Links */
 #include "H5MMprivate.h"      /* Memory management */
 #include "H5VLprivate.h"	/* Virtual Object Layer                 */
-
+#include "H5VLnative.h"     /* Native VOL driver */
 
 /****************/
 /* Local Macros */
@@ -3529,8 +3529,18 @@ H5D_get_type(H5D_t *dset)
     if(H5T_lock(dt, FALSE) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to lock transient datatype")
 
-    if((ret_value = H5I_register(H5I_DATATYPE, dt, TRUE)) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register datatype")
+    /* Create an atom */
+    if(H5T_is_named(dt)) {
+        /* If this is a committed datatype, we need to recreate the
+           two level IDs, where the VOL object is a copy of the
+           returned datatype */
+        if((ret_value = H5VL_native_register(H5I_DATATYPE, dt, TRUE)) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register datatype")
+    }
+    else {
+        if((ret_value = H5I_register(H5I_DATATYPE, dt, TRUE)) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register datatype")
+    }
 
 done:
     if(ret_value < 0) {
