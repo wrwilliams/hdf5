@@ -5,12 +5,10 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -686,6 +684,13 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
     (cache_ptr)->images_created++;                          \
 }
 
+#define H5C__UPDATE_STATS_FOR_CACHE_IMAGE_READ(cache_ptr)  \
+{                                                          \
+    /* make sure image len is still good */                \
+    HDassert((cache_ptr)->image_len > 0);                  \
+    (cache_ptr)->images_read++;                            \
+}
+
 #define H5C__UPDATE_STATS_FOR_CACHE_IMAGE_LOAD(cache_ptr)  \
 {                                                          \
     /* make sure image len is still good */                \
@@ -931,6 +936,7 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
 #define H5C__UPDATE_STATS_FOR_LRU_SCAN_RESTART(cache_ptr)
 #define H5C__UPDATE_STATS_FOR_INDEX_SCAN_RESTART(cache_ptr)
 #define H5C__UPDATE_STATS_FOR_CACHE_IMAGE_CREATE(cache_ptr)
+#define H5C__UPDATE_STATS_FOR_CACHE_IMAGE_READ(cache_ptr)
 #define H5C__UPDATE_STATS_FOR_CACHE_IMAGE_LOAD(cache_ptr)
 #define H5C__UPDATE_STATS_FOR_PREFETCH(cache_ptr, dirty)
 #define H5C__UPDATE_STATS_FOR_PREFETCH_HIT(cache_ptr)
@@ -4549,6 +4555,18 @@ typedef struct H5C_tag_info_t {
  *		Further, since cache images are only created at file 
  *		close, this field should only be set at that time.
  *
+ * images_read: Integer field containing the number of cache images 
+ *              read from file.  Note that reading an image is different
+ *              from loading it -- reading the image means just that,
+ *              while loading the image refers to decoding it and loading
+ *              it into the metadata cache.
+ *
+ *              In the serial case, image_read should always equal 
+ *              images_loaded.  However, in the parallel case, the 
+ *              image should only be read by process 0.  All other 
+ *              processes should receive the cache image via a broadcast
+ *              from process 0.
+ *
  * images_loaded:  Integer field containing the number of cache images
  *		loaded since the last time statistics were reset.
  *
@@ -4728,6 +4746,7 @@ struct H5C_t {
     H5C_cache_entry_t *		LRU_head_ptr;
     H5C_cache_entry_t *		LRU_tail_ptr;
 
+#if H5C_MAINTAIN_CLEAN_AND_DIRTY_LRU_LISTS
     /* Fields for clean LRU list of entries */
     uint32_t                    cLRU_list_len;
     size_t                      cLRU_list_size;
@@ -4739,6 +4758,7 @@ struct H5C_t {
     size_t                      dLRU_list_size;
     H5C_cache_entry_t *		dLRU_head_ptr;
     H5C_cache_entry_t *	        dLRU_tail_ptr;
+#endif /* H5C_MAINTAIN_CLEAN_AND_DIRTY_LRU_LISTS */
 
 #ifdef H5_HAVE_PARALLEL
     /* Fields for collective metadata reads */
@@ -4864,6 +4884,7 @@ struct H5C_t {
 
     /* Fields for tracking cache image operations */
     int32_t			images_created;
+    int32_t			images_read;
     int32_t			images_loaded;
     hsize_t			last_image_size;
 
@@ -4901,31 +4922,29 @@ typedef int (*H5C_tag_iter_cb_t)(H5C_cache_entry_t *entry, void *ctx);
 /******************************/
 /* Package Private Prototypes */
 /******************************/
-H5_DLL herr_t H5C__prep_image_for_file_close(H5F_t *f, hid_t dxpl_id,
-    hbool_t *image_generated);
-H5_DLL herr_t H5C__deserialize_prefetched_entry(H5F_t *f, hid_t dxpl_id,
-    H5C_t * cache_ptr, H5C_cache_entry_t** entry_ptr_ptr, 
-    const H5C_class_t * type, haddr_t addr, void * udata);
+H5_DLL herr_t H5C__prep_image_for_file_close(H5F_t *f, hbool_t *image_generated);
+H5_DLL herr_t H5C__deserialize_prefetched_entry(H5F_t *f, H5C_t * cache_ptr,
+    H5C_cache_entry_t** entry_ptr_ptr, const H5C_class_t * type, haddr_t addr,
+    void * udata);
 
 /* General routines */
-H5_DLL herr_t H5C__flush_single_entry(H5F_t *f, hid_t dxpl_id,
-    H5C_cache_entry_t *entry_ptr, unsigned flags);
-H5_DLL herr_t H5C__generate_cache_image(H5F_t *f, hid_t dxpl_id, H5C_t *cache_ptr);
-H5_DLL herr_t H5C__load_cache_image(H5F_t *f, hid_t dxpl_id);
+H5_DLL herr_t H5C__flush_single_entry(H5F_t *f, H5C_cache_entry_t *entry_ptr,
+    unsigned flags);
+H5_DLL herr_t H5C__generate_cache_image(H5F_t *f, H5C_t *cache_ptr);
+H5_DLL herr_t H5C__load_cache_image(H5F_t *f);
 H5_DLL herr_t H5C__mark_flush_dep_serialized(H5C_cache_entry_t * entry_ptr);
 H5_DLL herr_t H5C__mark_flush_dep_unserialized(H5C_cache_entry_t * entry_ptr);
-H5_DLL herr_t H5C__make_space_in_cache(H5F_t * f, hid_t dxpl_id,
-    size_t  space_needed, hbool_t write_permitted);
-H5_DLL herr_t H5C__flush_marked_entries(H5F_t * f, hid_t dxpl_id);
+H5_DLL herr_t H5C__make_space_in_cache(H5F_t * f, size_t  space_needed,
+    hbool_t write_permitted);
+H5_DLL herr_t H5C__flush_marked_entries(H5F_t * f);
 H5_DLL herr_t H5C__generate_image(H5F_t *f, H5C_t *cache_ptr,
-    H5C_cache_entry_t *entry_ptr, hid_t dxpl_id);
-H5_DLL herr_t H5C__serialize_cache(H5F_t *f, hid_t dxpl_id);
+    H5C_cache_entry_t *entry_ptr);
+H5_DLL herr_t H5C__serialize_cache(H5F_t *f);
 H5_DLL herr_t H5C__iter_tagged_entries(H5C_t *cache, haddr_t tag, hbool_t match_global,
     H5C_tag_iter_cb_t cb, void *cb_ctx);
 
 /* Routines for operating on entry tags */
-H5_DLL herr_t H5C__tag_entry(H5C_t * cache_ptr, H5C_cache_entry_t * entry_ptr,
-    hid_t dxpl_id);
+H5_DLL herr_t H5C__tag_entry(H5C_t * cache_ptr, H5C_cache_entry_t * entry_ptr);
 H5_DLL herr_t H5C__untag_entry(H5C_t *cache, H5C_cache_entry_t *entry);
 
 /* Testing functions */
