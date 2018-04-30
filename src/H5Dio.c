@@ -265,7 +265,7 @@ H5Dwrite(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 	    if(H5S_SELECT_VALID(file_space) != TRUE)
 		HGOTO_ERROR(H5E_DATASPACE, H5E_BADRANGE, FAIL, "file selection+offset not within extent")
 	} /* end if */
-    }
+    } /* end if */
 
     if(H5D__pre_write(dset, direct_write, mem_type_id, mem_space, file_space, dxpl_id, buf) < 0) 
 	HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "can't prepare for writing data")

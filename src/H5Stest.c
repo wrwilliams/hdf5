@@ -302,9 +302,9 @@ H5S_check_internal_consistency(const H5S_t *space)
         HGOTO_ERROR(H5E_DATASPACE, H5E_INCONSISTENTSTATE, FAIL, "the bound box could not be retrieved")
 
     for(u = 0; u < space->extent.rank; u++) {
-        if((hsize_t)((hssize_t)space->select.low_bounds[u] + space->select.offset[u]) != low_bounds[u]) 
+        if((hsize_t)((hssize_t)space->select.sel_info.hslab->diminfo.low_bounds[u] + space->select.offset[u]) != low_bounds[u]) 
             HGOTO_ERROR(H5E_DATASPACE, H5E_INCONSISTENTSTATE, FAIL, "the lower bound box of the selection is inconsistent")
-        if((hsize_t)((hssize_t)space->select.high_bounds[u] + space->select.offset[u]) != high_bounds[u]) 
+        if((hsize_t)((hssize_t)space->select.sel_info.hslab->diminfo.high_bounds[u] + space->select.offset[u]) != high_bounds[u]) 
             HGOTO_ERROR(H5E_DATASPACE, H5E_INCONSISTENTSTATE, FAIL, "the higher bound box of the selection is inconsistent")
     } /* end for */
 

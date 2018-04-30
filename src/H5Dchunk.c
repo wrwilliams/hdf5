@@ -956,9 +956,6 @@ H5D__chunk_io_init(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to create chunk selections for single element")
     } /* end if */
     else {
-#ifdef OLD_WAY
-        H5SL_node_t *curr_node;     /* Current node in skip list */
-#endif /* OLD_WAY */
         hbool_t sel_hyper_flag;         /* Whether file selection is a hyperslab */
 
         /* Initialize skip list for chunk selections */
@@ -989,25 +986,6 @@ H5D__chunk_io_init(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
             /* Build the file selection for each chunk */
             if(H5D__create_chunk_file_map_hyper(fm, io_info) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to create file chunk selections")
-
-#ifdef OLD_WAY
-            /* Clean file chunks' hyperslab span "scratch" information */
-            curr_node = H5SL_first(fm->sel_chunks);
-            while(curr_node) {
-                H5D_chunk_info_t *chunk_info;   /* Pointer chunk information */
-
-                /* Get pointer to chunk's information */
-                chunk_info = (H5D_chunk_info_t *)H5SL_item(curr_node);
-                HDassert(chunk_info);
-
-                /* Clean hyperslab span's "scratch" information */
-                if(H5S_hyper_reset_scratch(chunk_info->fspace) < 0)
-                    HGOTO_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "unable to reset span scratch info")
-
-                /* Get the next chunk node in the skip list */
-                curr_node = H5SL_next(curr_node);
-            } /* end while */
-#endif /* OLD_WAY */
         } /* end if */
         else {
             H5S_sel_iter_op_t iter_op;  /* Operator for iteration */
@@ -1080,28 +1058,6 @@ H5D__chunk_io_init(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
             /* Spaces aren't the same shape, iterate over the memory selection directly */
             if(H5S_select_iterate(&bogus, file_type, file_space, &iter_op, fm) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to create memory chunk selections")
-
-#ifdef OLD_WAY
-            /* Clean up hyperslab stuff, if necessary */
-            if(fm->msel_type != H5S_SEL_POINTS) {
-                /* Clean memory chunks' hyperslab span "scratch" information */
-                curr_node = H5SL_first(fm->sel_chunks);
-                while(curr_node) {
-                    H5D_chunk_info_t *chunk_info;   /* Pointer chunk information */
-
-                    /* Get pointer to chunk's information */
-                    chunk_info = (H5D_chunk_info_t *)H5SL_item(curr_node);
-                    HDassert(chunk_info);
-
-                    /* Clean hyperslab span's "scratch" information */
-                    if(H5S_hyper_reset_scratch(chunk_info->mspace) < 0)
-                        HGOTO_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "unable to reset span scratch info")
-
-                    /* Get the next chunk node in the skip list */
-                    curr_node = H5SL_next(curr_node);
-                } /* end while */
-            } /* end if */
-#endif /* OLD_WAY */
         } /* end else */
     } /* end else */
 

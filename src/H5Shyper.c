@@ -3842,42 +3842,6 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5S_hyper_add_span_element() */
 
-#ifdef OLD_WAY
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_hyper_reset_scratch
- PURPOSE
-    Reset the scratch information for span tree
- USAGE
-    herr_t H5S_hyper_reset_scratch(space)
-        H5S_t *space;           IN/OUT: Pointer to dataspace to reset scratch pointers
- RETURNS
-    Non-negative on success, negative on failure
- DESCRIPTION
-    Resets the "scratch" pointers used for various tasks in computing hyperslab
-    spans.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_hyper_reset_scratch(H5S_t *space)
-{
-    FUNC_ENTER_NOAPI_NOERR
-
-    HDassert(space);
-
-    /* Check if there are spans in the span tree */
-    if(space->select.sel_info.hslab->span_lst != NULL)
-        /* Reset the scratch pointers for the next routine which needs them */
-        H5S__hyper_span_scratch(space->select.sel_info.hslab->span_lst);
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5S_hyper_reset_scratch() */
-#endif /* OLD_WAY */
-
 
 /*--------------------------------------------------------------------------
  NAME
