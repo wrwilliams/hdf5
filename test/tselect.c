@@ -13511,7 +13511,6 @@ test_space_update_diminfo(void)
 **      verify that offsets for hyperslab selections are working in
 **      chunked datasets.
 **
-****************************************************************/
 static void
 test_select_hyper_chunk_offset(void)
 {

@@ -3331,10 +3331,9 @@ H5S__hyper_is_single(const H5S_t *space)
          */
 
         /* Check for a single block */
-        for(u = 0; u < space->extent.rank; u++) {
+        for(u = 0; u < space->extent.rank; u++)
             if(space->select.sel_info.hslab->diminfo.opt[u].count > 1)
                 HGOTO_DONE(FALSE)
-        } /* end for */
     } /* end if */
     else {
         H5S_hyper_span_info_t *spans;   /* Hyperslab span info node */
@@ -4788,7 +4787,7 @@ done:
  PURPOSE
     Create a new span and append to span list
  USAGE
-    herr_t H5S__hyper_append_span(prev_span, span_tree, low, high, down, next)
+    herr_t H5S__hyper_append_span(span_tree, prev_span, low, high, down, next)
         H5S_hyper_span_info_t **span_tree;  IN/OUT: Pointer to span tree to append to
         H5S_hyper_span_t **prev_span;    IN/OUT: Pointer to previous span in list
         unsigned ndims;                  IN: Number of dimension for span
@@ -6437,16 +6436,14 @@ H5S__hyper_update_diminfo(H5S_t *space, H5S_seloper_t op,
         H5S_hyper_dim_t span_slab[];    OUT: Rebuilt section of hyperslab description
         unsigned rank;                  IN: Current dimension to work on
  RETURNS
-    >=0 on success, <0 on failure
+    TRUE/FALSE for hyperslab selection rebuilt
  DESCRIPTION
     Examine the span tree for a hyperslab selection and rebuild
     the start/stride/count/block information for the selection, if possible.
-
  GLOBAL VARIABLES
  COMMENTS, BUGS, ASSUMPTIONS
     To be able to recover the optimized information, the span tree must conform
     to span tree able to be generated from a single H5S_SELECT_SET operation.
-
  EXAMPLES
  REVISION LOG
     KY, 2005/9/22
@@ -6574,12 +6571,10 @@ done:
  DESCRIPTION
     Examine the span tree for a hyperslab selection and rebuild
     the start/stride/count/block information for the selection, if possible.
-
  GLOBAL VARIABLES
  COMMENTS, BUGS, ASSUMPTIONS
     To be able to recover the optimized information, the span tree must conform
     to span tree able to be generated from a single H5S_SELECT_SET operation.
-
  EXAMPLES
  REVISION LOG
     This routine is the optimization of the old version. The previous version
