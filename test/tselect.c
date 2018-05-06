@@ -4956,11 +4956,11 @@ test_select_hyper_union_stagger(void)
     hsize_t count[2]={3,1}; /* 1st Hyperslab size */
     hsize_t count2[2]={3,1}; /* 2nd Hyperslab size */
     hsize_t count3[2]={2,1}; /* 3rd Hyperslab size */
-    hssize_t offset[2]={0,0}; /* 1st Hyperslab offset */
-    hssize_t offset2[2]={2,1}; /* 2nd Hyperslab offset */
-    hssize_t offset3[2]={4,2}; /* 3rd Hyperslab offset */
+    hsize_t start[2]={0,0};  /* 1st Hyperslab offset */
+    hsize_t start2[2]={2,1}; /* 2nd Hyperslab offset */
+    hsize_t start3[2]={4,2}; /* 3rd Hyperslab offset */
     hsize_t count_out[2]={4,2}; /* Hyperslab size in memory */
-    hssize_t offset_out[2]={0,3}; /* Hyperslab offset in memory */
+    hsize_t start_out[2]={0,3}; /* Hyperslab offset in memory */
     int data[6][5];     /* Data to write */
     int data_out[7][7]; /* Data read in */
     int input_loc[8][2]={{0,0},
@@ -5031,15 +5031,15 @@ test_select_hyper_union_stagger(void)
     CHECK(dataspace, FAIL, "H5Dget_space");
 
     /* Select the hyperslabs */
-    error = H5Sselect_hyperslab(dataspace, H5S_SELECT_SET, offset, stride, count, block);
+    error = H5Sselect_hyperslab(dataspace, H5S_SELECT_SET, start, stride, count, block);
     CHECK(error, FAIL, "H5Sselect_hyperslab");
-    tmp_space = H5Scombine_hyperslab(dataspace, H5S_SELECT_OR, offset2, stride, count2, block);
+    tmp_space = H5Scombine_hyperslab(dataspace, H5S_SELECT_OR, start2, stride, count2, block);
     CHECK(tmp_space, FAIL, "H5Scombine_hyperslab");
 
     /* Copy the file dataspace and select hyperslab */
     tmp2_space = H5Scopy(dataspace);
     CHECK(tmp2_space, FAIL, "H5Scopy");
-    error=H5Sselect_hyperslab(tmp2_space,H5S_SELECT_SET,offset3,stride,count3,block);
+    error=H5Sselect_hyperslab(tmp2_space, H5S_SELECT_SET, start3, stride, count3, block);
     CHECK(error, FAIL, "H5Sselect_hyperslab");
 
     /* Combine the copied dataspace with the temporary dataspace */
@@ -5051,7 +5051,7 @@ test_select_hyper_union_stagger(void)
     CHECK(memspace, FAIL, "H5Screate_simple");
 
     /* Select hyperslab in memory */
-    error=H5Sselect_hyperslab(memspace,H5S_SELECT_SET,offset_out,stride,count_out,block);
+    error=H5Sselect_hyperslab(memspace, H5S_SELECT_SET, start_out, stride, count_out, block);
     CHECK(error, FAIL, "H5Sselect_hyperslab");
 
     /* Read File Dataset */
@@ -5225,7 +5225,7 @@ test_select_hyper_union_3d(void)
     tmp2_space = H5Scombine_select(sid2,H5S_SELECT_OR,tmp_space);
     CHECK(tmp2_space, FAIL, "H5Scombin_select");
 
-    npoints = H5Sget_select_npoints(tmp2_space);
+    npoints = (hsize_t)H5Sget_select_npoints(tmp2_space);
     VERIFY(npoints, 15*26, "H5Sget_select_npoints");
 
     /* Create a dataset */
@@ -13511,6 +13511,7 @@ test_space_update_diminfo(void)
 **      verify that offsets for hyperslab selections are working in
 **      chunked datasets.
 **
+****************************************************************/
 static void
 test_select_hyper_chunk_offset(void)
 {
