@@ -1261,7 +1261,7 @@ H5VL_native_dataset_get(void *obj, H5VL_dataset_get_t get_type, hid_t dxpl_id,
 
                 /* Set return value */
                 if (H5D__get_storage_size(dset, dxpl_id, ret) < 0)
-                    HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, 0, "can't get size of dataset's storage")
+                    HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get size of dataset's storage")
                 break;
             }
             /* H5Dget_offset */
@@ -1273,6 +1273,23 @@ H5VL_native_dataset_get(void *obj, H5VL_dataset_get_t get_type, hid_t dxpl_id,
                 *ret = H5D__get_offset(dset);
                 if (!H5F_addr_defined(*ret))
                     *ret = HADDR_UNDEF;
+                break;
+            }
+        case H5VL_DATASET_GET_CHUNK_STORAGE_SIZE:
+            {
+                /* XXX: Unclear if this should go under optional */
+
+                hsize_t *offset = va_arg(arguments, hsize_t *);
+                hsize_t *chunk_nbytes = va_arg(arguments, hsize_t *);
+
+                /* Make sure the dataset is chunked */
+                if (H5D_CHUNKED != dset->shared->layout.type)
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a chunked dataset")
+
+                /* Call private function */
+                if (H5D__get_chunk_storage_size(dset, H5P_DATASET_XFER_DEFAULT, offset, chunk_nbytes) < 0)
+                    HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get storage size of chunk")
+
                 break;
             }
         default:

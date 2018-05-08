@@ -1107,7 +1107,10 @@ done:
  *
  * Purpose:     Returns the size of an allocated chunk.
  *
- * Return:	Non-negative on success, negative on failure
+ *              Intended for use with the H5D(O)read_chunk API call so
+ *              the caller can construct an appropriate buffer.
+ *
+ * Return:      Non-negative on success, negative on failure
  *
  * Programmer:  Matthew Strong (GE Healthcare)
  *              20 October 2016
@@ -1117,27 +1120,26 @@ done:
 herr_t
 H5Dget_chunk_storage_size(hid_t dset_id, const hsize_t *offset, hsize_t *chunk_nbytes)
 {
-    H5D_t       *dset = NULL;
-    herr_t      ret_value = SUCCEED;
+    H5VL_object_t  *dset;                   /* Dataset for this operation   */
+    herr_t          ret_value = SUCCEED;
 
     FUNC_ENTER_API(FAIL)
     H5TRACE3("e", "i*h*h", dset_id, offset, chunk_nbytes);
 
     /* Check arguments */
-    if(NULL == (dset = (H5D_t *)H5I_object_verify(dset_id, H5I_DATASET)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
+    if(NULL == (dset = (H5VL_object_t *)H5VL_object_verify(dset_id, H5I_DATASET)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "dset_id is not a dataset ID")
     if( NULL == offset )
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid argument (null)")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "offset parameter cannot be NULL")
     if( NULL == chunk_nbytes )
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid argument (null)")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "chunk_nbytes parameter cannot be NULL")
 
-    if(H5D_CHUNKED != dset->shared->layout.type)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a chunked dataset")
-
-    /* Call private function */
-    if(H5D__get_chunk_storage_size(dset, H5P_DATASET_XFER_DEFAULT, offset, chunk_nbytes) < 0)
+    /* Get the dataset creation property list */
+    if (H5VL_dataset_get(dset->vol_obj, dset->vol_info->vol_cls, H5VL_DATASET_GET_CHUNK_STORAGE_SIZE, 
+                        H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, offset, chunk_nbytes) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get storage size of chunk")
 
 done:
     FUNC_LEAVE_API(ret_value);
 } /* H5Dget_chunk_storage_size() */
+
