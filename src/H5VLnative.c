@@ -1367,7 +1367,36 @@ H5VL_native_dataset_optional(void *obj, hid_t dxpl_id, void H5_ATTR_UNUSED **req
     switch (optional_type) {
         case H5VL_DATASET_FORMAT_CONVERT:
             {
-                HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
+                dset = (H5D_t *)obj;
+
+                switch(dset->shared->layout.type) {
+                    case H5D_CHUNKED:
+                        /* Convert the chunk indexing type to version 1 B-tree if not */
+                        if (dset->shared->layout.u.chunk.idx_type != H5D_CHUNK_IDX_BTREE)
+                            if ((H5D__format_convert(dset, H5AC_ind_read_dxpl_id)) < 0)
+                                HGOTO_ERROR(H5E_DATASET, H5E_CANTLOAD, FAIL, "unable to downgrade chunk indexing type for dataset")
+                        break;
+
+                    case H5D_CONTIGUOUS:
+                    case H5D_COMPACT:
+                        /* Downgrade the layout version to 3 if greater than 3 */
+                        if (dset->shared->layout.version > H5O_LAYOUT_VERSION_DEFAULT)
+                            if ((H5D__format_convert(dset, H5AC_ind_read_dxpl_id)) < 0)
+                                HGOTO_ERROR(H5E_DATASET, H5E_CANTLOAD, FAIL, "unable to downgrade layout version for dataset")
+                        break;
+
+                    case H5D_VIRTUAL:
+                        /* Nothing to do even though layout is version 4 */
+                        break;
+
+                    case H5D_LAYOUT_ERROR:
+                    case H5D_NLAYOUTS:
+                        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid dataset layout type")
+
+                    default: 
+                        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "unknown dataset layout type")
+                } /* end switch */
+
                 break;
             }
         case H5VL_DATASET_GET_CHUNK_INDEX_TYPE:

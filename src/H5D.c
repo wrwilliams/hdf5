@@ -1021,8 +1021,8 @@ done:
 herr_t
 H5Dformat_convert(hid_t dset_id)
 {
-    H5D_t *dset;                /* Dataset to refresh */
-    herr_t ret_value = SUCCEED; /* return value */
+    H5VL_object_t  *dset = NULL;            /* Dataset for this operation   */
+    herr_t ret_value = SUCCEED;             /* return value */
     
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "i", dset_id);
@@ -1031,33 +1031,10 @@ H5Dformat_convert(hid_t dset_id)
     if(NULL == (dset = (H5D_t *)H5I_object_verify(dset_id, H5I_DATASET)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
 
-    switch(dset->shared->layout.type) {
-	case H5D_CHUNKED:
-	    /* Convert the chunk indexing type to version 1 B-tree if not */
-	    if(dset->shared->layout.u.chunk.idx_type != H5D_CHUNK_IDX_BTREE)
-                if((H5D__format_convert(dset, H5AC_ind_read_dxpl_id)) < 0)
-                    HGOTO_ERROR(H5E_DATASET, H5E_CANTLOAD, FAIL, "unable to downgrade chunk indexing type for dataset")
-	    break;
-
-	case H5D_CONTIGUOUS:
-	case H5D_COMPACT:
-	    /* Downgrade the layout version to 3 if greater than 3 */
-	    if(dset->shared->layout.version > H5O_LAYOUT_VERSION_DEFAULT)
-                if((H5D__format_convert(dset, H5AC_ind_read_dxpl_id)) < 0)
-                    HGOTO_ERROR(H5E_DATASET, H5E_CANTLOAD, FAIL, "unable to downgrade layout version for dataset")
-	    break;
-
-	case H5D_VIRTUAL:
-	    /* Nothing to do even though layout is version 4 */
-	    break;
-
-        case H5D_LAYOUT_ERROR:
-        case H5D_NLAYOUTS:
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid dataset layout type")
-
-	default: 
-	    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "unknown dataset layout type")
-    } /* end switch */
+    /* Convert the dataset through the VOL */
+    if (H5VL_dataset_optional(dset->vol_obj, dset->vol_info->vol_cls, H5AC_ind_read_dxpl_id,
+            H5_REQUEST_NULL, H5VL_DATASET_FORMAT_CONVERT) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_INTERNAL, FAIL, "can't convert format")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1079,7 +1056,7 @@ done:
 herr_t
 H5Dget_chunk_index_type(hid_t dset_id, H5D_chunk_index_t *idx_type)
 {
-    H5VL_object_t  *dset;                   /* Dataset for this operation   */
+    H5VL_object_t  *dset = NULL;                /* Dataset for this operation   */
     herr_t          ret_value = SUCCEED;
 
     FUNC_ENTER_API(FAIL)
@@ -1092,7 +1069,7 @@ H5Dget_chunk_index_type(hid_t dset_id, H5D_chunk_index_t *idx_type)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "idx_type parameter cannot be NULL")
 
     /* Get the chunk indexing type */
-    if (H5VL_dataset_get(dset->vol_obj, dset->vol_info->vol_cls, H5AC_ind_read_dxpl_id,
+    if (H5VL_dataset_optional(dset->vol_obj, dset->vol_info->vol_cls, H5AC_ind_read_dxpl_id,
             H5_REQUEST_NULL, H5VL_DATASET_GET_CHUNK_INDEX_TYPE, idx_type) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get chunk index type")
 
@@ -1119,7 +1096,7 @@ done:
 herr_t
 H5Dget_chunk_storage_size(hid_t dset_id, const hsize_t *offset, hsize_t *chunk_nbytes)
 {
-    H5VL_object_t  *dset;                   /* Dataset for this operation   */
+    H5VL_object_t  *dset = NULL;            /* Dataset for this operation   */
     herr_t          ret_value = SUCCEED;
 
     FUNC_ENTER_API(FAIL)
