@@ -2018,9 +2018,47 @@ H5VL_native_file_optional(void *obj, hid_t dxpl_id, void H5_ATTR_UNUSED **req, v
                 HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
                 break;
             }
-        case H5VL_FILE_FORMAT_CONVERT_SUPER:
+        case H5VL_FILE_FORMAT_CONVERT:
             {
-                HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
+                hbool_t   mark_dirty = FALSE;
+
+                f = (H5F_t *)obj;
+
+                /* Check if the superblock should be downgraded */
+                if (f->shared->sblock->super_vers > HDF5_SUPERBLOCK_VERSION_V18_LATEST) {
+                    f->shared->sblock->super_vers = HDF5_SUPERBLOCK_VERSION_V18_LATEST;
+                    mark_dirty = TRUE;
+                }
+
+                /* Check for persistent freespace manager, which needs to be downgraded */
+                if (!(f->shared->fs_strategy == H5F_FILE_SPACE_STRATEGY_DEF &&
+                        f->shared->fs_persist == H5F_FREE_SPACE_PERSIST_DEF &&
+                        f->shared->fs_threshold == H5F_FREE_SPACE_THRESHOLD_DEF &&
+                        f->shared->fs_page_size == H5F_FILE_SPACE_PAGE_SIZE_DEF)) {
+                    /* Check to remove free-space manager info message from superblock extension */
+                    if (H5F_addr_defined(f->shared->sblock->ext_addr))
+                        if (H5F_super_ext_remove_msg(f, H5AC_ind_read_dxpl_id, H5O_FSINFO_ID) < 0)
+                            HGOTO_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "error in removing message from superblock extension")
+
+                    /* Close freespace manager */
+                    if (H5MF_try_close(f, H5AC_ind_read_dxpl_id) < 0)
+                        HGOTO_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "unable to free free-space address")
+
+                    /* Set non-persistent freespace manager */
+                    f->shared->fs_strategy = H5F_FILE_SPACE_STRATEGY_DEF;
+                    f->shared->fs_persist = H5F_FREE_SPACE_PERSIST_DEF;
+                    f->shared->fs_threshold = H5F_FREE_SPACE_THRESHOLD_DEF;
+                    f->shared->fs_page_size = H5F_FILE_SPACE_PAGE_SIZE_DEF;
+
+                    /* Indicate that the superblock should be marked dirty */
+                    mark_dirty = TRUE;
+                }
+
+                /* Check if we should mark the superblock dirty */
+                if (mark_dirty)
+                    if (H5F_super_dirty(f) < 0)
+                        HGOTO_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
+
                 break;
             }
         case H5VL_FILE_RESET_PAGE_BUFFERING_STATS:
