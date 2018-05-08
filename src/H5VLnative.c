@@ -1276,38 +1276,6 @@ H5VL_native_dataset_get(void *obj, H5VL_dataset_get_t get_type, hid_t dxpl_id,
                     *ret = HADDR_UNDEF;
                 break;
             }
-        case H5VL_DATASET_GET_CHUNK_STORAGE_SIZE:
-            {
-                /* XXX: Unclear if this should go under optional */
-
-                hsize_t *offset = va_arg(arguments, hsize_t *);
-                hsize_t *chunk_nbytes = va_arg(arguments, hsize_t *);
-
-                /* Make sure the dataset is chunked */
-                if (H5D_CHUNKED != dset->shared->layout.type)
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a chunked dataset")
-
-                /* Call private function */
-                if (H5D__get_chunk_storage_size(dset, H5P_DATASET_XFER_DEFAULT, offset, chunk_nbytes) < 0)
-                    HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get storage size of chunk")
-
-                break;
-            }
-        case H5VL_DATASET_GET_CHUNK_INDEX_TYPE:
-            {
-                /* XXX: Unclear if this should go under optional */
-
-                H5D_chunk_index_t *idx_type = va_arg(arguments, H5D_chunk_index_t *);
-
-                /* Make sure the dataset is chunked */
-                if (H5D_CHUNKED != dset->shared->layout.type)
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a chunked dataset")
-
-                /* Get the chunk indexing type */
-                *idx_type = dset->shared->layout.u.chunk.idx_type;
-
-                break;
-            }
         default:
             HGOTO_ERROR(H5E_VOL, H5E_CANTGET, FAIL, "can't get this type of information from dataset")
     }
@@ -1402,18 +1370,38 @@ H5VL_native_dataset_optional(void *obj, hid_t dxpl_id, void H5_ATTR_UNUSED **req
                 HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
                 break;
             }
-#if 0
-        case H5VL_DATASET_GET_CHUNK_INDEX_TIME:
+        case H5VL_DATASET_GET_CHUNK_INDEX_TYPE:
             {
-                HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
+                H5D_chunk_index_t *idx_type = va_arg(arguments, H5D_chunk_index_t *);
+
+                dset = (H5D_t *)obj;
+
+                /* Make sure the dataset is chunked */
+                if (H5D_CHUNKED != dset->shared->layout.type)
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a chunked dataset")
+
+                /* Get the chunk indexing type */
+                *idx_type = dset->shared->layout.u.chunk.idx_type;
+
                 break;
             }
         case H5VL_DATASET_GET_CHUNK_STORAGE_SIZE:
             {
-                HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
+                hsize_t *offset = va_arg(arguments, hsize_t *);
+                hsize_t *chunk_nbytes = va_arg(arguments, hsize_t *);
+
+                dset = (H5D_t *)obj;
+
+                /* Make sure the dataset is chunked */
+                if (H5D_CHUNKED != dset->shared->layout.type)
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a chunked dataset")
+
+                /* Call private function */
+                if (H5D__get_chunk_storage_size(dset, H5P_DATASET_XFER_DEFAULT, offset, chunk_nbytes) < 0)
+                    HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get storage size of chunk")
+
                 break;
             }
-#endif
         default:
             HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
     }

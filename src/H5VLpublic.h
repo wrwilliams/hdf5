@@ -81,8 +81,6 @@ typedef enum H5VL_attr_specific_t {
 
 /* types for dataset GET callback */
 typedef enum H5VL_dataset_get_t {
-    H5VL_DATASET_GET_CHUNK_INDEX_TYPE,      /* chunk index type                    */
-    H5VL_DATASET_GET_CHUNK_STORAGE_SIZE,    /* chunk storage size                  */
     H5VL_DATASET_GET_DAPL,                  /* access property list                */
     H5VL_DATASET_GET_DCPL,                  /* creation property list              */
     H5VL_DATASET_GET_OFFSET,                /* offset                              */

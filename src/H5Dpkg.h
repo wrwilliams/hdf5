@@ -119,8 +119,8 @@ typedef struct H5D_type_info_t {
 /* types for dataset optional VOL operations */
 typedef enum H5VL_dataset_optional_t {
     H5VL_DATASET_FORMAT_CONVERT,            /* H5Dformat_convert (internal) */
-//    H5VL_DATASET_GET_CHUNK_INDEX_TYPE,      /* H5Dget_chunk_index_type      */
-//    H5VL_DATASET_GET_CHUNK_STORAGE_SIZE,    /* H5Dget_chunk_storage_size    */
+    H5VL_DATASET_GET_CHUNK_INDEX_TYPE,      /* H5Dget_chunk_index_type      */
+    H5VL_DATASET_GET_CHUNK_STORAGE_SIZE,    /* H5Dget_chunk_storage_size    */
 } H5VL_dataset_optional_t;
 
 /* Forward declaration of structs used below */
