@@ -75,6 +75,7 @@ static herr_t H5VL_native_dataset_write(void *dset, hid_t mem_type_id, hid_t mem
                                         hid_t file_space_id, hid_t plist_id, const void *buf, void **req);
 static herr_t H5VL_native_dataset_get(void *dset, H5VL_dataset_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
 static herr_t H5VL_native_dataset_specific(void *dset, H5VL_dataset_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_native_dataset_optional(void *dset, hid_t dxpl_id, void **req, va_list arguments);
 static herr_t H5VL_native_dataset_close(void *dset, hid_t dxpl_id, void **req);
 
 /* File callbacks */
@@ -148,7 +149,7 @@ static H5VL_class_t H5VL_native_g = {
         H5VL_native_dataset_write,                  /* write        */
         H5VL_native_dataset_get,                    /* get          */
         H5VL_native_dataset_specific,               /* specific     */
-        NULL,                                       /* optional     */
+        H5VL_native_dataset_optional,               /* optional     */
         H5VL_native_dataset_close                   /* close        */
     },
     {   /* datatype_cls */
@@ -1375,6 +1376,51 @@ H5VL_native_dataset_specific(void *obj, H5VL_dataset_specific_t specific_type,
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL_native_dataset_specific() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_native_dataset_optional
+ *
+ * Purpose:     Perform a driver specific operation on a native dataset
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5VL_native_dataset_optional(void *obj, hid_t dxpl_id, void H5_ATTR_UNUSED **req, va_list arguments)
+{
+    H5D_t *dset = NULL;             /* Dataset */
+    H5VL_dataset_optional_t optional_type = va_arg(arguments, H5VL_dataset_optional_t);
+    herr_t ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    switch (optional_type) {
+        case H5VL_DATASET_FORMAT_CONVERT:
+            {
+                HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
+                break;
+            }
+#if 0
+        case H5VL_DATASET_GET_CHUNK_INDEX_TIME:
+            {
+                HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
+                break;
+            }
+        case H5VL_DATASET_GET_CHUNK_STORAGE_SIZE:
+            {
+                HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
+                break;
+            }
+#endif
+        default:
+            HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid optional operation")
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5VL_native_dataset_optional() */
 
 
 /*-------------------------------------------------------------------------
