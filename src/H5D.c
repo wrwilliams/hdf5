@@ -1077,25 +1077,24 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Dget_chunk_index_type(hid_t did, H5D_chunk_index_t *idx_type)
+H5Dget_chunk_index_type(hid_t dset_id, H5D_chunk_index_t *idx_type)
 {
-    H5D_t *dset;                /* Dataset to refresh */
-    herr_t ret_value = SUCCEED; /* return value */
-    
+    H5VL_object_t  *dset;                   /* Dataset for this operation   */
+    herr_t          ret_value = SUCCEED;
+
     FUNC_ENTER_API(FAIL)
-    H5TRACE2("e", "i*Dk", did, idx_type);
+    H5TRACE2("e", "i*Dk", dset_id, idx_type);
 
     /* Check args */
-    if(NULL == (dset = (H5D_t *)H5I_object_verify(did, H5I_DATASET)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
-
-    /* Should be a chunked dataset */
-    if(dset->shared->layout.type != H5D_CHUNKED)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "dataset is not chunked")
+    if (NULL == (dset = (H5VL_object_t *)H5VL_object_verify(dset_id, H5I_DATASET)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "dset_id is not a dataset ID")
+    if (NULL == idx_type)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "idx_type parameter cannot be NULL")
 
     /* Get the chunk indexing type */
-    if(idx_type)
-        *idx_type = dset->shared->layout.u.chunk.idx_type;
+    if (H5VL_dataset_get(dset->vol_obj, dset->vol_info->vol_cls, H5VL_DATASET_GET_CHUNK_INDEX_TYPE, 
+                        H5AC_ind_read_dxpl_id, H5_REQUEST_NULL, idx_type) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get chunk index type")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1127,11 +1126,11 @@ H5Dget_chunk_storage_size(hid_t dset_id, const hsize_t *offset, hsize_t *chunk_n
     H5TRACE3("e", "i*h*h", dset_id, offset, chunk_nbytes);
 
     /* Check arguments */
-    if(NULL == (dset = (H5VL_object_t *)H5VL_object_verify(dset_id, H5I_DATASET)))
+    if (NULL == (dset = (H5VL_object_t *)H5VL_object_verify(dset_id, H5I_DATASET)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "dset_id is not a dataset ID")
-    if( NULL == offset )
+    if (NULL == offset)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "offset parameter cannot be NULL")
-    if( NULL == chunk_nbytes )
+    if (NULL == chunk_nbytes)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "chunk_nbytes parameter cannot be NULL")
 
     /* Get the dataset creation property list */

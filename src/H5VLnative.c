@@ -1292,6 +1292,21 @@ H5VL_native_dataset_get(void *obj, H5VL_dataset_get_t get_type, hid_t dxpl_id,
 
                 break;
             }
+        case H5VL_DATASET_GET_CHUNK_INDEX_TYPE:
+            {
+                /* XXX: Unclear if this should go under optional */
+
+                H5D_chunk_index_t *idx_type = va_arg(arguments, H5D_chunk_index_t *);
+
+                /* Make sure the dataset is chunked */
+                if (H5D_CHUNKED != dset->shared->layout.type)
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a chunked dataset")
+
+                /* Get the chunk indexing type */
+                *idx_type = dset->shared->layout.u.chunk.idx_type;
+
+                break;
+            }
         default:
             HGOTO_ERROR(H5E_VOL, H5E_CANTGET, FAIL, "can't get this type of information from dataset")
     }
