@@ -899,8 +899,8 @@ H5I_object(hid_t id)
     /* General lookup of the ID */
     if (NULL != (id_ptr = H5I__find_id(id))) {
         /* Get the object pointer to return */
-        /* (Casting away const OK -QAK) */
-        ret_value = (void *)id_ptr->obj_ptr;
+        ret_value = (void *)id_ptr->obj_ptr;        /* (Casting away const OK -QAK) */
+
     }
 
     FUNC_LEAVE_NOAPI(ret_value)

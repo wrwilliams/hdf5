@@ -1006,10 +1006,11 @@ done:
  * Function:    H5Dformat_convert (Internal)
  *
  * Purpose:     For chunked: 
- *		  Convert the chunk indexing type to version 1 B-tree if not
- *		For compact/contiguous: 
- *		  Downgrade layout version to 3 if greater than 3
- *		For virtual: no conversion
+ *                  Convert the chunk indexing type to version 1 B-tree if not
+ *              For compact/contiguous:
+ *                  Downgrade layout version to 3 if greater than 3
+ *              For virtual:
+ *                  No conversion
  *
  * Return:      Non-negative on success, negative on failure
  *
@@ -1028,13 +1029,13 @@ H5Dformat_convert(hid_t dset_id)
     H5TRACE1("e", "i", dset_id);
 
     /* Check args */
-    if(NULL == (dset = (H5D_t *)H5I_object_verify(dset_id, H5I_DATASET)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
+    if(NULL == (dset = (H5VL_object_t *)H5I_object_verify(dset_id, H5I_DATASET)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "dset_id parameter is not a valid dataset identifier")
 
     /* Convert the dataset through the VOL */
     if (H5VL_dataset_optional(dset->vol_obj, dset->vol_info->vol_cls, H5AC_ind_read_dxpl_id,
             H5_REQUEST_NULL, H5VL_DATASET_FORMAT_CONVERT) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_INTERNAL, FAIL, "can't convert format")
+        HGOTO_ERROR(H5E_DATASET, H5E_INTERNAL, FAIL, "can't convert dataset format")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1063,7 +1064,7 @@ H5Dget_chunk_index_type(hid_t dset_id, H5D_chunk_index_t *idx_type)
     H5TRACE2("e", "i*Dk", dset_id, idx_type);
 
     /* Check args */
-    if (NULL == (dset = (H5VL_object_t *)H5VL_object_verify(dset_id, H5I_DATASET)))
+    if (NULL == (dset = (H5VL_object_t *)H5I_object_verify(dset_id, H5I_DATASET)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "dset_id is not a dataset ID")
     if (NULL == idx_type)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "idx_type parameter cannot be NULL")
@@ -1103,7 +1104,7 @@ H5Dget_chunk_storage_size(hid_t dset_id, const hsize_t *offset, hsize_t *chunk_n
     H5TRACE3("e", "i*h*h", dset_id, offset, chunk_nbytes);
 
     /* Check arguments */
-    if (NULL == (dset = (H5VL_object_t *)H5VL_object_verify(dset_id, H5I_DATASET)))
+    if (NULL == (dset = (H5VL_object_t *)H5I_object_verify(dset_id, H5I_DATASET)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "dset_id is not a dataset ID")
     if (NULL == offset)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "offset parameter cannot be NULL")

@@ -265,8 +265,8 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5VL_free_object
  *
- * Purpose:     Wrapper to register an object ID with a VOL aux struct
- *              and increment ref count on VOL driver ID
+ * Purpose:     Wrapper to unregister an object ID with a VOL aux struct
+ *              and decrement ref count on VOL driver ID
  *
  * Return:      SUCCEED/FAIL
  *
@@ -533,8 +533,8 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5VL_object_verify
  *
- * Purpose:     Utility function to return the VOL object pointer associated with
- *              a hid_t.
+ * Purpose:     Utility function to return the VOL object pointer associated
+ *              with an identifier.
  *
  * Return:      Success:    object pointer
  *              Failure:    NULL

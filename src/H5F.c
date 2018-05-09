@@ -1675,7 +1675,7 @@ done:
 herr_t
 H5Fformat_convert(hid_t file_id)
 {
-    H5VL_object_t  *file;                   /* File */
+    H5VL_object_t  *file = NULL;            /* File */
     herr_t          ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_API(FAIL)
