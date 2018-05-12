@@ -111,7 +111,7 @@ H5Fget_info1(hid_t obj_id, H5F_info1_t *finfo)
      * the top file in a mount hierarchy)
      */
     if (H5I_get_type(obj_id) == H5I_FILE ) {
-        if (NULL == (f = (H5F_t *)H5I_object(obj_id)))
+        if (NULL == (f = (H5F_t *)H5VL_object(obj_id)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file")
     }
     else {
@@ -213,7 +213,7 @@ done:
  *-------------------------------------------------------------------------
  */
 /* XXX: This needs to go in the native VOL driver under 'optional' but I'm
- *      goign to hack it for now.
+ *      going to hack it for now.
  */
 herr_t
 H5Fset_latest_format(hid_t file_id, hbool_t latest_format)

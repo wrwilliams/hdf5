@@ -433,7 +433,7 @@ H5Fget_obj_ids(hid_t file_id, unsigned types, size_t max_objs, hid_t *oid_list)
 {
     /* XXX: Note the type mismatch - you can ask for more objects than can be returned */
 
-    ssize_t     ret_value;          /* Return value */
+    ssize_t     ret_value = 0;          /* Return value */
 
     FUNC_ENTER_API((-1))
     H5TRACE4("Zs", "iIuz*i", file_id, types, max_objs, oid_list);
@@ -1662,7 +1662,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5Fformat_convert_super (Internal)
+ * Function:    H5Fformat_convert (Internal)
  *
  * Purpose:     Downgrade the superblock version to v2 and
  *              downgrade persistent file space to non-persistent
@@ -1673,59 +1673,22 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Fformat_convert(hid_t fid)
+H5Fformat_convert(hid_t file_id)
 {
-    herr_t      ret_value = SUCCEED;    /* Return value */
+    H5VL_object_t  *file = NULL;            /* File */
+    herr_t          ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE1("e", "i", fid);
+    H5TRACE1("e", "i", file_id);
 
-    if (H5I_FILE == H5I_get_type(fid)) {
-        H5F_t    *f;                     /* File to flush */
-        hbool_t   mark_dirty = FALSE;
+    /* Check args */
+    if (NULL == (file = (H5VL_object_t *)H5I_object_verify(file_id, H5I_FILE)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "file_id parameter is not a valid file identifier")
 
-        /* Get file object */
-        if (NULL == (f = (H5F_t *)H5I_object(fid)))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
-
-        /* Check if the superblock should be downgraded */
-        if (f->shared->sblock->super_vers > HDF5_SUPERBLOCK_VERSION_V18_LATEST) {
-            f->shared->sblock->super_vers = HDF5_SUPERBLOCK_VERSION_V18_LATEST;
-            mark_dirty = TRUE;
-        }
-
-        /* Check for persistent freespace manager, which needs to be downgraded */
-        if (!(f->shared->fs_strategy == H5F_FILE_SPACE_STRATEGY_DEF &&
-                f->shared->fs_persist == H5F_FREE_SPACE_PERSIST_DEF &&
-                f->shared->fs_threshold == H5F_FREE_SPACE_THRESHOLD_DEF &&
-                f->shared->fs_page_size == H5F_FILE_SPACE_PAGE_SIZE_DEF)) {
-            /* Check to remove free-space manager info message from superblock extension */
-            if (H5F_addr_defined(f->shared->sblock->ext_addr))
-                if (H5F_super_ext_remove_msg(f, H5AC_ind_read_dxpl_id, H5O_FSINFO_ID) < 0)
-                    HGOTO_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "error in removing message from superblock extension")
-
-            /* Close freespace manager */
-            if (H5MF_try_close(f, H5AC_ind_read_dxpl_id) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "unable to free free-space address")
-
-            /* Set non-persistent freespace manager */
-            f->shared->fs_strategy = H5F_FILE_SPACE_STRATEGY_DEF;
-            f->shared->fs_persist = H5F_FREE_SPACE_PERSIST_DEF;
-            f->shared->fs_threshold = H5F_FREE_SPACE_THRESHOLD_DEF;
-            f->shared->fs_page_size = H5F_FILE_SPACE_PAGE_SIZE_DEF;
-
-            /* Indicate that the superblock should be marked dirty */
-            mark_dirty = TRUE;
-        }
-
-        /* Check if we should mark the superblock dirty */
-        if (mark_dirty)
-            /* Mark superblock as dirty */
-            if (H5F_super_dirty(f) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
-    }
-    else
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file or file object")
+    /* Reset the statistics */
+    if (H5VL_file_optional(file->vol_obj, file->vol_info->vol_cls, H5AC_ind_read_dxpl_id, 
+                          H5_REQUEST_NULL, H5VL_FILE_FORMAT_CONVERT) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't convert file format")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1757,7 +1720,7 @@ H5Freset_page_buffering_stats(hid_t file_id)
     /* Reset the statistics */
     if (H5VL_file_optional(file->vol_obj, file->vol_info->vol_cls, H5AC_ind_read_dxpl_id, 
                           H5_REQUEST_NULL, H5VL_FILE_RESET_PAGE_BUFFERING_STATS) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't reset stats for page buffering")
+        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't reset stats for page buffering")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1824,7 +1787,7 @@ H5Fget_mdc_image_info(hid_t file_id, haddr_t *image_addr, hsize_t *image_len)
     H5TRACE3("e", "i*a*h", file_id, image_addr, image_len);
 
     /* Check args */
-    if (NULL == (file = (H5F_t *)H5I_object_verify(file_id, H5I_FILE)))
+    if (NULL == (file = (H5F_t *)H5VL_object_verify(file_id, H5I_FILE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "not a file ID")
     if (NULL == image_addr || NULL == image_len)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "NULL image addr or image len")
@@ -1862,7 +1825,7 @@ H5Fget_eoa(hid_t file_id, haddr_t *eoa)
     H5TRACE2("e", "i*a", file_id, eoa);
 
     /* Check args */
-    if(NULL == (file = (H5F_t *)H5I_object_verify(file_id, H5I_FILE)))
+    if(NULL == (file = (H5F_t *)H5VL_object_verify(file_id, H5I_FILE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "hid_t identifier is not a file ID")
 
     /* This public routine will work only for drivers with this feature enabled.*/
@@ -1901,7 +1864,7 @@ H5Fincrement_filesize(hid_t file_id, hsize_t increment)
     H5TRACE2("e", "ih", file_id, increment);
 
     /* Check args */
-    if(NULL == (file = (H5F_t *)H5I_object_verify(file_id, H5I_FILE)))
+    if(NULL == (file = (H5F_t *)H5VL_object_verify(file_id, H5I_FILE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "hid_t identifier is not a file ID")
 
     /* This public routine will work only for drivers with this feature enabled.*/
