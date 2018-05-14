@@ -998,10 +998,6 @@ fi
 ###              T H E   T E S T S
 ##############################################################################
 
-# XXX: TEMPORARILY SKIPPED
-echo "SKIPPED (temporarily disabled)"
-exit 0
-
 # prepare for test
 COPY_TESTFILES_TO_TESTDIR
 
