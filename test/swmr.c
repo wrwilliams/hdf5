@@ -7048,7 +7048,7 @@ main(void)
      */
     driver = HDgetenv("HDF5_DRIVER");
     if(!H5FD_supports_swmr_test(driver)) {
-        printf("This VFD does not support SWMR I/O\n");
+        HDprintf("This VFD does not support SWMR I/O\n");
         return EXIT_SUCCESS;
     } /* end if */
 
@@ -7138,7 +7138,7 @@ main(void)
     if(nerrors)
         goto error;
 
-    printf("All tests passed.\n");
+    HDprintf("All tests passed.\n");
 
     h5_cleanup(FILENAME, fapl);
 
@@ -7146,7 +7146,7 @@ main(void)
 
 error:
     nerrors = MAX(1, nerrors);
-    printf("***** %d SWMR TEST%s FAILED! *****\n",
+    HDprintf("***** %d SWMR TEST%s FAILED! *****\n",
         nerrors, 1 == nerrors ? "" : "S");
     return EXIT_FAILURE;
 
