@@ -1259,34 +1259,33 @@ done:
  * Purpose:
  *
  *     Compares two files belonging to this driver using an arbitrary 
- *     (but consistent) ordering.
- *              
- *     Uses the parsed url structure to compare, as though doing `strcmp` on
- *     the url strings used to open the file.
+ *     (but consistent) ordering:
  *
- *     `strcmp`, element-by-element, of scheme, host, port, path, and query
- *     parameters in files' S3 Requests's `purl` parsed url structure.
+ *     + url scheme
+ *     + url host
+ *     + url port
+ *     + url path
+ *     + url query
+ *     + fapl aws_region
+ *     + fapl secret_id
+ *     + fapl secret_key
  *
- *     - Scheme and Host are guaranteed present, and `strcmp`'d
- *     - If equivalent (value of 0), attempts to compare ports:
- *         - if both `f1` and `f2` have `port`, `strcmp` port number-strings
- *         - if one absent, set cmp value to 1 if `f1` has, -1 if `f2` has
- *         - if both absent, does not modify cmp value
- *     - If equivalent, attempts to compare paths using same apprach as with
- *       port.
- *     - If equivalent, attempts to compare query strings using same approach
- *       as with port.
- *     - If equivalent, attempts to compare `fa.aws_region`
- *     - If equivalent, attempts to compare `fa.secret_id`
- *     - If equivalent, attempts to compare `fa.secret_key`
+ *     tl;dr -> check URL, check crentials
  *
  * Return:
  *      
  *     - Equivalent:      0
- *     - Not Equivalent: -1 or 1, following algorithm outlined above.
+ *     - Not Equivalent: -1
  *
  * Programmer: Jacob Smith
  *             2017-11-06
+ *
+ * Changes:
+ *
+ *     + Change from strcmp-like return values (-1, 0, 1) to instead return
+ *       binary equivalence (0) or inequality (-1).
+ *     + Replace "if still equal then check this" waterfall with GOTO jumps.
+ *     Jacob Smith 2018-05-17
  *
  *-------------------------------------------------------------------------
  */
@@ -1321,80 +1320,66 @@ H5FD_ros3_cmp(const H5FD_t *_f1,
     HDassert(purl2->host != NULL);
 
     /* URL: SCHEME */
-    ret_value = strcmp(purl1->scheme, purl2->scheme);
+    if (strcmp(purl1->scheme, purl2->scheme)) HGOTO_DONE(-1);
 
     /* URL: HOST */
-    if (0 == ret_value)
-        ret_value = strcmp(purl1->host, purl2->host);
+    if (strcmp(purl1->host, purl2->host)) HGOTO_DONE(-1);
 
     /* URL: PORT */
-    if (0 == ret_value) {
-        if (purl1->port && purl2->port)
-	    ret_value = strcmp(purl1->port, purl2->port);
-        else if (purl1->port && !purl2->port)
-            ret_value = 1;
-        else if (purl2->port && !purl1->port)
-            ret_value = -1;
+    if (purl1->port && purl2->port) {
+        if (strcmp(purl1->port, purl2->port)) HGOTO_DONE(-1);
+    } else if (purl1->port) {
+        HGOTO_DONE(-1);
+    } else if (purl2->port) {
+        HGOTO_DONE(-1);
     }
 
     /* URL: PATH */
-    if (0 == ret_value) {
-        if (purl1->path && purl2->path)
-	    ret_value = strcmp(purl1->path, purl2->path);
-        else if (purl1->path && !purl2->path)
-            ret_value = 1;
-        else if (purl2->path && !purl1->path)
-            ret_value = -1;
+    if (purl1->path && purl2->path) {
+        if (strcmp(purl1->path, purl2->path)) HGOTO_DONE(-1);
+    } else if (purl1->path && !purl2->path) {
+        HGOTO_DONE(-1);
+    } else if (purl2->path && !purl1->path) {
+        HGOTO_DONE(-1);
     }
 
     /* URL: QUERY */
-    if (0 == ret_value) {
-        if (purl1->query && purl2->query)
-	    ret_value = strcmp(purl1->query, purl2->query);
-        else if (purl1->query && !purl2->query)
-            ret_value = 1;
-        else if (purl2->query && !purl1->query)
-            ret_value = -1;
+    if (purl1->query && purl2->query) {
+        if (strcmp(purl1->query, purl2->query)) HGOTO_DONE(-1);
+    } else if (purl1->query && !purl2->query) {
+        HGOTO_DONE(-1);
+    } else if (purl2->query && !purl1->query) {
+        HGOTO_DONE(-1);
     }
 
     /* FAPL: AWS_REGION */
-    if (0 == ret_value) {
-        if ((f1->fa.aws_region[0] != '\0') && (f2->fa.aws_region[0] != '\0')) {
-	    ret_value = strcmp(f1->fa.aws_region, f2->fa.aws_region);
-        } else if ((f1->fa.aws_region[0] != '\0') && (f2->fa.aws_region[0] == '\0')) {
-            ret_value = 1;
-        } else if ((f2->fa.aws_region[0] != '\0') && (f1->fa.aws_region[0] == '\0')) {
-            ret_value = -1;
-        }
+    if (f1->fa.aws_region[0] != '\0' && f1->fa.aws_region[0] != '\0') {
+        if (strcmp(f1->fa.aws_region, f2->fa.aws_region)) HGOTO_DONE(-1);
+    } else if (f1->fa.aws_region[0] != '\0') {
+        HGOTO_DONE(-1);
+    } else if (f2->fa.aws_region[0] != '\0') {
+        HGOTO_DONE(-1);
     }
 
     /* FAPL: SECRET_ID */
-    if (0 == ret_value) {
-        if ((f1->fa.secret_id[0] != '\0') && (f2->fa.secret_id[0] != '\0')) {
-	    ret_value = strcmp(f1->fa.secret_id, f2->fa.secret_id);
-        } else if ((f1->fa.secret_id[0] != '\0') && (f2->fa.secret_id[0] == '\0')) {
-            ret_value = 1;
-        } else if ((f2->fa.secret_id[0] != '\0') && (f1->fa.secret_id[0] == '\0')) {
-            ret_value = -1;
-        }
+    if (f1->fa.secret_id[0] != '\0' && f1->fa.secret_id[0] != '\0') {
+        if (strcmp(f1->fa.secret_id, f2->fa.secret_id)) HGOTO_DONE(-1);
+    } else if (f1->fa.secret_id[0] != '\0') {
+        HGOTO_DONE(-1);
+    } else if (f2->fa.secret_id[0] != '\0') {
+        HGOTO_DONE(-1);
     }
 
     /* FAPL: SECRET_KEY */
-    if (0 == ret_value) {
-        if ((f1->fa.secret_key[0] != '\0') && (f2->fa.secret_key[0] != '\0')) {
-	    ret_value = strcmp(f1->fa.secret_key, f2->fa.secret_key);
-        } else if ((f1->fa.secret_key[0] != '\0') && (f2->fa.secret_key[0] == '\0')) {
-            ret_value = 1;
-        } else if ((f2->fa.secret_key[0] != '\0') && (f1->fa.secret_key[0] == '\0')) {
-            ret_value = -1;
-        }
+    if (f1->fa.secret_key[0] != '\0' && f1->fa.secret_key[0] != '\0') {
+        if (strcmp(f1->fa.secret_key, f2->fa.secret_key)) HGOTO_DONE(-1);
+    } else if (f1->fa.secret_key[0] != '\0') {
+        HGOTO_DONE(-1);
+    } else if (f2->fa.secret_key[0] != '\0') {
+        HGOTO_DONE(-1);
     }
 
-    /* constrain to -1, 0, 1--makes testing much easier
-     */
-    ret_value = (ret_value < 0) ? -1 : ret_value;
-    ret_value = (ret_value > 0) ?  1 : ret_value;
-
+done:
     FUNC_LEAVE_NOAPI(ret_value)
 
 } /* H5FD_ros3_cmp() */

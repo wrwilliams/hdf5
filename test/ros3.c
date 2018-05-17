@@ -1713,7 +1713,7 @@ test_cmp(void)
 
     JSVERIFY(  0, H5FDcmp(fd_raven,  fd_raven_2), NULL )
     JSVERIFY( -1, H5FDcmp(fd_raven,  fd_shakes),  NULL )
-    JSVERIFY(  1, H5FDcmp(fd_shakes, fd_raven_2), NULL )
+    JSVERIFY( -1, H5FDcmp(fd_shakes, fd_raven_2), NULL )
 
     /************
      * TEARDOWN *
