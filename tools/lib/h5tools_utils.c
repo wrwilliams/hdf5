@@ -1336,4 +1336,62 @@ done:
 
 } /* h5tools_populate_ros3_fapl */
 
+
+/*-----------------------------------------------------------------------------
+ *
+ * Function: h5tools_set_configured_fapl
+ *
+ * Purpose: prepare fapl_id with the given property list, according to 
+ *          VFD prototype.
+ *
+ * Return: 0 on failure, 1 on success
+ *
+ * Programmer: Jacob Smith
+ *             2018-05-21
+ *
+ * Changes: None.
+ *
+ *-----------------------------------------------------------------------------
+ */
+int
+h5tools_set_configured_fapl(hid_t     *fapl_id,
+                           const char  vfd_name[],
+                           void       *fapl_t_ptr)
+{
+    int ret_value = 0;
+
+    if (!strcmp("", vfd_name)) {
+        if (fapl_id != NULL) {
+            ret_value = 1;
+            goto done;
+        }
+        *fapl_id = H5P_DEFAULT;
+    } else if (!strcmp("ros3", vfd_name)) {
+        if (FAIL == H5Pset_fapl_ros3(
+                *fapl_id,
+                (H5FD_ros3_fapl_t *)fapl_t_ptr))
+        {
+            ret_value = 1;
+            goto done;
+        }
+#if 0
+    } else if (!strcmp("hdfs", vfd_name)) {
+        if (FAIL == H5Pset_fapl_hdfs(
+                *fapl_id,
+                (H5FD_hdfs_fapl_t *)fapl_t_ptr))
+        {
+            ret_value = 1;
+            goto done;
+        }
+#endif
+    } else {
+        ret_value = 0; /* unrecognized fapl type "name" */
+    }
+
+done:
+    return ret_value;
+
+} /* h5tools_set_configured_fapl() */
+
+
 

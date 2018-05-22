@@ -179,6 +179,9 @@ H5TOOLS_DLL void     h5tools_setprogname(const char*progname);
 H5TOOLS_DLL int      h5tools_getstatus(void);
 H5TOOLS_DLL void     h5tools_setstatus(int d_status);
 H5TOOLS_DLL int h5tools_getenv_update_hyperslab_bufsize(void);
+H5TOOLS_DLL int h5tools_set_configured_fapl(hid_t      *fapl_id,
+                                            const char  vfd_name[],
+                                            void       *fapl_t_ptr);
 H5TOOLS_DLL int h5tools_populate_ros3_fapl(H5FD_ros3_fapl_t  *fa, 
                                            const char       **values);
 #ifdef __cplusplus

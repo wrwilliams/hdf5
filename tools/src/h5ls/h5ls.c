@@ -2607,9 +2607,7 @@ main(int argc, const char *argv[])
     const char *preferred_driver = NULL;
     int err_exit = 0;
 
-
-    hid_t              ros3_fapl_id = -1;
-    
+    hid_t fapl_id = H5P_DEFAULT;
 
     h5tools_setprogname(PROGRAMNAME);
     h5tools_setstatus(EXIT_SUCCESS);
@@ -2626,6 +2624,7 @@ main(int argc, const char *argv[])
     width_g = get_width();
 
 #if 0
+
 /* restating the argument-parting component of this tool as would be compatible
  * with "argtable" <http://www.argtable.org/>
  *
@@ -2754,21 +2753,7 @@ main(int argc, const char *argv[])
         H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
     }
 
-/* This is further brainstorming, unrelated to argtable thought experiment.
- * Substitute for/with the loop over file names
- */
-    enum H5LS_STATUS status = H5LS_OK;
-    status = run_h5ls_on_files();
-    if (status != H5LS_OK) {
-        /* error */
-    }
-
-    /* when done, clean up */
-    arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
-
 #endif
-
-
 
     /* Switches come before non-switch arguments */
     for(argno = 1; argno < argc && '-' == argv[argno][0]; argno++) {
@@ -2891,12 +2876,11 @@ main(int argc, const char *argv[])
             }
             HDfree(s3cred);
             HDfree(s3cred_src);
-            ros3_fapl_id = H5Pcreate(H5P_FILE_ACCESS);
-            if (ros3_fapl_id < 0) {
-                usage();
-                leave(EXIT_FAILURE);
-            }
-            if (FAIL == H5Pset_fapl_ros3(ros3_fapl_id, &ros3_fa)) {
+            if (FAIL == h5tools_set_configured_fapl(
+                    &fapl_id,
+                    "ros3",
+                    &ros3_fa)) 
+            {
                 usage();
                 leave(EXIT_FAILURE);
             }
@@ -2988,6 +2972,26 @@ main(int argc, const char *argv[])
         leave(EXIT_FAILURE);
     }
 
+    /* If using S3 file driver but was given no credentials, use anon cred */
+    if (preferred_driver
+        && !HDstrcmp(preferred_driver, "ros3")
+        && fapl_id == H5P_DEFAULT)
+    {
+        H5FD_ros3_fapl_t ros3_anon_fa;
+        if (0 == h5tools_populate_ros3_fapl(&ros3_anon_fa, NULL)) {
+            usage();
+            leave(EXIT_FAILURE);
+        }
+        if (FAIL == h5tools_set_configured_fapl(
+                &fapl_id,
+                "ros3",
+                &ros3_anon_fa)) 
+        {
+            usage();
+            leave(EXIT_FAILURE);
+        }
+    }
+
     /* Turn off HDF5's automatic error printing unless you're debugging h5ls */
     if(!show_errors_g)
         H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
@@ -3018,30 +3022,7 @@ main(int argc, const char *argv[])
 
         while(fname && *fname) {
             if (preferred_driver && !HDstrcmp(preferred_driver, "ros3")) {
-                /* use ROS3 
-                 */
-                if (ros3_fapl_id < 0) {
-                    /* s3 credential not provided 
-                     * try default (no authentication )
-                     */
-
-                    H5FD_ros3_fapl_t ros3_fa;
-
-                    if (0 == h5tools_populate_ros3_fapl(&ros3_fa, NULL)) {
-                        usage();
-                        leave(EXIT_FAILURE);
-                    }
-                    ros3_fapl_id = H5Pcreate(H5P_FILE_ACCESS);
-                    if (ros3_fapl_id  < 0) {
-                        usage();
-                        leave(EXIT_FAILURE);
-                    }
-                    if (FAIL == H5Pset_fapl_ros3(ros3_fapl_id, &ros3_fa)) {
-                        usage();
-                        leave(EXIT_FAILURE);
-                    }
-                } /* if no s3-credential */
-                file = H5Fopen(fname, H5F_ACC_RDONLY, ros3_fapl_id);
+                file = H5Fopen(fname, H5F_ACC_RDONLY, fapl_id);
             } else {
                 file = h5tools_fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT, preferred_driver, drivername, sizeof drivername);
             }
@@ -3157,8 +3138,8 @@ main(int argc, const char *argv[])
             err_exit = 1;
     } /* end while */
 
-    if (ros3_fapl_id >= 0) {
-        if (FAIL == H5Pclose(ros3_fapl_id)) {
+    if (fapl_id != H5P_DEFAULT) {
+        if (FAIL == H5Pclose(fapl_id)) {
             leave(EXIT_FAILURE);
         }
     }
