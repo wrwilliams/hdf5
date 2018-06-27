@@ -411,6 +411,7 @@ test_select_point(hid_t xfer_plist)
     hid_t		fid1;		/* HDF5 File IDs		*/
     hid_t		dataset;	/* Dataset ID			*/
     hid_t		sid1,sid2;	/* Dataspace ID			*/
+    hid_t               copy_sid;       /* Copied dataspace ID          */
     hsize_t		dims1[] = {SPACE1_DIM1, SPACE1_DIM2, SPACE1_DIM3};
     hsize_t		dims2[] = {SPACE2_DIM1, SPACE2_DIM2};
     hsize_t		dims3[] = {SPACE3_DIM1, SPACE3_DIM2};
@@ -453,6 +454,10 @@ test_select_point(hid_t xfer_plist)
     sid2 = H5Screate_simple(SPACE2_RANK, dims2, NULL);
     CHECK(sid2, FAIL, "H5Screate_simple");
 
+    /* Create dataspace for copying */
+    copy_sid = H5Screate_simple(SPACE1_RANK, dims1, NULL);
+    CHECK(copy_sid, FAIL, "H5Screate_simple");
+
     /* Select sequence of ten points for disk dataset */
     coord1[0][0]=0; coord1[0][1]=10; coord1[0][2]= 5;
     coord1[1][0]=1; coord1[1][1]= 2; coord1[1][2]= 7;
@@ -474,6 +479,27 @@ test_select_point(hid_t xfer_plist)
         VERIFY(temp_coord1[i][1],coord1[i][1],"H5Sget_select_elem_pointlist");
         VERIFY(temp_coord1[i][2],coord1[i][2],"H5Sget_select_elem_pointlist");
     } /* end for */
+
+    /* Copy dataspace selection */
+    ret = H5Sselect_copy(copy_sid, sid1);
+    CHECK(ret, FAIL, "H5Sselect_copy");
+
+    /* Verify elements copied correctly */
+    for(i = 0; i < POINT1_NPOINTS; i++) {
+        temp_coord1[i][0] = 0;
+        temp_coord1[i][1] = 0;
+        temp_coord1[i][2] = 0;
+    }
+    H5Sget_select_elem_pointlist(copy_sid, (hsize_t)0, (hsize_t)POINT1_NPOINTS, (hsize_t *)temp_coord1);
+    for(i=0; i<POINT1_NPOINTS; i++) {
+        VERIFY(temp_coord1[i][0], coord1[i][0], "H5Sget_select_elem_pointlist");
+        VERIFY(temp_coord1[i][1], coord1[i][1], "H5Sget_select_elem_pointlist");
+        VERIFY(temp_coord1[i][2], coord1[i][2], "H5Sget_select_elem_pointlist");
+    }
+
+    /* Close the copied dataspace */
+    ret = H5Sclose(copy_sid);
+    CHECK(ret, FAIL, "H5Sclose");
 
     ret = (int)H5Sget_select_npoints(sid1);
     VERIFY(ret, 10, "H5Sget_select_npoints");
