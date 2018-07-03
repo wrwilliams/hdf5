@@ -627,6 +627,7 @@ error:
 static unsigned
 test_populate_ros3_fa(void)
 {
+#ifdef H5_HAVE_ROS3_VFD
     /*************************
      * TEST-LOCAL STRUCTURES *
      *************************/
@@ -637,11 +638,16 @@ test_populate_ros3_fa(void)
 
     hbool_t show_progress = FALSE;
     int     bad_version   = 0xf87a;
-
-
+#endif /* H5_HAVE_ROS3_VFD */
 
     TESTING("programmatic fapl population");
 
+#ifndef H5_HAVE_ROS3_VFD
+    puts(" -SKIP-");
+    puts("    Read-Only S3 VFD not enabled");
+    fflush(stdout);
+    return 0;
+#else
 #if H5TOOLS_UTILS_TEST_DEBUG > 0
     show_progress = TRUE;
 #endif
@@ -973,6 +979,7 @@ error :
      ***********/
 
     return 1;
+#endif /* H5_HAVE_ROS3_VFD */
 
 } /* test_populate_ros3_fa */
 

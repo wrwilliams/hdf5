@@ -2738,6 +2738,50 @@ fi
 AM_CONDITIONAL([DIRECT_VFD_CONDITIONAL], [test "X$DIRECT_VFD" = "Xyes"])
 
 ## ----------------------------------------------------------------------
+## Check if Read-Only S3 virtual file driver is enabled by --enable-ros3-vfd
+##
+AC_SUBST([ROS3_VFD])
+
+## Default is no Read-Only S3 VFD
+ROS3_VFD=no
+
+AC_ARG_ENABLE([ros3-vfd],
+              [AS_HELP_STRING([--enable-ros3-vfd],
+                              [Build the Read-Only S3 virtual file driver (VFD).
+                               [default=no]])],
+              [ROS3_VFD=$enableval], [ROS3_VFD=no])
+
+if test "X$ROS3_VFD" = "Xyes"; then
+    AC_CHECK_HEADERS([curl/curl.h],, [unset ROS3_VFD])
+    AC_CHECK_HEADERS([openssl/evp.h],, [unset ROS3_VFD])
+    AC_CHECK_HEADERS([openssl/hmac.h],, [unset ROS3_VFD])
+    AC_CHECK_HEADERS([openssl/sha.h],, [unset ROS3_VFD])
+    if test "X$ROS3_VFD" = "Xyes"; then
+        AC_CHECK_LIB([curl], [curl_global_init],, [unset ROS3_VFD])
+        AC_CHECK_LIB([crypto], [EVP_sha256],, [unset ROS3_VFD])
+        AC_CHECK_LIB([ssl], [SSL_cache_hit],, [unset ROS3_VFD])
+    fi
+
+    AC_MSG_CHECKING([if the Read-Only S3 virtual file driver (VFD) is enabled])
+    if test "X$ROS3_VFD" = "Xyes"; then
+        AC_DEFINE([HAVE_ROS3_VFD], [1],
+                [Define whether the Read-Only S3 virtual file driver (VFD) should be compiled])
+        AC_MSG_RESULT([yes])
+    else
+        AC_MSG_RESULT([no])
+        ROS3_VFD=no
+        AC_MSG_ERROR([The Read-Only S3 VFD was requested but cannot be built.
+                      Please check that openssl and cURL are available on your
+                      system, and/or re-configure without option
+                      --enable-ros3-vfd.])
+    fi
+else
+    AC_MSG_CHECKING([if the Read-Only S3 virtual file driver (VFD) is enabled])
+    AC_MSG_RESULT([no])
+    ROS3_VFD=no
+fi
+
+## ----------------------------------------------------------------------
 ## Enable custom plugin default path for library.  It requires SHARED support.
 ##
 AC_MSG_CHECKING([for custom plugin default path definition])

@@ -58,11 +58,12 @@
 #include <string.h>
 #include <time.h>
 
+#ifdef H5_HAVE_ROS3_VFD
 #include <curl/curl.h>
-
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
+#endif /* ifdef H5_HAVE_ROS3_VFD */
 
 /*****************
  * PUBLIC MACROS *
@@ -521,6 +522,7 @@ typedef struct {
  */
 typedef struct {
     unsigned long  magic;
+#ifdef H5_HAVE_ROS3_VFD
     CURL          *curlhandle;
     size_t         filesize;
     char          *httpverb;
@@ -528,6 +530,7 @@ typedef struct {
     char          *region;
     char          *secret_id;
     unsigned char *signing_key;
+#endif /* ifdef H5_HAVE_ROS3_VFD */
 } s3r_t;
 #define S3COMMS_S3R_MAGIC 0x44d8d79
 

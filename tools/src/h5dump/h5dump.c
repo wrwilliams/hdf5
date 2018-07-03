@@ -23,8 +23,10 @@ const char          *outfname=NULL;
 static int           doxml = 0;
 static int           useschema = 1;
 static const char   *xml_dtd_uri = NULL;
+#ifdef H5_HAVE_ROS3_VFD
 static char        **s3_cred = NULL; /* values for s3 authorization */
 static char         *s3_cred_string = NULL; /* "source string" for elements */
+#endif /* H5_HAVE_ROS3_VFD */
 
 /* module-scoped variables for XML option */
 #define DEFAULT_XSD     "http://www.hdfgroup.org/HDF5/XML/schema/HDF5-File.xsd"
@@ -1287,6 +1289,11 @@ end_collect:
             h5tools_setstatus(EXIT_SUCCESS);
             goto done;
         case '$': 
+#ifndef H5_HAVE_ROS3_VFD
+            error_msg("Read-Only S3 VFD not enabled.\n");
+            h5tools_setstatus(EXIT_FAILURE);
+            goto done;
+#else
             /* s3 credential */
             {
                 unsigned nelems = 0;
@@ -1312,6 +1319,7 @@ end_collect:
                 } /* credentials count != 3 */
             } /* s3 credential block */
             break;
+#endif /* H5_HAVE_ROS3_VFD */
         case '?':
         default:
             usage(h5tools_getprogname());
@@ -1473,11 +1481,15 @@ main(int argc, const char *argv[])
     while(opt_ind < argc) {
         fname = HDstrdup(argv[opt_ind++]);
 
-#if 1
         /* if the driver is "ros3", we take a much more explicit tack 
          * to open the target file (now assumed to be a URL
          */
         if (driver != NULL && !strcmp(driver, "ros3")) {
+#ifndef H5_HAVE_ROS3_VFD
+            error_msg("Read-Only S3 VFD not enabled.\n");
+            h5tools_setstatus(EXIT_FAILURE);
+            goto done;
+#else
             H5FD_ros3_fapl_t fa;
             hid_t            fapl_id = -1;
 
@@ -1505,16 +1517,12 @@ main(int argc, const char *argv[])
             /* create fapl entry
              */
             fapl_id = H5Pcreate(H5P_FILE_ACCESS);
-            if (fapl_id < 0) {
+            if (0 != h5tools_set_configured_fapl(
+                    &fapl_id,
+                    "ros3",
+                    &fa))
+            {
                 error_msg("unable to create ros3 fapl");
-                h5tools_setstatus(EXIT_FAILURE);
-                goto done;
-            }
-            
-            /* set fapl entry from config
-             */
-            if (FAIL == H5Pset_fapl_ros3(fapl_id, &fa)) {
-                error_msg("unable to set ros3 fapl");
                 h5tools_setstatus(EXIT_FAILURE);
                 goto done;
             }
@@ -1528,15 +1536,17 @@ main(int argc, const char *argv[])
                 h5tools_setstatus(EXIT_FAILURE);
                 goto done;
             }
+#endif /* H5_HAVE_ROS3_VFD */
 
         } else { 
-            /* if not "ros3" driver 
-             */
-            fid = h5tools_fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT, driver, NULL, 0);
-        }
-#else
-        fid = h5tools_fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT, driver, NULL, 0);
-#endif
+            fid = h5tools_fopen(
+                    fname,
+                    H5F_ACC_RDONLY,
+                    H5P_DEFAULT,
+                    driver,
+                    NULL,
+                    0);
+        } /* if abnormal (e.g., read-only s3) file driver; fapl_id preset */
 
         if (fid < 0) {
             error_msg("unable to open file \"%s\"\n", fname);
@@ -1729,6 +1739,7 @@ done:
         HDfree(fname);
         fname = NULL;
     }
+#ifdef H5_HAVE_ROS3_VFD
     if (s3_cred) {
         HDfree(s3_cred);
         s3_cred = NULL;
@@ -1737,6 +1748,7 @@ done:
         HDfree(s3_cred_string);
         s3_cred_string = NULL;
     }
+#endif /* H5_HAVE_ROS3_VFD */
 
     if(hand)
         free_handler(hand, argc);

@@ -776,17 +776,20 @@ H5FD_ros3_open(const char *url,
                hid_t       fapl_id, 
                haddr_t     maxaddr)
 {
+#ifdef H5_HAVE_ROS3_VFD
     H5FD_ros3_t      *file      = NULL;
     struct tm        *now       = NULL;
     char              iso8601now[ISO8601_SIZE];
     unsigned char     signing_key[SHA256_DIGEST_LENGTH];
     s3r_t            *handle    = NULL;
     H5FD_ros3_fapl_t  fa;
+#endif
     H5FD_t           *ret_value = NULL;
 
 
 
     FUNC_ENTER_NOAPI_NOINIT
+#ifdef H5_HAVE_ROS3_VFD
 
 #if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_open() called.\n");
@@ -889,6 +892,7 @@ done:
         }
         curl_global_cleanup(); /* early cleanup because open failed */
     } /* if null return value (error) */
+#endif /* H5_HAVE_ROS3_VFD */
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -1209,12 +1213,17 @@ done:
 static herr_t
 H5FD_ros3_close(H5FD_t *_file)
 {
+#ifdef H5_HAVE_ROS3_VFD
     H5FD_ros3_t *file      = (H5FD_ros3_t *)_file;
     herr_t       ret_value = SUCCEED;
+#else
+    herr_t       ret_value = FAIL;
+#endif
 
 
 
     FUNC_ENTER_NOAPI_NOINIT
+#ifdef H5_HAVE_ROS3_VFD
 
 #if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_close() called.\n");
@@ -1246,6 +1255,7 @@ H5FD_ros3_close(H5FD_t *_file)
 
 done:
     curl_global_cleanup(); /* cleanup to answer init on open */
+#endif /* H5_HAVE_ROS3_VFD */
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -1293,15 +1303,18 @@ static int
 H5FD_ros3_cmp(const H5FD_t *_f1,
               const H5FD_t *_f2)
 {
+#ifdef H5_HAVE_ROS3_VFD
     const H5FD_ros3_t  *f1        = (const H5FD_ros3_t *)_f1;
     const H5FD_ros3_t  *f2        = (const H5FD_ros3_t *)_f2;
     const parsed_url_t *purl1     = NULL;
     const parsed_url_t *purl2     = NULL;
+#endif
     int                 ret_value = 0;
 
 
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
+#ifdef H5_HAVE_ROS3_VFD
 
 #if ROS3_DEBUG
     HDfprintf(stdout, "H5FD_ros3_cmp() called.\n");
@@ -1378,6 +1391,7 @@ H5FD_ros3_cmp(const H5FD_t *_f1,
     } else if (f2->fa.secret_key[0] != '\0') {
         HGOTO_DONE(-1);
     }
+#endif /* H5_HAVE_ROS3_VFD */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

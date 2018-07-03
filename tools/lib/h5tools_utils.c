@@ -20,7 +20,10 @@
 #include "h5tools_utils.h"
 #include "H5private.h"
 #include "h5trav.h"
+
+#ifdef H5_HAVE_ROS3_VFD
 #include "H5FDros3.h"
+#endif
 
 /* global variables */
 unsigned h5tools_nCols = 80;
@@ -1176,6 +1179,7 @@ error:
  * Return:
  *
  *     0 (failure) if...
+ *         * Read-Only S3 VFD is not enabled.
  *         * NULL fapl pointer: (NULL, {...} )
  *         * Warning: In all cases below, fapl will be set as "default" 
  *                    before error occurs.
@@ -1214,6 +1218,9 @@ int
 h5tools_populate_ros3_fapl(H5FD_ros3_fapl_t  *fa, 
                            const char       **values)
 {
+#ifndef H5_HAVE_ROS3_VFD
+    return 0;
+#else
     int show_progress = 0; /* set to 1 for debugging */
     int ret_value     = 1; /* 1 for success, 0 for failure           */
                            /* e.g.? if (!populate()) { then failed } */
@@ -1333,6 +1340,7 @@ h5tools_populate_ros3_fapl(H5FD_ros3_fapl_t  *fa,
 
 done:
     return ret_value;
+#endif /* H5_HAVE_ROS3_VFD */
 
 } /* h5tools_populate_ros3_fapl */
 
@@ -1366,6 +1374,7 @@ h5tools_set_configured_fapl(hid_t     *fapl_id,
             goto done;
         }
         *fapl_id = H5P_DEFAULT;
+#ifdef H5_HAVE_ROS3_VFD
     } else if (!strcmp("ros3", vfd_name)) {
         if (FAIL == H5Pset_fapl_ros3(
                 *fapl_id,
@@ -1374,16 +1383,7 @@ h5tools_set_configured_fapl(hid_t     *fapl_id,
             ret_value = 1;
             goto done;
         }
-#if 0
-    } else if (!strcmp("hdfs", vfd_name)) {
-        if (FAIL == H5Pset_fapl_hdfs(
-                *fapl_id,
-                (H5FD_hdfs_fapl_t *)fapl_t_ptr))
-        {
-            ret_value = 1;
-            goto done;
-        }
-#endif
+#endif /* H5_HAVE_ROS3_VFD */
     } else {
         ret_value = 0; /* unrecognized fapl type "name" */
     }

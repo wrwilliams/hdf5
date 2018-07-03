@@ -31,8 +31,6 @@
  *
  *****************************************************************************/
 
-
-
 /****************/
 /* Module Setup */
 /****************/
@@ -883,6 +881,7 @@ H5FD_s3comms_s3r_close(s3r_t *handle)
 
     FUNC_ENTER_NOAPI_NOINIT
 
+#ifdef H5_HAVE_ROS3_VFD
 #if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_s3r_close.\n");
 #endif
@@ -911,6 +910,8 @@ H5FD_s3comms_s3r_close(s3r_t *handle)
     }
 
     H5MM_xfree(handle);
+
+#endif /* H5_HAVE_ROS3_VFD */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -947,8 +948,10 @@ H5FD_s3comms_s3r_get_filesize(s3r_t *handle) {
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
+#ifdef H5_HAVE_ROS3_VFD
     if (handle != NULL) 
         ret_value = handle->filesize;
+#endif /* H5_HAVE_ROS3_VFD */
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -1002,6 +1005,7 @@ H5FD_s3comms_s3r_get_filesize(s3r_t *handle) {
 herr_t
 H5FD_s3comms_s3r_getsize(s3r_t *handle)
 {
+#ifdef H5_HAVE_ROS3_VFD
     unsigned long int      content_length = 0;
     CURL                  *curlh          = NULL;
     char                  *end            = NULL;
@@ -1012,10 +1016,15 @@ H5FD_s3comms_s3r_getsize(s3r_t *handle)
             NULL,
             0 };
     char                  *start          = NULL;
+#else
+    herr_t                 ret_value      = FAIL;
+#endif /* H5_HAVE_ROS3_VFD */
 
 
 
     FUNC_ENTER_NOAPI_NOINIT
+
+#ifdef H5_HAVE_ROS3_VFD
 
 #if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_s3r_getsize.\n");
@@ -1169,6 +1178,8 @@ done:
     H5MM_xfree(headerresponse);
     sds.magic += 1; /* set to bad magic */
 
+#endif /* H5_HAVE_ROS3_VFD */
+
     FUNC_LEAVE_NOAPI(ret_value);
 
 } /* H5FD_s3comms_s3r_getsize */
@@ -1233,15 +1244,19 @@ H5FD_s3comms_s3r_open(const char          *url,
                       const char          *id,
                       const unsigned char *signing_key)
 {
+#ifdef H5_HAVE_ROS3_VFD
     size_t        tmplen    = 0;
     CURL         *curlh     = NULL;
     s3r_t        *handle    = NULL;
     parsed_url_t *purl      = NULL;
+#endif
     s3r_t        *ret_value = NULL;
 
 
 
     FUNC_ENTER_NOAPI_NOINIT
+
+#ifdef H5_HAVE_ROS3_VFD
 
 #if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_s3r_open.\n");
@@ -1417,9 +1432,11 @@ H5FD_s3comms_s3r_open(const char          *url,
     HDmemcpy(handle->httpverb, "GET", 4);
 
     ret_value = handle;
+#endif /* H5_HAVE_ROS3_VFD */
 
 done:
     if (ret_value == NULL) {
+#ifdef H5_HAVE_ROS3_VFD
         if (curlh != NULL) {
             curl_easy_cleanup(curlh);
         }
@@ -1436,6 +1453,7 @@ done:
             }
             H5MM_xfree(handle);
         }
+#endif /* H5_HAVE_ROS3_VFD */
     }
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1513,6 +1531,7 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
                       size_t   len,
                       void    *dest)
 {
+#ifdef H5_HAVE_ROS3_VFD
     CURL                  *curlh         = NULL;
     CURLcode               p_status      = CURLE_OK;
     struct curl_slist     *curlheaders   = NULL;
@@ -1523,12 +1542,17 @@ H5FD_s3comms_s3r_read(s3r_t   *handle,
     hrb_t                 *request       = NULL;
     int                    ret           = 0; /* working variable to check  */
                                               /* return value of snprintf  */
-    herr_t                 ret_value     = SUCCEED;
     struct s3r_datastruct *sds           = NULL;
+    herr_t                 ret_value     = SUCCEED;
+#else
+    herr_t                 ret_value     = FAIL;
+#endif /* H5_HAVE_ROS3_VFD */
 
 
 
     FUNC_ENTER_NOAPI_NOINIT
+
+#ifdef H5_HAVE_ROS3_VFD
 
 #if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_s3r_read.\n");
@@ -2011,6 +2035,8 @@ done:
                             "cannot unset CURLOPT_HTTPHEADER")
     }
 
+#endif /* H5_HAVE_ROS3_VFD */
+
     FUNC_LEAVE_NOAPI(ret_value);
 
 } /* H5FD_s3comms_s3r_read */
@@ -2402,13 +2428,19 @@ H5FD_s3comms_HMAC_SHA256(const unsigned char *key,
                          size_t               msg_len,
                          char                *dest)
 {
+#ifdef H5_HAVE_ROS3_VFD
     unsigned char md[SHA256_DIGEST_LENGTH];
     unsigned int  md_len    = SHA256_DIGEST_LENGTH;
     herr_t        ret_value = SUCCEED;
+#else
+    herr_t        ret_value = FAIL;
+#endif /* H5_HAVE_ROS3_VFD */
 
 
 
     FUNC_ENTER_NOAPI_NOINIT
+
+#ifdef H5_HAVE_ROS3_VFD
 
 #if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_HMAC_SHA256.\n");
@@ -2436,6 +2468,8 @@ H5FD_s3comms_HMAC_SHA256(const unsigned char *key,
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "could not convert to hex string.");
     }
+
+#endif /* H5_HAVE_ROS3_VFD */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
@@ -3269,6 +3303,7 @@ H5FD_s3comms_signing_key(unsigned char *md,
                          const char    *region,
                          const char    *iso8601now)
 {
+#ifdef H5_HAVE_ROS3_VFD
     char          *AWS4_secret     = NULL;
     size_t         AWS4_secret_len = 0;
     unsigned char  datekey[SHA256_DIGEST_LENGTH];
@@ -3276,10 +3311,15 @@ H5FD_s3comms_signing_key(unsigned char *md,
     unsigned char  dateregionservicekey[SHA256_DIGEST_LENGTH];
     int            ret             = 0; /* return value of snprintf */
     herr_t         ret_value       = SUCCEED;
+#else
+    herr_t         ret_value       = SUCCEED;
+#endif /* H5_HAVE_ROS3_VFD */
 
 
 
     FUNC_ENTER_NOAPI_NOINIT
+
+#ifdef H5_HAVE_ROS3_VFD
 
 #if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_signing_key.\n");
@@ -3352,6 +3392,8 @@ H5FD_s3comms_signing_key(unsigned char *md,
 done:
     H5MM_xfree(AWS4_secret);
 
+#endif /* H5_HAVE_ROS3_VFD */
+
     FUNC_LEAVE_NOAPI(ret_value);
 
 } /* H5FD_s3comms_signing_key */
@@ -3410,6 +3452,7 @@ H5FD_s3comms_tostringtosign(char       *dest,
                             const char *now,
                             const char *region)
 {
+#ifdef H5_HAVE_ROS3_VFD
     unsigned char checksum[SHA256_DIGEST_LENGTH * 2 + 1];
     size_t        d         = 0;
     char          day[9];
@@ -3418,10 +3461,14 @@ H5FD_s3comms_tostringtosign(char       *dest,
     int           ret       = 0; /* snprintf return value */
     herr_t        ret_value = SUCCEED;
     char          tmp[128];
-
+#else
+    herr_t        ret_value = FAIL;
+#endif /* H5_HAVE_ROS3_VFD */
 
 
     FUNC_ENTER_NOAPI_NOINIT
+
+#ifdef H5_HAVE_ROS3_VFD
 
 #if S3COMMS_DEBUG
     HDfprintf(stdout, "called H5FD_s3comms_tostringtosign.\n");
@@ -3492,6 +3539,8 @@ H5FD_s3comms_tostringtosign(char       *dest,
     }
 
     dest[d] = '\0';
+
+#endif /* H5_HAVE_ROS3_VFD */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

@@ -2607,7 +2607,7 @@ main(int argc, const char *argv[])
     const char *preferred_driver = NULL;
     int err_exit = 0;
 
-    hid_t fapl_id = H5P_DEFAULT;
+    hid_t fapl_id_g = H5P_DEFAULT;
 
     h5tools_setprogname(PROGRAMNAME);
     h5tools_setstatus(EXIT_SUCCESS);
@@ -2840,6 +2840,12 @@ main(int argc, const char *argv[])
                 leave(EXIT_FAILURE);
             }
         } else if (!HDstrncmp(argv[argno], "--s3-cred=", (size_t)10)) {
+#ifndef H5_HAVE_ROS3_VFD
+            fprintf(stdout, "Read-Only S3 VFD is not enabled.\n");
+            fflush(stdout);
+            usage();
+            leave(EXIT_FAILURE);
+#else
             unsigned           nelems      = 0;
             char              *start       = NULL;
             char              *s3cred_src = NULL;
@@ -2876,14 +2882,16 @@ main(int argc, const char *argv[])
             }
             HDfree(s3cred);
             HDfree(s3cred_src);
+            fapl_id_g = H5Pcreate(H5P_FILE_ACCESS);
             if (FAIL == h5tools_set_configured_fapl(
-                    &fapl_id,
+                    &fapl_id_g,
                     "ros3",
                     &ros3_fa)) 
             {
                 usage();
                 leave(EXIT_FAILURE);
             }
+#endif /* H5_HAVE_ROS3_VFD */
         } else if('-'!=argv[argno][1]) {
             /* Single-letter switches */
             for(s = argv[argno] + 1; *s; s++) {
@@ -2975,21 +2983,29 @@ main(int argc, const char *argv[])
     /* If using S3 file driver but was given no credentials, use anon cred */
     if (preferred_driver
         && !HDstrcmp(preferred_driver, "ros3")
-        && fapl_id == H5P_DEFAULT)
+        && fapl_id_g == H5P_DEFAULT)
     {
+#ifndef H5_HAVE_ROS3_VFD
+        fprintf(stdout, "Read-Only S3 VFD not enabled.\n");
+        fflush(stdout);
+        usage();
+        leave(EXIT_FAILURE);
+#else
         H5FD_ros3_fapl_t ros3_anon_fa;
         if (0 == h5tools_populate_ros3_fapl(&ros3_anon_fa, NULL)) {
             usage();
             leave(EXIT_FAILURE);
         }
+        fapl_id_g = H5Pcreate(H5P_FILE_ACCESS);
         if (FAIL == h5tools_set_configured_fapl(
-                &fapl_id,
+                &fapl_id_g,
                 "ros3",
                 &ros3_anon_fa)) 
         {
             usage();
             leave(EXIT_FAILURE);
         }
+#endif /* H5_HAVE_ROS3_VFD */
     }
 
     /* Turn off HDF5's automatic error printing unless you're debugging h5ls */
@@ -3021,8 +3037,8 @@ main(int argc, const char *argv[])
         file = -1;
 
         while(fname && *fname) {
-            if (preferred_driver && !HDstrcmp(preferred_driver, "ros3")) {
-                file = H5Fopen(fname, H5F_ACC_RDONLY, fapl_id);
+            if (fapl_id_g != H5P_DEFAULT) {
+                file = H5Fopen(fname, H5F_ACC_RDONLY, fapl_id_g);
             } else {
                 file = h5tools_fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT, preferred_driver, drivername, sizeof drivername);
             }
@@ -3138,8 +3154,8 @@ main(int argc, const char *argv[])
             err_exit = 1;
     } /* end while */
 
-    if (fapl_id != H5P_DEFAULT) {
-        if (FAIL == H5Pclose(fapl_id)) {
+    if (fapl_id_g != H5P_DEFAULT) {
+        if (FAIL == H5Pclose(fapl_id_g)) {
             leave(EXIT_FAILURE);
         }
     }

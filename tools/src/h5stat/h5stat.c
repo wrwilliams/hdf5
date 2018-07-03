@@ -1012,6 +1012,10 @@ parse_command_line(int argc, const char *argv[], struct handler_t **hand_ret)
                 break;
 
             case 'w':
+#ifndef H5_HAVE_ROS3_VFD
+                error_msg("Read-Only S3 VFD not enabled.\n");
+                goto error;
+#else
                 {
                     char        *cred_str = NULL;
                     unsigned     nelems   = 0;
@@ -1041,6 +1045,7 @@ parse_command_line(int argc, const char *argv[], struct handler_t **hand_ret)
                 } /* parse s3-cred block */
                 use_ros3 = TRUE;
                 break;
+#endif /* H5_HAVE_ROS3_VFD */
 
             default:
                 usage(h5tools_getprogname());
@@ -1769,6 +1774,10 @@ main(int argc, const char *argv[])
         printf("Filename: %s\n", fname);
 
         if (use_ros3) {
+#ifndef H5_HAVE_ROS3_VFD
+            error_msg("Read-Only S3 VFD not enabled.\n");
+            goto done;
+#else
             hid_t fapl_id = -1;
 
             fapl_id = H5Pcreate(H5P_FILE_ACCESS);
@@ -1786,6 +1795,7 @@ main(int argc, const char *argv[])
                 error_msg("unable to close fapl entry\n");
                 goto done;
             }
+#endif /* H5_HAVE_ROS3_VFD */
         } else {
             fid = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
         }
