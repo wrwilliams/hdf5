@@ -74,6 +74,7 @@ Features:
          I/O filters (external): @EXTERNAL_FILTERS@
                             MPE: @MPE@
                      Direct VFD: @DIRECT_VFD@
+             S3 VFD (Read-Only): @ROS3_VFD@
                         dmalloc: @HAVE_DMALLOC@
  Packages w/ extra debug output: @INTERNAL_DEBUG_OUTPUT@
                     API tracing: @TRACE_API@
