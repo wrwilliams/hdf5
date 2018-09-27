@@ -809,7 +809,7 @@ herr_t
 H5Dvlen_get_buf_size(hid_t dataset_id, hid_t type_id, hid_t space_id,
         hsize_t *size)
 {
-    H5D_vlen_bufsize_t vlen_bufsize = {0, 0, 0, 0, 0, 0, 0};
+    H5D_vlen_bufsize_t vlen_bufsize = {0, 0, 0, 0, 0, 0};
     H5VL_object_t  *vol_obj;       /* Dataset for this operation */
     H5S_t *mspace = NULL;       /* Memory dataspace */
     char bogus;                 /* bogus value to pass to H5Diterate() */
