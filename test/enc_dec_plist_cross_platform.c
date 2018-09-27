@@ -28,10 +28,7 @@ int
 main(void)
 {
     if(VERBOSE_MED)
-	printf("Encode/Decode property list endianess\n");
-
-    printf("SKIPPED until the merge work is complete to avoid property list test file regeneration\n");
-    HDexit(EXIT_SUCCESS);
+        HDprintf("Encode/Decode property list endianess\n");
 
     /******* ENCODE/DECODE DCPLS *****/
     TESTING("Default DCPL Encoding/Decoding");
@@ -230,7 +227,7 @@ test_plists(const char *filename_prefix)
     return 1;
 
 error:
-    printf("***** Plist Encode/Decode tests FAILED! *****\n");
+    HDprintf("***** Plist Encode/Decode tests FAILED! *****\n");
     return -1;
 }
 
