@@ -105,7 +105,6 @@ typedef enum H5VL_datatype_get_t {
 
 /* types for datatype SPECFIC callback */
 typedef enum H5VL_datatype_specific_t {
-    /* XXX: New API calls */
     H5VL_DATATYPE_FLUSH,
     H5VL_DATATYPE_REFRESH
 } H5VL_datatype_specific_t;
@@ -137,7 +136,6 @@ typedef enum H5VL_group_get_t {
 
 /* types for group SPECFIC callback */
 typedef enum H5VL_group_specific_t {
-    /* XXX: New API calls */
     H5VL_GROUP_FLUSH,
     H5VL_GROUP_REFRESH
 } H5VL_group_specific_t;
@@ -176,7 +174,6 @@ typedef enum H5VL_object_specific_t {
     H5VL_OBJECT_EXISTS,                /* H5Oexists_by_name                  */
     H5VL_OBJECT_VISIT,                 /* H5Ovisit(_by_name)                 */
     H5VL_REF_CREATE,                   /* H5Rcreate                          */
-    /* XXX: New API calls */
     H5VL_OBJECT_FLUSH,
     H5VL_OBJECT_REFRESH
 } H5VL_object_specific_t;

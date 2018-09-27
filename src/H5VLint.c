@@ -18,7 +18,6 @@
  *              a specific file format, or remotely on other machines, etc...
  */
 
-/* XXX: Add HDassert calls to all pointers, etc. */
 
 /****************/
 /* Module Setup */
@@ -206,7 +205,7 @@ H5VL_free_cls(H5VL_class_t *cls)
     if (cls->terminate && cls->terminate(H5P_DEFAULT) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTCLOSEOBJ, FAIL, "VOL driver did not terminate cleanly");
 
-    /* XXX: We'll leak memory if the name string was dynamically allocated. */
+    /* XXX (VOL MERGE): We'll leak memory if the name string was dynamically allocated. */
     H5MM_xfree(cls);
 
 done:
@@ -229,7 +228,6 @@ hid_t
 H5VL_register_id(H5I_type_t type, void *object, H5VL_t *vol_driver, hbool_t app_ref)
 {
     H5VL_object_t  *new_obj     = NULL;
-    H5T_t          *dt          = NULL;
     hid_t           ret_value   = H5I_INVALID_HID;
 
     FUNC_ENTER_NOAPI(H5I_INVALID_HID)
@@ -241,12 +239,15 @@ H5VL_register_id(H5I_type_t type, void *object, H5VL_t *vol_driver, hbool_t app_
     /* setup VOL object */
     if (NULL == (new_obj = H5FL_CALLOC(H5VL_object_t)))
         HGOTO_ERROR(H5E_VOL, H5E_CANTALLOC, H5I_INVALID_HID, "can't allocate top object structure");
-    new_obj->vol_info = vol_driver;
-    new_obj->vol_obj = object;
+    new_obj->driver = vol_driver;
+    new_obj->data = object;
 
     vol_driver->nrefs++;
 
     if (H5I_DATATYPE == type) {
+
+        H5T_t *dt = NULL;
+
         if (NULL == (dt = H5T_construct_datatype(new_obj)))
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, H5I_INVALID_HID, "can't construct datatype object");
 
@@ -274,23 +275,24 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_free_object(H5VL_object_t *obj)
+H5VL_free_object(H5VL_object_t *vol_obj)
 {
     herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(SUCCEED)
 
     /* Check arguments */
-    HDassert(obj);
+    HDassert(vol_obj);
 
-    obj->vol_info->nrefs --;
-    if (0 == obj->vol_info->nrefs) {
-        if (H5I_dec_ref(obj->vol_info->vol_id) < 0)
+    vol_obj->driver->nrefs --;
+
+    if (0 == vol_obj->driver->nrefs) {
+        if (H5I_dec_ref(vol_obj->driver->id) < 0)
             HGOTO_ERROR(H5E_VOL, H5E_CANTDEC, FAIL, "unable to decrement ref count on VOL driver");
-        obj->vol_info = H5FL_FREE(H5VL_t, obj->vol_info);
+        vol_obj->driver = H5FL_FREE(H5VL_t, vol_obj->driver);
     }
 
-    obj = H5FL_FREE(H5VL_object_t, obj);
+    vol_obj = H5FL_FREE(H5VL_object_t, vol_obj);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -354,26 +356,26 @@ done:
 hid_t
 H5VL_object_register(void *obj, H5I_type_t obj_type, hid_t driver_id, hbool_t app_ref)
 {
-    H5VL_class_t    *vol_cls = NULL;
-    H5VL_t          *vol_info = NULL;       /* VOL info struct */
+    H5VL_class_t    *cls = NULL;
+    H5VL_t          *driver = NULL;       /* VOL driver struct */
     hid_t           ret_value = H5I_INVALID_HID;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if (NULL == (vol_cls = (H5VL_class_t *)H5I_object_verify(driver_id, H5I_VOL)))
+    if (NULL == (cls = (H5VL_class_t *)H5I_object_verify(driver_id, H5I_VOL)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5I_INVALID_HID, "not a VOL driver ID");
 
-    /* setup VOL info struct */
-    if (NULL == (vol_info = H5FL_CALLOC(H5VL_t)))
-        HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, H5I_INVALID_HID, "can't allocate VL info struct");
-    vol_info->vol_cls = vol_cls;
-    vol_info->vol_id = driver_id;
-    if (H5I_inc_ref(vol_info->vol_id, FALSE) < 0)
+    /* Setup VOL info struct */
+    if (NULL == (driver = H5FL_CALLOC(H5VL_t)))
+        HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, H5I_INVALID_HID, "can't allocate VOL info struct");
+    driver->cls = cls;
+    driver->id = driver_id;
+    if (H5I_inc_ref(driver->id, FALSE) < 0)
         HGOTO_ERROR(H5E_ATOM, H5E_CANTINC, H5I_INVALID_HID, "unable to increment ref count on VOL driver");
 
-    /* Get an atom for the object */
-    if ((ret_value = H5VL_register_id(obj_type, obj, vol_info, app_ref)) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, H5I_INVALID_HID, "unable to atomize object handle");
+    /* Get an ID for the VOL object */
+    if ((ret_value = H5VL_register_id(obj_type, obj, driver, app_ref)) < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, H5I_INVALID_HID, "unable to register object handle");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -393,22 +395,22 @@ done:
 ssize_t
 H5VL_get_driver_name(hid_t id, char *name /*out*/, size_t size)
 {
-    H5VL_object_t       *obj = NULL;
-    const H5VL_class_t  *vol_cls = NULL;
+    H5VL_object_t       *vol_obj = NULL;
+    const H5VL_class_t  *cls = NULL;
     size_t              len;
     ssize_t             ret_value = -1;
 
     FUNC_ENTER_NOAPI(FAIL)
 
     /* get the object pointer */
-    if (NULL == (obj = H5VL_get_object(id)))
+    if (NULL == (vol_obj = H5VL_get_object(id)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier");
 
-    vol_cls = obj->vol_info->vol_cls;
+    cls = vol_obj->driver->cls;
 
-    len = HDstrlen(vol_cls->name);
+    len = HDstrlen(cls->name);
     if (name) {
-        HDstrncpy(name, vol_cls->name, MIN(len + 1,size));
+        HDstrncpy(name, cls->name, MIN(len + 1,size));
         if (len >= size)
             name[size-1]='\0';
     }
@@ -479,7 +481,7 @@ done:
 void *
 H5VL_object(hid_t id)
 {
-    H5VL_object_t   *obj = NULL;    
+    H5VL_object_t   *vol_obj = NULL;    
     void            *ret_value = NULL;
 
     FUNC_ENTER_NOAPI(NULL)
@@ -491,10 +493,10 @@ H5VL_object(hid_t id)
         case H5I_FILE:            
         case H5I_ATTR:
             /* get the object */
-            if (NULL == (obj = (H5VL_object_t *)H5I_object(id)))
+            if (NULL == (vol_obj = (H5VL_object_t *)H5I_object(id)))
                 HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "invalid identifier");
 
-            ret_value = obj->vol_obj;
+            ret_value = vol_obj->data;
             break;
         case H5I_DATATYPE:
             {
@@ -505,10 +507,10 @@ H5VL_object(hid_t id)
                     HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "invalid identifier");
 
                 /* Get the actual datatype object that should be the vol_obj */
-                if (NULL == (obj = H5T_get_named_type(dt)))
+                if (NULL == (vol_obj = H5T_get_named_type(dt)))
                     HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a named datatype");
 
-                ret_value = obj->vol_obj;
+                ret_value = vol_obj->data;
                 break;
             }
         case H5I_UNINIT:
@@ -545,7 +547,7 @@ done:
 void *
 H5VL_object_verify(hid_t id, H5I_type_t obj_type)
 {
-    H5VL_object_t   *obj = NULL;    
+    H5VL_object_t   *vol_obj = NULL;    
     void            *ret_value = NULL;
 
     FUNC_ENTER_NOAPI(NULL)
@@ -557,10 +559,10 @@ H5VL_object_verify(hid_t id, H5I_type_t obj_type)
         case H5I_FILE:            
         case H5I_ATTR:
             /* get the object */
-            if (NULL == (obj = (H5VL_object_t *)H5I_object_verify(id, obj_type)))
+            if (NULL == (vol_obj = (H5VL_object_t *)H5I_object_verify(id, obj_type)))
                 HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "invalid identifier");
 
-            ret_value = obj->vol_obj;
+            ret_value = vol_obj->data;
             break;
         case H5I_DATATYPE:
             {
@@ -571,10 +573,10 @@ H5VL_object_verify(hid_t id, H5I_type_t obj_type)
                     HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "invalid identifier");
 
                 /* Get the actual datatype object that should be the vol_obj */
-                if (NULL == (obj = H5T_get_named_type(dt)))
+                if (NULL == (vol_obj = H5T_get_named_type(dt)))
                     HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a named datatype");
 
-                ret_value = obj->vol_obj;
+                ret_value = vol_obj->data;
                 break;
             }
         case H5I_UNINIT:
@@ -597,13 +599,13 @@ done:
 } /* end H5VL_object_verify() */
 
 
-/* XXX: This could be a macro like in H5F */
+/* XXX (VOL MERGE): This could be a macro like in H5F */
 void *
-H5VL_driver_object(H5VL_object_t *obj)
+H5VL_driver_object(H5VL_object_t *vol_obj)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    FUNC_LEAVE_NOAPI(obj->vol_obj)
+    FUNC_LEAVE_NOAPI(vol_obj->data)
 } /* end H5VL_driver_object() */
 
 
@@ -619,7 +621,7 @@ H5VL_driver_object(H5VL_object_t *obj)
  *-------------------------------------------------------------------------
  */
 void *
-H5VL_attr_create(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_cls, const char *name, 
+H5VL_attr_create(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *cls, const char *name, 
                  hid_t acpl_id, hid_t aapl_id, hid_t dxpl_id, void **req)
 {
     void *ret_value;  /* Return value */
@@ -627,11 +629,11 @@ H5VL_attr_create(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vo
     FUNC_ENTER_NOAPI(NULL)
 
     /* check if the corresponding VOL create callback exists */
-    if (NULL == vol_cls->attr_cls.create)
+    if (NULL == cls->attr_cls.create)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, NULL, "VOL driver has no 'attr create' method")
 
     /* call the corresponding VOL create callback */
-    if (NULL == (ret_value = (vol_cls->attr_cls.create) 
+    if (NULL == (ret_value = (cls->attr_cls.create) 
                 (obj, loc_params, name, acpl_id, aapl_id, dxpl_id, req)))
         HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, NULL, "create failed")
 
@@ -652,7 +654,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5VL_attr_open(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_cls, const char *name, 
+H5VL_attr_open(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *cls, const char *name, 
                hid_t aapl_id, hid_t dxpl_id, void **req)
 {
     void *ret_value;  /* Return value */
@@ -660,11 +662,11 @@ H5VL_attr_open(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_
     FUNC_ENTER_NOAPI(NULL)
 
     /* check if the type specific corresponding VOL open callback exists */
-    if(NULL == vol_cls->attr_cls.open)
+    if(NULL == cls->attr_cls.open)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, NULL, "VOL driver has no 'attr open' method")
 
     /* call the corresponding VOL open callback */
-    if(NULL == (ret_value = (vol_cls->attr_cls.open) 
+    if(NULL == (ret_value = (cls->attr_cls.open) 
                 (obj, loc_params, name, aapl_id, dxpl_id, req)))
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPENOBJ, NULL, "attribute open failed")
 
@@ -684,16 +686,16 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5VL_attr_read(void *attr, const H5VL_class_t *vol_cls, hid_t mem_type_id, void *buf, 
+herr_t H5VL_attr_read(void *attr, const H5VL_class_t *cls, hid_t mem_type_id, void *buf, 
                       hid_t dxpl_id, void **req)
 {
     herr_t              ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->attr_cls.read)
+    if(NULL == cls->attr_cls.read)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'attr read' method")
-    if((ret_value = (vol_cls->attr_cls.read)(attr, mem_type_id, buf, dxpl_id, req)) < 0)
+    if((ret_value = (cls->attr_cls.read)(attr, mem_type_id, buf, dxpl_id, req)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTRELEASE, FAIL, "read failed")
 
 done:
@@ -712,16 +714,16 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5VL_attr_write(void *attr, const H5VL_class_t *vol_cls, hid_t mem_type_id, const void *buf, 
+herr_t H5VL_attr_write(void *attr, const H5VL_class_t *cls, hid_t mem_type_id, const void *buf, 
                        hid_t dxpl_id, void **req)
 {
     herr_t              ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->attr_cls.write)
+    if(NULL == cls->attr_cls.write)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'attr write' method")
-    if((ret_value = (vol_cls->attr_cls.write)(attr, mem_type_id, buf, dxpl_id, req)) < 0)
+    if((ret_value = (cls->attr_cls.write)(attr, mem_type_id, buf, dxpl_id, req)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTRELEASE, FAIL, "write failed")
 
 done:
@@ -741,7 +743,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_attr_get(void *obj, const H5VL_class_t *vol_cls, H5VL_attr_get_t get_type, 
+H5VL_attr_get(void *obj, const H5VL_class_t *cls, H5VL_attr_get_t get_type, 
               hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
@@ -749,11 +751,11 @@ H5VL_attr_get(void *obj, const H5VL_class_t *vol_cls, H5VL_attr_get_t get_type,
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->attr_cls.get)
+    if(NULL == cls->attr_cls.get)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'attr get' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->attr_cls.get)(obj, get_type, dxpl_id, req, arguments)) < 0)
+    if((ret_value = (cls->attr_cls.get)(obj, get_type, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTGET, FAIL, "get failed")
     va_end (arguments);
 
@@ -774,7 +776,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_attr_specific(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_cls, 
+H5VL_attr_specific(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *cls, 
                    H5VL_attr_specific_t specific_type, hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
@@ -782,11 +784,11 @@ H5VL_attr_specific(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->attr_cls.specific)
+    if(NULL == cls->attr_cls.specific)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'attr specific' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->attr_cls.specific)(obj, loc_params, specific_type, dxpl_id, req, arguments)) < 0)
+    if((ret_value = (cls->attr_cls.specific)(obj, loc_params, specific_type, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPERATE, FAIL, "Unable to execute attribute specific callback")
     va_end (arguments);
 
@@ -807,18 +809,18 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_attr_optional(void *obj, const H5VL_class_t *vol_cls, hid_t dxpl_id, void **req, ...)
+H5VL_attr_optional(void *obj, const H5VL_class_t *cls, hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
     herr_t            ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->attr_cls.optional)
+    if(NULL == cls->attr_cls.optional)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'attr optional' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->attr_cls.optional)(obj, dxpl_id, req, arguments)) < 0)
+    if((ret_value = (cls->attr_cls.optional)(obj, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPERATE, FAIL, "Unable to execute attribute optional callback")
     va_end (arguments);
 
@@ -837,21 +839,21 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_attr_close(void *attr, const H5VL_class_t *vol_cls, hid_t dxpl_id, void **req)
+H5VL_attr_close(void *attr, const H5VL_class_t *cls, hid_t dxpl_id, void **req)
 {
     herr_t ret_value = SUCCEED;
 
     HDassert(attr);
-    HDassert(vol_cls);
+    HDassert(cls);
 
     FUNC_ENTER_NOAPI(FAIL)
             
     /* Check if the corresponding VOL callback exists */
-    if (NULL == vol_cls->attr_cls.close)
+    if (NULL == cls->attr_cls.close)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'attr close' method");
 
     /* Call the corresponding VOL callback */
-    if ((ret_value = (vol_cls->attr_cls.close)(attr, dxpl_id, req)) < 0)
+    if ((ret_value = (cls->attr_cls.close)(attr, dxpl_id, req)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTRELEASE, FAIL, "close failed");
 
 done:
@@ -871,7 +873,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5VL_dataset_create(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_cls, const char *name, 
+H5VL_dataset_create(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *cls, const char *name, 
                     hid_t dcpl_id, hid_t dapl_id, hid_t dxpl_id, void **req)
 {
     void *ret_value; /* Return value */
@@ -879,11 +881,11 @@ H5VL_dataset_create(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t 
     FUNC_ENTER_NOAPI(NULL)
 
     /* check if the corresponding VOL create callback exists */
-    if(NULL == vol_cls->dataset_cls.create)
+    if(NULL == cls->dataset_cls.create)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, NULL, "VOL driver has no 'dataset create' method")
 
     /* call the corresponding VOL create callback */
-    if(NULL == (ret_value = (vol_cls->dataset_cls.create)
+    if(NULL == (ret_value = (cls->dataset_cls.create)
                 (obj, loc_params, name, dcpl_id, dapl_id, dxpl_id, req)))
         HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, NULL, "create failed")
 
@@ -904,7 +906,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5VL_dataset_open(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_cls, const char *name, 
+H5VL_dataset_open(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *cls, const char *name, 
                   hid_t dapl_id, hid_t dxpl_id, void **req)
 {
     void *ret_value; /* Return value */
@@ -912,11 +914,11 @@ H5VL_dataset_open(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *v
     FUNC_ENTER_NOAPI(NULL)
 
     /* check if the type specific corresponding VOL open callback exists */
-    if(NULL == vol_cls->dataset_cls.open)
+    if(NULL == cls->dataset_cls.open)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, NULL, "VOL driver has no 'dset open' method")
 
     /* call the corresponding VOL open callback */
-    if(NULL == (ret_value = (vol_cls->dataset_cls.open)
+    if(NULL == (ret_value = (cls->dataset_cls.open)
                 (obj, loc_params, name, dapl_id, dxpl_id, req)))
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPENOBJ, NULL, "open failed")
 
@@ -937,16 +939,16 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5VL_dataset_read(void *dset, const H5VL_class_t *vol_cls, hid_t mem_type_id, hid_t mem_space_id, 
+H5VL_dataset_read(void *dset, const H5VL_class_t *cls, hid_t mem_type_id, hid_t mem_space_id, 
                   hid_t file_space_id, hid_t plist_id, void *buf, void **req)
 {
     herr_t              ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->dataset_cls.read)
+    if(NULL == cls->dataset_cls.read)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'dataset read' method")
-    if((ret_value = (vol_cls->dataset_cls.read)
+    if((ret_value = (cls->dataset_cls.read)
         (dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_READERROR, FAIL, "read failed")
 
@@ -967,16 +969,16 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5VL_dataset_write(void *dset, const H5VL_class_t *vol_cls, hid_t mem_type_id, hid_t mem_space_id, 
+H5VL_dataset_write(void *dset, const H5VL_class_t *cls, hid_t mem_type_id, hid_t mem_space_id, 
                    hid_t file_space_id, hid_t plist_id, const void *buf, void **req)
 {
     herr_t              ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->dataset_cls.write)
+    if(NULL == cls->dataset_cls.write)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'dataset write' method")
-    if((ret_value = (vol_cls->dataset_cls.write)
+    if((ret_value = (cls->dataset_cls.write)
         (dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_WRITEERROR, FAIL, "write failed")
 
@@ -997,7 +999,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_dataset_get(void *dset, const H5VL_class_t *vol_cls, H5VL_dataset_get_t get_type, 
+H5VL_dataset_get(void *dset, const H5VL_class_t *cls, H5VL_dataset_get_t get_type, 
                  hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
@@ -1005,11 +1007,11 @@ H5VL_dataset_get(void *dset, const H5VL_class_t *vol_cls, H5VL_dataset_get_t get
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->dataset_cls.get)
+    if(NULL == cls->dataset_cls.get)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'dataset get' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->dataset_cls.get)(dset, get_type, dxpl_id, req, arguments)) < 0)
+    if((ret_value = (cls->dataset_cls.get)(dset, get_type, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTGET, FAIL, "get failed")
     va_end (arguments);
 
@@ -1030,7 +1032,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_dataset_specific(void *obj, const H5VL_class_t *vol_cls, H5VL_dataset_specific_t specific_type, 
+H5VL_dataset_specific(void *obj, const H5VL_class_t *cls, H5VL_dataset_specific_t specific_type, 
                        hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
@@ -1038,11 +1040,11 @@ H5VL_dataset_specific(void *obj, const H5VL_class_t *vol_cls, H5VL_dataset_speci
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->dataset_cls.specific)
+    if(NULL == cls->dataset_cls.specific)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'dataset specific' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->dataset_cls.specific)
+    if((ret_value = (cls->dataset_cls.specific)
         (obj, specific_type, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPERATE, FAIL, "Unable to execute dataset specific callback")
     va_end (arguments);
@@ -1064,18 +1066,18 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_dataset_optional(void *obj, const H5VL_class_t *vol_cls, hid_t dxpl_id, void **req, ...)
+H5VL_dataset_optional(void *obj, const H5VL_class_t *cls, hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
     herr_t            ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->dataset_cls.optional)
+    if(NULL == cls->dataset_cls.optional)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'dataset optional' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->dataset_cls.optional)(obj, dxpl_id, req, arguments)) < 0)
+    if((ret_value = (cls->dataset_cls.optional)(obj, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPERATE, FAIL, "Unable to execute dataset optional callback")
     va_end (arguments);
 
@@ -1094,21 +1096,21 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_dataset_close(void *dset, const H5VL_class_t *vol_cls, hid_t dxpl_id, void **req)
+H5VL_dataset_close(void *dset, const H5VL_class_t *cls, hid_t dxpl_id, void **req)
 {
     herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
     HDassert(dset);
-    HDassert(vol_cls);
+    HDassert(cls);
 
     /* Check if the corresponding VOL callback exists */
-    if (NULL == vol_cls->dataset_cls.close)
+    if (NULL == cls->dataset_cls.close)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'dset close' method");
 
     /* Call the corresponding VOL callback */
-    if ((ret_value = (vol_cls->dataset_cls.close)(dset, dxpl_id, req)) < 0)
+    if ((ret_value = (cls->dataset_cls.close)(dset, dxpl_id, req)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTRELEASE, FAIL, "close failed");
 
 done:
@@ -1129,7 +1131,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5VL_file_create(const H5VL_class_t *vol_cls, const char *name, unsigned flags, hid_t fcpl_id, 
+H5VL_file_create(const H5VL_class_t *cls, const char *name, unsigned flags, hid_t fcpl_id, 
                  hid_t fapl_id, hid_t dxpl_id, void **req)
 {
     void *ret_value = NULL;             /* Return value */
@@ -1137,10 +1139,10 @@ H5VL_file_create(const H5VL_class_t *vol_cls, const char *name, unsigned flags, 
     FUNC_ENTER_NOAPI(NULL)
 
     /* check if the corresponding VOL create callback exists */
-    if(NULL == vol_cls->file_cls.create)
+    if(NULL == cls->file_cls.create)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, NULL, "VOL driver has no 'file create' method")
     /* call the corresponding VOL create callback */
-    if(NULL == (ret_value = (vol_cls->file_cls.create)(name, flags, fcpl_id, fapl_id, dxpl_id, req)))
+    if(NULL == (ret_value = (cls->file_cls.create)(name, flags, fcpl_id, fapl_id, dxpl_id, req)))
         HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, NULL, "create failed")
 
 done:
@@ -1160,7 +1162,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5VL_file_open(const H5VL_class_t *vol_cls, const char *name, unsigned flags, hid_t fapl_id, 
+H5VL_file_open(const H5VL_class_t *cls, const char *name, unsigned flags, hid_t fapl_id, 
                hid_t dxpl_id, void **req)
 {
     void *ret_value = NULL;             /* Return value */
@@ -1168,10 +1170,10 @@ H5VL_file_open(const H5VL_class_t *vol_cls, const char *name, unsigned flags, hi
     FUNC_ENTER_NOAPI(NULL)
 
     /* check if the corresponding VOL create callback exists */
-    if(NULL == vol_cls->file_cls.open)
+    if(NULL == cls->file_cls.open)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, NULL, "VOL driver has no 'file open' method")
     /* call the corresponding VOL create callback */
-    if(NULL == (ret_value = (vol_cls->file_cls.open)(name, flags, fapl_id, dxpl_id, req)))
+    if(NULL == (ret_value = (cls->file_cls.open)(name, flags, fapl_id, dxpl_id, req)))
         HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, NULL, "open failed")
 
 done:
@@ -1191,7 +1193,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_file_get(void *file, const H5VL_class_t *vol_cls, H5VL_file_get_t get_type, 
+H5VL_file_get(void *file, const H5VL_class_t *cls, H5VL_file_get_t get_type, 
               hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
@@ -1199,11 +1201,11 @@ H5VL_file_get(void *file, const H5VL_class_t *vol_cls, H5VL_file_get_t get_type,
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->file_cls.get)
+    if(NULL == cls->file_cls.get)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'file get' method")
 
     va_start(arguments, req);
-    if((ret_value = (vol_cls->file_cls.get)(file, get_type, dxpl_id, req, arguments)) < 0)
+    if((ret_value = (cls->file_cls.get)(file, get_type, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTGET, FAIL, "get failed")
     va_end(arguments);
 
@@ -1223,7 +1225,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_file_specific(void *file, const H5VL_class_t *vol_cls, H5VL_file_specific_t specific_type, 
+H5VL_file_specific(void *file, const H5VL_class_t *cls, H5VL_file_specific_t specific_type, 
                    hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
@@ -1248,21 +1250,21 @@ H5VL_file_specific(void *file, const H5VL_class_t *vol_cls, H5VL_file_specific_t
         if(H5P_peek(plist, H5F_ACS_VOL_DRV_NAME, &driver_prop) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get VOL driver info")
 
-        if(NULL == (vol_cls = (H5VL_class_t *)H5I_object_verify(driver_prop.driver_id, H5I_VOL)))
+        if(NULL == (cls = (H5VL_class_t *)H5I_object_verify(driver_prop.driver_id, H5I_VOL)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a VOL driver ID")
 
         va_start (arguments, req);
-        if((ret_value = (vol_cls->file_cls.specific)
+        if((ret_value = (cls->file_cls.specific)
             (file, specific_type, dxpl_id, req, arguments)) < 0)
             HGOTO_ERROR(H5E_VOL, H5E_CANTGET, FAIL, "specific failed")
         va_end (arguments);
     }
     else {
-        if(NULL == vol_cls->file_cls.specific)
+        if(NULL == cls->file_cls.specific)
             HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'file specific' method")
 
         va_start (arguments, req);
-        if((ret_value = (vol_cls->file_cls.specific)
+        if((ret_value = (cls->file_cls.specific)
             (file, specific_type, dxpl_id, req, arguments)) < 0)
             HGOTO_ERROR(H5E_VOL, H5E_CANTGET, FAIL, "specific failed")
         va_end (arguments);
@@ -1284,18 +1286,18 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_file_optional(void *file, const H5VL_class_t *vol_cls, hid_t dxpl_id, void **req, ...)
+H5VL_file_optional(void *file, const H5VL_class_t *cls, hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
     herr_t            ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->file_cls.optional)
+    if(NULL == cls->file_cls.optional)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'file optional' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->file_cls.optional)(file, dxpl_id, req, arguments)) < 0)
+    if((ret_value = (cls->file_cls.optional)(file, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTGET, FAIL, "optional failed")
     va_end (arguments);
 
@@ -1314,21 +1316,21 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_file_close(void *file, const H5VL_class_t *vol_cls, hid_t dxpl_id, void **req)
+H5VL_file_close(void *file, const H5VL_class_t *cls, hid_t dxpl_id, void **req)
 {
     herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
     HDassert(file);
-    HDassert(vol_cls);
+    HDassert(cls);
 
     /* Check if the corresponding VOL callback exists */
-    if (NULL == vol_cls->file_cls.close)
+    if (NULL == cls->file_cls.close)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'file close' method");
 
     /* Call the corresponding VOL callback */
-    if ((ret_value = (vol_cls->file_cls.close)(file, dxpl_id, req)) < 0)
+    if ((ret_value = (cls->file_cls.close)(file, dxpl_id, req)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTCLOSEFILE, FAIL, "close failed");
 
 done:
@@ -1348,7 +1350,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5VL_group_create(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_cls, const char *name, 
+H5VL_group_create(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *cls, const char *name, 
                   hid_t gcpl_id, hid_t gapl_id, hid_t dxpl_id, void **req)
 {
     void *ret_value = NULL; /* Return value */
@@ -1356,11 +1358,11 @@ H5VL_group_create(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *v
     FUNC_ENTER_NOAPI(NULL)
 
     /* check if the corresponding VOL create callback exists */
-    if(NULL == vol_cls->group_cls.create)
+    if(NULL == cls->group_cls.create)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, NULL, "VOL driver has no 'group create' method")
 
     /* call the corresponding VOL create callback */
-    if(NULL == (ret_value = (vol_cls->group_cls.create)
+    if(NULL == (ret_value = (cls->group_cls.create)
                 (obj, loc_params, name, gcpl_id, gapl_id, dxpl_id, req)))
         HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, NULL, "create failed")
 
@@ -1381,17 +1383,17 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5VL_group_open(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_cls, const char *name, 
+H5VL_group_open(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *cls, const char *name, 
                 hid_t gapl_id, hid_t dxpl_id, void **req)
 {
     void *ret_value; /* Return value */
 
     FUNC_ENTER_NOAPI(NULL)
 
-    if(NULL == vol_cls->group_cls.open)
+    if(NULL == cls->group_cls.open)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, NULL, "VOL driver has no 'group open' method")
 
-    if(NULL == (ret_value = (vol_cls->group_cls.open)
+    if(NULL == (ret_value = (cls->group_cls.open)
                 (obj, loc_params, name, gapl_id, dxpl_id, req)))
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPENOBJ, NULL, "open failed")
 
@@ -1412,7 +1414,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_group_get(void *obj, const H5VL_class_t *vol_cls, H5VL_group_get_t get_type, 
+H5VL_group_get(void *obj, const H5VL_class_t *cls, H5VL_group_get_t get_type, 
                hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
@@ -1420,11 +1422,11 @@ H5VL_group_get(void *obj, const H5VL_class_t *vol_cls, H5VL_group_get_t get_type
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->group_cls.get)
+    if(NULL == cls->group_cls.get)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'group get' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->group_cls.get)
+    if((ret_value = (cls->group_cls.get)
         (obj, get_type, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTGET, FAIL, "get failed")
     va_end (arguments);
@@ -1446,7 +1448,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_group_specific(void *obj, const H5VL_class_t *vol_cls, H5VL_group_specific_t specific_type, 
+H5VL_group_specific(void *obj, const H5VL_class_t *cls, H5VL_group_specific_t specific_type, 
                        hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
@@ -1454,11 +1456,11 @@ H5VL_group_specific(void *obj, const H5VL_class_t *vol_cls, H5VL_group_specific_
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->group_cls.specific)
+    if(NULL == cls->group_cls.specific)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'group specific' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->group_cls.specific)
+    if((ret_value = (cls->group_cls.specific)
         (obj, specific_type, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPERATE, FAIL, "Unable to execute group specific callback")
     va_end (arguments);
@@ -1480,18 +1482,18 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_group_optional(void *obj, const H5VL_class_t *vol_cls, hid_t dxpl_id, void **req, ...)
+H5VL_group_optional(void *obj, const H5VL_class_t *cls, hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
     herr_t            ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->group_cls.optional)
+    if(NULL == cls->group_cls.optional)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'group optional' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->group_cls.optional)(obj, dxpl_id, req, arguments)) < 0)
+    if((ret_value = (cls->group_cls.optional)(obj, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPERATE, FAIL, "Unable to execute group optional callback")
     va_end (arguments);
 
@@ -1510,21 +1512,21 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_group_close(void *grp, const H5VL_class_t *vol_cls, hid_t dxpl_id, void **req)
+H5VL_group_close(void *grp, const H5VL_class_t *cls, hid_t dxpl_id, void **req)
 {
     herr_t ret_value = SUCCEED;
 
     HDassert(grp);
-    HDassert(vol_cls);
+    HDassert(cls);
 
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check if the corresponding VOL callback exists */
-    if (NULL == vol_cls->group_cls.close)
+    if (NULL == cls->group_cls.close)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'group close' method");
 
     /* Call the corresponding VOL callback */
-    if ((ret_value = (vol_cls->group_cls.close)(grp, dxpl_id, req)) < 0)
+    if ((ret_value = (cls->group_cls.close)(grp, dxpl_id, req)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTRELEASE, FAIL, "close failed");
 
 done:
@@ -1543,17 +1545,17 @@ done:
  */
 herr_t
 H5VL_link_create(H5VL_link_create_type_t create_type, void *obj, H5VL_loc_params_t loc_params, 
-                 const H5VL_class_t *vol_cls, hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id, void **req)
+                 const H5VL_class_t *cls, hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id, void **req)
 {
     herr_t               ret_value = SUCCEED;  /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
     /* check if the corresponding VOL create callback exists */
-    if(NULL == vol_cls->link_cls.create)
+    if(NULL == cls->link_cls.create)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'link create' method")
     /* call the corresponding VOL create callback */
-    if((ret_value = (vol_cls->link_cls.create)
+    if((ret_value = (cls->link_cls.create)
         (create_type, obj, loc_params, lcpl_id, lapl_id, dxpl_id, req)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, FAIL, "link create failed")
 
@@ -1573,7 +1575,7 @@ done:
  */
 herr_t 
 H5VL_link_copy(void *src_obj, H5VL_loc_params_t loc_params1, void *dst_obj,
-               H5VL_loc_params_t loc_params2, const H5VL_class_t *vol_cls,  
+               H5VL_loc_params_t loc_params2, const H5VL_class_t *cls,  
                hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id, void **req)
 {
     herr_t               ret_value = SUCCEED;  /* Return value */
@@ -1581,11 +1583,11 @@ H5VL_link_copy(void *src_obj, H5VL_loc_params_t loc_params1, void *dst_obj,
     FUNC_ENTER_NOAPI(FAIL)
 
     /* check if the corresponding VOL copy callback exists */
-    if(NULL == vol_cls->link_cls.copy)
+    if(NULL == cls->link_cls.copy)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'link copy' method")
 
     /* call the corresponding VOL copy callback */
-    if((ret_value = (vol_cls->link_cls.copy)
+    if((ret_value = (cls->link_cls.copy)
         (src_obj, loc_params1, dst_obj, loc_params2, lcpl_id, 
          lapl_id, dxpl_id, req)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, FAIL, "link copy failed")
@@ -1606,7 +1608,7 @@ done:
  */
 herr_t 
 H5VL_link_move(void *src_obj, H5VL_loc_params_t loc_params1, void *dst_obj,
-               H5VL_loc_params_t loc_params2, const H5VL_class_t *vol_cls,  
+               H5VL_loc_params_t loc_params2, const H5VL_class_t *cls,  
                hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id, void **req)
 {
     herr_t               ret_value = SUCCEED;  /* Return value */
@@ -1614,11 +1616,11 @@ H5VL_link_move(void *src_obj, H5VL_loc_params_t loc_params1, void *dst_obj,
     FUNC_ENTER_NOAPI(FAIL)
 
     /* check if the corresponding VOL move callback exists */
-    if(NULL == vol_cls->link_cls.move)
+    if(NULL == cls->link_cls.move)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'link move' method")
 
     /* call the corresponding VOL move callback */
-    if((ret_value = (vol_cls->link_cls.move)
+    if((ret_value = (cls->link_cls.move)
         (src_obj, loc_params1, dst_obj, loc_params2, lcpl_id, 
          lapl_id, dxpl_id, req)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, FAIL, "link move failed")
@@ -1640,7 +1642,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_link_get(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_cls, H5VL_link_get_t get_type, 
+H5VL_link_get(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *cls, H5VL_link_get_t get_type, 
               hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
@@ -1648,11 +1650,11 @@ H5VL_link_get(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_c
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->link_cls.get)
+    if(NULL == cls->link_cls.get)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'link get' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->link_cls.get)
+    if((ret_value = (cls->link_cls.get)
         (obj, loc_params, get_type, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTGET, FAIL, "get failed")
     va_end (arguments);
@@ -1674,7 +1676,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_link_specific(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_cls, 
+H5VL_link_specific(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *cls, 
                    H5VL_link_specific_t specific_type, hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
@@ -1682,11 +1684,11 @@ H5VL_link_specific(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->link_cls.specific)
+    if(NULL == cls->link_cls.specific)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'link specific' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->link_cls.specific)
+    if((ret_value = (cls->link_cls.specific)
         (obj, loc_params, specific_type, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPERATE, FAIL, "Unable to execute link specific callback")
     va_end (arguments);
@@ -1708,18 +1710,18 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_link_optional(void *obj, const H5VL_class_t *vol_cls, hid_t dxpl_id, void **req, ...)
+H5VL_link_optional(void *obj, const H5VL_class_t *cls, hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
     herr_t            ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->link_cls.optional)
+    if(NULL == cls->link_cls.optional)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'link optional' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->link_cls.optional)(obj, dxpl_id, req, arguments)) < 0)
+    if((ret_value = (cls->link_cls.optional)(obj, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPERATE, FAIL, "Unable to execute link optional callback")
     va_end (arguments);
 
@@ -1740,7 +1742,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5VL_object_open(void *obj, H5VL_loc_params_t params, const H5VL_class_t *vol_cls, H5I_type_t *opened_type,
+H5VL_object_open(void *obj, H5VL_loc_params_t params, const H5VL_class_t *cls, H5I_type_t *opened_type,
                  hid_t dxpl_id, void **req)
 {
     void *ret_value;              /* Return value */
@@ -1748,11 +1750,11 @@ H5VL_object_open(void *obj, H5VL_loc_params_t params, const H5VL_class_t *vol_cl
     FUNC_ENTER_NOAPI(NULL)
 
     /* check if the corresponding VOL open callback exists */
-    if(NULL == vol_cls->object_cls.open)
+    if(NULL == cls->object_cls.open)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, NULL, "VOL driver has no 'object open' method")
 
     /* call the corresponding VOL open callback */
-    if(NULL == (ret_value = (vol_cls->object_cls.open)
+    if(NULL == (ret_value = (cls->object_cls.open)
                 (obj, params, opened_type, dxpl_id, req)))
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPENOBJ, NULL, "open failed")
 
@@ -1772,8 +1774,8 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5VL_object_copy(void *src_obj, H5VL_loc_params_t loc_params1, const H5VL_class_t *vol_cls1, const char *src_name, 
-                 void *dst_obj, H5VL_loc_params_t loc_params2, const H5VL_class_t *vol_cls2, const char *dst_name, 
+H5VL_object_copy(void *src_obj, H5VL_loc_params_t loc_params1, const H5VL_class_t *cls1, const char *src_name, 
+                 void *dst_obj, H5VL_loc_params_t loc_params2, const H5VL_class_t *cls2, const char *dst_name, 
                  hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id, void **req)
 {
     herr_t              ret_value = SUCCEED;
@@ -1781,13 +1783,13 @@ H5VL_object_copy(void *src_obj, H5VL_loc_params_t loc_params1, const H5VL_class_
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Make sure that the VOL drivers are the same */
-    if (vol_cls1->value != vol_cls2->value)
+    if (cls1->value != cls2->value)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "Objects are accessed through different VOL drivers and can't be linked")
 
-    if(NULL == vol_cls1->object_cls.copy)
+    if(NULL == cls1->object_cls.copy)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'object copy' method")
 
-    if((ret_value = (vol_cls1->object_cls.copy)
+    if((ret_value = (cls1->object_cls.copy)
         (src_obj, loc_params1, src_name, dst_obj, loc_params2, dst_name, ocpypl_id, 
          lcpl_id, dxpl_id, req)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTRELEASE, FAIL, "copy failed")
@@ -1809,7 +1811,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_object_get(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_cls, H5VL_object_get_t get_type, 
+H5VL_object_get(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *cls, H5VL_object_get_t get_type, 
                 hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
@@ -1817,11 +1819,11 @@ H5VL_object_get(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->object_cls.get)
+    if(NULL == cls->object_cls.get)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'object get' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->object_cls.get)
+    if((ret_value = (cls->object_cls.get)
         (obj, loc_params, get_type, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTGET, FAIL, "get failed")
     va_end (arguments);
@@ -1842,7 +1844,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_object_specific(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_cls, 
+H5VL_object_specific(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *cls, 
                      H5VL_object_specific_t specific_type, hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
@@ -1850,11 +1852,11 @@ H5VL_object_specific(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->object_cls.specific)
+    if(NULL == cls->object_cls.specific)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'object specific' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->object_cls.specific)
+    if((ret_value = (cls->object_cls.specific)
         (obj, loc_params, specific_type, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTGET, FAIL, "specific failed")
     va_end (arguments);
@@ -1876,18 +1878,18 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_object_optional(void *obj, const H5VL_class_t *vol_cls, hid_t dxpl_id, void **req, ...)
+H5VL_object_optional(void *obj, const H5VL_class_t *cls, hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
     herr_t            ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->object_cls.optional)
+    if(NULL == cls->object_cls.optional)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'object optional' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->object_cls.optional)(obj, dxpl_id, req, arguments)) < 0)
+    if((ret_value = (cls->object_cls.optional)(obj, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPERATE, FAIL, "Unable to execute object optional callback")
     va_end (arguments);
 
@@ -1908,7 +1910,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5VL_datatype_commit(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_cls, const char *name, 
+H5VL_datatype_commit(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *cls, const char *name, 
                      hid_t type_id, hid_t lcpl_id, hid_t tcpl_id, hid_t tapl_id, 
                      hid_t dxpl_id, void **req)
 {
@@ -1917,11 +1919,11 @@ H5VL_datatype_commit(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t
     FUNC_ENTER_NOAPI(NULL)
 
     /* check if the corresponding VOL commit callback exists */
-    if(NULL == vol_cls->datatype_cls.commit)
+    if(NULL == cls->datatype_cls.commit)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, NULL, "VOL driver has no 'datatype commit' method")
 
     /* call the corresponding VOL commit callback */
-    if(NULL == (ret_value = (vol_cls->datatype_cls.commit) 
+    if(NULL == (ret_value = (cls->datatype_cls.commit) 
         (obj, loc_params, name, type_id, lcpl_id, tcpl_id, tapl_id, dxpl_id, req)))
         HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, NULL, "commit failed")
 
@@ -1942,7 +1944,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5VL_datatype_open(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *vol_cls, const char *name, 
+H5VL_datatype_open(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *cls, const char *name, 
                    hid_t tapl_id, hid_t dxpl_id, void **req)
 {
     void *ret_value = NULL;              /* Return value */
@@ -1950,11 +1952,11 @@ H5VL_datatype_open(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *
     FUNC_ENTER_NOAPI(NULL)
 
     /* check if the type specific corresponding VOL open callback exists */
-    if(NULL == vol_cls->datatype_cls.open)
+    if(NULL == cls->datatype_cls.open)
         HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, NULL, "no datatype open callback");
 
     /* call the corresponding VOL open callback */
-    if(NULL == (ret_value = (vol_cls->datatype_cls.open)
+    if(NULL == (ret_value = (cls->datatype_cls.open)
                 (obj, loc_params, name, tapl_id, dxpl_id, req)))
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPENOBJ, NULL, "open failed")
 
@@ -1973,7 +1975,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_datatype_get(void *obj, const H5VL_class_t *vol_cls, H5VL_datatype_get_t get_type, 
+H5VL_datatype_get(void *obj, const H5VL_class_t *cls, H5VL_datatype_get_t get_type, 
                   hid_t dxpl_id, void **req, ...)
 {
     va_list     arguments;             /* argument list passed from the API call */
@@ -1982,12 +1984,12 @@ H5VL_datatype_get(void *obj, const H5VL_class_t *vol_cls, H5VL_datatype_get_t ge
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check if the corresponding VOL callback exists */
-    if (NULL == vol_cls->datatype_cls.get)
+    if (NULL == cls->datatype_cls.get)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'datatype get' method");
     va_start (arguments, req);
 
     /* Call the corresponding VOL callback */
-    if ((ret_value = (vol_cls->datatype_cls.get)(obj, get_type, dxpl_id, req, arguments)) < 0)
+    if ((ret_value = (cls->datatype_cls.get)(obj, get_type, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTGET, FAIL, "get failed");
     va_end (arguments);
 
@@ -2008,7 +2010,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_datatype_specific(void *obj, const H5VL_class_t *vol_cls, H5VL_datatype_specific_t specific_type, 
+H5VL_datatype_specific(void *obj, const H5VL_class_t *cls, H5VL_datatype_specific_t specific_type, 
                        hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
@@ -2016,11 +2018,11 @@ H5VL_datatype_specific(void *obj, const H5VL_class_t *vol_cls, H5VL_datatype_spe
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->datatype_cls.specific)
+    if(NULL == cls->datatype_cls.specific)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'datatype specific' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->datatype_cls.specific)
+    if((ret_value = (cls->datatype_cls.specific)
         (obj, specific_type, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPERATE, FAIL, "Unable to execute datatype specific callback")
     va_end (arguments);
@@ -2042,18 +2044,18 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_datatype_optional(void *obj, const H5VL_class_t *vol_cls, hid_t dxpl_id, void **req, ...)
+H5VL_datatype_optional(void *obj, const H5VL_class_t *cls, hid_t dxpl_id, void **req, ...)
 {
     va_list           arguments;             /* argument list passed from the API call */
     herr_t            ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(NULL == vol_cls->datatype_cls.optional)
+    if(NULL == cls->datatype_cls.optional)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'datatype optional' method")
 
     va_start (arguments, req);
-    if((ret_value = (vol_cls->datatype_cls.optional)(obj, dxpl_id, req, arguments)) < 0)
+    if((ret_value = (cls->datatype_cls.optional)(obj, dxpl_id, req, arguments)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTOPERATE, FAIL, "Unable to execute datatype optional callback")
     va_end (arguments);
 
@@ -2072,18 +2074,18 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_datatype_close(void *dt, const H5VL_class_t *vol_cls, hid_t dxpl_id, void **req)
+H5VL_datatype_close(void *dt, const H5VL_class_t *cls, hid_t dxpl_id, void **req)
 {
     herr_t ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check if the corresponding VOL callback exists */
-    if (NULL == vol_cls->datatype_cls.close)
+    if (NULL == cls->datatype_cls.close)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'datatype close' method");
 
     /* Call the corresponding VOL callback */
-    if ((ret_value = (vol_cls->datatype_cls.close)(dt, dxpl_id, req)) < 0)
+    if ((ret_value = (cls->datatype_cls.close)(dt, dxpl_id, req)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTRELEASE, FAIL, "close failed");
 
 done:
@@ -2101,22 +2103,22 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_request_cancel(void **req, const H5VL_class_t *vol_cls, H5ES_status_t *status)
+H5VL_request_cancel(void **req, const H5VL_class_t *cls, H5ES_status_t *status)
 {
     herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
     HDassert(req);
-    HDassert(vol_cls);
+    HDassert(cls);
     HDassert(status);
 
     /* Check if the corresponding VOL callback exists */
-    if (NULL == vol_cls->async_cls.cancel)
+    if (NULL == cls->async_cls.cancel)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'async cancel' method");
 
     /* Call the corresponding VOL callback */
-    if ((ret_value = (vol_cls->async_cls.cancel)(req, status)) < 0)
+    if ((ret_value = (cls->async_cls.cancel)(req, status)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTRELEASE, FAIL, "request cancel failed");
 
 done:
@@ -2134,22 +2136,22 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_request_test(void **req, const H5VL_class_t *vol_cls, H5ES_status_t *status)
+H5VL_request_test(void **req, const H5VL_class_t *cls, H5ES_status_t *status)
 {
     herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
     HDassert(req);
-    HDassert(vol_cls);
+    HDassert(cls);
     HDassert(status);
 
     /* Check if the corresponding VOL callback exists */
-    if (NULL == vol_cls->async_cls.test)
+    if (NULL == cls->async_cls.test)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'async test' method");
 
     /* Call the corresponding VOL callback */
-    if ((ret_value = (vol_cls->async_cls.test)(req, status)) < 0)
+    if ((ret_value = (cls->async_cls.test)(req, status)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTRELEASE, FAIL, "request test failed");
 
 done:
@@ -2167,22 +2169,22 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5VL_request_wait(void **req, const H5VL_class_t *vol_cls, H5ES_status_t *status)
+H5VL_request_wait(void **req, const H5VL_class_t *cls, H5ES_status_t *status)
 {
     herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
     HDassert(req);
-    HDassert(vol_cls);
+    HDassert(cls);
     HDassert(status);
 
     /* Check if the corresponding VOL callback exists */
-    if (NULL == vol_cls->async_cls.wait)
+    if (NULL == cls->async_cls.wait)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL driver has no 'async wait' method");
 
     /* Call the corresponding VOL callback */
-    if ((ret_value = (vol_cls->async_cls.wait)(req, status)) < 0)
+    if ((ret_value = (cls->async_cls.wait)(req, status)) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTRELEASE, FAIL, "request wait failed");
 
 done:

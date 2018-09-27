@@ -42,6 +42,9 @@ MODULE H5F
   USE H5GLOBAL
   IMPLICIT NONE
 
+  ! Number of objects opened in H5open_f
+  INTEGER(SIZE_T) :: H5OPEN_NUM_OBJ
+
 CONTAINS
 !****s* H5F/h5fcreate_f
 !
@@ -483,6 +486,71 @@ CONTAINS
 
   END SUBROUTINE h5fget_access_plist_f
 
+!****s* H5F/h5fis_accessible_f
+!
+! NAME
+!  h5fis_accessible_f
+!
+! PURPOSE
+!  Determines whether a file can be accessed as HDF5.
+!
+! INPUTS
+!  name 	 - name of the file to check
+! OUTPUTS
+!  status 	 - indicates if file is and HDF5 file
+!  hdferr 	 - Returns 0 if successful and -1 if fails
+! OPTIONAL PARAMETERS
+!  access_prp 	 - file access property list identifier
+! AUTHOR
+!  Dana Robinson
+!  September 2018
+!
+! HISTORY
+!  Explicit Fortran interfaces were added for
+!  called C functions (it is needed for Windows
+!  port).  February 28, 2001
+!
+! SOURCE
+  SUBROUTINE h5fis_accessible_f(name, status, hdferr, access_prp)
+    IMPLICIT NONE
+    CHARACTER(LEN=*), INTENT(IN) :: name   ! Name of the file
+    LOGICAL, INTENT(OUT) :: status         ! Indicates if file
+                                           ! is an HDF5 file
+    INTEGER, INTENT(OUT) :: hdferr         ! Error code
+    INTEGER(HID_T), OPTIONAL, INTENT(IN) :: access_prp
+                                           ! File access property list
+                                           ! identifier
+!*****
+    INTEGER(HID_T) :: access_prp_default
+    INTEGER :: namelen ! Length of the name character string
+    INTEGER :: flag    ! "TRUE/FALSE" flag from C routine
+                       ! to define status value.
+
+    INTERFACE
+       INTEGER FUNCTION h5fis_accessible_c(name, namelen, &
+            access_prp_default, flag) BIND(C,NAME='h5fis_accessible_c')
+         IMPORT :: C_CHAR
+         IMPORT :: HID_T
+         IMPLICIT NONE
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name
+         INTEGER :: namelen
+         INTEGER(HID_T), INTENT(IN) :: access_prp_default
+         INTEGER :: flag
+       END FUNCTION h5fis_accessible_c
+    END INTERFACE
+
+    access_prp_default = H5P_DEFAULT_F
+    IF (PRESENT(access_prp))   access_prp_default   = access_prp
+    namelen = LEN_TRIM(name)
+    hdferr = h5fis_accessible_c(name, namelen, access_prp_default, flag)
+    status = .TRUE.
+    IF (flag .EQ. 0) status = .FALSE.
+
+  END SUBROUTINE h5fis_accessible_f
+
+! XXX (VOL_MERGE): This function should probably be marked as
+!                  deprecated since H5Fis_hdf5() is deprecated.
+
 !****s* H5F/h5fis_hdf5_f
 !
 ! NAME
@@ -500,13 +568,18 @@ CONTAINS
 !  Elena Pourmal
 !  August 12, 1999
 !
+! NOTES
+!  The underlying HDF5 C API call (H5Fis_hdf5) has been deprecated
+!  in favor of the VOL-capable H5Fis_accessible(). New code should
+!  use h5fis_accessible_f() instead of this function in case this
+!  function is deprecated in the future.
+!
 ! HISTORY
 !  Explicit Fortran interfaces were added for
 !  called C functions (it is needed for Windows
 !  port).  February 28, 2001
 !
 ! SOURCE
-#ifdef VOL_FIXME
   SUBROUTINE h5fis_hdf5_f(name, status, hdferr)
     IMPLICIT NONE
     CHARACTER(LEN=*), INTENT(IN) :: name   ! Name of the file
@@ -514,27 +587,31 @@ CONTAINS
                                            ! is an HDF5 file
     INTEGER, INTENT(OUT) :: hdferr         ! Error code
 !*****
+    INTEGER(HID_T) :: access_prp_default
     INTEGER :: namelen ! Length of the name character string
     INTEGER :: flag    ! "TRUE/FALSE" flag from C routine
                        ! to define status value.
 
     INTERFACE
-       INTEGER FUNCTION h5fis_hdf5_c(name, namelen, flag) BIND(C,NAME='h5fis_hdf5_c')
+       INTEGER FUNCTION h5fis_accessible_c(name, namelen, &
+            access_prp_default, flag) BIND(C,NAME='h5fis_accessible_c')
          IMPORT :: C_CHAR
+         IMPORT :: HID_T
          IMPLICIT NONE
          CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name
          INTEGER :: namelen
+         INTEGER(HID_T), INTENT(IN) :: access_prp_default
          INTEGER :: flag
-       END FUNCTION h5fis_hdf5_c
+       END FUNCTION h5fis_accessible_c
     END INTERFACE
 
+    access_prp_default = H5P_DEFAULT_F
     namelen = LEN_TRIM(name)
-    hdferr = h5fis_hdf5_c(name, namelen, flag)
+    hdferr = h5fis_accessible_c(name, namelen, access_prp_default, flag)
     status = .TRUE.
     IF (flag .EQ. 0) status = .FALSE.
 
   END SUBROUTINE h5fis_hdf5_f
-#endif
 
 !****s* H5F/h5fclose_f
 !
@@ -619,8 +696,13 @@ CONTAINS
          INTEGER(SIZE_T), INTENT(OUT) :: obj_count
        END FUNCTION h5fget_obj_count_c
     END INTERFACE
-
+    
     hdferr = h5fget_obj_count_c(file_id, obj_type, obj_count)
+
+    ! Don't include objects created by H5open in the H5F_OBJ_ALL_F count
+    IF(file_id.EQ.INT(H5F_OBJ_ALL_F,HID_T))THEN
+       obj_count = obj_count - H5OPEN_NUM_OBJ
+    ENDIF
 
   END SUBROUTINE h5fget_obj_count_f
 

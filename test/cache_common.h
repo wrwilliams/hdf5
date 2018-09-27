@@ -27,7 +27,6 @@
 #include "H5ACprivate.h"
 #include "H5Cpkg.h"
 #include "H5Fpkg.h"
-#include "H5HLprivate.h"
 #include "H5Iprivate.h"
 #include "H5VLprivate.h"        /* Virtual Object Layer                     */
 
