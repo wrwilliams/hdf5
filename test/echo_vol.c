@@ -16,7 +16,6 @@
  *              the name of the API call.
  */
 
-#include "h5test.h"
 #include "H5PLextern.h"
 
 /* The VOL class struct.

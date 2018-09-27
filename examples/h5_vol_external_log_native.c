@@ -226,7 +226,7 @@ int main(int argc, char **argv) {
 	H5Dwrite(datasetId, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data);
 	H5Dclose(datasetId);
 
-        H5Ovisit(file_id, H5_INDEX_NAME, H5_ITER_NATIVE, visit_cb, NULL);
+        H5Ovisit2(file_id, H5_INDEX_NAME, H5_ITER_NATIVE, visit_cb, NULL, H5O_INFO_ALL);
 
 	free (data);
         H5Oclose(int_id);
