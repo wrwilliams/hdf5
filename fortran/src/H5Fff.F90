@@ -587,29 +587,7 @@ CONTAINS
                                            ! is an HDF5 file
     INTEGER, INTENT(OUT) :: hdferr         ! Error code
 !*****
-    INTEGER(HID_T) :: access_prp_default
-    INTEGER :: namelen ! Length of the name character string
-    INTEGER :: flag    ! "TRUE/FALSE" flag from C routine
-                       ! to define status value.
-
-    INTERFACE
-       INTEGER FUNCTION h5fis_accessible_c(name, namelen, &
-            access_prp_default, flag) BIND(C,NAME='h5fis_accessible_c')
-         IMPORT :: C_CHAR
-         IMPORT :: HID_T
-         IMPLICIT NONE
-         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name
-         INTEGER :: namelen
-         INTEGER(HID_T), INTENT(IN) :: access_prp_default
-         INTEGER :: flag
-       END FUNCTION h5fis_accessible_c
-    END INTERFACE
-
-    access_prp_default = H5P_DEFAULT_F
-    namelen = LEN_TRIM(name)
-    hdferr = h5fis_accessible_c(name, namelen, access_prp_default, flag)
-    status = .TRUE.
-    IF (flag .EQ. 0) status = .FALSE.
+    CALL h5fis_accessible_f(name, status, hdferr, H5P_DEFAULT_F)
 
   END SUBROUTINE h5fis_hdf5_f
 
