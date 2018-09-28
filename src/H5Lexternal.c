@@ -104,7 +104,7 @@ static const H5L_class_t H5L_EXTERN_LINK_CLASS[1] = {{
  *              link access property list, appends that prefix to the
  *              filename being opened.
  *
- * Return:    ID of the opened object on success/Negative on failure
+ * Return:    ID of the opened object on success/H5I_INVALID_HID on failure
  *
  * Programmer:    James Laird
  *              Monday, July 10, 2006

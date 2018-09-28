@@ -998,7 +998,7 @@ herr_t refresh_verification(const char * obj_pathname)
         check to ensure we didn't erroneously flush the attribute before
         starting the verification. */
     if(flushed_oinfo.num_attrs != 0)
-	PROCESS_ERROR;
+        PROCESS_ERROR;
 
     /* Send Signal to MAIN PROCESS indicating that it can go ahead and modify the 
         object. */

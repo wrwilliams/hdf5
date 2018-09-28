@@ -773,8 +773,8 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Ldelete_by_idx(hid_t loc_id, const char *group_name,
-    H5_index_t idx_type, H5_iter_order_t order, hsize_t n, hid_t lapl_id)
+H5Ldelete_by_idx(hid_t loc_id, const char *group_name, H5_index_t idx_type,
+    H5_iter_order_t order, hsize_t n, hid_t lapl_id)
 {
     H5VL_object_t    *vol_obj = NULL;        /* object token of loc_id */
     H5VL_loc_params_t loc_params;

@@ -1054,6 +1054,11 @@ set_tests_properties (H5PLUGIN-filter_plugin PROPERTIES
 #)
 ##############################################################################
 
+if (TEST_SHELL_SCRIPTS)
+  include (ShellTests.cmake)
+endif()
+
+if (ENABLE_EXTENDED_TESTS)
 ##############################################################################
 ###    S W M R  T E S T S
 ##############################################################################
@@ -1061,6 +1066,48 @@ set_tests_properties (H5PLUGIN-filter_plugin PROPERTIES
 #       test_usecases.sh: use_append_chunk, use_append_mchunks, use_disable_mdc_flushes
 #       testswmr.sh: swmr*
 #       testvdsswmr.sh: vds_swmr*
+
+#  add_test (NAME H5Test-swmr_check_compat_vfd COMMAND $<TARGET_FILE:swmr_check_compat_vfd>)
+
+#-- Adding test for flushrefresh
+  file (MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/H5TEST/flushrefresh_test")
+  if (BUILD_SHARED_LIBS)
+    file (MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/H5TEST-shared/flushrefresh_test")
+  endif ()
+  find_package (Perl)
+  if (PERL_FOUND)
+    add_test (NAME H5TEST-clear-testflushrefresh-objects
+        COMMAND    ${CMAKE_COMMAND}
+            -E remove
+            flushrefresh.txt
+            flushrefresh.txt.err
+            flushrefresh.h5
+        WORKING_DIRECTORY
+            ${HDF5_TEST_BINARY_DIR}/H5TEST/flushrefresh_test
+    )
+    set_tests_properties (H5TEST-clear-testflushrefresh-objects PROPERTIES FIXTURES_SETUP testflushrefresh_clear_objects)
+    add_test (NAME H5TEST-testflushrefresh COMMAND "${CMAKE_COMMAND}"
+        -D "TEST_PROGRAM=$<TARGET_FILE:flushrefresh>"
+        -D "TEST_ARGS1:STRING=flushrefresh_VERIFICATION_START"
+        -D "TEST_ARGS2:STRING=flushrefresh_VERIFICATION_DONE"
+        -D "TEST_ERR:STRING=flushrefresh_ERROR"
+        -D "TEST_EXPECT=0"
+        -D "TEST_OUTPUT=flushrefresh.out"
+        -D "TEST_REFERENCE=flushrefresh.txt"
+        -D "TEST_FOLDER=${PROJECT_BINARY_DIR}/H5TEST/flushrefresh_test"
+        -D "PERL_SCRIPT=${HDF5_SOURCE_DIR}/bin/runbkgprog"
+        -D "PERL_EXECUTABLE=${PERL_EXECUTABLE}"
+        -P "${HDF5_TEST_SOURCE_DIR}/flushrefreshTest.cmake"
+    )
+    set_tests_properties (H5TEST-testflushrefresh PROPERTIES
+        FIXTURES_REQUIRED testflushrefresh_clear_objects
+        ENVIRONMENT "srcdir=${HDF5_TEST_BINARY_DIR}/H5TEST/flushrefresh_test"
+        WORKING_DIRECTORY ${HDF5_TEST_BINARY_DIR}/H5TEST/flushrefresh_test
+    )
+  else ()
+    message (STATUS "Cannot execute TEST flushrefresh - perl not found")
+  endif ()
+endif()
 
 ##############################################################################
 ##############################################################################

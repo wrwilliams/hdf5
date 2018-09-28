@@ -122,6 +122,10 @@ H5Rcreate(void *ref, hid_t loc_id, const char *name, H5R_type_t ref_type, hid_t 
     if (NULL == (vol_obj = (H5VL_object_t *)H5I_object(loc_id)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
 
+    /* Set up collective metadata if appropriate */
+    if(H5CX_set_loc(loc_id) < 0)
+        HGOTO_ERROR(H5E_REFERENCE, H5E_CANTSET, FAIL, "can't set access property list info")
+
     /* Create reference */
     if((ret_value = H5VL_object_specific(vol_obj->data, loc_params, vol_obj->driver->cls, H5VL_REF_CREATE, 
                                          H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL, 
