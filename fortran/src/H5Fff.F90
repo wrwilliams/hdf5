@@ -45,6 +45,18 @@ MODULE H5F
   ! Number of objects opened in H5open_f
   INTEGER(SIZE_T) :: H5OPEN_NUM_OBJ
 
+  INTERFACE
+     INTEGER(C_INT) FUNCTION h5fis_accessible(name, &
+          access_prp_default) BIND(C,NAME='H5Fis_accessible')
+       IMPORT :: C_CHAR
+       IMPORT :: HID_T
+       IMPORT :: C_INT
+       IMPLICIT NONE
+       CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name
+       INTEGER(HID_T), INTENT(IN), VALUE :: access_prp_default
+     END FUNCTION h5fis_accessible
+  END INTERFACE
+
 CONTAINS
 !****s* H5F/h5fcreate_f
 !
@@ -522,27 +534,19 @@ CONTAINS
                                            ! identifier
 !*****
     INTEGER(HID_T) :: access_prp_default
-    INTEGER :: namelen ! Length of the name character string
-    INTEGER :: flag    ! "TRUE/FALSE" flag from C routine
-                       ! to define status value.
-
-    INTERFACE
-       INTEGER FUNCTION h5fis_accessible_c(name, namelen, &
-            access_prp_default, flag) BIND(C,NAME='h5fis_accessible_c')
-         IMPORT :: C_CHAR
-         IMPORT :: HID_T
-         IMPLICIT NONE
-         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name
-         INTEGER :: namelen
-         INTEGER(HID_T), INTENT(IN) :: access_prp_default
-         INTEGER :: flag
-       END FUNCTION h5fis_accessible_c
-    END INTERFACE
+    CHARACTER(LEN=LEN_TRIM(name)+1,KIND=C_CHAR) :: c_name
+    INTEGER(C_INT) :: flag    ! "TRUE/FALSE/ERROR" flag from C routine
 
     access_prp_default = H5P_DEFAULT_F
-    IF (PRESENT(access_prp))   access_prp_default   = access_prp
-    namelen = LEN_TRIM(name)
-    hdferr = h5fis_accessible_c(name, namelen, access_prp_default, flag)
+    IF (PRESENT(access_prp)) access_prp_default = access_prp
+
+    c_name = TRIM(name)//C_NULL_CHAR
+
+    flag = H5Fis_accessible(c_name, access_prp_default)
+
+    hdferr = 0
+    IF(flag.LT.0) hdferr = -1
+
     status = .TRUE.
     IF (flag .EQ. 0) status = .FALSE.
 
@@ -588,26 +592,17 @@ CONTAINS
     INTEGER, INTENT(OUT) :: hdferr         ! Error code
 !*****
     INTEGER(HID_T) :: access_prp_default
-    INTEGER :: namelen ! Length of the name character string
-    INTEGER :: flag    ! "TRUE/FALSE" flag from C routine
-                       ! to define status value.
+    CHARACTER(LEN=LEN_TRIM(name)+1,KIND=C_CHAR) :: c_name
+    INTEGER(C_INT) :: flag    ! "TRUE/FALSE/ERROR" flag from C routine
+                              ! to define status value.
 
-    INTERFACE
-       INTEGER FUNCTION h5fis_accessible_c(name, namelen, &
-            access_prp_default, flag) BIND(C,NAME='h5fis_accessible_c')
-         IMPORT :: C_CHAR
-         IMPORT :: HID_T
-         IMPLICIT NONE
-         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name
-         INTEGER :: namelen
-         INTEGER(HID_T), INTENT(IN) :: access_prp_default
-         INTEGER :: flag
-       END FUNCTION h5fis_accessible_c
-    END INTERFACE
+    c_name = TRIM(name)//C_NULL_CHAR
 
-    access_prp_default = H5P_DEFAULT_F
-    namelen = LEN_TRIM(name)
-    hdferr = h5fis_accessible_c(name, namelen, access_prp_default, flag)
+    flag = H5Fis_accessible(c_name, H5P_DEFAULT_F)
+
+    hdferr = 0
+    IF(flag.LT.0) hdferr = -1
+
     status = .TRUE.
     IF (flag .EQ. 0) status = .FALSE.
 
