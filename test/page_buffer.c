@@ -2197,7 +2197,6 @@ main(void)
     HDexit(EXIT_SUCCESS);
 
 error:
-
     HDprintf("***** %d Page Buffering TEST%s FAILED! *****\n",
         nerrors, nerrors > 1 ? "S" : "");
 
@@ -2208,6 +2207,5 @@ error:
     if(api_ctx_pushed) H5CX_pop();
 
     HDexit(EXIT_FAILURE);
-
 } /* main() */
 
