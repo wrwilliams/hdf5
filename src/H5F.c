@@ -748,7 +748,7 @@ H5Fopen(const char *filename, unsigned flags, hid_t fapl_id)
 
     /* Open the file through the VOL layer */
     if(NULL == (new_file = H5VL_file_open(cls, filename, flags, fapl_id, H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL)))
-        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, H5I_INVALID_HID, "unable to create file")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, H5I_INVALID_HID, "unable to open file")
 
     /* Setup VOL driver struct */
     if(NULL == (driver = H5FL_CALLOC(H5VL_t)))

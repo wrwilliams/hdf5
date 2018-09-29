@@ -88,7 +88,7 @@ typedef struct {
     void               *op_data;        /* Application's user data */
 } H5I_iterate_pub_ud_t;
 
-/* User data for iterator callback for retrieveing an ID correponding to an object pointer */
+/* User data for iterator callback for retrieving an ID corresponding to an object pointer */
 typedef struct {
     const void         *object;         /* object pointer to search for */
     H5I_type_t          obj_type;       /* type of object we are searching for */

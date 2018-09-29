@@ -1666,11 +1666,11 @@ H5Tcreate(H5T_class_t type, size_t size)
 
     /* create the type */
     if(NULL == (dt = H5T__create(type, size)))
-    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to create type")
+        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to create type")
 
     /* Get an ID for the datatype */
     if((ret_value = H5I_register(H5I_DATATYPE, dt, TRUE)) < 0)
-    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register datatype ID")
+        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register datatype ID")
 
 done:
     FUNC_LEAVE_API(ret_value)
