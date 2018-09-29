@@ -232,7 +232,7 @@ CONTAINS
               CALL check("h5fclose_f",error,total_error)
 
           !
-          !test whether files are accessble as HDF5 (new, VOL-safe, way)
+          !test whether files are accessible as HDF5 (new, VOL-safe, way)
           !
           CALL h5fis_accessible_f(fix_filename1, status, error)
                CALL check("h5fis_accessible_f",error,total_error)

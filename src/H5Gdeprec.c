@@ -577,12 +577,12 @@ H5Gmove2(hid_t src_loc_id, const char *src_name, hid_t dst_loc_id,
     if(H5CX_set_loc(dst_loc_id) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTSET, FAIL, "can't set collective metadata read info")
 
-    /* Set location paramter for source object */
+    /* Set location parameter for source object */
     loc_params1.type = H5VL_OBJECT_BY_NAME;
     loc_params1.loc_data.loc_by_name.name = src_name;
     loc_params1.loc_data.loc_by_name.lapl_id = H5P_DEFAULT;
     loc_params1.obj_type = H5I_get_type(src_loc_id);
-    /* Set location paramter for destination object */
+    /* Set location parameter for destination object */
     loc_params2.type = H5VL_OBJECT_BY_NAME;
     loc_params2.loc_data.loc_by_name.name = dst_name;
     loc_params2.loc_data.loc_by_name.lapl_id = H5P_DEFAULT;

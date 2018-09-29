@@ -33,7 +33,7 @@ Time:  XXXX
 OK (28 tests)
 
 HDF5-DIAG: Error detected in HDF5 (version (number)) thread (IDs):
-  #000: (file name) line (number) in H5Fopen(): unable to create file
+  #000: (file name) line (number) in H5Fopen(): unable to open file
     major: File accessibility
     minor: Unable to open file
   #001: (file name) line (number) in H5VL_file_open(): open failed
@@ -52,7 +52,7 @@ HDF5-DIAG: Error detected in HDF5 (version (number)) thread (IDs):
     major: File accessibility
     minor: Unable to open file
 HDF5-DIAG: Error detected in HDF5 (version (number)) thread (IDs):
-  #000: (file name) line (number) in H5Fopen(): unable to create file
+  #000: (file name) line (number) in H5Fopen(): unable to open file
     major: File accessibility
     minor: Unable to open file
   #001: (file name) line (number) in H5VL_file_open(): open failed
