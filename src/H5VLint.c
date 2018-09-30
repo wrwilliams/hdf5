@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -920,7 +919,7 @@ H5VL_dataset_open(void *obj, H5VL_loc_params_t loc_params, const H5VL_class_t *c
     /* call the corresponding VOL open callback */
     if(NULL == (ret_value = (cls->dataset_cls.open)
                 (obj, loc_params, name, dapl_id, dxpl_id, req)))
-        HGOTO_ERROR(H5E_VOL, H5E_CANTOPENOBJ, NULL, "open failed")
+        HGOTO_ERROR(H5E_VOL, H5E_CANTOPENOBJ, NULL, "dataset open failed")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
