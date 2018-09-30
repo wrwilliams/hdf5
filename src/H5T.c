@@ -3671,7 +3671,7 @@ done:
  *
  * Purpose:   Frees a datatype and all associated memory.
  *
- * Hote:      Does _not_ deal with open named datatypes, etc. so this
+ * Note:      Does _not_ deal with open named datatypes, etc. so this
  *            should never see a type managed by a VOL driver.
  *
  * Return:    Non-negative on success/Negative on failure
