@@ -257,35 +257,58 @@ done:
 herr_t
 H5Dextend(hid_t dset_id, const hsize_t size[])
 {
-    H5D_t	*dset;                          /* Pointer to dataset to modify */
-    hsize_t     dset_dims[H5S_MAX_RANK];    /* Current dataset dimensions */
-    unsigned    u;                          /* Local index variable */
-    herr_t      ret_value = SUCCEED;        /* Return value */
+    H5VL_object_t  *vol_obj = NULL;             /* Dataset structure */
+    hid_t           sid = H5I_INVALID_HID;      /* Dataspace ID */
+    H5S_t          *ds = NULL;                  /* Dataspace struct */
+    int             ndims;                      /* Dataset/space rank */
+    hsize_t         dset_dims[H5S_MAX_RANK];    /* Current dataset dimensions */
+    int             i;                          /* Local index variable */
+    herr_t          ret_value = SUCCEED;        /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "i*h", dset_id, size);
 
     /* Check args */
-    if(NULL == (dset = (H5D_t *)H5VL_object_verify(dset_id, H5I_DATASET)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
+    if(NULL == (vol_obj = (H5VL_object_t *)H5I_object_verify(dset_id, H5I_DATASET)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid dataset identifier")
     if(!size)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no size specified")
 
-    /* Make certain that the dataset dimensions don't decrease */
-    /* (Shrinking dimensions is possible with H5Dset_extent, but not H5Dextend) */
-    if(H5S_get_simple_extent_dims(dset->shared->space, dset_dims, NULL) < 0)
+    /* Get the dataspace pointer for the dataset */
+    if(H5VL_dataset_get(vol_obj->data, vol_obj->driver->cls, H5VL_DATASET_GET_SPACE, 
+                        H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL, &sid) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to get dataspace")
+    if(H5I_INVALID_HID == sid)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "received an invalid dataspace from the dataset")
+    if(NULL == (ds = (H5S_t *)H5I_object_verify(sid, H5I_DATASPACE)))
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "couldn't get dataspace structure from ID")
+
+    /* Get the dataset's current extent */
+    if(H5S_get_simple_extent_dims(ds, dset_dims, NULL) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get dataset dimensions")
-    for(u = 0; u < dset->shared->ndims; u++)
-        if(size[u] > dset_dims[u])
-            dset_dims[u] = size[u];
+
+    /* Get the dataset dimensions */
+    ndims = H5S_GET_EXTENT_NDIMS(ds);
+
+    /* Make certain that the dataset dimensions don't decrease in any dimension.
+     *
+     * (Shrinking dimensions is possible with H5Dset_extent, but not H5Dextend)
+     *
+     * XXX (VOL_MERGE): I feel like we should fail here instead of just silently
+     *                  not doing what we're supposed to do.
+     */
+    for(i = 0; i < ndims; i++)
+        if(size[i] > dset_dims[i])
+            dset_dims[i] = size[i];
 
     /* Set up collective metadata if appropriate */
     if(H5CX_set_loc(dset_id) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "can't set collective metadata read info")
 
     /* Increase size */
-    if(H5D__set_extent(dset, dset_dims) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to extend dataset")
+    if ((ret_value = H5VL_dataset_specific(vol_obj->data, vol_obj->driver->cls, H5VL_DATASET_SET_EXTENT, 
+                                          H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL, dset_dims)) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "unable to extend dataset")
 
 done:
     FUNC_LEAVE_API(ret_value)
