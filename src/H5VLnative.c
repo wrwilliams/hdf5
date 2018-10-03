@@ -122,9 +122,8 @@ static H5VL_class_t H5VL_native_cls_g = {
     H5VL_NATIVE_VERSION,                            /* version      */
     H5VL_NATIVE_VALUE,                              /* value        */
     H5VL_NATIVE_NAME,                               /* name         */
-    /* XXX: init and term not set in the vol branch -- unclear why */
-    H5VL_native_init,                               /* initialize   */
-    H5VL__native_term,                              /* terminate    */
+    NULL,                                           /* initialize   */
+    NULL,                                           /* terminate    */
     (size_t)0,                                      /* fapl size    */
     NULL,                                           /* fapl copy    */
     NULL,                                           /* fapl free    */
