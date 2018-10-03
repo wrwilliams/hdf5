@@ -311,6 +311,10 @@ H5Dextend(hid_t dset_id, const hsize_t size[])
         HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "unable to extend dataset")
 
 done:
+    /* Close the dataspace */
+    if(ds && H5I_dec_app_ref(sid) < 0)
+        HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "can't close dataspace")
+
     FUNC_LEAVE_API(ret_value)
 } /* end H5Dextend() */
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
