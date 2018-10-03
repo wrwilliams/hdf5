@@ -192,13 +192,9 @@ H5File::H5File(const H5File& original) : Group()
 //--------------------------------------------------------------------------
 bool H5File::isHdf5(const char* name)
 {
-    FileAccPropList* access_plist  = new FileAccPropList;
-
     // Calls C routine H5Fis_accessible to determine whether the file is in
     // HDF5 format.  It returns positive value, 0, or negative value
-    htri_t ret_value = H5Fis_accessible(name, access_plist->getId());
-    delete access_plist;
-    access_plist = NULL;
+    htri_t ret_value = H5Fis_accessible(name, H5P_DEFAULT);
 
     if (ret_value > 0)
         return true;
@@ -212,7 +208,7 @@ bool H5File::isHdf5(const char* name)
 
 //--------------------------------------------------------------------------
 // Function:    H5File::isHdf5 (static)
-
+///\brief       This is an overloaded member function, provided for convenience.
 ///             It takes an \c H5std_string for \a name. (Static)
 ///\param       name - IN: Name of the file - \c H5std_string
 // December 2000
