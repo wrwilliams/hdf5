@@ -33,6 +33,9 @@ main(void)
     hsize_t max_dims[RANK];     /* max size of dataset              */
 
 
+    /* XXX (VOL_MERGE): Temporarily skipped */
+    HDprintf("NOTE: SWMR VDS reader tests SKIPPED\n");
+
     /* Open the VDS file and dataset */
     if((fid = H5Fopen(VDS_FILE_NAME, H5F_ACC_RDONLY | H5F_ACC_SWMR_READ, H5P_DEFAULT)) < 0)
         TEST_ERROR
@@ -49,6 +52,7 @@ main(void)
     if((msid = H5Screate_simple(RANK, VDS_PLANE, NULL)) < 0)
         TEST_ERROR
 
+#if 0
     /* Read data until the dataset is full (via the writer) */
     do {
 
@@ -97,11 +101,11 @@ main(void)
             TEST_ERROR
         if(H5Dread(did, H5T_NATIVE_INT, msid, fsid, H5P_DEFAULT, buffer) < 0)
             TEST_ERROR
-
         if(H5Sclose(fsid) < 0)
             TEST_ERROR
 
     } while (dims[0] < N_PLANES_TO_WRITE);
+#endif
 
     /* Close file and dataset */
     if(H5Sclose(msid) < 0)
