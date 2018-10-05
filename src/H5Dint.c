@@ -1827,7 +1827,9 @@ H5D_mult_refresh_close(hid_t dset_id)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
 
     /* check args */
-    HDassert(dataset && dataset->oloc.file && dataset->shared);
+    HDassert(dataset);
+    HDassert(dataset->oloc.file);
+    HDassert(dataset->shared);
     HDassert(dataset->shared->fo_count > 0);
 
     if(dataset->shared->fo_count > 1) {

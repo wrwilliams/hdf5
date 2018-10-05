@@ -46,7 +46,7 @@
 /*
  * The VOL driver identification number.
  */
-static hid_t H5VL_NATIVE_ID_g = 0;
+static hid_t H5VL_NATIVE_ID_g = H5I_INVALID_HID;
 
 
 /* Prototypes */
@@ -226,6 +226,13 @@ H5VL_native_init(void)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL_native_init() */
+
+/* XXX (VOL_MERGE): TEMPORARY */
+hid_t
+H5VL_native_get_driver_id(void)
+{
+    return H5VL_NATIVE_ID_g;
+}
 
 
 /*---------------------------------------------------------------------------
@@ -3387,6 +3394,7 @@ H5VL_native_datatype_open(void *obj, H5VL_loc_params_t loc_params, const char *n
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTOPENOBJ, NULL, "unable to open named datatype")
 
     type->vol_obj = NULL;
+
     ret_value = (void *)type;
 
 done:
