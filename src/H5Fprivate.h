@@ -34,10 +34,6 @@ typedef struct H5F_t H5F_t;
 #include "H5VMprivate.h"        /* Vectors and arrays */
 
 
-/* XXX: BADNESS */
-#include "H5VLprivate.h"
-extern H5VL_t *GLOBAL_DRIVER_g;
-
 /**************************/
 /* Library Private Macros */
 /**************************/

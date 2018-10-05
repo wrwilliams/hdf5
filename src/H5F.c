@@ -73,9 +73,6 @@ static int H5F__get_all_ids_cb(void H5_ATTR_UNUSED *obj_ptr, hid_t obj_id, void 
 /* Package initialization variable */
 hbool_t H5_PKG_INIT_VAR = FALSE;
 
-/* XXX: BADNESS */
-H5VL_t *GLOBAL_DRIVER_g = NULL;
-
 
 /*****************************/
 /* Library Private Variables */
@@ -760,11 +757,6 @@ H5Fopen(const char *filename, unsigned flags, hid_t fapl_id)
     driver->id = driver_prop.driver_id;
     if(H5I_inc_ref(driver->id, FALSE) < 0)
         HGOTO_ERROR(H5E_ATOM, H5E_CANTINC, H5I_INVALID_HID, "unable to increment ref count on VOL driver")
-
-    /* XXX: BADNESS
-     * Note that we're not incrementing the count on the driver here.
-     */
-    GLOBAL_DRIVER_g = driver;
 
     /* Get an ID for the file */
     if((ret_value = H5VL_register_id(H5I_FILE, new_file, driver, TRUE)) < 0)
