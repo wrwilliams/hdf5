@@ -32,8 +32,10 @@
 #include "H5private.h"          /* Generic Functions                        */
 #include "H5ACprivate.h"        /* Metadata cache                           */
 #include "H5CXprivate.h"        /* API Contexts                             */
+#include "H5Dprivate.h"         /* Datasets                                 */
 #include "H5Eprivate.h"		    /* Error handling                           */
 #include "H5FLprivate.h"	    /* Free Lists                               */
+#include "H5Gprivate.h"         /* Groups                                   */
 #include "H5Ipkg.h"             /* IDs                                      */
 #include "H5MMprivate.h"        /* Memory management                        */
 #include "H5Oprivate.h"         /* Object headers                           */
@@ -41,16 +43,6 @@
 #include "H5Tpkg.h"             /* Datatypes                                */
 #include "H5VLprivate.h"        /* Virtual Object Layer                     */
 
-/* Define this to compile in support for dumping ID information */
-/* #define H5I_DEBUG_OUTPUT */
-#ifndef H5I_DEBUG_OUTPUT
-#include "H5Gprivate.h"         /* Groups                                   */
-#else /* H5I_DEBUG_OUTPUT */
-#define H5G_FRIEND              /* Suppress error about including H5Gpkg    */
-#include "H5Gpkg.h"             /* Groups                                   */
-#include "H5Dprivate.h"         /* Datasets                                 */
-#include "H5Tprivate.h"         /* Datatypes                                */
-#endif /* H5I_DEBUG_OUTPUT */
 
 /* Local Macros */
 
@@ -149,10 +141,7 @@ static H5I_id_info_t *H5I__find_id(hid_t id);
 static int H5I__iterate_pub_cb(void *obj, hid_t id, void *udata);
 static hid_t H5I__get_file_id(hid_t obj_id, H5I_type_t id_type);
 static int H5I__find_id_cb(void *_item, void *_key, void *_udata);
-#ifdef H5I_DEBUG_OUTPUT
-static int H5I__debug_cb(void *_item, void *_key, void *_udata);
-static herr_t H5I__debug(H5I_type_t type);
-#endif /* H5I_DEBUG_OUTPUT */
+static int H5I__id_dump_cb(void *_item, void *_key, void *_udata);
 
 
 /*-------------------------------------------------------------------------
@@ -572,7 +561,7 @@ H5I__clear_type_cb(void *_id, void H5_ATTR_UNUSED *key, void *_udata)
             if(udata->force) {
 #ifdef H5I_DEBUG
                 if(H5DEBUG(I)) {
-                    fprintf(H5DEBUG(I), "H5I: free type=%d obj=0x%08lx "
+                    HDfprintf(H5DEBUG(I), "H5I: free type=%d obj=0x%08lx "
                             "failure ignored\n",
                             (int)udata->type_ptr->cls->type_id,
                             (unsigned long)(id->obj_ptr));
@@ -2353,10 +2342,9 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5I_find_id() */
 
-#ifdef H5I_DEBUG_OUTPUT
 
 /*-------------------------------------------------------------------------
- * Function:    H5I__debug_cb
+ * Function:    H5I__id_dump_cb
  *
  * Purpose:     Dump the contents of an ID to stderr for debugging.
  *
@@ -2365,7 +2353,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static int
-H5I__debug_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_udata)
+H5I__id_dump_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_udata)
 {
     H5I_id_info_t  *item    = (H5I_id_info_t *)_item;       /* Pointer to the ID node */
     H5I_type_t      type    = *(H5I_type_t *)_udata;        /* User data */
@@ -2387,7 +2375,7 @@ H5I__debug_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_udata)
             obj_ptr = vol_obj->data;
 
             if(H5_VOL_NATIVE == vol_obj->driver->cls->value)
-                path = H5G_nameof((H5G_t*)obj_ptr);
+                path = H5G_nameof((H5G_t *)obj_ptr);
             break;
         }
         case H5I_DATASET:
@@ -2397,7 +2385,7 @@ H5I__debug_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_udata)
             obj_ptr = vol_obj->data;
 
             if(H5_VOL_NATIVE == vol_obj->driver->cls->value)
-                path = H5D_nameof((H5D_t*)obj_ptr);
+                path = H5D_nameof((H5D_t *)obj_ptr);
             break;
         }
         case H5I_DATATYPE:
@@ -2406,10 +2394,7 @@ H5I__debug_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_udata)
 
             obj_ptr = (void *)H5T_get_actual_type(dt);
 
-            /* XXX (VOL MERGE): This is probably going to need rework to function
-             * correctly with VOL driver-managed datatypes.
-             */
-            path = H5T_nameof((H5T_t*)obj_ptr);
+            path = H5T_nameof((H5T_t *)obj_ptr);
             break;
         }
         case H5I_UNINIT:
@@ -2438,11 +2423,11 @@ H5I__debug_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_udata)
     }
 
     FUNC_LEAVE_NOAPI(H5_ITER_CONT)
-} /* end H5I__debug_cb() */
+} /* end H5I__id_dump_cb() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5I__debug
+ * Function:    H5I_dump_ids_for_type
  *
  * Purpose:     Dump the contents of a type to stderr for debugging.
  *
@@ -2450,12 +2435,12 @@ H5I__debug_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_udata)
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
-H5I__debug(H5I_type_t type)
+herr_t
+H5I_dump_ids_for_type(H5I_type_t type)
 {
-    H5I_id_type_t *type_ptr;
+    H5I_id_type_t  *type_ptr = NULL;
 
-    FUNC_ENTER_STATIC_NOERR
+    FUNC_ENTER_NOAPI_NOERR
 
     HDfprintf(stderr, "Dumping ID type %d\n", (int)type);
     type_ptr = H5I_id_type_list_g[type];
@@ -2468,9 +2453,8 @@ H5I__debug(H5I_type_t type)
 
     /* List */
     HDfprintf(stderr, "	 List:\n");
-    H5SL_iterate(type_ptr->ids, H5I__debug_cb, &type);
+    H5SL_iterate(type_ptr->ids, H5I__id_dump_cb, &type);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5I__debug() */
-#endif /* H5I_DEBUG_OUTPUT */
+} /* end H5I_dump_ids_for_type() */
 

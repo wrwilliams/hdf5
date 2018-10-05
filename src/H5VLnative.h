@@ -30,7 +30,10 @@
 extern "C" {
 #endif
 
-/* XXX: Poor separation of public and private functionality here */
+H5_DLL hid_t H5VL_native_get_driver_id(void);
+
+
+/* XXX (VOL_MERGE): Poor separation of public and private functionality here */
 H5_DLL herr_t H5Pset_fapl_native(hid_t fapl_id);
 
 H5_DLL hid_t H5VL_native_init(void);
