@@ -141,7 +141,7 @@ static H5I_id_info_t *H5I__find_id(hid_t id);
 static int H5I__iterate_pub_cb(void *obj, hid_t id, void *udata);
 static hid_t H5I__get_file_id(hid_t obj_id, H5I_type_t id_type);
 static int H5I__find_id_cb(void *_item, void *_key, void *_udata);
-static int H5I__debug_cb(void *_item, void *_key, void *_udata);
+static int H5I__id_dump_cb(void *_item, void *_key, void *_udata);
 
 
 /*-------------------------------------------------------------------------
@@ -2344,7 +2344,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5I__debug_cb
+ * Function:    H5I__id_dump_cb
  *
  * Purpose:     Dump the contents of an ID to stderr for debugging.
  *
@@ -2353,7 +2353,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static int
-H5I__debug_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_udata)
+H5I__id_dump_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_udata)
 {
     H5I_id_info_t  *item    = (H5I_id_info_t *)_item;       /* Pointer to the ID node */
     H5I_type_t      type    = *(H5I_type_t *)_udata;        /* User data */
@@ -2423,11 +2423,11 @@ H5I__debug_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_udata)
     }
 
     FUNC_LEAVE_NOAPI(H5_ITER_CONT)
-} /* end H5I__debug_cb() */
+} /* end H5I__id_dump_cb() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5I_debug
+ * Function:    H5I_dump_ids_for_type
  *
  * Purpose:     Dump the contents of a type to stderr for debugging.
  *
@@ -2436,7 +2436,7 @@ H5I__debug_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_udata)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5I_debug(H5I_type_t type)
+H5I_dump_ids_for_type(H5I_type_t type)
 {
     H5I_id_type_t  *type_ptr = NULL;
 
@@ -2453,8 +2453,8 @@ H5I_debug(H5I_type_t type)
 
     /* List */
     HDfprintf(stderr, "	 List:\n");
-    H5SL_iterate(type_ptr->ids, H5I__debug_cb, &type);
+    H5SL_iterate(type_ptr->ids, H5I__id_dump_cb, &type);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5I_debug() */
+} /* end H5I_dump_ids_for_type() */
 
