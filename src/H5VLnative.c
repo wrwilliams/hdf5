@@ -3039,7 +3039,7 @@ H5VL_native_object_get(void *obj, H5VL_loc_params_t loc_params, H5VL_object_get_
                 void        *ref       = va_arg(arguments, void *);
 
                 /* Get name */
-                if((*ret = H5R__get_name(loc.oloc->file, H5P_DEFAULT, ref_type, ref, name, size)) < 0)
+                if((*ret = H5R__get_name(loc.oloc->file, ref_type, ref, name, size)) < 0)
                     HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, FAIL, "unable to determine object path")
                 break;
             }
