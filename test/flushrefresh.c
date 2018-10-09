@@ -698,9 +698,8 @@ herr_t test_refresh(void)
     /* ================= */
     /* Refresh Datatypes */
     /* ================= */
-#if 0
     TESTING("to ensure that H5Trefresh correctly refreshes single datatypes");
-
+#if 0
     /* Verify First Committed Datatype can be refreshed with H5Trefresh */
     if(start_refresh_verification_process(T1) != 0) TEST_ERROR;
 
@@ -718,8 +717,10 @@ herr_t test_refresh(void)
     if(H5Oflush(tid2) < 0) TEST_ERROR;
 
     if(end_refresh_verification_process() != 0) TEST_ERROR;
-#endif
     PASSED();
+#else
+    SKIPPED();
+#endif
 
     /* =============== */
     /* Refresh Objects */
@@ -1032,7 +1033,6 @@ herr_t refresh_verification(const char * obj_pathname)
      * test cases is easy). */
     do {
 
-#if 0
         if((HDstrcmp(obj_pathname, D1) == 0) || (HDstrcmp(obj_pathname, D2) == 0)) {
             if(H5Drefresh(oid) < 0) PROCESS_ERROR;
         } /* end if */
@@ -1050,21 +1050,6 @@ herr_t refresh_verification(const char * obj_pathname)
             HDfprintf(stdout, "Error. %s is an unrecognized object.\n", obj_pathname);
             PROCESS_ERROR;
         } /* end else */
-#endif
-        if((HDstrcmp(obj_pathname, D1) == 0) || (HDstrcmp(obj_pathname, D2) == 0)) {
-            if(H5Drefresh(oid) < 0) PROCESS_ERROR;
-        } /* end if */
-        else if((HDstrcmp(obj_pathname, G1) == 0) || (HDstrcmp(obj_pathname, G2) == 0)) {
-            if(H5Grefresh(oid) < 0) PROCESS_ERROR;
-        } /* end if */
-        else if((HDstrcmp(obj_pathname, D3) == 0) || (HDstrcmp(obj_pathname, G3) == 0)) {
-            if(H5Orefresh(oid) < 0) PROCESS_ERROR;
-        } /* end if */
-        else {
-            HDfprintf(stdout, "Error. %s is an unrecognized object.\n", obj_pathname);
-            PROCESS_ERROR;
-        } /* end else */
-
 
         /* Get object info. This should now accurately reflect the refreshed object on disk. */
         if((status = H5Oget_info2(oid, &refreshed_oinfo, H5O_INFO_BASIC|H5O_INFO_NUM_ATTRS|H5O_INFO_HDR)) < 0)

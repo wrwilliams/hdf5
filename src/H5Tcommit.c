@@ -35,6 +35,7 @@
 #include "H5Iprivate.h"         /* IDs                                      */
 #include "H5Lprivate.h"         /* Links                                    */
 #include "H5MMprivate.h"        /* Memory Management                        */
+#include "H5Oprivate.h"         /* Object headers                           */
 #include "H5Pprivate.h"         /* Property lists                           */
 #include "H5Tpkg.h"             /* Datatypes                                */
 #include "H5VLprivate.h"        /* Virtual Object Layer                     */
@@ -1184,4 +1185,86 @@ H5T_get_actual_type(H5T_t *dt)
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5T_get_actual_type() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5T_save_refresh_state
+ *
+ * Purpose:     Save state for datatype reconstuction after a refresh.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5T_save_refresh_state(hid_t tid, H5O_shared_t *cached_H5O_shared)
+{
+    H5T_t *dt = NULL;                   /* High level datatype object that wraps the VOL object */
+    H5T_t *vol_dt = NULL;               /* H5T_t pointer stored in the datatype's vol_obj field */
+    herr_t ret_value = SUCCEED;         /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    HDassert(cached_H5O_shared);
+
+    if(NULL == (dt = (H5T_t *)H5I_object_verify(tid, H5I_DATATYPE)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "tid is not a datatype ID")
+    vol_dt = (H5T_t *)(dt->vol_obj->data);
+    if(NULL == vol_dt)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "tid is not not a named datatype ID")
+
+    /* Increase the count on the file object */
+    vol_dt->shared->fo_count += 1;
+
+    /* Increment object count for the object in the top file */
+    if(H5FO_top_incr(vol_dt->sh_loc.file, vol_dt->sh_loc.u.loc.oh_addr) < 0)
+        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINC, FAIL, "can't increment object count")
+
+    /* Cache the H5O_shared_t data */
+    HDmemcpy(cached_H5O_shared, &(vol_dt->sh_loc), sizeof(H5O_shared_t));
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5T_save_refresh_state() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5T_restore_refresh_state
+ *
+ * Purpose:     Restore state for datatype reconstuction after a refresh.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5T_restore_refresh_state(hid_t tid, H5O_shared_t *cached_H5O_shared)
+{
+    H5T_t *dt = NULL;                   /* High level datatype object that wraps the VOL object */
+    H5T_t *vol_dt = NULL;               /* H5T_t pointer stored in the datatype's vol_obj field */
+    herr_t ret_value = SUCCEED;         /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    HDassert(cached_H5O_shared);
+
+    if(NULL == (dt = (H5T_t *)H5I_object_verify(tid, H5I_DATATYPE)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "tid not a datatype ID")
+    vol_dt = (H5T_t *)(dt->vol_obj->data);
+    if(NULL == vol_dt)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "tid is not not a named datatype ID")
+
+    /* Restore the H5O_shared_t data */
+    HDmemcpy(&(vol_dt->sh_loc), cached_H5O_shared, sizeof(H5O_shared_t));
+
+    /* Decrement the ref. count for this object in the top file */
+    if(H5FO_top_decr(vol_dt->sh_loc.file, vol_dt->sh_loc.u.loc.oh_addr) < 0)
+        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTDEC, FAIL, "can't decrement object count")
+
+    /* Decrease the count on the file object */
+    vol_dt->shared->fo_count -= 1;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5T_restore_refresh_state() */
 

@@ -300,6 +300,7 @@ H5O_refresh_metadata(hid_t oid, H5O_loc_t oloc)
         H5G_loc_t obj_loc;
         H5O_loc_t obj_oloc;
         H5G_name_t obj_path;
+        H5O_shared_t cached_H5O_shared;
 
         /* Create empty object location */
         obj_loc.oloc = &obj_oloc;
@@ -311,6 +312,11 @@ H5O_refresh_metadata(hid_t oid, H5O_loc_t oloc)
          */
         H5F_incr_nopen_objs(oloc.file);
         objs_incr = TRUE;
+
+        /* Save important datatype state */
+        if(H5I_get_type(oid) == H5I_DATATYPE)
+            if(H5T_save_refresh_state(oid, &cached_H5O_shared) < 0)
+                HGOTO_ERROR(H5E_DATATYPE, H5E_CANTOPENOBJ, FAIL, "unable to save datatype state")
 
         /* Get the VOL object from the ID */
         if(NULL == (vol_obj = H5VL_get_object(oid)))
@@ -331,6 +337,11 @@ H5O_refresh_metadata(hid_t oid, H5O_loc_t oloc)
 
         /* Restore the number of references on the VOL driver */
         vol_obj->driver->nrefs--;
+
+        /* Restore important datatype state */
+        if(H5I_get_type(oid) == H5I_DATATYPE)
+            if(H5T_restore_refresh_state(oid, &cached_H5O_shared) < 0)
+                HGOTO_ERROR(H5E_DATATYPE, H5E_CANTOPENOBJ, FAIL, "unable to restore datatype state")
 
     } /* end if */
 
