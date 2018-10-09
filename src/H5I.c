@@ -817,7 +817,7 @@ H5I_register_with_id(H5I_type_t type, void *object, H5VL_t *vol_driver, hbool_t 
     if(NULL == (new_vol_obj = H5FL_CALLOC(H5VL_object_t)))
         HGOTO_ERROR(H5E_ATOM, H5E_CANTALLOC, FAIL, "can't allocate memory for VOL object");
     new_vol_obj->driver = vol_driver;
-    new_vol_obj->data   = object;
+    new_vol_obj->data = object;
 
     /* Bump the reference count on the VOL driver */
     vol_driver->nrefs++;
@@ -827,8 +827,12 @@ H5I_register_with_id(H5I_type_t type, void *object, H5VL_t *vol_driver, hbool_t 
     id_ptr->count       = 1; /* initial reference count*/
     id_ptr->app_count   = !!app_ref;
     if(H5I_DATATYPE == type) {
-        id_ptr->obj_ptr             = object;
-        ((H5T_t *)object)->vol_obj  = new_vol_obj;
+        void *dt = NULL;
+
+        if(NULL == (dt = (void *)H5T_construct_datatype(new_vol_obj)))
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "can't construct datatype object");
+
+        id_ptr->obj_ptr     = dt;
     }
     else
         id_ptr->obj_ptr     = new_vol_obj;

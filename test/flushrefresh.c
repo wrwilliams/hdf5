@@ -699,7 +699,7 @@ herr_t test_refresh(void)
     /* Refresh Datatypes */
     /* ================= */
     TESTING("to ensure that H5Trefresh correctly refreshes single datatypes");
-#if 0
+
     /* Verify First Committed Datatype can be refreshed with H5Trefresh */
     if(start_refresh_verification_process(T1) != 0) TEST_ERROR;
 
@@ -718,9 +718,6 @@ herr_t test_refresh(void)
 
     if(end_refresh_verification_process() != 0) TEST_ERROR;
     PASSED();
-#else
-    SKIPPED();
-#endif
 
     /* =============== */
     /* Refresh Objects */
@@ -746,7 +743,6 @@ herr_t test_refresh(void)
 
     if(end_refresh_verification_process() != 0) TEST_ERROR;
 
-#if 0
     /* Verify Third Committed Datatype can be refreshed with H5Orefresh */
     if(start_refresh_verification_process(T3) != 0) TEST_ERROR;
 
@@ -755,7 +751,6 @@ herr_t test_refresh(void)
     if(H5Oflush(tid3) < 0) TEST_ERROR;
 
     if(end_refresh_verification_process() != 0) TEST_ERROR;
-#endif
 
     PASSED();
 
