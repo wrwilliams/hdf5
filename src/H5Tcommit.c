@@ -964,9 +964,6 @@ H5T_open(const H5G_loc_t *loc)
         if(H5T_set_loc(dt, NULL, H5T_LOC_MEMORY) < 0)
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, NULL, "invalid datatype location")
 
-        /* Mark the type as named and open */
-        shared_fo->state = H5T_STATE_OPEN;
-
         /* Increment ref. count on shared info */
         shared_fo->fo_count++;
 
