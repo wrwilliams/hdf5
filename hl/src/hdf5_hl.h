@@ -29,5 +29,7 @@
 #include "H5TBpublic.h" /* table */
 #include "H5PTpublic.h" /* packet table */
 
+typedef href_t hobj_ref_t;
+
 #endif /*H5_INCLUDE_HL*/
 
