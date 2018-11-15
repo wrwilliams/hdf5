@@ -820,8 +820,22 @@ h5_fileaccess(void)
 
     if((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0)
         return -1;
-    if(!val || !*val)
-        return fapl; /* use default */
+    if(!val || !*val) {
+        /*
+         * Try to retrieve the name of a VOL connector
+         * through the use of a different environment
+         * variable. If the environment variable is not
+         * set, look for the constant.
+         */
+        val = HDgetenv("HDF5_VOL_CONNECTOR_NAME");
+#ifdef HDF5_VOL_CONNECTOR_NAME
+        if(!val)
+            val = HDF5_VOL_CONNECTOR_NAME;
+#endif
+
+        if (!val || !*val)
+            return fapl; /* use default */
+    }
 
     HDstrncpy(s, val, sizeof s);
     s[sizeof(s)-1] = '\0';
@@ -919,8 +933,36 @@ h5_fileaccess(void)
             return -1;
     }
     else {
-        /* Unknown driver */
-        return -1;
+        hid_t connector_id = -1;
+
+        /*
+         * Try to load a VOL connector
+         */
+        if ((connector_id = H5VLregister_driver_by_name(name)) >= 0) {
+            /*
+             * Initialize the VOL connector.
+             *
+             * XXX: No provisions for vipl_id currently.
+             */
+            if (H5VLinitialize(connector_id, -1) < 0) {
+                H5VLunregister_driver(connector_id);
+                return -1;
+            }
+
+            /*
+             * XXX: Currently cannot pass any info to the VOL connector; will
+             * likely need some sort of callback for the library to call for this
+             * and it will have to be exposed at the H5VL layer.
+             */
+            if (H5Pset_vol(fapl, connector_id, NULL) < 0) {
+                H5VLterminate(connector_id, -1); /* XXX: no provisions for vtpl_id currently. */
+                H5VLunregister_driver(connector_id);
+                return -1;
+            }
+        }
+        else
+            /* Unknown driver */
+            return -1;
     }
 
     return fapl;
