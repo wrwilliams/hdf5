@@ -9,3 +9,92 @@
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+#ifndef VOL_ATTRIBUTE_TEST_H
+#define VOL_ATTRIBUTE_TEST_H
+
+#include "vol_test.h"
+
+int vol_attribute_test(void);
+
+/**************************************************
+ *                                                *
+ *      VOL connector Attribute test defines      *
+ *                                                *
+ **************************************************/
+
+#define ATTRIBUTE_CREATE_ON_ROOT_SPACE_RANK 2
+#define ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME  "attr_on_root"
+#define ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME2 "attr_on_root2"
+
+#define ATTRIBUTE_CREATE_ON_DATASET_DSET_SPACE_RANK 2
+#define ATTRIBUTE_CREATE_ON_DATASET_ATTR_SPACE_RANK 2
+#define ATTRIBUTE_CREATE_ON_DATASET_DSET_NAME       "dataset_with_attr"
+#define ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME       "attr_on_dataset"
+#define ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME2      "attr_on_dataset2"
+
+#define ATTRIBUTE_CREATE_ON_DATATYPE_SPACE_RANK 2
+#define ATTRIBUTE_CREATE_ON_DATATYPE_DTYPE_NAME "datatype_with_attr"
+#define ATTRIBUTE_CREATE_ON_DATATYPE_ATTR_NAME  "attr_on_datatype"
+#define ATTRIBUTE_CREATE_ON_DATATYPE_ATTR_NAME2 "attr_on_datatype2"
+
+#define ATTRIBUTE_CREATE_NULL_DATASPACE_TEST_SUBGROUP_NAME "attr_with_null_space_test"
+#define ATTRIBUTE_CREATE_NULL_DATASPACE_TEST_ATTR_NAME     "attr_with_null_space"
+
+#define ATTRIBUTE_CREATE_SCALAR_DATASPACE_TEST_SUBGROUP_NAME "attr_with_scalar_space_test"
+#define ATTRIBUTE_CREATE_SCALAR_DATASPACE_TEST_ATTR_NAME     "attr_with_scalar_space"
+
+#define ATTRIBUTE_GET_INFO_TEST_SPACE_RANK 2
+#define ATTRIBUTE_GET_INFO_TEST_ATTR_NAME  "get_info_test_attr"
+
+#define ATTRIBUTE_GET_SPACE_TYPE_TEST_SPACE_RANK 2
+#define ATTRIBUTE_GET_SPACE_TYPE_TEST_ATTR_NAME  "get_space_type_test_attr"
+
+#define ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME "retrieve_attr_name_test"
+#define ATTRIBUTE_GET_NAME_TEST_SPACE_RANK     2
+
+#define ATTRIBUTE_CREATE_WITH_SPACE_IN_NAME_SPACE_RANK 2
+#define ATTRIBUTE_CREATE_WITH_SPACE_IN_NAME_ATTR_NAME  "attr with space in name"
+
+#define ATTRIBUTE_DELETION_TEST_SPACE_RANK 2
+#define ATTRIBUTE_DELETION_TEST_ATTR_NAME  "attr_to_be_deleted"
+
+#define ATTRIBUTE_WRITE_TEST_ATTR_DTYPE_SIZE sizeof(int)
+#define ATTRIBUTE_WRITE_TEST_ATTR_DTYPE      H5T_NATIVE_INT
+#define ATTRIBUTE_WRITE_TEST_SPACE_RANK      2
+#define ATTRIBUTE_WRITE_TEST_ATTR_NAME       "write_test_attr"
+
+#define ATTRIBUTE_READ_TEST_ATTR_DTYPE_SIZE sizeof(int)
+#define ATTRIBUTE_READ_TEST_ATTR_DTYPE      H5T_NATIVE_INT
+#define ATTRIBUTE_READ_TEST_SPACE_RANK      2
+#define ATTRIBUTE_READ_TEST_ATTR_NAME       "read_test_attr"
+
+#define ATTRIBUTE_RENAME_TEST_SPACE_RANK 2
+#define ATTRIBUTE_RENAME_TEST_ATTR_NAME  "rename_test_attr"
+#define ATTRIBUTE_RENAME_TEST_NEW_NAME   "renamed_attr"
+
+#define ATTRIBUTE_GET_NUM_ATTRS_TEST_ATTRIBUTE_NAME "get_num_attrs_test_attribute"
+#define ATTRIBUTE_GET_NUM_ATTRS_TEST_SPACE_RANK     2
+
+#define ATTRIBUTE_ITERATE_TEST_DSET_SPACE_RANK 2
+#define ATTRIBUTE_ITERATE_TEST_ATTR_SPACE_RANK 2
+#define ATTRIBUTE_ITERATE_TEST_SUBGROUP_NAME   "attribute_iterate_test"
+#define ATTRIBUTE_ITERATE_TEST_DSET_NAME       "attribute_iterate_dset"
+#define ATTRIBUTE_ITERATE_TEST_ATTR_NAME       "iter_attr1"
+#define ATTRIBUTE_ITERATE_TEST_ATTR_NAME2      "iter_attr2"
+#define ATTRIBUTE_ITERATE_TEST_ATTR_NAME3      "iter_attr3"
+#define ATTRIBUTE_ITERATE_TEST_ATTR_NAME4      "iter_attr4"
+
+#define ATTRIBUTE_ITERATE_TEST_0_ATTRIBUTES_DSET_SPACE_RANK 2
+#define ATTRIBUTE_ITERATE_TEST_0_ATTRIBUTES_SUBGROUP_NAME   "attribute_iterate_test_0_attributes"
+#define ATTRIBUTE_ITERATE_TEST_0_ATTRIBUTES_DSET_NAME       "attribute_iterate_dset"
+
+#define ATTRIBUTE_PROPERTY_LIST_TEST_ATTRIBUTE_NAME1 "property_list_test_attribute1"
+#define ATTRIBUTE_PROPERTY_LIST_TEST_ATTRIBUTE_NAME2 "property_list_test_attribute2"
+#define ATTRIBUTE_PROPERTY_LIST_TEST_SUBGROUP_NAME   "attribute_property_list_test_group"
+#define ATTRIBUTE_PROPERTY_LIST_TEST_SPACE_RANK      2
+
+#define ATTRIBUTE_UNUSED_APIS_TEST_SPACE_RANK 2
+#define ATTRIBUTE_UNUSED_APIS_TEST_ATTR_NAME  "unused_apis_attr"
+
+#endif

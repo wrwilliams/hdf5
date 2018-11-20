@@ -23,17 +23,13 @@ int vol_file_test(void);
  *                                           *
  *********************************************/
 
-#define TEST_FILE_NAME "vol_test.h5"
+#define FILE_INTENT_TEST_DATASETNAME "/test_dset"
+#define FILE_INTENT_TEST_DSET_RANK   2
+#define FILE_INTENT_TEST_FILENAME    "intent_test_file"
 
-/* The names of a set of container groups which hold objects
- * created by each of the different types of tests.
- */
-#define GROUP_TEST_GROUP_NAME         "group_tests"
-#define ATTRIBUTE_TEST_GROUP_NAME     "attribute_tests"
-#define DATASET_TEST_GROUP_NAME       "dataset_tests"
-#define DATATYPE_TEST_GROUP_NAME      "datatype_tests"
-#define LINK_TEST_GROUP_NAME          "link_tests"
-#define OBJECT_TEST_GROUP_NAME        "object_tests"
-#define MISCELLANEOUS_TEST_GROUP_NAME "miscellaneous_tests"
+#define NONEXISTENT_FILENAME "nonexistent_file"
+
+#define FILE_PROPERTY_LIST_TEST_FNAME1 "property_list_test_file1"
+#define FILE_PROPERTY_LIST_TEST_FNAME2 "property_list_test_file2"
 
 #endif

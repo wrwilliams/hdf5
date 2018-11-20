@@ -820,6 +820,7 @@ h5_fileaccess(void)
 
     if((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0)
         return -1;
+
     if(!val || !*val) {
         /*
          * Try to retrieve the name of a VOL connector
@@ -933,36 +934,50 @@ h5_fileaccess(void)
             return -1;
     }
     else {
-        hid_t connector_id = -1;
+        htri_t connector_is_registered;
+        hid_t  connector_id = -1;
 
         /*
-         * Try to load a VOL connector
+         * Try to load a VOL connector.
          */
-        if ((connector_id = H5VLregister_driver_by_name(name)) >= 0) {
+
+        /*
+         * First, check to see if the connector is already registered.
+         */
+        if ((connector_is_registered = H5VLis_driver_registered(name)) < 0)
+            return -1;
+
+        if (connector_is_registered) {
             /*
-             * Initialize the VOL connector.
+             * Retrieve the ID of the already-registered VOL connector.
+             */
+            if ((connector_id = H5VLget_driver_id(name)) < 0)
+                return -1;
+        }
+        else {
+            /*
+             * Register and initialize the VOL connector.
              *
              * XXX: No provisions for vipl_id currently.
              */
+            if ((connector_id = H5VLregister_driver_by_name(name)) < 0)
+                return -1;
+
             if (H5VLinitialize(connector_id, -1) < 0) {
                 H5VLunregister_driver(connector_id);
                 return -1;
             }
-
-            /*
-             * XXX: Currently cannot pass any info to the VOL connector; will
-             * likely need some sort of callback for the library to call for this
-             * and it will have to be exposed at the H5VL layer.
-             */
-            if (H5Pset_vol(fapl, connector_id, NULL) < 0) {
-                H5VLterminate(connector_id, -1); /* XXX: no provisions for vtpl_id currently. */
-                H5VLunregister_driver(connector_id);
-                return -1;
-            }
         }
-        else
-            /* Unknown driver */
+
+        /*
+         * XXX: Currently cannot pass any info to the VOL connector; will
+         * likely need some sort of callback for the library to call for this
+         * and it will have to be exposed at the H5VL layer.
+         */
+        if (H5Pset_vol(fapl, connector_id, NULL) < 0) {
+            H5VLterminate(connector_id, -1); /* XXX: no provisions for vtpl_id currently. */
             return -1;
+        }
     }
 
     return fapl;
