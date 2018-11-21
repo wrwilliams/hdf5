@@ -217,6 +217,6 @@ use_disable_mdc_flushes_SOURCES=use_disable_mdc_flushes.c
 DISTCLEANFILES=testerror.sh testlibinfo.sh testcheck_version.sh testlinks_env.sh test_filter_plugin.sh \
     testswmr.sh testvdsswmr.sh test_usecases.sh testflushrefresh.sh test_filenotclosed.sh
 
-SUBDIRS = VOL
+SUBDIRS = . VOL
 
 include $(top_srcdir)/config/conclude.am
