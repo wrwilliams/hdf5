@@ -809,6 +809,9 @@ test_create_dataset_compound_types(void)
 
     TESTING("dataset creation w/ compound datatypes")
 
+    for (j = 0; j < DATASET_COMPOUND_TYPE_TEST_MAX_SUBTYPES; j++)
+        type_pool[j] = -1;
+
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 #ifdef DAOS_SPECIFIC
@@ -852,10 +855,10 @@ test_create_dataset_compound_types(void)
         size_t next_offset = 0;
         char   dset_name[256];
 
-        num_subtypes = (size_t) (rand() % DATASET_COMPOUND_TYPE_TEST_MAX_SUBTYPES) + 1;
-
-        for (j = 0; j < num_subtypes; j++)
+        for (j = 0; j < DATASET_COMPOUND_TYPE_TEST_MAX_SUBTYPES; j++)
             type_pool[j] = -1;
+
+        num_subtypes = (size_t) (rand() % DATASET_COMPOUND_TYPE_TEST_MAX_SUBTYPES) + 1;
 
         if ((compound_type = H5Tcreate(H5T_COMPOUND, 1)) < 0) {
             H5_FAILED();
