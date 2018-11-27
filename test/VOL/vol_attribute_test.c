@@ -435,31 +435,26 @@ test_create_attribute_on_dataset(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Attempting to open the attributes with H5Aopen_by_idx\n");
-#endif
-
     if (H5Aclose(attr_id) < 0)
         TEST_ERROR
     if (H5Aclose(attr_id2) < 0)
         TEST_ERROR
 
-    H5E_BEGIN_TRY {
-        attr_id = H5Aopen_by_idx(file_id, "/" ATTRIBUTE_TEST_GROUP_NAME "/" ATTRIBUTE_CREATE_ON_DATASET_DSET_NAME,
-                H5_INDEX_NAME, H5_ITER_INC, 0, H5P_DEFAULT, H5P_DEFAULT);
-        attr_id2 = H5Aopen_by_idx(file_id, "/" ATTRIBUTE_TEST_GROUP_NAME "/" ATTRIBUTE_CREATE_ON_DATASET_DSET_NAME,
-                H5_INDEX_NAME, H5_ITER_INC, 1, H5P_DEFAULT, H5P_DEFAULT);
-    } H5E_END_TRY;
+#ifdef VOL_TEST_DEBUG
+    puts("Attempting to open the attributes with H5Aopen_by_idx\n");
+#endif
 
-    if (attr_id >= 0) {
+    if ((attr_id = H5Aopen_by_idx(file_id, "/" ATTRIBUTE_TEST_GROUP_NAME "/" ATTRIBUTE_CREATE_ON_DATASET_DSET_NAME,
+            H5_INDEX_NAME, H5_ITER_INC, 0, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    unsupported API succeeded!\n");
+        printf("    couldn't open attribute by index\n");
         goto error;
     }
 
-    if (attr_id2 >= 0) {
+    if ((attr_id2 = H5Aopen_by_idx(file_id, "/" ATTRIBUTE_TEST_GROUP_NAME "/" ATTRIBUTE_CREATE_ON_DATASET_DSET_NAME,
+            H5_INDEX_NAME, H5_ITER_INC, 1, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    unsupported API succeeded!\n");
+        printf("    couldn't open attribute by index\n");
         goto error;
     }
 
@@ -678,31 +673,26 @@ test_create_attribute_on_datatype(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Attempting to open the attributes with H5Aopen_by_idx\n");
-#endif
-
     if (H5Aclose(attr_id) < 0)
         TEST_ERROR
     if (H5Aclose(attr_id2) < 0)
         TEST_ERROR
 
-    H5E_BEGIN_TRY {
-        attr_id = H5Aopen_by_idx(type_id, "/" ATTRIBUTE_CREATE_ON_DATATYPE_DTYPE_NAME,
-                H5_INDEX_NAME, H5_ITER_INC, 0, H5P_DEFAULT, H5P_DEFAULT);
-        attr_id2 = H5Aopen_by_idx(type_id, "/" ATTRIBUTE_CREATE_ON_DATATYPE_DTYPE_NAME,
-                H5_INDEX_NAME, H5_ITER_INC, 1, H5P_DEFAULT, H5P_DEFAULT);
-    } H5E_END_TRY;
+#ifdef VOL_TEST_DEBUG
+    puts("Attempting to open the attributes with H5Aopen_by_idx\n");
+#endif
 
-    if (attr_id >= 0) {
+    if ((attr_id = H5Aopen_by_idx(file_id, "/" ATTRIBUTE_TEST_GROUP_NAME "/" ATTRIBUTE_CREATE_ON_DATATYPE_DTYPE_NAME,
+            H5_INDEX_NAME, H5_ITER_INC, 0, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    unsupported API succeeded!\n");
+        printf("    couldn't open attribute by index\n");
         goto error;
     }
 
-    if (attr_id2 >= 0) {
+    if ((attr_id2 = H5Aopen_by_idx(file_id, "/" ATTRIBUTE_TEST_GROUP_NAME "/" ATTRIBUTE_CREATE_ON_DATATYPE_DTYPE_NAME,
+            H5_INDEX_NAME, H5_ITER_INC, 1, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    unsupported API succeeded!\n");
+        printf("    couldn't open attribute by index\n");
         goto error;
     }
 
@@ -1449,14 +1439,16 @@ test_get_attribute_name(void)
         goto error;
     }
 
-    H5E_BEGIN_TRY {
-        err_ret = H5Aget_name_by_idx(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5_INDEX_NAME, H5_ITER_INC,
-                0, name_buf, (size_t) name_buf_size + 1, H5P_DEFAULT);
-    } H5E_END_TRY;
-
-    if (err_ret >= 0) {
+    if (H5Aget_name_by_idx(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5_INDEX_NAME, H5_ITER_INC,
+            0, name_buf, (size_t) name_buf_size + 1, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    unsupported API succeeded!\n");
+        printf("    couldn't retrieve attribute name by index\n");
+        goto error;
+    }
+
+    if (strcmp(name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME)) {
+        H5_FAILED();
+        printf("    attribute name didn't match\n");
         goto error;
     }
 
@@ -1690,6 +1682,10 @@ test_delete_attribute(void)
     if (H5Aclose(attr_id) < 0)
         TEST_ERROR
 
+#ifdef VOL_TEST_DEBUG
+    puts("Attempting to delete attribute with H5Adelete_by_name\n");
+#endif
+
     /* Test H5Adelete_by_name */
     if ((attr_id = H5Acreate2(container_group, ATTRIBUTE_DELETION_TEST_ATTR_NAME, attr_dtype,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
@@ -1711,10 +1707,6 @@ test_delete_attribute(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Attempting to delete attribute with H5Adelete_by_name\n");
-#endif
-
     /* Delete the attribute */
     if (H5Adelete_by_name(file_id, ATTRIBUTE_TEST_GROUP_NAME, ATTRIBUTE_DELETION_TEST_ATTR_NAME, H5P_DEFAULT) < 0) {
         H5_FAILED();
@@ -1735,17 +1727,50 @@ test_delete_attribute(void)
         goto error;
     }
 
+    if (H5Aclose(attr_id) < 0)
+        TEST_ERROR
+
 #ifdef VOL_TEST_DEBUG
     puts("Attempting to delete attribute with H5Adelete_by_idx\n");
 #endif
 
-    H5E_BEGIN_TRY {
-        err_ret = H5Adelete_by_idx(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5_INDEX_NAME, H5_ITER_INC, 0, H5P_DEFAULT);
-    } H5E_END_TRY;
-
-    if (err_ret >= 0) {
+    /* Test H5Adelete_by_idx */
+    if ((attr_id = H5Acreate2(container_group, ATTRIBUTE_DELETION_TEST_ATTR_NAME, attr_dtype,
+            space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    unsupported API succeeded!\n");
+        printf("    couldn't create attribute\n");
+        goto error;
+    }
+
+    /* Verify the attribute has been created */
+    if ((attr_exists = H5Aexists(container_group, ATTRIBUTE_DELETION_TEST_ATTR_NAME)) < 0) {
+        H5_FAILED();
+        printf("    couldn't determine if attribute exists\n");
+        goto error;
+    }
+
+    if (!attr_exists) {
+        H5_FAILED();
+        printf("    attribute didn't exists\n");
+        goto error;
+    }
+
+    if (H5Adelete_by_idx(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5_INDEX_NAME, H5_ITER_INC, 0, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("    failed to delete attribute by index number\n");
+        goto error;
+    }
+
+    /* Verify the attribute has been deleted */
+    if ((attr_exists = H5Aexists(container_group, ATTRIBUTE_DELETION_TEST_ATTR_NAME)) < 0) {
+        H5_FAILED();
+        printf("    couldn't determine if attribute exists\n");
+        goto error;
+    }
+
+    if (attr_exists) {
+        H5_FAILED();
+        printf("    attribute exists!\n");
         goto error;
     }
 
