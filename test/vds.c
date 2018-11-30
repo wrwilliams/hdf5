@@ -115,7 +115,7 @@ vds_select_equal(hid_t space1, hid_t space2)
                 if(npoints1 != npoints2)
                     return FALSE;
 
-                /* Allocate point lists.  Do not return directly afer
+                /* Allocate point lists.  Do not return directly after
                  * allocating, to make sure buffers are freed. */
                 if(NULL == (buf1 = (hsize_t *)HDmalloc((size_t)rank1 * (size_t)npoints1 * sizeof(hsize_t))))
                     TEST_ERROR
@@ -372,7 +372,7 @@ test_api_get_ex_dcpl(test_api_config_t config, hid_t fapl, hid_t dcpl,
             TEST_ERROR
 
         /* Test H5Oget_info returns correct metadata size */
-        if(H5Oget_info(dset, &oinfo) < 0)
+        if(H5Oget_info2(dset, &oinfo, H5O_INFO_META_SIZE) < 0)
             TEST_ERROR
         if(oinfo.meta_size.obj.index_size != (hsize_t)0)
             TEST_ERROR

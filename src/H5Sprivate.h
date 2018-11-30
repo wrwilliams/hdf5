@@ -215,6 +215,7 @@ H5_DLL herr_t H5S_set_extent_real(H5S_t *space, const hsize_t *size);
 H5_DLL herr_t H5S_set_extent_simple(H5S_t *space, unsigned rank,
     const hsize_t *dims, const hsize_t *max);
 H5_DLL H5S_t *H5S_create(H5S_class_t type);
+H5_DLL herr_t H5S_get_validated_dataspace(hid_t space_id, const H5S_t **space/*out*/);
 H5_DLL H5S_t *H5S_create_simple(unsigned rank, const hsize_t dims[/*rank*/],
     const hsize_t maxdims[/*rank*/]);
 H5_DLL herr_t H5S_set_version(H5F_t *f, H5S_t *ds);
@@ -258,7 +259,7 @@ H5_DLL herr_t H5S_select_serialize(const H5S_t *space, uint8_t **p);
 H5_DLL htri_t H5S_select_is_contiguous(const H5S_t *space);
 H5_DLL htri_t H5S_select_is_single(const H5S_t *space);
 H5_DLL htri_t H5S_select_is_regular(const H5S_t *space);
-H5_DLL void H5S_select_adjust_u(H5S_t *space, const hsize_t *offset);
+H5_DLL herr_t H5S_select_adjust_u(H5S_t *space, const hsize_t *offset);
 H5_DLL herr_t H5S_select_project_scalar(const H5S_t *space, hsize_t *offset);
 H5_DLL herr_t H5S_select_project_simple(const H5S_t *space, H5S_t *new_space, hsize_t *offset);
 H5_DLL herr_t H5S_select_project_intersection(const H5S_t *src_space,

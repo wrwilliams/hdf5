@@ -190,6 +190,7 @@ public class HDF5Constants {
     public static final long H5E_UNSUPPORTED = H5E_UNSUPPORTED();
     public static final long H5E_VERSION = H5E_VERSION();
     public static final long H5E_VFL = H5E_VFL();
+    public static final long H5E_VOL = H5E_VOL();
     public static final long H5E_WALK_DOWNWARD = H5E_WALK_DOWNWARD();
     public static final long H5E_WALK_UPWARD = H5E_WALK_UPWARD();
     public static final long H5E_WRITEERROR = H5E_WRITEERROR();
@@ -317,6 +318,7 @@ public class HDF5Constants {
     public static final int H5I_REFERENCE = H5I_REFERENCE();
     public static final int H5I_UNINIT = H5I_UNINIT();
     public static final int H5I_VFL = H5I_VFL();
+    public static final int H5I_VOL = H5I_VOL();
 
     public static final int H5L_TYPE_ERROR = H5L_TYPE_ERROR();
     public static final int H5L_TYPE_HARD = H5L_TYPE_HARD();
@@ -330,6 +332,12 @@ public class HDF5Constants {
     public static final int H5O_COPY_EXPAND_REFERENCE_FLAG = H5O_COPY_EXPAND_REFERENCE_FLAG();
     public static final int H5O_COPY_WITHOUT_ATTR_FLAG = H5O_COPY_WITHOUT_ATTR_FLAG();
     public static final int H5O_COPY_PRESERVE_NULL_FLAG = H5O_COPY_PRESERVE_NULL_FLAG();
+    public static final int H5O_INFO_BASIC = H5O_INFO_BASIC();
+    public static final int H5O_INFO_TIME = H5O_INFO_TIME();
+    public static final int H5O_INFO_NUM_ATTRS = H5O_INFO_NUM_ATTRS();
+    public static final int H5O_INFO_HDR = H5O_INFO_HDR();
+    public static final int H5O_INFO_META_SIZE = H5O_INFO_META_SIZE();
+    public static final int H5O_INFO_ALL = H5O_INFO_ALL();
     public static final int H5O_SHMESG_NONE_FLAG = H5O_SHMESG_NONE_FLAG();
     public static final int H5O_SHMESG_SDSPACE_FLAG = H5O_SHMESG_SDSPACE_FLAG();
     public static final int H5O_SHMESG_DTYPE_FLAG = H5O_SHMESG_DTYPE_FLAG();
@@ -617,6 +625,7 @@ public class HDF5Constants {
     public static final long H5T_UNIX_D64LE = H5T_UNIX_D64LE();
     public static final long H5T_VARIABLE = H5T_VARIABLE();
     public static final int H5T_VLEN = H5T_VLEN();
+    public static final int H5T_VL_T = H5T_VL_T();
     public static final int H5Z_CB_CONT = H5Z_CB_CONT();
     public static final int H5Z_CB_ERROR = H5Z_CB_ERROR();
     public static final int H5Z_CB_FAIL = H5Z_CB_FAIL();
@@ -973,6 +982,8 @@ public class HDF5Constants {
 
     private static native final long H5E_VFL();
 
+    private static native final long H5E_VOL();
+
     private static native final long H5E_WALK_DOWNWARD();
 
     private static native final long H5E_WALK_UPWARD();
@@ -1217,6 +1228,8 @@ public class HDF5Constants {
 
     private static native final int H5I_VFL();
 
+    private static native final int H5I_VOL();
+
     private static native final int H5L_TYPE_ERROR();
 
     private static native final int H5L_TYPE_HARD();
@@ -1238,6 +1251,18 @@ public class HDF5Constants {
     private static native final int H5O_COPY_WITHOUT_ATTR_FLAG();
 
     private static native final int H5O_COPY_PRESERVE_NULL_FLAG();
+
+    private static native final int H5O_INFO_BASIC();
+
+    private static native final int H5O_INFO_TIME();
+
+    private static native final int H5O_INFO_NUM_ATTRS();
+
+    private static native final int H5O_INFO_HDR();
+
+    private static native final int H5O_INFO_META_SIZE();
+
+    private static native final int H5O_INFO_ALL();
 
     private static native final int H5O_SHMESG_NONE_FLAG();
 
@@ -1806,6 +1831,8 @@ public class HDF5Constants {
     private static native final long H5T_VARIABLE();
 
     private static native final int H5T_VLEN();
+
+    private static native final int H5T_VL_T();
 
     private static native final int H5Z_CB_CONT();
 

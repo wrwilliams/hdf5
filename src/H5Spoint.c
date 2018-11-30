@@ -48,7 +48,7 @@ static int H5S__point_unlim_dim(const H5S_t *space);
 static htri_t H5S_point_is_contiguous(const H5S_t *space);
 static htri_t H5S_point_is_single(const H5S_t *space);
 static htri_t H5S_point_is_regular(const H5S_t *space);
-static void H5S_point_adjust_u(H5S_t *space, const hsize_t *offset);
+static herr_t H5S_point_adjust_u(H5S_t *space, const hsize_t *offset);
 static herr_t H5S_point_project_scalar(const H5S_t *space, hsize_t *offset);
 static herr_t H5S_point_project_simple(const H5S_t *space, H5S_t *new_space, hsize_t *offset);
 static herr_t H5S_point_iter_init(H5S_sel_iter_t *iter, const H5S_t *space);
@@ -700,7 +700,7 @@ done:
     TRUE if the selection fits within the extent, FALSE if it does not and
         Negative on an error.
  DESCRIPTION
-    Determines if the current selection at the current offet fits within the
+    Determines if the current selection at the current offset fits within the
     extent for the dataspace.
  GLOBAL VARIABLES
  COMMENTS, BUGS, ASSUMPTIONS
@@ -1353,11 +1353,11 @@ H5S_point_is_regular(const H5S_t *space)
  PURPOSE
     Adjust a "point" selection by subtracting an offset
  USAGE
-    void H5S_point_adjust_u(space, offset)
+    herr_t H5S_point_adjust_u(space, offset)
         H5S_t *space;           IN/OUT: Pointer to dataspace to adjust
         const hsize_t *offset; IN: Offset to subtract
  RETURNS
-    None
+    Non-negative on success, negative on failure
  DESCRIPTION
     Moves a point selection by subtracting an offset from it.
  GLOBAL VARIABLES
@@ -1365,7 +1365,7 @@ H5S_point_is_regular(const H5S_t *space)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static void
+static herr_t
 H5S_point_adjust_u(H5S_t *space, const hsize_t *offset)
 {
     H5S_pnt_node_t *node;               /* Point node */
@@ -1400,7 +1400,7 @@ H5S_point_adjust_u(H5S_t *space, const hsize_t *offset)
         space->select.sel_info.pnt_lst->high_bounds[u] -= offset[u];
     } /* end for */
 
-    FUNC_LEAVE_NOAPI_VOID
+    FUNC_LEAVE_NOAPI(SUCCEED)
 }   /* H5S_point_adjust_u() */
 
 

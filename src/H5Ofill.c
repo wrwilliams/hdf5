@@ -194,7 +194,7 @@ H5FL_BLK_EXTERN(type_conv);
 static void *
 H5O_fill_new_decode(H5F_t H5_ATTR_UNUSED *f, H5O_t H5_ATTR_UNUSED *open_oh,
     unsigned H5_ATTR_UNUSED mesg_flags, unsigned H5_ATTR_UNUSED *ioflags,
-    size_t H5_ATTR_UNUSED p_size, const uint8_t *p)
+    size_t p_size, const uint8_t *p)
 {
     H5O_fill_t	*fill = NULL;
     void *ret_value = NULL;     /* Return value */
@@ -228,6 +228,8 @@ H5O_fill_new_decode(H5F_t H5_ATTR_UNUSED *f, H5O_t H5_ATTR_UNUSED *open_oh,
             INT32DECODE(p, fill->size);
             if(fill->size > 0) {
                 H5_CHECK_OVERFLOW(fill->size, ssize_t, size_t);
+                if((size_t)fill->size > p_size)
+                    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "destination buffer too small")
                 if(NULL == (fill->buf = H5MM_malloc((size_t)fill->size)))
                     HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for fill value")
                 HDmemcpy(fill->buf, p, (size_t)fill->size);
@@ -307,11 +309,13 @@ done:
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_fill_old_decode(H5F_t H5_ATTR_UNUSED *f, H5O_t H5_ATTR_UNUSED *open_oh,
+H5O_fill_old_decode(H5F_t *f, H5O_t *open_oh,
     unsigned H5_ATTR_UNUSED mesg_flags, unsigned H5_ATTR_UNUSED *ioflags,
-    size_t H5_ATTR_UNUSED p_size, const uint8_t *p)
+    size_t p_size, const uint8_t *p)
 {
     H5O_fill_t *fill = NULL;	/* Decoded fill value message */
+    htri_t exists = FALSE;
+    H5T_t *dt = NULL;
     void *ret_value = NULL;     /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -332,6 +336,21 @@ H5O_fill_old_decode(H5F_t H5_ATTR_UNUSED *f, H5O_t H5_ATTR_UNUSED *open_oh,
 
     /* Only decode the fill value itself if there is one */
     if(fill->size > 0) {
+        H5_CHECK_OVERFLOW(fill->size, ssize_t, size_t);
+        if((size_t)fill->size > p_size)
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "destination buffer too small")
+
+        /* Get the datatype message  */
+        if((exists = H5O_msg_exists_oh(open_oh, H5O_DTYPE_ID)) < 0)
+            HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, NULL, "unable to read object header")
+        if(exists) {
+            if(NULL == (dt = (H5T_t *)H5O_msg_read_oh(f, open_oh, H5O_DTYPE_ID, NULL)))
+                HGOTO_ERROR(H5E_SYM, H5E_CANTGET, NULL, "can't read DTYPE message")
+            /* Verify size */
+            if(fill->size != H5T_GET_SIZE(dt))
+                HGOTO_ERROR(H5E_SYM, H5E_CANTGET, NULL, "inconsistent fill value size")
+        }
+
         if(NULL == (fill->buf = H5MM_malloc((size_t)fill->size)))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for fill value")
         HDmemcpy(fill->buf, p, (size_t)fill->size);
@@ -344,6 +363,9 @@ H5O_fill_old_decode(H5F_t H5_ATTR_UNUSED *f, H5O_t H5_ATTR_UNUSED *open_oh,
     ret_value = (void*)fill;
 
 done:
+    if(dt)
+        H5O_msg_free(H5O_DTYPE_ID, dt);
+
     if(!ret_value && fill) {
         if(fill->buf)
             H5MM_xfree(fill->buf);
@@ -732,8 +754,8 @@ H5O_fill_reset_dyn(H5O_fill_t *fill)
     } /* end if */
     fill->size = 0;
     if(fill->type) {
-	(void)H5T_close_real(fill->type);
-	fill->type = NULL;
+        (void)H5T_close_real(fill->type);
+        fill->type = NULL;
     } /* end if */
 
 done:
@@ -986,7 +1008,7 @@ H5O_fill_convert(H5O_fill_t *fill, H5T_t *dset_type, hbool_t *fill_changed)
      * Can we convert between source and destination data types?
      */
     if(NULL == (tpath = H5T_path_find(fill->type, dset_type)))
-	HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to convert between src and dst datatypes")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to convert between src and dst datatypes")
 
     /* Don't bother doing anything if there will be no actual conversion */
     if(!H5T_path_noop(tpath)) {

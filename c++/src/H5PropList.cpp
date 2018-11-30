@@ -151,6 +151,7 @@ PropList::PropList(const hid_t plist_id) : IdComponent()
         case H5I_ATTR:
         case H5I_REFERENCE:
         case H5I_VFL:
+        case H5I_VOL:
         case H5I_ERROR_CLASS:
         case H5I_ERROR_MSG:
         case H5I_ERROR_STACK:
@@ -468,7 +469,7 @@ H5std_string PropList::getProperty(const char* name) const
         throw PropListIException(inMemFunc("getProperty"), "H5Pget failed");
     }
 
-    // Return propety value as a string after deleting temp C-string
+    // Return property value as a string after deleting temp C-string
     H5std_string prop_strg(prop_strg_C);
     delete []prop_strg_C;
     return (prop_strg);

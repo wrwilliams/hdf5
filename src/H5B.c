@@ -245,7 +245,7 @@ H5B_create(H5F_t *f, const H5B_class_t *type, void *udata, haddr_t *addr_p/*out*
             NULL == (bt->child = H5FL_SEQ_MALLOC(haddr_t, (size_t)shared->two_k)))
 	HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, FAIL, "memory allocation failed for B-tree root node")
     if(HADDR_UNDEF == (*addr_p = H5MF_alloc(f, H5FD_MEM_BTREE, (hsize_t)shared->sizeof_rnode)))
-	HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, FAIL, "file allocation failed for B-tree root node")
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, FAIL, "file allocation failed for B-tree root node")
 
     /*
      * Cache the new B-tree node.
@@ -320,7 +320,7 @@ H5B_find(H5F_t *f, const H5B_class_t *type, haddr_t addr, void *udata)
 
     /* Get shared info for B-tree */
     if(NULL == (rc_shared = (type->get_shared)(f, udata)))
-	HGOTO_ERROR(H5E_BTREE, H5E_CANTGET, FAIL, "can't retrieve B-tree's shared ref. count object")
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTGET, FAIL, "can't retrieve B-tree's shared ref. count object")
     shared = (H5B_shared_t *)H5UC_GET_OBJ(rc_shared);
     HDassert(shared);
 
@@ -332,7 +332,7 @@ H5B_find(H5F_t *f, const H5B_class_t *type, haddr_t addr, void *udata)
     cache_udata.type = type;
     cache_udata.rc_shared = rc_shared;
     if(NULL == (bt = (H5B_t *)H5AC_protect(f, H5AC_BT, addr, &cache_udata, H5AC__READ_ONLY_FLAG)))
-	HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to load B-tree node")
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to load B-tree node")
 
     rt = bt->nchildren;
     while(lt < rt && cmp) {
@@ -471,12 +471,12 @@ H5B__split(H5F_t *f, H5B_ins_ud_t *bt_ud, unsigned idx,
      * Create the new B-tree node.
      */
     if(H5B_create(f, shared->type, udata, &split_bt_ud->addr/*out*/) < 0)
-	HGOTO_ERROR(H5E_BTREE, H5E_CANTINIT, FAIL, "unable to create B-tree")
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTINIT, FAIL, "unable to create B-tree")
     cache_udata.f = f;
     cache_udata.type = shared->type;
     cache_udata.rc_shared = bt_ud->bt->rc_shared;
     if(NULL == (split_bt_ud->bt = (H5B_t *)H5AC_protect(f, H5AC_BT, split_bt_ud->addr, &cache_udata, H5AC__NO_FLAGS_SET)))
-	HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree")
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree")
     split_bt_ud->bt->level = bt_ud->bt->level;
 
     /*
@@ -769,7 +769,7 @@ H5B__insert_child(H5B_t *bt, unsigned *bt_flags, unsigned idx,
  *		the specified type.
  *
  *		On return, if LT_KEY_CHANGED is non-zero, then LT_KEY is
- *		the new native left key.  Similarily for RT_KEY_CHANGED
+ *		the new native left key.  Similarly for RT_KEY_CHANGED
  *		and RT_KEY.
  *
  *		If the node splits, then MD_KEY contains the key that
@@ -1300,7 +1300,7 @@ H5B__remove_helper(H5F_t *f, haddr_t addr, const H5B_class_t *type, int level,
 	if((int)(ret_value = H5B__remove_helper(f, bt->child[idx], type,
                 level + 1, H5B_NKEY(bt, shared, idx)/*out*/,
                 lt_key_changed/*out*/, udata, H5B_NKEY(bt, shared, idx + 1)/*out*/,
-                 rt_key_changed/*out*/)) < 0)
+                rt_key_changed/*out*/)) < 0)
 	    HGOTO_ERROR(H5E_BTREE, H5E_NOTFOUND, H5B_INS_ERROR, "key not found in subtree")
     } else if(type->remove) {
 	/*

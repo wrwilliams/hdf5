@@ -457,7 +457,7 @@ H5FS__cache_hdr_pre_serialize(H5F_t *f, void *_thing,
          *        H5F_addr_defined(fspace->addr)
          *
          *    will both be TRUE.  If this contition does not hold, then
-         *    either the free space info is not persistant 
+         *    either the free space info is not persistent 
          *    (!H5F_addr_defined(fspace->addr)???) or the section info 
          *    contains no free space data that must be written to file 
          *    ( fspace->serial_sect_count == 0 ).
@@ -487,7 +487,7 @@ H5FS__cache_hdr_pre_serialize(H5F_t *f, void *_thing,
          *
          * Case 1) If either fspace->serial_sect_count == 0 or 
          *         ! H5F_addr_defined(fspace->addr) do nothing as either 
-         *         the free space manager data is not persistant, or the 
+         *         the free space manager data is not persistent, or the 
          *         section info is empty.
          *
          *         Otherwise, allocate space for the section info in real
@@ -926,7 +926,7 @@ H5FS__cache_sinfo_verify_chksum(const void *_image, size_t len, void H5_ATTR_UNU
     uint32_t computed_chksum;   /* Computed metadata checksum value */
     htri_t ret_value = TRUE;	/* Return value */
 
-    FUNC_ENTER_STATIC_NOERR
+    FUNC_ENTER_PACKAGE_NOERR
 
     /* Check arguments */
     HDassert(image);
@@ -981,7 +981,7 @@ H5FS__cache_sinfo_deserialize(const void *_image, size_t len, void *_udata,
     HDassert(dirty);
 
     /* Allocate a new free space section info */
-    if(NULL == (sinfo = H5FS_sinfo_new(udata->f, fspace)))
+    if(NULL == (sinfo = H5FS__sinfo_new(udata->f, fspace)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* initialize old_sect_size */
@@ -1087,7 +1087,7 @@ H5FS__cache_sinfo_deserialize(const void *_image, size_t len, void *_udata,
 
 done:
     if(!ret_value && sinfo)
-        if(H5FS_sinfo_dest(sinfo) < 0)
+        if(H5FS__sinfo_dest(sinfo) < 0)
             HDONE_ERROR(H5E_FSPACE, H5E_CANTFREE, NULL, "unable to destroy free space info")
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1321,7 +1321,7 @@ H5FS__cache_sinfo_notify(H5AC_notify_action_t action, void *_thing)
     H5FS_sinfo_t *sinfo = (H5FS_sinfo_t *)_thing;
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT
+    FUNC_ENTER_PACKAGE
     
     /* Sanity check */
     HDassert(sinfo);
@@ -1404,7 +1404,7 @@ H5FS__cache_sinfo_free_icr(void *_thing)
     HDassert(fspace->cache_info.is_pinned);
 
     /* Destroy free space info */
-    if(H5FS_sinfo_dest(sinfo) < 0)
+    if(H5FS__sinfo_dest(sinfo) < 0)
         HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "unable to destroy free space info")
 
 done:
@@ -1454,7 +1454,7 @@ H5FS__sinfo_serialize_sect_cb(void *_item, void H5_ATTR_UNUSED *key, void *_udat
         /* Call 'serialize' callback for this section */
         if(sect_cls->serialize) {
             if((*sect_cls->serialize)(sect_cls, sect, *udata->image) < 0)
-                HGOTO_ERROR(H5E_FSPACE, H5E_CANTSERIALIZE, FAIL, "can't syncronize section")
+                HGOTO_ERROR(H5E_FSPACE, H5E_CANTSERIALIZE, FAIL, "can't synchronize section")
 
             /* Update offset in serialization buffer */
             (*udata->image) += sect_cls->serial_size;
@@ -1512,3 +1512,4 @@ H5FS__sinfo_serialize_node_cb(void *_item, void H5_ATTR_UNUSED *key, void *_udat
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS__sinfo_serialize_node_cb() */
+

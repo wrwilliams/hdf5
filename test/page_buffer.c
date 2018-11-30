@@ -21,6 +21,11 @@
 
 #include "h5test.h"
 
+#include "H5CXprivate.h"        /* API Contexts                         */
+#include "H5Iprivate.h"
+#include "H5PBprivate.h"
+#include "H5VLprivate.h"        /* Virtual Object Layer                     */
+
 /*
  * This file needs to access private information from the H5F package.
  */
@@ -31,12 +36,8 @@
 #define H5F_TESTING
 #include "H5Fpkg.h"
 
-#include "H5CXprivate.h"        /* API Contexts                         */
-#include "H5Iprivate.h"
-#include "H5PBprivate.h"
 
-
-#define FILENAME_LEN		1024
+#define FILENAME_LEN            1024
 #define NUM_DSETS               5
 #define NX                      100
 #define NY                      50
@@ -241,7 +242,7 @@ open_file(char *filename, hid_t fapl, hsize_t page_size,
         FAIL_STACK_ERROR;
 
     /* Get a pointer to the internal file object */
-    if(NULL == (f = (H5F_t *)H5I_object(file_id)))
+    if(NULL == (f = (H5F_t *)H5VL_object(file_id)))
         FAIL_STACK_ERROR;
 
     if(f->shared->page_buf == NULL)
@@ -604,7 +605,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
         FAIL_STACK_ERROR;
 
     /* Get a pointer to the internal file object */
-    if(NULL == (f = (H5F_t *)H5I_object(file_id)))
+    if(NULL == (f = (H5F_t *)H5VL_object(file_id)))
         FAIL_STACK_ERROR;
 
     /* opening the file inserts one or more pages into the page buffer.
@@ -619,7 +620,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
     if(HADDR_UNDEF == (addr = H5MF_alloc(f, H5FD_MEM_DRAW, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
-    /* intialize all the elements to have a value of -1 */
+    /* initialize all the elements to have a value of -1 */
     for(i=0 ; i<num_elements ; i++)
         data[i] = -1;
     if(H5F_block_write(f, H5FD_MEM_DRAW, addr, sizeof(int)*(size_t)num_elements, data) < 0)
@@ -887,7 +888,7 @@ test_lru_processing(hid_t orig_fapl, const char *env_h5_drvr)
         FAIL_STACK_ERROR;
 
     /* Get a pointer to the internal file object */
-    if(NULL == (f = (H5F_t *)H5I_object(file_id)))
+    if(NULL == (f = (H5F_t *)H5VL_object(file_id)))
         FAIL_STACK_ERROR;
 
     /* opening the file inserts one or more pages into the page buffer.
@@ -902,7 +903,7 @@ test_lru_processing(hid_t orig_fapl, const char *env_h5_drvr)
     if(HADDR_UNDEF == (addr = H5MF_alloc(f, H5FD_MEM_DRAW, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
-    /* intialize all the elements to have a value of -1 */
+    /* initialize all the elements to have a value of -1 */
     for(i=0 ; i<num_elements ; i++)
         data[i] = -1;
 
@@ -1146,7 +1147,7 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
         FAIL_STACK_ERROR;
 
     /* Get a pointer to the internal file object */
-    if(NULL == (f = (H5F_t *)H5I_object(file_id)))
+    if(NULL == (f = (H5F_t *)H5VL_object(file_id)))
         FAIL_STACK_ERROR;
 
     /* opening the file inserts one or more pages into the page buffer.
@@ -1281,7 +1282,7 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
         FAIL_STACK_ERROR;
 
     /* Get a pointer to the internal file object */
-    if(NULL == (f = (H5F_t *)H5I_object(file_id)))
+    if(NULL == (f = (H5F_t *)H5VL_object(file_id)))
         FAIL_STACK_ERROR;
 
     /* opening the file inserts one or more pages into the page buffer.
@@ -1411,7 +1412,7 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
         FAIL_STACK_ERROR;
 
     /* Get a pointer to the internal file object */
-    if(NULL == (f = (H5F_t *)H5I_object(file_id)))
+    if(NULL == (f = (H5F_t *)H5VL_object(file_id)))
         FAIL_STACK_ERROR;
 
     /* opening the file inserts one or more pages into the page buffer.
@@ -1440,7 +1441,7 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
     if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
-    /* intialize all the elements to have a value of -1 */
+    /* initialize all the elements to have a value of -1 */
     for(i=0 ; i<num_elements ; i++)
         data[i] = -1;
 
@@ -1552,7 +1553,7 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
     if((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
         FAIL_STACK_ERROR;
     /* Get a pointer to the internal file object */
-    if(NULL == (f = (H5F_t *)H5I_object(file_id)))
+    if(NULL == (f = (H5F_t *)H5VL_object(file_id)))
         FAIL_STACK_ERROR;
     page_buf = f->shared->page_buf;
 
@@ -1567,7 +1568,7 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
     if(HADDR_UNDEF == (raw_addr = H5MF_alloc(f, H5FD_MEM_DRAW, sizeof(int)*(size_t)num_elements)))
         FAIL_STACK_ERROR;
 
-    /* intialize all the elements to have a value of -1 */
+    /* initialize all the elements to have a value of -1 */
     for(i=0 ; i<num_elements ; i++)
         data[i] = -1;
 
@@ -1776,7 +1777,7 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
         FAIL_STACK_ERROR;
 
     /* Get a pointer to the internal file object */
-    if(NULL == (f = (H5F_t *)H5I_object(file_id)))
+    if(NULL == (f = (H5F_t *)H5VL_object(file_id)))
         FAIL_STACK_ERROR;
 
     /* opening the file inserts one or more pages into the page buffer.
@@ -1807,7 +1808,7 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
         FAIL_STACK_ERROR;
 
 
-    /* intialize all the elements to have a value of -1 */
+    /* initialize all the elements to have a value of -1 */
     for(i=0 ; i<num_elements ; i++)
         data[i] = -1;
 

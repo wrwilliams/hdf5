@@ -1633,14 +1633,10 @@ error:
  *
  * Purpose:     Callback function for h5_verify_cached_stabs.
  *
- * Return:      Success:        0
- *
- *              Failure:        -1
+ * Return:      SUCCEED/FAIL
  *
  * Programmer:  Neil Fortner
  *              Tuesday, April 12, 2011
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -1649,9 +1645,9 @@ h5_verify_cached_stabs_cb(hid_t oid, const char H5_ATTR_UNUSED *name,
     const H5O_info_t *oinfo, void H5_ATTR_UNUSED *udata)
 {
     if(oinfo->type == H5O_TYPE_GROUP)
-        return(H5G__verify_cached_stabs_test(oid));
+        return H5G__verify_cached_stabs_test(oid);
     else
-        return(0);
+        return SUCCEED;
 } /* end h5_verify_cached_stabs_cb() */
 
 
@@ -1694,8 +1690,8 @@ h5_verify_cached_stabs(const char *base_name[], hid_t fapl)
             continue;
         } /* end if */
 
-        if(H5Ovisit(file, H5_INDEX_NAME, H5_ITER_NATIVE,
-                h5_verify_cached_stabs_cb, NULL) < 0)
+        if(H5Ovisit2(file, H5_INDEX_NAME, H5_ITER_NATIVE,
+                h5_verify_cached_stabs_cb, NULL, H5O_INFO_BASIC) < 0)
             goto error;
 
         if(H5Fclose(file) < 0)
@@ -1904,4 +1900,47 @@ error:
         HDfree(vfd_class);
     return NULL;
 } /* h5_get_dummy_vfd_class */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    h5_get_dummy_vol_class()
+ *
+ * Purpose:     Returns a disposable, generally non-functional,
+ *              VOL class struct.
+ *
+ *              In some of the test code, we need a disposable VOL driver
+ *              but we don't want to mess with the real VFDs and we also
+ *              don't have access to the internals of the real VOL drivers
+ *              (which use static globals and functions) to easily duplicate
+ *              them (e.g.: for testing VOL driver ID handling).
+ *
+ *              This API call will return a pointer to a VOL class that
+ *              can be used to construct a test VOL using H5VLregister_driver().
+ *
+ * Return:      Success:    A pointer to a VOL class struct
+ *              Failure:    NULL
+ *
+ *-------------------------------------------------------------------------
+ */
+H5VL_class_t *
+h5_get_dummy_vol_class(void)
+{
+    H5VL_class_t *vol_class = NULL;     /* Dummy VOL class that will be returned */
+
+    /* Create the class and initialize everything to zero/NULL */
+    if(NULL == (vol_class = (H5VL_class_t *)HDcalloc((size_t)1, sizeof(H5VL_class_t))))
+        TEST_ERROR;
+
+    /* Fill in the minimum parameters to make a VOL driver class that
+     * can be registered.
+     */
+    vol_class->name = "dummy";
+
+    return vol_class;
+
+error:
+    if(vol_class)
+        HDfree(vol_class);
+    return NULL;
+} /* h5_get_dummy_vol_class */
 

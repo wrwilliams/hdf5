@@ -437,7 +437,7 @@ H5O__cache_serialize(const H5F_t *f, void *image, size_t len, void *_thing)
     HDassert(oh->cache_info.type == H5AC_OHDR);
     HDassert(oh->chunk[0].size == len);
 #ifdef H5O_DEBUG
-    H5O_assert(oh);
+    H5O__assert(oh);
 #endif /* H5O_DEBUG */
 
     /* Point to raw data 'image' for first chunk, which 
@@ -1433,6 +1433,7 @@ H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len, const uint8_t *image
                 H5O_NULL_ID == id && oh->nmesgs > 0 &&
                 H5O_NULL_ID == oh->mesg[oh->nmesgs - 1].type->id &&
                 oh->mesg[oh->nmesgs - 1].chunkno == chunkno) {
+
             size_t mesgno;          /* Current message to operate on */
 
             /* Combine adjacent null messages */
@@ -1447,7 +1448,7 @@ H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len, const uint8_t *image
 
             /* Check if we need to extend message table to hold the new message */
             if(oh->nmesgs >= oh->alloc_nmesgs)
-                if(H5O_alloc_msgs(oh, (size_t)1) < 0)
+                if(H5O__alloc_msgs(oh, (size_t)1) < 0)
                     HGOTO_ERROR(H5E_OHDR, H5E_CANTALLOC, FAIL, "can't allocate more space for messages")
 
             /* Get pointer to message to set up */
@@ -1467,13 +1468,13 @@ H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len, const uint8_t *image
 
             /* Point unknown messages at 'unknown' message class */
             /* (Usually from future versions of the library) */
-	    if(id >= H5O_UNKNOWN_ID ||
+            if(id >= H5O_UNKNOWN_ID ||
 #ifdef H5O_ENABLE_BOGUS
                     id == H5O_BOGUS_VALID_ID ||
 #endif
                     NULL == H5O_msg_class_g[id]) {
 
-		H5O_unknown_t *unknown;     /* Pointer to "unknown" message info */
+                H5O_unknown_t *unknown;     /* Pointer to "unknown" message info */
 
                 /* Allocate "unknown" message info */
                 if(NULL == (unknown = H5FL_MALLOC(H5O_unknown_t)))
@@ -1490,7 +1491,7 @@ H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len, const uint8_t *image
 
                 /* Check for "fail if unknown" message flags */
                 if(((udata->file_intent & H5F_ACC_RDWR) && 
-                       (flags & H5O_MSG_FLAG_FAIL_IF_UNKNOWN_AND_OPEN_FOR_WRITE))
+                        (flags & H5O_MSG_FLAG_FAIL_IF_UNKNOWN_AND_OPEN_FOR_WRITE))
                         || (flags & H5O_MSG_FLAG_FAIL_IF_UNKNOWN_ALWAYS))
                     HGOTO_ERROR(H5E_OHDR, H5E_BADMESG, FAIL, "unknown message with 'fail if unknown' flag found")
                 /* Check for "mark if unknown" message flag, etc. */
@@ -1543,7 +1544,8 @@ H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len, const uint8_t *image
                 H5O_refcount_t *refcount;
 
                 /* Decode ref. count message */
-                HDassert(oh->version > H5O_VERSION_1);
+                if(oh->version <= H5O_VERSION_1)
+                    HGOTO_ERROR(H5E_OHDR, H5E_VERSION, FAIL, "object header version does not support reference count message")
                 refcount = (H5O_refcount_t *)(H5O_MSG_REFCOUNT->decode)(udata->f, NULL, 0, &ioflags, mesg->raw_size, mesg->raw);
 
                 /* Save 'native' form of ref. count message */
@@ -1551,6 +1553,8 @@ H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len, const uint8_t *image
 
                 /* Set object header values */
                 oh->has_refcount_msg = TRUE;
+                if(!refcount)
+                    HGOTO_ERROR(H5E_OHDR, H5E_CANTSET, FAIL, "can't decode refcount")
                 oh->nlink = *refcount;
             } /* end if */
             /* Check if message is a link message */
@@ -1614,6 +1618,10 @@ H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len, const uint8_t *image
     } /* end if */
 
 done:
+    if(ret_value < 0 && udata->cont_msg_info->msgs) {
+        udata->cont_msg_info->msgs = H5FL_SEQ_FREE(H5O_cont_t, udata->cont_msg_info->msgs);
+        udata->cont_msg_info->alloc_nmsgs = 0;
+    }
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5O__chunk_deserialize() */
 

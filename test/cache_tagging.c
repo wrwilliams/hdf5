@@ -119,7 +119,7 @@ static int dump_cache(hid_t fid)
     H5F_t *f;           /* File Pointer */
 
     /* Get Internal File / Cache Pointers */
-    if(NULL == (f = (H5F_t *)H5I_object(fid)))
+    if(NULL == (f = (H5F_t *)H5VL_object(fid)))
         TEST_ERROR;
 
     /* Dump the cache */
@@ -159,7 +159,7 @@ verify_no_unknown_tags(hid_t fid)
     int i;              /* Iterator */
 
     /* Get Internal File / Cache Pointers */
-    if(NULL == (f = (H5F_t *)H5I_object(fid)))
+    if(NULL == (f = (H5F_t *)H5VL_object(fid)))
         TEST_ERROR;
     cache_ptr = f->shared->cache;
 
@@ -207,7 +207,7 @@ mark_all_entries_investigated(hid_t fid)
     int i;              /* Iterator */
 
     /* Get Internal File / Cache Pointers */
-    if(NULL == (f = (H5F_t *)H5I_object(fid)))
+    if(NULL == (f = (H5F_t *)H5VL_object(fid)))
         TEST_ERROR;
     cache_ptr = f->shared->cache;
 
@@ -253,7 +253,7 @@ reset_all_entries_investigated(hid_t fid)
     int i;              /* Iterator */
 
     /* Get Internal File / Cache Pointers */
-    if(NULL == (f = (H5F_t *)H5I_object(fid)))
+    if(NULL == (f = (H5F_t *)H5VL_object(fid)))
         TEST_ERROR;
     cache_ptr = f->shared->cache;
 
@@ -301,7 +301,7 @@ verify_tag(hid_t fid, int id, haddr_t tag)
     int i;                      /* Iterator */
 
     /* Get Internal File / Cache Pointers */
-    if(NULL == (f = (H5F_t *)H5I_object(fid)))
+    if(NULL == (f = (H5F_t *)H5VL_object(fid)))
         TEST_ERROR;
     cache_ptr = f->shared->cache;
 
@@ -341,7 +341,7 @@ evict_entries(hid_t fid)
     H5F_t *f;         /* File Pointer */
 
     /* Get Internal File / Cache Pointers */
-    if(NULL == (f = (H5F_t *)H5I_object(fid)))
+    if(NULL == (f = (H5F_t *)H5VL_object(fid)))
         TEST_ERROR;
 
     /* Mark all entries investigated */
@@ -377,7 +377,7 @@ get_object_header_tag(hid_t loc_id, haddr_t *tag)
     H5O_info_t oinfo;           /* Object info */
 
     /* Retrieve the info for the object */
-    if(H5Oget_info(loc_id, &oinfo) < 0)
+    if(H5Oget_info2(loc_id, &oinfo, H5O_INFO_ALL) < 0)
         TEST_ERROR;
 
     /* Set the tag to return */
@@ -394,7 +394,7 @@ error:
  * Function:    get_sbe_tag()
  *
  * Purpose:     This function retrieves the tag associated with the superblock
- *		extension (the object header address stored in the superblock)
+ *              extension (the object header address stored in the superblock)
  *
  * Return:      0 on Success; 1 on Failure
  *
@@ -407,7 +407,7 @@ static int
 get_sbe_tag(hid_t fid, haddr_t *tag)
 {
     /* Retrieve the superblock extension's object header address for the file */
-    if(H5F_get_sbe_addr_test(fid, tag) < 0)
+    if(H5F__get_sbe_addr_test(fid, tag) < 0)
         TEST_ERROR;
 
     return 0;
@@ -1514,7 +1514,7 @@ check_attribute_rename_tags(hid_t fcpl, int type)
     haddr_t g_tag = 0;
     hsize_t dims1[2] = {DIMS, DIMS}; /* dimensions */
     hsize_t maxdims[2] = {H5S_UNLIMITED, H5S_UNLIMITED}; /* dimensions */
-    hbool_t persistant_fsms = FALSE;
+    hbool_t persistent_fsms = FALSE;
 
     /* Testing Macro */
     TESTING("tag application during attribute renaming");
@@ -1523,8 +1523,8 @@ check_attribute_rename_tags(hid_t fcpl, int type)
     /* Setup */
     /* ===== */
 
-    /* check to see if the FCPL specified persistant free space managers */
-    if(H5Pget_file_space_strategy(fcpl, NULL, &persistant_fsms, NULL) < 0)
+    /* check to see if the FCPL specified persistent free space managers */
+    if(H5Pget_file_space_strategy(fcpl, NULL, &persistent_fsms, NULL) < 0)
         TEST_ERROR;
 
     /* Allocate array */
@@ -1621,14 +1621,14 @@ check_attribute_rename_tags(hid_t fcpl, int type)
          */
         if ( verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0 ) TEST_ERROR;
 
-        /* If the free space managers are persistant, the
+        /* If the free space managers are persistent, the
          * H5MF_tidy_self_referential_fsm_hack() must have been run.
          * Since this function floats all self referential free space
          * managers, the H5FD_MEM_SUPER FSM will not be in the metadata
          * cache.
          */
-        if(!persistant_fsms && verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0) TEST_ERROR;
-        if(!persistant_fsms && verify_tag(fid, H5AC_FSPACE_SINFO_ID, H5AC__FREESPACE_TAG) < 0) TEST_ERROR;
+        if(!persistent_fsms && verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0) TEST_ERROR;
+        if(!persistent_fsms && verify_tag(fid, H5AC_FSPACE_SINFO_ID, H5AC__FREESPACE_TAG) < 0) TEST_ERROR;
 
         /* verify btree header and leaf node belonging to group */
         if ( verify_tag(fid, H5AC_BT2_HDR_ID, g_tag) < 0 ) TEST_ERROR;
@@ -1693,7 +1693,7 @@ check_attribute_delete_tags(hid_t fcpl, int type)
     haddr_t g_tag = 0;
     hsize_t dims1[2] = {DIMS, DIMS}; /* dimensions */
     hsize_t maxdims[2] = {H5S_UNLIMITED, H5S_UNLIMITED}; /* dimensions */
-    hbool_t persistant_fsms = FALSE;
+    hbool_t persistent_fsms = FALSE;
 
     /* Testing Macro */
     TESTING("tag application during attribute delete");
@@ -1702,8 +1702,8 @@ check_attribute_delete_tags(hid_t fcpl, int type)
     /* Setup */
     /* ===== */
 
-    /* check to see if the FCPL specified persistant free space managers */
-    if ( H5Pget_file_space_strategy(fcpl, NULL, &persistant_fsms, NULL) < 0 )
+    /* check to see if the FCPL specified persistent free space managers */
+    if ( H5Pget_file_space_strategy(fcpl, NULL, &persistent_fsms, NULL) < 0 )
         TEST_ERROR;
 
     /* Allocate array */
@@ -1781,13 +1781,13 @@ check_attribute_delete_tags(hid_t fcpl, int type)
             TEST_ERROR;
 
 #if 0
-        /* If the free space managers are persistant, the 
+        /* If the free space managers are persistent, the 
          * H5MF_tidy_self_referential_fsm_hack() must have been run.
          * Since this function floats all self referential free space 
          * managers, the H5FD_MEM_SUPER FSM will not be in the metadata 
          * cache.
          */
-        if ( ( ! persistant_fsms ) && 
+        if ( ( ! persistent_fsms ) && 
              ( verify_tag(fid, H5AC_FSPACE_HDR_ID, H5AC__FREESPACE_TAG) < 0 ) )
             TEST_ERROR;
 #endif
@@ -2937,7 +2937,7 @@ check_object_info_tags(void)
     /* Get information on an object by name  */
     /* ===================================== */
 
-    if ( H5Oget_info_by_name(fid, GROUPNAME, &oinfo, H5P_DEFAULT) < 0 ) TEST_ERROR;
+    if ( H5Oget_info_by_name2(fid, GROUPNAME, &oinfo, H5O_INFO_ALL, H5P_DEFAULT) < 0 ) TEST_ERROR;
 
     /* =================================== */
     /* Verification of Metadata Tag Values */
@@ -3599,7 +3599,7 @@ check_external_link_open_tags(void)
     /* =========================== */
     /* Close open objects and file */
     /* =========================== */
-    if ( (H5Gclose(xid)) < 0 ) TEST_ERROR;
+    if ( H5Gclose(xid) < 0 ) TEST_ERROR;
     if ( H5Fclose(fid) < 0 ) TEST_ERROR;
     if ( H5Fclose(fid2) < 0 ) TEST_ERROR;
 
@@ -3653,7 +3653,7 @@ check_invalid_tag_application(void)
     api_ctx_pushed = TRUE;
 
     /* Get internal file pointer*/
-    if ( NULL == (f = (H5F_t *)H5I_object(fid)) ) TEST_ERROR;
+    if ( NULL == (f = (H5F_t *)H5VL_object(fid)) ) TEST_ERROR;
 
     /* Call H5HL_create, an internal function that calls H5AC_insert_entry without setting up a tag */
     /* Ensure this returns FAILURE, as a tag has not been set up. */
@@ -3672,7 +3672,7 @@ check_invalid_tag_application(void)
     /* This should fail as no tag is set up during the protect call */
     if (( lheap = H5HL_protect(f, addr, H5AC__NO_FLAGS_SET)) != NULL ) TEST_ERROR;
 
-    /* Again, set up a valid tag in the DXPL */
+    /* Again, set up a valid tag in the API context */
     H5AC_tag((haddr_t)25, NULL);
 
     /* Call H5HL_protect again to protect the local heap. This should succeed. */
@@ -3711,9 +3711,7 @@ error:
  *
  * Purpose:     Run tests on library's ability to tag metadata entries.
  *
- * Return:      Success:
- *
- *              Failure:
+ * Return:      EXIT_SUCCESS/EXIT_FAILURE
  *
  * Programmer:  Mike McGreevy
  *              January 15, 2009
@@ -3755,12 +3753,12 @@ main(void)
         /* Run tests on each fcpl set up above. */
         if (test_type == TEST_DEFAULT) {
 
-            if (!nerrs) printf("Testing standard tag application cases w/ default fcpl:\n");
+            if (!nerrs) HDprintf("Testing standard tag application cases w/ default fcpl:\n");
             fcpl = fcpl_default;
         
         } else if (test_type == TEST_SHMESG) {
 
-            if (!nerrs) printf("Testing standard tag application cases w/ shared messages:\n");
+            if (!nerrs) HDprintf("Testing standard tag application cases w/ shared messages:\n");
             fcpl = fcpl_shmesg_all;
 
         } else {
@@ -3780,7 +3778,7 @@ main(void)
         if (!nerrs) nerrs += check_link_removal_tags(fcpl, test_type);
     } /* end for */
 
-    if (!nerrs) printf("Testing other specific tag application cases:\n");
+    if (!nerrs) HDprintf("Testing other specific tag application cases:\n");
     if (!nerrs) nerrs += check_group_creation_tags();
     if (!nerrs) nerrs += check_multi_group_creation_tags();
     if (!nerrs) nerrs += check_group_open_tags();
@@ -3804,10 +3802,13 @@ main(void)
     HDremove(FILENAME2);
 
     /* Return Errors */
-    return nerrs > 0;
+    if (nerrs > 0)
+        return EXIT_FAILURE;
+    else
+        return EXIT_SUCCESS;
 
 error:
     /* Return with Error */
-    return 1;
+    return EXIT_FAILURE;
 
 } /* main */

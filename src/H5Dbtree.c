@@ -666,12 +666,13 @@ done:
 static herr_t
 H5D__btree_decode_key(const H5B_shared_t *shared, const uint8_t *raw, void *_key)
 {
-    const H5O_layout_chunk_t *layout;           /* Chunk layout description */
-    H5D_btree_key_t	*key = (H5D_btree_key_t *) _key;        /* Pointer to decoded key */
-    hsize_t             tmp_offset;             /* Temporary coordinate offset, from file */
-    unsigned		u;                      /* Local index variable */
+    const H5O_layout_chunk_t *layout;                 /* Chunk layout description */
+    H5D_btree_key_t *key = (H5D_btree_key_t *) _key;  /* Pointer to decoded key */
+    hsize_t  tmp_offset;             /* Temporary coordinate offset, from file */
+    unsigned u;                      /* Local index variable */
+    herr_t   ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_STATIC_NOERR
+    FUNC_ENTER_STATIC
 
     /* check args */
     HDassert(shared);
@@ -685,15 +686,19 @@ H5D__btree_decode_key(const H5B_shared_t *shared, const uint8_t *raw, void *_key
     UINT32DECODE(raw, key->nbytes);
     UINT32DECODE(raw, key->filter_mask);
     for(u = 0; u < layout->ndims; u++) {
+        if(layout->dim[u] == 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_BADVALUE, FAIL, "chunk size must be > 0, dim = %u ", u)
+
         /* Retrieve coordinate offset */
-	UINT64DECODE(raw, tmp_offset);
+        UINT64DECODE(raw, tmp_offset);
         HDassert(0 == (tmp_offset % layout->dim[u]));
 
         /* Convert to a scaled offset */
         key->scaled[u] = tmp_offset / layout->dim[u];
     } /* end for */
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__btree_decode_key() */
 
 
@@ -937,7 +942,7 @@ H5D__btree_idx_create(const H5D_chk_idx_info_t *idx_info)
 
     /* Create the v1 B-tree for the chunk index */
     if(H5B_create(idx_info->f, H5B_BTREE, &udata, &(idx_info->storage->idx_addr)/*out*/) < 0)
-	HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't create B-tree")
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't create B-tree")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
