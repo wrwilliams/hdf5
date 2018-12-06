@@ -6415,10 +6415,25 @@ H5S__hyper_update_diminfo(H5S_t *space, H5S_seloper_t op,
         /* Check if we succeeded, if so, set the new diminfo values */
         if(space->select.sel_info.hslab->diminfo_valid == H5S_DIMINFO_VALID_YES)
             for(curr_dim = 0; curr_dim < space->extent.rank; curr_dim++) {
+                hsize_t tmp_high_bound;
+
+                /* Set the new diminfo values */
                 space->select.sel_info.hslab->diminfo.app[curr_dim].start  = space->select.sel_info.hslab->diminfo.opt[curr_dim].start = tmp_diminfo[curr_dim].start;
+                HDassert(tmp_diminfo[curr_dim].stride > 0);
                 space->select.sel_info.hslab->diminfo.app[curr_dim].stride = space->select.sel_info.hslab->diminfo.opt[curr_dim].stride = tmp_diminfo[curr_dim].stride;
+                HDassert(tmp_diminfo[curr_dim].count > 0);
                 space->select.sel_info.hslab->diminfo.app[curr_dim].count  = space->select.sel_info.hslab->diminfo.opt[curr_dim].count = tmp_diminfo[curr_dim].count;
+                HDassert(tmp_diminfo[curr_dim].block > 0);
                 space->select.sel_info.hslab->diminfo.app[curr_dim].block  = space->select.sel_info.hslab->diminfo.opt[curr_dim].block = tmp_diminfo[curr_dim].block;
+
+                /* Check for updating the low & high bounds */
+                if(tmp_diminfo[curr_dim].start < space->select.sel_info.hslab->diminfo.low_bounds[curr_dim])
+                    space->select.sel_info.hslab->diminfo.low_bounds[curr_dim] = tmp_diminfo[curr_dim].start;
+                tmp_high_bound = tmp_diminfo[curr_dim].start +
+                    (tmp_diminfo[curr_dim].block - 1) +
+                    (tmp_diminfo[curr_dim].stride * (tmp_diminfo[curr_dim].count - 1));
+                if(tmp_high_bound > space->select.sel_info.hslab->diminfo.low_bounds[curr_dim])
+                    space->select.sel_info.hslab->diminfo.high_bounds[curr_dim] = tmp_high_bound;
             } /* end for */
     } /* end else */
 
