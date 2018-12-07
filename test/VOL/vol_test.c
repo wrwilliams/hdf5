@@ -11,11 +11,17 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * A generic test suite meant to test a specified VOL connector or set of
- * VOL connectors.
+ * A test suite which only makes public HDF5 API calls and which is meant
+ * to test a specified HDF5 VOL connector or set of VOL connectors. This
+ * test suite must assume that a VOL connector could only implement the File
+ * interface. Therefore, the suite should check that a particular piece of
+ * functionality is supported by the VOL connector before actually testing
+ * it. If the functionality is not supported, the test should simply be
+ * skipped, perhaps with a note as to why the test was skipped, if possible.
  *
- * The first file-related test will create a file that contains a group for
- * each of the different class of tests.
+ * If the VOL connector being used supports the creation of groups, this
+ * test suite will attempt to organize the output of these various tests
+ * into groups based on their respective interface.
  */
 
 #include "vol_test.h"
@@ -34,22 +40,19 @@
 #include "vol_misc_test.h"
 
 static int test_vol_connector_setup(void);
+static int create_test_container(void);
 
 char vol_test_filename[VOL_TEST_FILENAME_MAX_LENGTH];
 
 static int
 test_vol_connector_setup(void)
 {
-    hid_t fapl_id = -1;
+    hid_t fapl_id = H5I_INVALID_HID;
 
     TESTING("VOL connector setup");
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if (H5Pclose(fapl_id) < 0)
         TEST_ERROR
@@ -77,10 +80,14 @@ generate_random_datatype(H5T_class_t parent_class)
 {
     static int  depth = 0;
     hsize_t    *array_dims = NULL;
+    size_t      i;
     hid_t       compound_members[COMPOUND_TYPE_MAX_MEMBERS];
-    hid_t       datatype = -1;
+    hid_t       datatype = H5I_INVALID_HID;
 
     depth++;
+
+    for (i = 0; i < COMPOUND_TYPE_MAX_MEMBERS; i++)
+        compound_members[i] = H5I_INVALID_HID;
 
     switch (rand() % H5T_NCLASSES) {
         case_integer:
@@ -414,7 +421,6 @@ generate_random_datatype(H5T_class_t parent_class)
             size_t num_members;
             size_t next_offset = 0;
             size_t compound_size = 0;
-            size_t i;
 
             /* Currently only allows arrays of integer, float or string. Pick another type if we
              * are creating an array of something other than these. Also don't allow recursion
@@ -438,9 +444,6 @@ generate_random_datatype(H5T_class_t parent_class)
                         break;
                 }
             }
-
-            for (i = 0; i < COMPOUND_TYPE_MAX_MEMBERS; i++)
-                compound_members[i] = -1;
 
             if ((datatype = H5Tcreate(H5T_COMPOUND, 1)) < 0) {
                 H5_FAILED();
@@ -553,8 +556,6 @@ generate_random_datatype(H5T_class_t parent_class)
         case_enum:
         case H5T_ENUM:
         {
-            size_t i;
-
             /* Currently doesn't currently support ARRAY of ENUM, so try another type
              * if this happens. */
             if (H5T_ARRAY == parent_class) {
@@ -628,8 +629,7 @@ generate_random_datatype(H5T_class_t parent_class)
         case H5T_ARRAY:
         {
             unsigned ndims;
-            size_t   i;
-            hid_t    base_datatype = -1;
+            hid_t    base_datatype = H5I_INVALID_HID;
 
             /* Currently doesn't currently support ARRAY of ARRAY, so try another type
              * if this happens. Also check for too much recursion. */
@@ -686,8 +686,6 @@ error:
     depth--;
 
     if (datatype < 0) {
-        size_t i;
-
         for (i = 0; i < COMPOUND_TYPE_MAX_MEMBERS; i++) {
             if (compound_members[i] > 0 && H5Tclose(compound_members[i]) < 0) {
                 H5_FAILED();
@@ -700,6 +698,81 @@ error:
         free(array_dims);
 
     return datatype;
+}
+
+static int
+create_test_container(void)
+{
+    hid_t file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+#ifdef GROUP_CREATION_IS_SUPPORTED
+    hid_t group_id = H5I_INVALID_HID;
+#endif
+
+    if ((fapl_id = h5_fileaccess()) < 0)
+        TEST_ERROR
+
+    if ((file_id = H5Fcreate(vol_test_filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
+        printf("    couldn't create testing container file\n");
+        goto error;
+    }
+
+#ifdef GROUP_CREATION_IS_SUPPORTED
+    /* Create container groups for each of the test interfaces
+     * (group, attribute, dataset, etc.).
+     */
+    if ((group_id = H5Gcreate2(file_id, GROUP_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
+        printf("    created container group for Group tests\n");
+        H5Gclose(group_id);
+    }
+
+    if ((group_id = H5Gcreate2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
+        printf("    created container group for Attribute tests\n");
+        H5Gclose(group_id);
+    }
+
+    if ((group_id = H5Gcreate2(file_id, DATASET_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
+        printf("    created container group for Dataset tests\n");
+        H5Gclose(group_id);
+    }
+
+    if ((group_id = H5Gcreate2(file_id, DATATYPE_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
+        printf("    created container group for Datatype tests\n");
+        H5Gclose(group_id);
+    }
+
+    if ((group_id = H5Gcreate2(file_id, LINK_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
+        printf("    created container group for Link tests\n");
+        H5Gclose(group_id);
+    }
+
+    if ((group_id = H5Gcreate2(file_id, OBJECT_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
+        printf("    created container group for Object tests\n");
+        H5Gclose(group_id);
+    }
+
+    if ((group_id = H5Gcreate2(file_id, MISCELLANEOUS_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
+        printf("    created container group for Miscellaneous tests\n");
+        H5Gclose(group_id);
+    }
+#endif
+
+    if (H5Pclose(fapl_id) < 0)
+        TEST_ERROR
+    if (H5Fclose(file_id) < 0)
+        TEST_ERROR
+
+    return 0;
+
+error:
+    H5E_BEGIN_TRY {
+        H5Pclose(fapl_id);
+#ifdef GROUP_CREATION_IS_SUPPORTED
+        H5Gclose(group_id);
+#endif
+        H5Fclose(file_id);
+    } H5E_END_TRY;
+
+    return -1;
 }
 
 int main(int argc, char **argv)
@@ -722,7 +795,7 @@ int main(int argc, char **argv)
 
     snprintf(vol_test_filename, VOL_TEST_FILENAME_MAX_LENGTH, "%s", TEST_FILE_NAME);
 
-    if (NULL == (vol_connector_name = HDgetenv("HDF5_VOL_CONNECTOR_NAME"))) {
+    if (NULL == (vol_connector_name = HDgetenv("HDF5_VOL_CONNECTOR"))) {
         printf("No VOL connector selected; using native VOL connector\n");
         vol_connector_name = "native";
     }
@@ -749,6 +822,15 @@ int main(int argc, char **argv)
          */
         if (test_vol_connector_setup()) {
             fprintf(stderr, "Unable to initialize VOL connector '%s'\n", vol_connector_name);
+            continue;
+        }
+
+        /*
+         * Create the file that will be used for all of the tests,
+         * except for those which test file creation.
+         */
+        if (create_test_container() < 0) {
+            fprintf(stderr, "Unable to create testing container file\n");
             continue;
         }
 

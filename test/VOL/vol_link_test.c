@@ -76,17 +76,13 @@ static int
 test_create_hard_link(void)
 {
     htri_t link_exists;
-    hid_t  file_id = -1, fapl_id = -1;
-    hid_t  container_group = -1;
+    hid_t  file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t  container_group = H5I_INVALID_HID;
 
     TESTING("create hard link")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -100,19 +96,11 @@ test_create_hard_link(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating a hard link\n");
-#endif
-
     if (H5Lcreate_hard(file_id, "/", container_group, HARD_LINK_TEST_LINK_NAME, H5P_DEFAULT, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    couldn't create hard link\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Verifying that the link exists\n");
-#endif
 
     /* Verify the link has been created */
     if ((link_exists = H5Lexists(container_group, HARD_LINK_TEST_LINK_NAME, H5P_DEFAULT)) < 0) {
@@ -158,20 +146,16 @@ test_create_hard_link_same_loc(void)
     hsize_t dims[H5L_SAME_LOC_TEST_DSET_SPACE_RANK];
     size_t  i;
     htri_t  link_exists;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   space_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   space_id = H5I_INVALID_HID;
 
     TESTING("create hard link with H5L_SAME_LOC")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -209,10 +193,6 @@ test_create_hard_link_same_loc(void)
     }
 
 #if 0 /* Library functionality for this part of the test is broken */
-#ifdef VOL_TEST_DEBUG
-    puts("Calling H5Lcreate_hard with H5L_SAME_LOC as first parameter\n");
-#endif
-
     if (H5Lcreate_hard(H5L_SAME_LOC, H5L_SAME_LOC_TEST_DSET_NAME, group_id, H5L_SAME_LOC_TEST_LINK_NAME1, H5P_DEFAULT, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    couldn't create first link\n");
@@ -231,10 +211,6 @@ test_create_hard_link_same_loc(void)
         printf("    link did not exist\n");
         goto error;
     }
-#endif
-
-#ifdef VOL_TEST_DEBUG
-    puts("Calling H5Lcreate_hard with H5L_SAME_LOC as second parameter\n");
 #endif
 
     if (H5Lcreate_hard(group_id, H5L_SAME_LOC_TEST_DSET_NAME, H5L_SAME_LOC, H5L_SAME_LOC_TEST_LINK_NAME2, H5P_DEFAULT, H5P_DEFAULT) < 0) {
@@ -299,20 +275,16 @@ test_create_soft_link_existing_relative(void)
     hsize_t dims[SOFT_LINK_EXISTING_RELATIVE_TEST_DSET_SPACE_RANK];
     size_t  i;
     htri_t  link_exists;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   dset_dspace = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   dset_dspace = H5I_INVALID_HID;
 
     TESTING("create soft link to existing object by relative path")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -351,20 +323,12 @@ test_create_soft_link_existing_relative(void)
     if (H5Dclose(dset_id) < 0)
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating soft link with relative path value to an existing object\n");
-#endif
-
     if (H5Lcreate_soft(SOFT_LINK_EXISTING_RELATIVE_TEST_DSET_NAME, group_id,
             SOFT_LINK_EXISTING_RELATIVE_TEST_LINK_NAME, H5P_DEFAULT, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    couldn't create soft link\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Verifying that the link exists\n");
-#endif
 
     /* Verify the link has been created */
     if ((link_exists = H5Lexists(group_id, SOFT_LINK_EXISTING_RELATIVE_TEST_LINK_NAME, H5P_DEFAULT)) < 0) {
@@ -426,17 +390,13 @@ static int
 test_create_soft_link_existing_absolute(void)
 {
     htri_t link_exists;
-    hid_t  file_id = -1, fapl_id = -1;
-    hid_t  container_group = -1, group_id = -1, root_id = -1;
+    hid_t  file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t  container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID, root_id = H5I_INVALID_HID;
 
     TESTING("create soft link to existing object by absolute path")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -456,19 +416,11 @@ test_create_soft_link_existing_absolute(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating a soft link with absolute path value to an existing object\n");
-#endif
-
     if (H5Lcreate_soft("/", group_id, SOFT_LINK_EXISTING_ABSOLUTE_TEST_LINK_NAME, H5P_DEFAULT, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    couldn't create soft link\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Verifying that the link exists\n");
-#endif
 
     /* Verify the link has been created */
     if ((link_exists = H5Lexists(file_id,
@@ -530,20 +482,16 @@ test_create_soft_link_dangling_relative(void)
     size_t  i;
     htri_t  link_exists;
     herr_t  err_ret = -1;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   dset_dspace = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   dset_dspace = H5I_INVALID_HID;
 
     TESTING("create dangling soft link to object by relative path")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -563,20 +511,12 @@ test_create_soft_link_dangling_relative(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating a dangling soft link with relative path value\n");
-#endif
-
     if (H5Lcreate_soft(SOFT_LINK_DANGLING_RELATIVE_TEST_DSET_NAME, group_id,
             SOFT_LINK_DANGLING_RELATIVE_TEST_LINK_NAME, H5P_DEFAULT, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    couldn't create soft link\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Verifying that the link exists\n");
-#endif
 
     /* Verify the link has been created */
     if ((link_exists = H5Lexists(group_id, SOFT_LINK_DANGLING_RELATIVE_TEST_LINK_NAME, H5P_DEFAULT)) < 0) {
@@ -671,20 +611,16 @@ test_create_soft_link_dangling_absolute(void)
     size_t  i;
     htri_t  link_exists;
     herr_t  err_ret = -1;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   dset_dspace = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   dset_dspace = H5I_INVALID_HID;
 
     TESTING("create dangling soft link to object by absolute path")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -704,20 +640,12 @@ test_create_soft_link_dangling_absolute(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating dangling soft link with absolute path value\n");
-#endif
-
     if (H5Lcreate_soft("/" LINK_TEST_GROUP_NAME "/" SOFT_LINK_DANGLING_ABSOLUTE_TEST_SUBGROUP_NAME "/" SOFT_LINK_DANGLING_ABSOLUTE_TEST_DSET_NAME,
             group_id, SOFT_LINK_DANGLING_ABSOLUTE_TEST_LINK_NAME, H5P_DEFAULT, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    couldn't create soft link\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Verifying that the link exists\n");
-#endif
 
     /* Verify the link has been created */
     if ((link_exists = H5Lexists(group_id, SOFT_LINK_DANGLING_ABSOLUTE_TEST_LINK_NAME, H5P_DEFAULT)) < 0) {
@@ -807,9 +735,9 @@ static int
 test_create_external_link(void)
 {
     htri_t link_exists;
-    hid_t  file_id = -1, fapl_id = -1;
-    hid_t  container_group = -1, group_id = -1;
-    hid_t  root_id = -1;
+    hid_t  file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t  container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t  root_id = H5I_INVALID_HID;
     char   ext_link_filename[VOL_TEST_FILENAME_MAX_LENGTH];
 
     TESTING("create external link to existing object")
@@ -818,10 +746,6 @@ test_create_external_link(void)
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fcreate(ext_link_filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
@@ -850,20 +774,12 @@ test_create_external_link(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating an external link to root group of other file\n");
-#endif
-
     if (H5Lcreate_external(ext_link_filename, "/", group_id,
             EXTERNAL_LINK_TEST_LINK_NAME, H5P_DEFAULT, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    couldn't create external link\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Verifying that the link exists\n");
-#endif
 
     /* Verify the link has been created */
     if ((link_exists = H5Lexists(group_id, EXTERNAL_LINK_TEST_LINK_NAME, H5P_DEFAULT)) < 0) {
@@ -923,11 +839,11 @@ test_create_dangling_external_link(void)
     size_t  i;
     htri_t  link_exists;
     herr_t  err_ret = -1;
-    hid_t   file_id = -1, ext_file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   dset_dspace = -1;
+    hid_t   file_id = H5I_INVALID_HID, ext_file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   dset_dspace = H5I_INVALID_HID;
     char    ext_link_filename[VOL_TEST_FILENAME_MAX_LENGTH];
 
     TESTING("create dangling external link")
@@ -936,10 +852,6 @@ test_create_dangling_external_link(void)
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((ext_file_id = H5Fcreate(ext_link_filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
@@ -966,20 +878,12 @@ test_create_dangling_external_link(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating a dangling external link to a dataset in other file\n");
-#endif
-
     if (H5Lcreate_external(ext_link_filename, "/" EXTERNAL_LINK_TEST_DANGLING_DSET_NAME, group_id,
             EXTERNAL_LINK_TEST_DANGLING_LINK_NAME, H5P_DEFAULT, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    couldn't create dangling external link\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Verifying that the link exists\n");
-#endif
 
     /* Verify the link has been created */
     if ((link_exists = H5Lexists(group_id, EXTERNAL_LINK_TEST_DANGLING_LINK_NAME, H5P_DEFAULT)) < 0) {
@@ -993,10 +897,6 @@ test_create_dangling_external_link(void)
         printf("    link did not exist\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Attempting to open non-existent dataset using dangling external link\n");
-#endif
 
     H5E_BEGIN_TRY {
         err_ret = H5Dopen2(group_id, EXTERNAL_LINK_TEST_DANGLING_LINK_NAME, H5P_DEFAULT);
@@ -1017,9 +917,6 @@ test_create_dangling_external_link(void)
     if ((dset_dspace = H5Screate_simple(EXTERNAL_LINK_TEST_DANGLING_DSET_SPACE_RANK, dims, NULL)) < 0)
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating target dataset for dangling external link\n");
-#endif
 
     if ((dset_id = H5Dcreate2(ext_file_id, EXTERNAL_LINK_TEST_DANGLING_DSET_NAME, dset_dtype, dset_dspace,
             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
@@ -1031,9 +928,6 @@ test_create_dangling_external_link(void)
     if (H5Dclose(dset_id) < 0)
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Re-attempting to open dataset using external link\n");
-#endif
 
     if ((dset_id = H5Dopen2(group_id, EXTERNAL_LINK_TEST_DANGLING_LINK_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
@@ -1086,18 +980,14 @@ test_create_user_defined_link(void)
     ssize_t udata_size;
     htri_t  link_exists;
     herr_t  err_ret = -1;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID;
     char    udata[UD_LINK_TEST_UDATA_MAX_SIZE];
 
     TESTING("create user-defined link")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -1114,10 +1004,6 @@ test_create_user_defined_link(void)
     if ((udata_size = snprintf(udata, UD_LINK_TEST_UDATA_MAX_SIZE, "udata")) < 0)
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating user-defined link\n");
-#endif
-
     H5E_BEGIN_TRY {
         err_ret = H5Lcreate_ud(container_group, UD_LINK_TEST_LINK_NAME, H5L_TYPE_HARD, udata, (size_t) udata_size,
                 H5P_DEFAULT, H5P_DEFAULT);
@@ -1128,10 +1014,6 @@ test_create_user_defined_link(void)
         printf("    unsupported API succeeded\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Verifying that the link exists\n");
-#endif
 
     /* Verify the link has been created */
     if ((link_exists = H5Lexists(container_group, UD_LINK_TEST_LINK_NAME, H5P_DEFAULT)) < 0) {
@@ -1177,11 +1059,11 @@ test_delete_link(void)
     size_t  i;
     htri_t  link_exists;
     herr_t  err_ret = -1;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id = -1, dset_id2 = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   dset_dspace = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID, dset_id2 = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   dset_dspace = H5I_INVALID_HID;
     char    ext_link_filename[VOL_TEST_FILENAME_MAX_LENGTH];
 
     TESTING("delete link")
@@ -1190,10 +1072,6 @@ test_delete_link(void)
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -1337,10 +1215,6 @@ test_delete_link(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Deleting links with H5Ldelete\n");
-#endif
-
     if (H5Ldelete(group_id, LINK_DELETE_TEST_DSET_NAME1, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    couldn't delete hard link using H5Ldelete\n");
@@ -1359,10 +1233,6 @@ test_delete_link(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Deleting links with H5Ldelete_by_idx\n");
-#endif
-
     H5E_BEGIN_TRY {
         err_ret = H5Ldelete_by_idx(group_id, ".", H5_INDEX_NAME, H5_ITER_INC, 0, H5P_DEFAULT);
     } H5E_END_TRY;
@@ -1392,10 +1262,6 @@ test_delete_link(void)
         printf("    unsupported API succeeded!\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Verifying that all links have been deleted\n");
-#endif
 
     /* Verify that all links have been deleted */
     if ((link_exists = H5Lexists(group_id, LINK_DELETE_TEST_DSET_NAME1, H5P_DEFAULT)) < 0) {
@@ -1518,20 +1384,16 @@ test_copy_link(void)
     size_t  i;
     htri_t  link_exists;
     herr_t  err_ret = -1;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   space_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   space_id = H5I_INVALID_HID;
 
     TESTING("copy a link")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -1587,10 +1449,6 @@ test_copy_link(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Attempting to copy a hard link to another location\n");
-#endif
-
     /* Copy the link */
     H5E_BEGIN_TRY {
         err_ret = H5Lcopy(group_id, COPY_LINK_TEST_HARD_LINK_NAME, group_id, COPY_LINK_TEST_HARD_LINK_COPY_NAME, H5P_DEFAULT, H5P_DEFAULT);
@@ -1634,10 +1492,6 @@ test_copy_link(void)
         printf("    soft link did not exist\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Attempting to copy a soft link to another location\n");
-#endif
 
     /* Copy the link */
     H5E_BEGIN_TRY {
@@ -1706,20 +1560,16 @@ test_move_link(void)
     size_t  i;
     htri_t  link_exists;
     herr_t  err_ret = -1;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   space_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   space_id = H5I_INVALID_HID;
 
     TESTING("move a link")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -1774,10 +1624,6 @@ test_move_link(void)
         printf("    hard link did not exist\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Attempting to move a hard link to another location\n");
-#endif
 
     /* Move the link */
     H5E_BEGIN_TRY {
@@ -1835,10 +1681,6 @@ test_move_link(void)
         printf("    soft link did not exist\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Attempting to move a soft link to another location\n");
-#endif
 
     /* Move the link */
     H5E_BEGIN_TRY {
@@ -1922,11 +1764,11 @@ test_get_link_info(void)
     size_t     i;
     htri_t     link_exists;
     herr_t     err_ret = -1;
-    hid_t      file_id = -1, fapl_id = -1;
-    hid_t      container_group = -1, group_id = -1;
-    hid_t      dset_id = -1;
-    hid_t      dset_dtype = -1;
-    hid_t      dset_dspace = -1;
+    hid_t      file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t      container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t      dset_id = H5I_INVALID_HID;
+    hid_t      dset_dtype = H5I_INVALID_HID;
+    hid_t      dset_dspace = H5I_INVALID_HID;
     char       ext_link_filename[VOL_TEST_FILENAME_MAX_LENGTH];
 
     TESTING("get link info")
@@ -1935,10 +1777,6 @@ test_get_link_info(void)
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -2024,10 +1862,6 @@ test_get_link_info(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving hard link info with H5Lget_info\n");
-#endif
-
     memset(&link_info, 0, sizeof(link_info));
 
     if (H5Lget_info(group_id, GET_LINK_INFO_TEST_DSET_NAME, &link_info, H5P_DEFAULT) < 0) {
@@ -2041,10 +1875,6 @@ test_get_link_info(void)
         printf("    incorrect link type returned\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving soft link info with H5Lget_info\n");
-#endif
 
     memset(&link_info, 0, sizeof(link_info));
 
@@ -2061,10 +1891,6 @@ test_get_link_info(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving external link info with H5Lget_info\n");
-#endif
-
     memset(&link_info, 0, sizeof(link_info));
 
     if (H5Lget_info(group_id, GET_LINK_INFO_TEST_EXT_LINK_NAME, &link_info, H5P_DEFAULT) < 0) {
@@ -2078,10 +1904,6 @@ test_get_link_info(void)
         printf("    incorrect link type returned\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving hard link info with H5Lget_info_by_idx\n");
-#endif
 
     memset(&link_info, 0, sizeof(link_info));
 
@@ -2101,10 +1923,6 @@ test_get_link_info(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving soft link info with H5Lget_info_by_idx\n");
-#endif
-
     memset(&link_info, 0, sizeof(link_info));
 
     H5E_BEGIN_TRY {
@@ -2123,10 +1941,6 @@ test_get_link_info(void)
         printf("    incorrect link type returned\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving external link info with H5Lget_info_by_idx\n");
-#endif
 
     memset(&link_info, 0, sizeof(link_info));
 
@@ -2191,21 +2005,17 @@ test_get_link_name(void)
     size_t  i;
     htri_t  link_exists;
     size_t  link_name_buf_size = 0;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   dset_dspace = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   dset_dspace = H5I_INVALID_HID;
     char   *link_name_buf = NULL;
 
     TESTING("get link name")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -2254,10 +2064,6 @@ test_get_link_name(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving size of link name\n");
-#endif
-
     H5E_BEGIN_TRY {
         ret = H5Lget_name_by_idx(group_id, ".", H5_INDEX_NAME, H5_ITER_INC, 0, NULL, link_name_buf_size, H5P_DEFAULT);
     } H5E_END_TRY;
@@ -2271,10 +2077,6 @@ test_get_link_name(void)
     link_name_buf_size = (size_t) ret;
     if (NULL == (link_name_buf = (char *) malloc(link_name_buf_size)))
         TEST_ERROR
-
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving link name\n");
-#endif
 
     H5E_BEGIN_TRY {
         ret = H5Lget_name_by_idx(group_id, ".", H5_INDEX_NAME, H5_ITER_INC, 0, link_name_buf, link_name_buf_size, H5P_DEFAULT);
@@ -2346,8 +2148,8 @@ test_get_link_val(void)
     herr_t      err_ret = -1;
     size_t      link_val_buf_size;
     char       *link_val_buf = NULL;
-    hid_t       file_id = -1, fapl_id = -1;
-    hid_t       container_group = -1, group_id = -1;
+    hid_t       file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t       container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
     char        ext_link_filename[VOL_TEST_FILENAME_MAX_LENGTH];
 
     TESTING("get link value")
@@ -2356,10 +2158,6 @@ test_get_link_val(void)
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -2434,10 +2232,6 @@ test_get_link_val(void)
     if (NULL == (link_val_buf = (char *) malloc(link_val_buf_size)))
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving value of soft link with H5Lget_val\n");
-#endif
-
     if (H5Lget_val(group_id, GET_LINK_VAL_TEST_SOFT_LINK_NAME, link_val_buf, link_val_buf_size, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    couldn't get soft link val\n");
@@ -2473,10 +2267,6 @@ test_get_link_val(void)
             TEST_ERROR
         link_val_buf = tmp_realloc;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving value of external link with H5Lget_val\n");
-#endif
 
     if (H5Lget_val(group_id, GET_LINK_VAL_TEST_EXT_LINK_NAME, link_val_buf, link_val_buf_size, H5P_DEFAULT) < 0) {
         H5_FAILED();
@@ -2530,10 +2320,6 @@ test_get_link_val(void)
             link_val_buf = tmp_realloc;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving value of soft link with H5Lget_val_by_idx\n");
-#endif
-
     H5E_BEGIN_TRY {
         err_ret = H5Lget_val_by_idx(group_id, ".", H5_INDEX_CRT_ORDER, H5_ITER_INC, 0, link_val_buf, link_val_buf_size, H5P_DEFAULT);
     } H5E_END_TRY;
@@ -2573,10 +2359,6 @@ test_get_link_val(void)
             TEST_ERROR
             link_val_buf = tmp_realloc;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving value of external link with H5Lget_val_by_idx\n");
-#endif
 
     H5E_BEGIN_TRY {
         err_ret = H5Lget_val_by_idx(group_id, ".", H5_INDEX_CRT_ORDER, H5_ITER_INC, 0, link_val_buf, link_val_buf_size, H5P_DEFAULT);
@@ -2654,11 +2436,12 @@ test_link_iterate(void)
     hsize_t saved_idx = 0;
     size_t  i;
     htri_t  link_exists;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   dset_dspace = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   gcpl_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   dset_dspace = H5I_INVALID_HID;
     int     halted = 0;
     char    ext_link_filename[VOL_TEST_FILENAME_MAX_LENGTH];
 
@@ -2668,10 +2451,6 @@ test_link_iterate(void)
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -2685,7 +2464,19 @@ test_link_iterate(void)
         goto error;
     }
 
-    if ((group_id = H5Gcreate2(container_group, LINK_ITER_TEST_SUBGROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
+    if ((gcpl_id = H5Pcreate(H5P_GROUP_CREATE)) < 0) {
+        H5_FAILED();
+        printf("    couldn't create GCPL for link creation order tracking\n");
+        goto error;
+    }
+
+    if (H5Pset_link_creation_order(gcpl_id, H5P_CRT_ORDER_TRACKED) < 0) {
+        H5_FAILED();
+        printf("    couldn't set link creation order tracking\n");
+        goto error;
+    }
+
+    if ((group_id = H5Gcreate2(container_group, LINK_ITER_TEST_SUBGROUP_NAME, H5P_DEFAULT, gcpl_id, H5P_DEFAULT)) < 0) {
         H5_FAILED();
         printf("    couldn't create container subgroup\n");
         goto error;
@@ -2757,10 +2548,6 @@ test_link_iterate(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link name in increasing order with H5Literate\n");
-#endif
-
     /* Test basic link iteration capability using both index types and both index orders */
     if (H5Literate(group_id, H5_INDEX_NAME, H5_ITER_INC, NULL, link_iter_callback1, NULL) < 0) {
         H5_FAILED();
@@ -2768,19 +2555,11 @@ test_link_iterate(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link name in decreasing order with H5Literate\n");
-#endif
-
     if (H5Literate(group_id, H5_INDEX_NAME, H5_ITER_DEC, NULL, link_iter_callback1, NULL) < 0) {
         H5_FAILED();
         printf("    H5Literate by index type name in decreasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link creation order in increasing order with H5Literate\n");
-#endif
 
     if (H5Literate(group_id, H5_INDEX_CRT_ORDER, H5_ITER_INC, NULL, link_iter_callback1, NULL) < 0) {
         H5_FAILED();
@@ -2788,19 +2567,11 @@ test_link_iterate(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link creation order in decreasing order with H5Literate\n");
-#endif
-
     if (H5Literate(group_id, H5_INDEX_CRT_ORDER, H5_ITER_DEC, NULL, link_iter_callback1, NULL) < 0) {
         H5_FAILED();
         printf("    H5Literate by index type creation order in decreasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link name in increasing order with H5Literate_by_name\n");
-#endif
 
     if (H5Literate_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_ITER_TEST_SUBGROUP_NAME,
             H5_INDEX_NAME, H5_ITER_INC, NULL, link_iter_callback1, NULL, H5P_DEFAULT) < 0) {
@@ -2809,20 +2580,12 @@ test_link_iterate(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link name in decreasing order with H5Literate_by_name\n");
-#endif
-
     if (H5Literate_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_ITER_TEST_SUBGROUP_NAME,
             H5_INDEX_NAME, H5_ITER_DEC, NULL, link_iter_callback1, NULL, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    H5Literate_by_name by index type name in decreasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link creation order in increasing order with H5Literate_by_name\n");
-#endif
 
     if (H5Literate_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_ITER_TEST_SUBGROUP_NAME,
             H5_INDEX_CRT_ORDER, H5_ITER_INC, NULL, link_iter_callback1, NULL, H5P_DEFAULT) < 0) {
@@ -2831,20 +2594,12 @@ test_link_iterate(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link creation order in decreasing order with H5Literate_by_name\n");
-#endif
-
     if (H5Literate_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_ITER_TEST_SUBGROUP_NAME,
             H5_INDEX_CRT_ORDER, H5_ITER_DEC, NULL, link_iter_callback1, NULL, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    H5Literate_by_name by index type creation order in decreasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Testing H5Literate's index-saving capability in increasing iteration order\n");
-#endif
 
     /* Test the H5Literate index-saving capabilities */
     if (H5Literate(group_id, H5_INDEX_CRT_ORDER, H5_ITER_INC, &saved_idx, link_iter_callback2, &halted) < 0) {
@@ -2867,10 +2622,6 @@ test_link_iterate(void)
 
     saved_idx = LINK_ITER_TEST_NUM_LINKS - 1;
     halted = 0;
-
-#ifdef VOL_TEST_DEBUG
-    puts("Testing H5Literate's index-saving capability in decreasing iteration order\n");
-#endif
 
     if (H5Literate(group_id, H5_INDEX_CRT_ORDER, H5_ITER_DEC, &saved_idx, link_iter_callback2, &halted) < 0) {
         H5_FAILED();
@@ -2896,6 +2647,8 @@ test_link_iterate(void)
         TEST_ERROR
     if (H5Dclose(dset_id) < 0)
         TEST_ERROR
+    if (H5Pclose(gcpl_id) < 0)
+        TEST_ERROR
     if (H5Gclose(group_id) < 0)
         TEST_ERROR
     if (H5Gclose(container_group) < 0)
@@ -2914,6 +2667,7 @@ error:
         H5Sclose(dset_dspace);
         H5Tclose(dset_dtype);
         H5Dclose(dset_id);
+        H5Pclose(gcpl_id);
         H5Gclose(group_id);
         H5Gclose(container_group);
         H5Pclose(fapl_id);
@@ -2930,17 +2684,14 @@ error:
 static int
 test_link_iterate_0_links(void)
 {
-    hid_t file_id = -1, fapl_id = -1;
-    hid_t container_group = -1, group_id = -1;
+    hid_t file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t gcpl_id = H5I_INVALID_HID;
 
     TESTING("link iteration on group with 0 links")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -2954,15 +2705,23 @@ test_link_iterate_0_links(void)
         goto error;
     }
 
-    if ((group_id = H5Gcreate2(container_group, LINK_ITER_TEST_0_LINKS_SUBGROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
+    if ((gcpl_id = H5Pcreate(H5P_GROUP_CREATE)) < 0) {
+        H5_FAILED();
+        printf("    couldn't create GCPL for link creation order tracking\n");
+        goto error;
+    }
+
+    if (H5Pset_link_creation_order(gcpl_id, H5P_CRT_ORDER_TRACKED) < 0) {
+        H5_FAILED();
+        printf("    couldn't set link creation order tracking\n");
+        goto error;
+    }
+
+    if ((group_id = H5Gcreate2(container_group, LINK_ITER_TEST_0_LINKS_SUBGROUP_NAME, H5P_DEFAULT, gcpl_id, H5P_DEFAULT)) < 0) {
         H5_FAILED();
         printf("    couldn't create container subgroup\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link name in increasing order with H5Literate\n");
-#endif
 
     /* Test basic link iteration capability using both index types and both index orders */
     if (H5Literate(group_id, H5_INDEX_NAME, H5_ITER_INC, NULL, link_iter_callback3, NULL) < 0) {
@@ -2971,19 +2730,11 @@ test_link_iterate_0_links(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link name in decreasing order with H5Literate\n");
-#endif
-
     if (H5Literate(group_id, H5_INDEX_NAME, H5_ITER_DEC, NULL, link_iter_callback3, NULL) < 0) {
         H5_FAILED();
         printf("    H5Literate by index type name in decreasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link creation order in increasing order with H5Literate\n");
-#endif
 
     if (H5Literate(group_id, H5_INDEX_CRT_ORDER, H5_ITER_INC, NULL, link_iter_callback3, NULL) < 0) {
         H5_FAILED();
@@ -2991,19 +2742,11 @@ test_link_iterate_0_links(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link creation order in decreasing order with H5Literate\n");
-#endif
-
     if (H5Literate(group_id, H5_INDEX_CRT_ORDER, H5_ITER_DEC, NULL, link_iter_callback3, NULL) < 0) {
         H5_FAILED();
         printf("    H5Literate by index type creation order in decreasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link name in increasing order with H5Literate_by_name\n");
-#endif
 
     if (H5Literate_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_ITER_TEST_0_LINKS_SUBGROUP_NAME,
             H5_INDEX_NAME, H5_ITER_INC, NULL, link_iter_callback3, NULL, H5P_DEFAULT) < 0) {
@@ -3012,20 +2755,12 @@ test_link_iterate_0_links(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link name in decreasing order with H5Literate_by_name\n");
-#endif
-
     if (H5Literate_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_ITER_TEST_0_LINKS_SUBGROUP_NAME,
             H5_INDEX_NAME, H5_ITER_DEC, NULL, link_iter_callback3, NULL, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    H5Literate_by_name by index type name in decreasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link creation order in increasing order with H5Literate_by_name\n");
-#endif
 
     if (H5Literate_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_ITER_TEST_0_LINKS_SUBGROUP_NAME,
             H5_INDEX_CRT_ORDER, H5_ITER_INC, NULL, link_iter_callback3, NULL, H5P_DEFAULT) < 0) {
@@ -3034,10 +2769,6 @@ test_link_iterate_0_links(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Iterating over links by link creation order in decreasing order with H5Literate_by_name\n");
-#endif
-
     if (H5Literate_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_ITER_TEST_0_LINKS_SUBGROUP_NAME,
             H5_INDEX_CRT_ORDER, H5_ITER_DEC, NULL, link_iter_callback3, NULL, H5P_DEFAULT) < 0) {
         H5_FAILED();
@@ -3045,6 +2776,8 @@ test_link_iterate_0_links(void)
         goto error;
     }
 
+    if (H5Pclose(gcpl_id) < 0)
+        TEST_ERROR
     if (H5Gclose(group_id) < 0)
         TEST_ERROR
     if (H5Gclose(container_group) < 0)
@@ -3060,6 +2793,7 @@ test_link_iterate_0_links(void)
 
 error:
     H5E_BEGIN_TRY {
+        H5Pclose(gcpl_id);
         H5Gclose(group_id);
         H5Gclose(container_group);
         H5Pclose(fapl_id);
@@ -3082,12 +2816,12 @@ test_link_visit(void)
     hsize_t dims[LINK_VISIT_TEST_NO_CYCLE_DSET_SPACE_RANK];
     size_t  i;
     htri_t  link_exists;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   subgroup1 = -1, subgroup2 = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   fspace_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   subgroup1 = H5I_INVALID_HID, subgroup2 = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   fspace_id = H5I_INVALID_HID;
     char    ext_link_filename[VOL_TEST_FILENAME_MAX_LENGTH];
 
     TESTING("link visit without cycles")
@@ -3096,10 +2830,6 @@ test_link_visit(void)
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -3234,19 +2964,11 @@ test_link_visit(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link name in increasing order with H5Lvisit\n");
-#endif
-
     if (H5Lvisit(group_id, H5_INDEX_NAME, H5_ITER_INC, link_visit_callback1, NULL) < 0) {
         H5_FAILED();
         printf("    H5Lvisit by index type name in increasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link name in decreasing order with H5Lvisit\n");
-#endif
 
     if (H5Lvisit(group_id, H5_INDEX_NAME, H5_ITER_DEC, link_visit_callback1, NULL) < 0) {
         H5_FAILED();
@@ -3254,29 +2976,17 @@ test_link_visit(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link creation order in increasing order with H5Lvisit\n");
-#endif
-
     if (H5Lvisit(group_id, H5_INDEX_CRT_ORDER, H5_ITER_INC, link_visit_callback1, NULL) < 0) {
         H5_FAILED();
         printf("    H5Lvisit by index type creation order in increasing order failed\n");
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link creation order in decreasing order with H5Lvisit\n");
-#endif
-
     if (H5Lvisit(group_id, H5_INDEX_CRT_ORDER, H5_ITER_DEC, link_visit_callback1, NULL) < 0) {
         H5_FAILED();
         printf("    H5Lvisit by index type creation order in decreasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link name in increasing order with H5Lvisit_by_name\n");
-#endif
 
     if (H5Lvisit_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_VISIT_TEST_NO_CYCLE_SUBGROUP_NAME,
             H5_INDEX_NAME, H5_ITER_INC, link_visit_callback1, NULL, H5P_DEFAULT) < 0) {
@@ -3285,10 +2995,6 @@ test_link_visit(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link name in decreasing order with H5Lvisit_by_name\n");
-#endif
-
     if (H5Lvisit_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_VISIT_TEST_NO_CYCLE_SUBGROUP_NAME,
             H5_INDEX_NAME, H5_ITER_DEC, link_visit_callback1, NULL, H5P_DEFAULT) < 0) {
         H5_FAILED();
@@ -3296,20 +3002,12 @@ test_link_visit(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link creation order in increasing order with H5Lvisit_by_name\n");
-#endif
-
     if (H5Lvisit_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_VISIT_TEST_NO_CYCLE_SUBGROUP_NAME,
             H5_INDEX_CRT_ORDER, H5_ITER_INC, link_visit_callback1, NULL, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    H5Lvisit_by_name by index type creation order in increasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link creation order in decreasing order with H5Lvisit_by_name\n");
-#endif
 
     if (H5Lvisit_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_VISIT_TEST_NO_CYCLE_SUBGROUP_NAME,
             H5_INDEX_CRT_ORDER, H5_ITER_DEC, link_visit_callback1, NULL, H5P_DEFAULT) < 0) {
@@ -3366,9 +3064,9 @@ static int
 test_link_visit_cycles(void)
 {
     htri_t link_exists;
-    hid_t  file_id = -1, fapl_id = -1;
-    hid_t  container_group = -1, group_id = -1;
-    hid_t  subgroup1 = -1, subgroup2 = -1;
+    hid_t  file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t  container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t  subgroup1 = H5I_INVALID_HID, subgroup2 = H5I_INVALID_HID;
     char   ext_link_filename[VOL_TEST_FILENAME_MAX_LENGTH];
 
     TESTING("link visit with cycles")
@@ -3377,10 +3075,6 @@ test_link_visit_cycles(void)
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -3488,19 +3182,11 @@ test_link_visit_cycles(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link name in increasing order with H5Lvisit\n");
-#endif
-
     if (H5Lvisit(group_id, H5_INDEX_NAME, H5_ITER_INC, link_visit_callback2, NULL) < 0) {
         H5_FAILED();
         printf("    H5Lvisit by index type name in increasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link name in decreasing order with H5Lvisit\n");
-#endif
 
     if (H5Lvisit(group_id, H5_INDEX_NAME, H5_ITER_DEC, link_visit_callback2, NULL) < 0) {
         H5_FAILED();
@@ -3508,29 +3194,17 @@ test_link_visit_cycles(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link creation order in increasing order with H5Lvisit\n");
-#endif
-
     if (H5Lvisit(group_id, H5_INDEX_CRT_ORDER, H5_ITER_INC, link_visit_callback2, NULL) < 0) {
         H5_FAILED();
         printf("    H5Lvisit by index type creation order in increasing order failed\n");
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link creation order in decreasing order with H5Lvisit\n");
-#endif
-
     if (H5Lvisit(group_id, H5_INDEX_CRT_ORDER, H5_ITER_DEC, link_visit_callback2, NULL) < 0) {
         H5_FAILED();
         printf("    H5Lvisit by index type creation order in decreasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link name in increasing order with H5Lvisit_by_name\n");
-#endif
 
     if (H5Lvisit_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_VISIT_TEST_CYCLE_SUBGROUP_NAME,
             H5_INDEX_NAME, H5_ITER_INC, link_visit_callback2, NULL, H5P_DEFAULT) < 0) {
@@ -3539,10 +3213,6 @@ test_link_visit_cycles(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link name in decreasing order with H5Lvisit_by_name\n");
-#endif
-
     if (H5Lvisit_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_VISIT_TEST_CYCLE_SUBGROUP_NAME,
             H5_INDEX_NAME, H5_ITER_DEC, link_visit_callback2, NULL, H5P_DEFAULT) < 0) {
         H5_FAILED();
@@ -3550,20 +3220,12 @@ test_link_visit_cycles(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link creation order in increasing order with H5Lvisit_by_name\n");
-#endif
-
     if (H5Lvisit_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_VISIT_TEST_CYCLE_SUBGROUP_NAME,
             H5_INDEX_CRT_ORDER, H5_ITER_INC, link_visit_callback2, NULL, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    H5Lvisit_by_name by index type creation order in increasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link creation order in decreasing order with H5Lvisit_by_name\n");
-#endif
 
     if (H5Lvisit_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_VISIT_TEST_CYCLE_SUBGROUP_NAME,
             H5_INDEX_CRT_ORDER, H5_ITER_DEC, link_visit_callback2, NULL, H5P_DEFAULT) < 0) {
@@ -3610,18 +3272,14 @@ error:
 static int
 test_link_visit_0_links(void)
 {
-    hid_t file_id = -1, fapl_id = -1;
-    hid_t container_group = -1, group_id = -1;
-    hid_t subgroup1 = -1, subgroup2 = -1;
+    hid_t file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t subgroup1 = H5I_INVALID_HID, subgroup2 = H5I_INVALID_HID;
 
     TESTING("link visit on group with subgroups containing 0 links")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -3653,19 +3311,11 @@ test_link_visit_0_links(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link name in increasing order with H5Lvisit\n");
-#endif
-
     if (H5Lvisit(group_id, H5_INDEX_NAME, H5_ITER_INC, link_visit_callback3, NULL) < 0) {
         H5_FAILED();
         printf("    H5Lvisit by index type name in increasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link name in decreasing order with H5Lvisit\n");
-#endif
 
     if (H5Lvisit(group_id, H5_INDEX_NAME, H5_ITER_DEC, link_visit_callback3, NULL) < 0) {
         H5_FAILED();
@@ -3673,29 +3323,17 @@ test_link_visit_0_links(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link creation order in increasing order with H5Lvisit\n");
-#endif
-
     if (H5Lvisit(group_id, H5_INDEX_CRT_ORDER, H5_ITER_INC, link_visit_callback3, NULL) < 0) {
         H5_FAILED();
         printf("    H5Lvisit by index type creation order in increasing order failed\n");
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link creation order in decreasing order with H5Lvisit\n");
-#endif
-
     if (H5Lvisit(group_id, H5_INDEX_CRT_ORDER, H5_ITER_DEC, link_visit_callback3, NULL) < 0) {
         H5_FAILED();
         printf("    H5Lvisit by index type creation order in decreasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link name in increasing order with H5Lvisit_by_name\n");
-#endif
 
     if (H5Lvisit_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_VISIT_TEST_0_LINKS_SUBGROUP_NAME,
             H5_INDEX_NAME, H5_ITER_INC, link_visit_callback3, NULL, H5P_DEFAULT) < 0) {
@@ -3704,10 +3342,6 @@ test_link_visit_0_links(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link name in decreasing order with H5Lvisit_by_name\n");
-#endif
-
     if (H5Lvisit_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_VISIT_TEST_0_LINKS_SUBGROUP_NAME,
             H5_INDEX_NAME, H5_ITER_DEC, link_visit_callback3, NULL, H5P_DEFAULT) < 0) {
         H5_FAILED();
@@ -3715,20 +3349,12 @@ test_link_visit_0_links(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link creation order in increasing order with H5Lvisit_by_name\n");
-#endif
-
     if (H5Lvisit_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_VISIT_TEST_0_LINKS_SUBGROUP_NAME,
             H5_INDEX_CRT_ORDER, H5_ITER_INC, link_visit_callback3, NULL, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    H5Lvisit_by_name by index type creation order in increasing order failed\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Recursively iterating over links by link creation order in decreasing order with H5Lvisit_by_name\n");
-#endif
 
     if (H5Lvisit_by_name(file_id, "/" LINK_TEST_GROUP_NAME "/" LINK_VISIT_TEST_0_LINKS_SUBGROUP_NAME,
             H5_INDEX_CRT_ORDER, H5_ITER_DEC, link_visit_callback3, NULL, H5P_DEFAULT) < 0) {
@@ -3773,10 +3399,6 @@ test_unused_link_API_calls(void)
     TESTING("unused link API calls")
 
     /* None currently that aren't planned to be used */
-#ifdef VOL_TEST_DEBUG
-    puts("Currently no API calls to test here\n");
-#endif
-
     SKIPPED();
 
     return 0;
@@ -3790,6 +3412,8 @@ test_unused_link_API_calls(void)
 static herr_t
 link_iter_callback1(hid_t group_id, const char *name, const H5L_info_t *info, void *op_data)
 {
+    UNUSED(group_id);
+
     if (!strcmp(name, LINK_ITER_TEST_HARD_LINK_NAME)) {
         if (H5L_TYPE_HARD != info->type) {
             H5_FAILED();
@@ -3832,6 +3456,8 @@ link_iter_callback2(hid_t group_id, const char *name, const H5L_info_t *info, vo
 {
     int *broken = (int *) op_data;
 
+    UNUSED(group_id);
+
     if (broken && !*broken && !strcmp(name, LINK_ITER_TEST_EXT_LINK_NAME)) {
         return (*broken = 1);
     }
@@ -3872,6 +3498,11 @@ error:
 static herr_t
 link_iter_callback3(hid_t group_id, const char *name, const H5L_info_t *info, void *op_data)
 {
+    UNUSED(group_id);
+    UNUSED(name);
+    UNUSED(info);
+    UNUSED(op_data);
+
     return 0;
 }
 
@@ -3883,6 +3514,8 @@ link_iter_callback3(hid_t group_id, const char *name, const H5L_info_t *info, vo
 static herr_t
 link_visit_callback1(hid_t group_id, const char *name, const H5L_info_t *info, void *op_data)
 {
+    UNUSED(group_id);
+
     if (!strcmp(name, LINK_VISIT_TEST_NO_CYCLE_SUBGROUP_NAME2 "/" LINK_VISIT_TEST_NO_CYCLE_DSET_NAME)) {
         if (H5L_TYPE_HARD != info->type) {
             H5_FAILED();
@@ -3954,6 +3587,8 @@ error:
 static herr_t
 link_visit_callback2(hid_t group_id, const char *name, const H5L_info_t *info, void *op_data)
 {
+    UNUSED(group_id);
+
     if (!strcmp(name, LINK_VISIT_TEST_CYCLE_SUBGROUP_NAME2 "/" LINK_VISIT_TEST_CYCLE_LINK_NAME1)) {
         if (H5L_TYPE_HARD != info->type) {
             H5_FAILED();
@@ -4011,6 +3646,11 @@ error:
 static herr_t
 link_visit_callback3(hid_t group_id, const char *name, const H5L_info_t *info, void *op_data)
 {
+    UNUSED(group_id);
+    UNUSED(name);
+    UNUSED(info);
+    UNUSED(op_data);
+
     return 0;
 }
 
@@ -4020,9 +3660,17 @@ vol_link_test(void)
     size_t i;
     int    nerrors = 0;
 
+    printf("**********************************************\n");
+    printf("*                                            *\n");
+    printf("*              VOL Link Tests                *\n");
+    printf("*                                            *\n");
+    printf("**********************************************\n\n");
+
     for (i = 0; i < ARRAY_LENGTH(link_tests); i++) {
         nerrors += (*link_tests[i])() ? 1 : 0;
     }
+
+    printf("\n");
 
 done:
     return nerrors;

@@ -34,21 +34,17 @@ test_open_link_without_leading_slash(void)
 {
     hsize_t dims[OPEN_LINK_WITHOUT_SLASH_DSET_SPACE_RANK];
     size_t  i;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1;
-    hid_t   group_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   space_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID;
+    hid_t   group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   space_id = H5I_INVALID_HID;
 
     TESTING("opening a link without a leading slash")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -98,10 +94,6 @@ test_open_link_without_leading_slash(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Testing that an object can be opened by a relative path\n");
-#endif
-
     if ((dset_id = H5Dopen2(group_id, MISCELLANEOUS_TEST_GROUP_NAME "/" OPEN_LINK_WITHOUT_SLASH_DSET_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
         printf("    couldn't open dataset\n");
@@ -148,21 +140,17 @@ test_object_creation_by_absolute_path(void)
     hsize_t dims[OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_DSET_SPACE_RANK];
     htri_t  link_exists;
     size_t  i;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1, sub_group_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   fspace_id = -1;
-    hid_t   dtype_id = -1;
-    hid_t   dset_dtype = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID, sub_group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   fspace_id = H5I_INVALID_HID;
+    hid_t   dtype_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
 
     TESTING("object creation by absolute path")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -182,10 +170,6 @@ test_object_creation_by_absolute_path(void)
         printf("    couldn't create container group\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Creating a variety of objects using absolute pathnames\n");
-#endif
 
     /* Next try to create a group under the container group by using an absolute pathname */
     if ((sub_group_id = H5Gcreate2(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_CONTAINER_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_SUBGROUP_NAME,
@@ -225,10 +209,6 @@ test_object_creation_by_absolute_path(void)
         printf("    couldn't commit datatype\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Verifying that all of the objects exist in the correct place\n");
-#endif
 
     /* Finally try to verify that all of the previously-created objects exist in the correct location */
     if ((link_exists = H5Lexists(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_CONTAINER_GROUP_NAME, H5P_DEFAULT)) < 0) {
@@ -324,20 +304,16 @@ test_absolute_vs_relative_path(void)
     hsize_t dims[ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET_SPACE_RANK];
     htri_t  link_exists;
     size_t  i;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id1 = -1, dset_id2 = -1, dset_id3 = -1, dset_id4 = -1, dset_id5 = -1, dset_id6 = -1;
-    hid_t   dset_dtype1 = -1, dset_dtype2 = -1, dset_dtype3 = -1, dset_dtype4 = -1, dset_dtype5 = -1, dset_dtype6 = -1;
-    hid_t   fspace_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id1 = H5I_INVALID_HID, dset_id2 = H5I_INVALID_HID, dset_id3 = H5I_INVALID_HID, dset_id4 = H5I_INVALID_HID, dset_id5 = H5I_INVALID_HID, dset_id6 = H5I_INVALID_HID;
+    hid_t   dset_dtype1 = H5I_INVALID_HID, dset_dtype2 = H5I_INVALID_HID, dset_dtype3 = H5I_INVALID_HID, dset_dtype4 = H5I_INVALID_HID, dset_dtype5 = H5I_INVALID_HID, dset_dtype6 = H5I_INVALID_HID;
+    hid_t   fspace_id = H5I_INVALID_HID;
 
     TESTING("absolute vs. relative pathnames")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -376,10 +352,6 @@ test_absolute_vs_relative_path(void)
         TEST_ERROR
     if ((dset_dtype6 = generate_random_datatype(H5T_NO_CLASS)) < 0)
         TEST_ERROR
-
-#ifdef VOL_TEST_DEBUG
-    puts("Creating a variety of datasets using different forms of absolute and relative pathnames\n");
-#endif
 
     /* Create a dataset by absolute path in the form "/group/dataset" starting from the root group */
     if ((dset_id1 = H5Dcreate2(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_CONTAINER_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET1_NAME,
@@ -428,10 +400,6 @@ test_absolute_vs_relative_path(void)
         printf("    couldn't create dataset by relative path from container group with leading '.'\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Verifying that all of the datasets are in the correct place\n");
-#endif
 
     /* Verify that all of the previously-created datasets exist in the correct locations */
     if ((link_exists = H5Lexists(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_CONTAINER_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET1_NAME, H5P_DEFAULT)) < 0) {
@@ -580,16 +548,12 @@ error:
 static int
 test_double_init_term(void)
 {
-    hid_t fapl_id = -1;
+    hid_t fapl_id = H5I_INVALID_HID;
 
     TESTING("double init/term correctness")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if (H5Pclose(fapl_id) < 0)
         TEST_ERROR
@@ -613,25 +577,21 @@ test_symbols_in_compound_field_name(void)
     size_t   i;
     size_t   total_type_size;
     size_t   next_offset;
-    hid_t    file_id = -1, fapl_id = -1;
-    hid_t    container_group = -1, group_id = -1;
-    hid_t    compound_type = -1;
-    hid_t    dset_id = -1;
-    hid_t    fspace_id = -1;
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t    container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t    compound_type = H5I_INVALID_HID;
+    hid_t    dset_id = H5I_INVALID_HID;
+    hid_t    fspace_id = H5I_INVALID_HID;
     hid_t    type_pool[COMPOUND_WITH_SYMBOLS_IN_MEMBER_NAMES_TEST_NUM_SUBTYPES];
     char     member_names[COMPOUND_WITH_SYMBOLS_IN_MEMBER_NAMES_TEST_NUM_SUBTYPES][256];
 
     TESTING("usage of '{', '}' and '\\\"' symbols in compound type\'s field name")
 
     for (i = 0; i < COMPOUND_WITH_SYMBOLS_IN_MEMBER_NAMES_TEST_NUM_SUBTYPES; i++)
-        type_pool[i] = -1;
+        type_pool[i] = H5I_INVALID_HID;
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -753,9 +713,17 @@ vol_misc_test(void)
     size_t i;
     int    nerrors = 0;
 
+    printf("**********************************************\n");
+    printf("*                                            *\n");
+    printf("*          VOL Miscellaneous Tests           *\n");
+    printf("*                                            *\n");
+    printf("**********************************************\n\n");
+
     for (i = 0; i < ARRAY_LENGTH(misc_tests); i++) {
         nerrors += (*misc_tests[i])() ? 1 : 0;
     }
+
+    printf("\n");
 
 done:
     return nerrors;

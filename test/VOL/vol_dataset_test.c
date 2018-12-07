@@ -92,19 +92,15 @@ test_create_dataset_under_root(void)
 {
     hsize_t dims[DATASET_CREATE_UNDER_ROOT_SPACE_RANK];
     size_t  i;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   fspace_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   fspace_id = H5I_INVALID_HID;
 
     TESTING("create dataset under root group")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -120,10 +116,6 @@ test_create_dataset_under_root(void)
 
     if ((dset_dtype = generate_random_datatype(H5T_NO_CLASS)) < 0)
         TEST_ERROR
-
-#ifdef VOL_TEST_DEBUG
-    puts("Creating a dataset under the root group\n");
-#endif
 
     /* Create the Dataset under the root group of the file */
     if ((dset_id = H5Dcreate2(file_id, DATASET_CREATE_UNDER_ROOT_DSET_NAME, dset_dtype, fspace_id,
@@ -168,20 +160,16 @@ test_create_anonymous_dataset(void)
 {
     hsize_t dims[DATASET_CREATE_ANONYMOUS_SPACE_RANK];
     size_t  i;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   fspace_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   fspace_id = H5I_INVALID_HID;
 
     TESTING("create anonymous dataset")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -204,19 +192,11 @@ test_create_anonymous_dataset(void)
     if ((dset_dtype = generate_random_datatype(H5T_NO_CLASS)) < 0)
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating an anonymous dataset\n");
-#endif
-
     if ((dset_id = H5Dcreate_anon(container_group, dset_dtype, fspace_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
         printf("    couldn't create dataset\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Linking the anonymous dataset into the file structure\n");
-#endif
 
     if (H5Olink(dset_id, container_group, DATASET_CREATE_ANONYMOUS_DATASET_NAME, H5P_DEFAULT, H5P_DEFAULT) < 0) {
         H5_FAILED();
@@ -263,20 +243,16 @@ test_create_dataset_under_existing_group(void)
 {
     hsize_t dims[DATASET_CREATE_UNDER_EXISTING_SPACE_RANK];
     size_t  i;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   group_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   fspace_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   fspace_id = H5I_INVALID_HID;
 
     TESTING("create dataset under existing group")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -298,10 +274,6 @@ test_create_dataset_under_existing_group(void)
 
     if ((dset_dtype = generate_random_datatype(H5T_NO_CLASS)) < 0)
         TEST_ERROR
-
-#ifdef VOL_TEST_DEBUG
-    puts("Creating dataset under non-root group\n");
-#endif
 
     if ((dset_id = H5Dcreate2(group_id, DATASET_CREATE_UNDER_EXISTING_DSET_NAME, dset_dtype, fspace_id,
             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
@@ -347,20 +319,16 @@ error:
 static int
 test_create_dataset_null_space(void)
 {
-    hid_t file_id = -1, fapl_id = -1;
-    hid_t container_group = -1, group_id = -1;
-    hid_t dset_id = -1;
-    hid_t dset_dtype = -1;
-    hid_t fspace_id = -1;
+    hid_t file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t dset_id = H5I_INVALID_HID;
+    hid_t dset_dtype = H5I_INVALID_HID;
+    hid_t fspace_id = H5I_INVALID_HID;
 
     TESTING("create dataset with a NULL dataspace")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -385,10 +353,6 @@ test_create_dataset_null_space(void)
 
     if ((dset_dtype = generate_random_datatype(H5T_NO_CLASS)) < 0)
         TEST_ERROR
-
-#ifdef VOL_TEST_DEBUG
-    printf("Creating dataset with NULL dataspace\n");
-#endif
 
     if ((dset_id = H5Dcreate2(group_id, DATASET_CREATE_NULL_DATASPACE_TEST_DSET_NAME, dset_dtype, fspace_id,
             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
@@ -446,20 +410,16 @@ error:
 static int
 test_create_dataset_scalar_space(void)
 {
-    hid_t file_id = -1, fapl_id = -1;
-    hid_t container_group = -1, group_id = -1;
-    hid_t dset_id = -1;
-    hid_t dset_dtype = -1;
-    hid_t fspace_id = -1;
+    hid_t file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t dset_id = H5I_INVALID_HID;
+    hid_t dset_dtype = H5I_INVALID_HID;
+    hid_t fspace_id = H5I_INVALID_HID;
 
     TESTING("create dataset with a SCALAR dataspace")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -484,10 +444,6 @@ test_create_dataset_scalar_space(void)
 
     if ((dset_dtype = generate_random_datatype(H5T_NO_CLASS)) < 0)
         TEST_ERROR
-
-#ifdef VOL_TEST_DEBUG
-    printf("Creating dataset with SCALAR dataspace\n");
-#endif
 
     if ((dset_id = H5Dcreate2(group_id, DATASET_CREATE_SCALAR_DATASPACE_TEST_DSET_NAME, dset_dtype, fspace_id,
             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
@@ -547,10 +503,10 @@ static int
 test_create_dataset_predefined_types(void)
 {
     size_t i;
-    hid_t  file_id = -1, fapl_id = -1;
-    hid_t  container_group = -1, group_id = -1;
-    hid_t  fspace_id = -1;
-    hid_t  dset_id = -1;
+    hid_t  file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t  container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t  fspace_id = H5I_INVALID_HID;
+    hid_t  dset_id = H5I_INVALID_HID;
     hid_t  predefined_type_test_table[] = {
             H5T_STD_U8LE,   H5T_STD_U8BE,   H5T_STD_I8LE,   H5T_STD_I8BE,
             H5T_STD_U16LE,  H5T_STD_U16BE,  H5T_STD_I16LE,  H5T_STD_I16BE,
@@ -563,10 +519,6 @@ test_create_dataset_predefined_types(void)
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -585,10 +537,6 @@ test_create_dataset_predefined_types(void)
         printf("    couldn't create sub-container group\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Creating datasets with the different predefined integer/floating-point datatypes\n");
-#endif
 
     for (i = 0; i < ARRAY_LENGTH(predefined_type_test_table); i++) {
         hsize_t dims[DATASET_PREDEFINED_TYPE_TEST_SPACE_RANK];
@@ -659,20 +607,16 @@ test_create_dataset_string_types(void)
 {
     hsize_t dims[DATASET_STRING_TYPE_TEST_SPACE_RANK];
     size_t  i;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id_fixed = -1, dset_id_variable = -1;
-    hid_t   type_id_fixed = -1, type_id_variable = -1;
-    hid_t   fspace_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id_fixed = H5I_INVALID_HID, dset_id_variable = H5I_INVALID_HID;
+    hid_t   type_id_fixed = H5I_INVALID_HID, type_id_variable = H5I_INVALID_HID;
+    hid_t   fspace_id = H5I_INVALID_HID;
 
     TESTING("dataset creation w/ string types")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -710,29 +654,17 @@ test_create_dataset_string_types(void)
     if ((fspace_id = H5Screate_simple(DATASET_STRING_TYPE_TEST_SPACE_RANK, dims, NULL)) < 0)
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating dataset with fixed-length string datatype\n");
-#endif
-
     if ((dset_id_fixed = H5Dcreate2(group_id, DATASET_STRING_TYPE_TEST_DSET_NAME1, type_id_fixed, fspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
         printf("    couldn't create fixed-length string dataset\n");
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating dataset with variable-length string datatype\n");
-#endif
-
     if ((dset_id_variable = H5Dcreate2(group_id, DATASET_STRING_TYPE_TEST_DSET_NAME2, type_id_variable, fspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
         printf("    couldn't create variable-length string dataset\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Attempting to re-open the datasets\n");
-#endif
 
     if (H5Dclose(dset_id_fixed) < 0)
         TEST_ERROR
@@ -799,25 +731,21 @@ test_create_dataset_compound_types(void)
 {
     hsize_t  dims[DATASET_COMPOUND_TYPE_TEST_DSET_RANK];
     size_t   i, j;
-    hid_t    file_id = -1, fapl_id = -1;
-    hid_t    container_group = -1, group_id = -1;
-    hid_t    compound_type = -1;
-    hid_t    dset_id = -1;
-    hid_t    fspace_id = -1;
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t    container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t    compound_type = H5I_INVALID_HID;
+    hid_t    dset_id = H5I_INVALID_HID;
+    hid_t    fspace_id = H5I_INVALID_HID;
     hid_t    type_pool[DATASET_COMPOUND_TYPE_TEST_MAX_SUBTYPES];
     int      num_passes;
 
     TESTING("dataset creation w/ compound datatypes")
 
     for (j = 0; j < DATASET_COMPOUND_TYPE_TEST_MAX_SUBTYPES; j++)
-        type_pool[j] = -1;
+        type_pool[j] = H5I_INVALID_HID;
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -845,10 +773,6 @@ test_create_dataset_compound_types(void)
 
     num_passes = (rand() % DATASET_COMPOUND_TYPE_TEST_MAX_PASSES) + 1;
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating datasets with a variety of randomly-generated compound datatypes\n");
-#endif
-
     for (i = 0; i < (size_t) num_passes; i++) {
         size_t num_subtypes;
         size_t compound_size = 0;
@@ -856,7 +780,7 @@ test_create_dataset_compound_types(void)
         char   dset_name[256];
 
         for (j = 0; j < DATASET_COMPOUND_TYPE_TEST_MAX_SUBTYPES; j++)
-            type_pool[j] = -1;
+            type_pool[j] = H5I_INVALID_HID;
 
         num_subtypes = (size_t) (rand() % DATASET_COMPOUND_TYPE_TEST_MAX_SUBTYPES) + 1;
 
@@ -965,11 +889,11 @@ test_create_dataset_enum_types(void)
 {
     hsize_t     dims[DATASET_ENUM_TYPE_TEST_SPACE_RANK];
     size_t      i;
-    hid_t       file_id = -1, fapl_id = -1;
-    hid_t       container_group = -1, group_id = -1;
-    hid_t       dset_id_native = -1, dset_id_non_native = -1;
-    hid_t       fspace_id = -1;
-    hid_t       enum_native = -1, enum_non_native = -1;
+    hid_t       file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t       container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t       dset_id_native = H5I_INVALID_HID, dset_id_non_native = H5I_INVALID_HID;
+    hid_t       fspace_id = H5I_INVALID_HID;
+    hid_t       enum_native = H5I_INVALID_HID, enum_non_native = H5I_INVALID_HID;
     const char *enum_type_test_table[] = {
             "RED",    "GREEN",  "BLUE",
             "BLACK",  "WHITE",  "PURPLE",
@@ -980,10 +904,6 @@ test_create_dataset_enum_types(void)
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -1034,29 +954,17 @@ test_create_dataset_enum_types(void)
     if ((fspace_id = H5Screate_simple(DATASET_ENUM_TYPE_TEST_SPACE_RANK, dims, NULL)) < 0)
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating dataset with native enum datatype\n");
-#endif
-
     if ((dset_id_native = H5Dcreate2(group_id, DATASET_ENUM_TYPE_TEST_DSET_NAME1, enum_native, fspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
         printf("    couldn't create native enum dataset\n");
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating dataset with non-native enum datatype\n");
-#endif
-
     if ((dset_id_non_native = H5Dcreate2(group_id, DATASET_ENUM_TYPE_TEST_DSET_NAME2, enum_non_native, fspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
         printf("    couldn't create non-native enum dataset\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Attempting to re-open the datasets\n");
-#endif
 
     if (H5Dclose(dset_id_native) < 0)
         TEST_ERROR
@@ -1126,26 +1034,22 @@ test_create_dataset_array_types(void)
     hsize_t array_dims2[DATASET_ARRAY_TYPE_TEST_RANK2];
     hsize_t array_dims3[DATASET_ARRAY_TYPE_TEST_RANK3];
     size_t  i;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id1 = -1, dset_id2 = -1;
-    hid_t   fspace_id = -1;
-    hid_t   array_type_id1 = -1, array_type_id2 = -1;
-    hid_t   array_base_type_id1 = -1, array_base_type_id2 = -1;
-    hid_t   array_base_type_id3 = -1;
-    hid_t   array_type_id3 = -1;
-    hid_t   nested_type_id = -1;
-    hid_t   dset_id3 = -1;
-    hid_t   non_predefined_type_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id1 = H5I_INVALID_HID, dset_id2 = H5I_INVALID_HID;
+    hid_t   fspace_id = H5I_INVALID_HID;
+    hid_t   array_type_id1 = H5I_INVALID_HID, array_type_id2 = H5I_INVALID_HID;
+    hid_t   array_base_type_id1 = H5I_INVALID_HID, array_base_type_id2 = H5I_INVALID_HID;
+    hid_t   array_base_type_id3 = H5I_INVALID_HID;
+    hid_t   array_type_id3 = H5I_INVALID_HID;
+    hid_t   nested_type_id = H5I_INVALID_HID;
+    hid_t   dset_id3 = H5I_INVALID_HID;
+    hid_t   non_predefined_type_id = H5I_INVALID_HID;
 
     TESTING("dataset creation w/ array types")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -1215,10 +1119,6 @@ test_create_dataset_array_types(void)
     if ((fspace_id = H5Screate_simple(DATASET_ARRAY_TYPE_TEST_SPACE_RANK, dset_dims, NULL)) < 0)
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating datasets with a variety of randomly-generated array datatypes\n");
-#endif
-
     if ((dset_id1 = H5Dcreate2(group_id, DATASET_ARRAY_TYPE_TEST_DSET_NAME1, array_type_id1, fspace_id,
             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
@@ -1239,10 +1139,6 @@ test_create_dataset_array_types(void)
         printf("    couldn't create nested array type dataset\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Attempting to re-open the datasets\n");
-#endif
 
     if (H5Dclose(dset_id1) < 0)
         TEST_ERROR
@@ -1327,19 +1223,15 @@ test_create_dataset_shapes(void)
 {
     hsize_t *dims = NULL;
     size_t   i;
-    hid_t    file_id = -1, fapl_id = -1;
-    hid_t    container_group = -1, group_id = -1;
-    hid_t    dset_id = -1, space_id = -1;
-    hid_t    dset_dtype = -1;
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t    container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t    dset_id = H5I_INVALID_HID, space_id = H5I_INVALID_HID;
+    hid_t    dset_dtype = H5I_INVALID_HID;
 
     TESTING("dataset creation w/ random dimension sizes")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -1361,10 +1253,6 @@ test_create_dataset_shapes(void)
 
     if ((dset_dtype = generate_random_datatype(H5T_NO_CLASS)) < 0)
         TEST_ERROR
-
-#ifdef VOL_TEST_DEBUG
-    puts("Creating datasets with a variety of randomly-generated dataspace shapes\n");
-#endif
 
     for (i = 0; i < DATASET_SHAPE_TEST_NUM_ITERATIONS; i++) {
         size_t j;
@@ -1444,20 +1332,16 @@ test_create_dataset_creation_properties(void)
 {
     hsize_t dims[DATASET_CREATION_PROPERTIES_TEST_SHAPE_RANK];
     size_t  i;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id = -1, dcpl_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   fspace_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID, dcpl_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   fspace_id = H5I_INVALID_HID;
 
     TESTING("dataset creation properties")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -1486,20 +1370,12 @@ test_create_dataset_creation_properties(void)
     if ((dset_dtype = generate_random_datatype(H5T_NO_CLASS)) < 0)
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating a variety of datasets with different creation properties\n");
-#endif
-
     /* Test the alloc time property */
     {
         H5D_alloc_time_t alloc_times[] = {
                 H5D_ALLOC_TIME_DEFAULT, H5D_ALLOC_TIME_EARLY,
                 H5D_ALLOC_TIME_INCR, H5D_ALLOC_TIME_LATE
         };
-
-#ifdef VOL_TEST_DEBUG
-    puts("Testing the alloc time property\n");
-#endif
 
         if ((dcpl_id = H5Pcreate(H5P_DATASET_CREATE)) < 0)
             TEST_ERROR
@@ -1542,10 +1418,6 @@ test_create_dataset_creation_properties(void)
                 H5P_CRT_ORDER_TRACKED | H5P_CRT_ORDER_INDEXED
         };
 
-#ifdef VOL_TEST_DEBUG
-    puts("Testing the attribute creation order property\n");
-#endif
-
         if ((dcpl_id = H5Pcreate(H5P_DATASET_CREATE)) < 0)
             TEST_ERROR
 
@@ -1582,10 +1454,6 @@ test_create_dataset_creation_properties(void)
 
     /* Test the attribute phase change property */
     {
-#ifdef VOL_TEST_DEBUG
-    puts("Testing the attribute phase change property\n");
-#endif
-
         if ((dcpl_id = H5Pcreate(H5P_DATASET_CREATE)) < 0)
             TEST_ERROR
 
@@ -1621,10 +1489,6 @@ test_create_dataset_creation_properties(void)
                 H5D_FILL_TIME_IFSET, H5D_FILL_TIME_ALLOC,
                 H5D_FILL_TIME_NEVER
         };
-
-#ifdef VOL_TEST_DEBUG
-    puts("Testing the fill time property\n");
-#endif
 
         if ((dcpl_id = H5Pcreate(H5P_DATASET_CREATE)) < 0)
             TEST_ERROR
@@ -1666,10 +1530,6 @@ test_create_dataset_creation_properties(void)
     }
 
     {
-#ifdef VOL_TEST_DEBUG
-        puts("Testing dataset filters\n");
-#endif
-
         if ((dcpl_id = H5Pcreate(H5P_DATASET_CREATE)) < 0)
             TEST_ERROR
 
@@ -1711,10 +1571,6 @@ test_create_dataset_creation_properties(void)
         H5D_layout_t layouts[] = {
                 H5D_COMPACT, H5D_CONTIGUOUS, H5D_CHUNKED
         };
-
-#ifdef VOL_TEST_DEBUG
-        puts("Testing the storage layout property\n");
-#endif
 
         if ((dcpl_id = H5Pcreate(H5P_DATASET_CREATE)) < 0)
             TEST_ERROR
@@ -1763,10 +1619,6 @@ test_create_dataset_creation_properties(void)
 
     /* Test the "track object times" property */
     {
-#ifdef VOL_TEST_DEBUG
-    puts("Testing the object time tracking property\n");
-#endif
-
         if ((dcpl_id = H5Pcreate(H5P_DATASET_CREATE)) < 0)
             TEST_ERROR
 
@@ -1859,20 +1711,16 @@ test_write_dataset_small_all(void)
     hssize_t  space_npoints;
     hsize_t   dims[DATASET_SMALL_WRITE_TEST_ALL_DSET_SPACE_RANK] = { 10, 5, 3 };
     size_t    i;
-    hid_t     file_id = -1, fapl_id = -1;
-    hid_t     container_group = -1;
-    hid_t     dset_id = -1;
-    hid_t     fspace_id = -1;
+    hid_t     file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t     container_group = H5I_INVALID_HID;
+    hid_t     dset_id = H5I_INVALID_HID;
+    hid_t     fspace_id = H5I_INVALID_HID;
     void     *data = NULL;
 
     TESTING("small write to dataset w/ H5S_ALL")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -1926,10 +1774,6 @@ test_write_dataset_small_all(void)
     for (i = 0; i < (hsize_t) space_npoints; i++)
         ((int *) data)[i] = (int) i;
 
-#ifdef VOL_TEST_DEBUG
-    puts("Writing to entire dataset with a small amount of data\n");
-#endif
-
     if (H5Dwrite(dset_id, DATASET_SMALL_WRITE_TEST_ALL_DSET_DTYPE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data) < 0) {
         H5_FAILED();
         printf("    couldn't write to dataset\n");
@@ -1982,20 +1826,16 @@ test_write_dataset_small_hyperslab(void)
     hsize_t  block[DATASET_SMALL_WRITE_TEST_HYPERSLAB_DSET_SPACE_RANK];
     hsize_t  dims[DATASET_SMALL_WRITE_TEST_HYPERSLAB_DSET_SPACE_RANK] = { 10, 5, 3 };
     size_t   i, data_size;
-    hid_t    file_id = -1, fapl_id = -1;
-    hid_t    container_group = -1;
-    hid_t    dset_id = -1;
-    hid_t    mspace_id = -1, fspace_id = -1;
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t    container_group = H5I_INVALID_HID;
+    hid_t    dset_id = H5I_INVALID_HID;
+    hid_t    mspace_id = H5I_INVALID_HID, fspace_id = H5I_INVALID_HID;
     void    *data = NULL;
 
     TESTING("small write to dataset w/ hyperslab")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -2042,10 +1882,6 @@ test_write_dataset_small_hyperslab(void)
 
     if (H5Sselect_hyperslab(fspace_id, H5S_SELECT_SET, start, stride, count, block) < 0)
         TEST_ERROR
-
-#ifdef VOL_TEST_DEBUG
-    puts("Writing small amount of data to dataset using a hyperslab selection\n");
-#endif
 
     if (H5Dwrite(dset_id, DATASET_SMALL_WRITE_TEST_HYPERSLAB_DSET_DTYPE, mspace_id, fspace_id, H5P_DEFAULT, data) < 0) {
         H5_FAILED();
@@ -2100,21 +1936,17 @@ test_write_dataset_small_point_selection(void)
     hsize_t  dims[DATASET_SMALL_WRITE_TEST_POINT_SELECTION_DSET_SPACE_RANK] = { 10, 10, 10 };
     hsize_t  mdims[] = { DATASET_SMALL_WRITE_TEST_POINT_SELECTION_NUM_POINTS };
     size_t   i, data_size;
-    hid_t    file_id = -1, fapl_id = -1;
-    hid_t    container_group = -1;
-    hid_t    dset_id = -1;
-    hid_t    fspace_id = -1;
-    hid_t    mspace_id = -1;
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t    container_group = H5I_INVALID_HID;
+    hid_t    dset_id = H5I_INVALID_HID;
+    hid_t    fspace_id = H5I_INVALID_HID;
+    hid_t    mspace_id = H5I_INVALID_HID;
     void    *data = NULL;
 
     TESTING("small write to dataset w/ point selection")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -2160,10 +1992,6 @@ test_write_dataset_small_point_selection(void)
         printf("    couldn't select points\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Writing a small amount of data to dataset using a point selection\n");
-#endif
 
     if (H5Dwrite(dset_id, DATASET_SMALL_WRITE_TEST_POINT_SELECTION_DSET_DTYPE, mspace_id, fspace_id, H5P_DEFAULT, data) < 0) {
         H5_FAILED();
@@ -2218,20 +2046,16 @@ test_write_dataset_large_all(void)
     hssize_t  space_npoints;
     hsize_t   dims[DATASET_LARGE_WRITE_TEST_ALL_DSET_SPACE_RANK] = { 600, 600, 600 };
     size_t    i, data_size;
-    hid_t     file_id = -1, fapl_id = -1;
-    hid_t     container_group = -1;
-    hid_t     dset_id = -1;
-    hid_t     fspace_id = -1;
+    hid_t     file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t     container_group = H5I_INVALID_HID;
+    hid_t     dset_id = H5I_INVALID_HID;
+    hid_t     fspace_id = H5I_INVALID_HID;
     void     *data = NULL;
 
     TESTING("write to large dataset w/ H5S_ALL")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -2285,10 +2109,6 @@ test_write_dataset_large_all(void)
     for (i = 0; i < (hsize_t) space_npoints; i++)
         ((int *) data)[i] = (int) i;
 
-#ifdef VOL_TEST_DEBUG
-    puts("Writing to entire dataset with a large amount of data\n");
-#endif
-
     if (H5Dwrite(dset_id, DATASET_LARGE_WRITE_TEST_ALL_DSET_DTYPE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data) < 0) {
         H5_FAILED();
         printf("    couldn't write to dataset\n");
@@ -2340,20 +2160,16 @@ test_write_dataset_large_hyperslab(void)
     hsize_t  block[DATASET_LARGE_WRITE_TEST_HYPERSLAB_DSET_SPACE_RANK];
     hsize_t  dims[DATASET_LARGE_WRITE_TEST_HYPERSLAB_DSET_SPACE_RANK] = { 600, 600, 600 };
     size_t   i, data_size;
-    hid_t    file_id = -1, fapl_id = -1;
-    hid_t    container_group = -1;
-    hid_t    dset_id = -1;
-    hid_t    mspace_id = -1, fspace_id = -1;
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t    container_group = H5I_INVALID_HID;
+    hid_t    dset_id = H5I_INVALID_HID;
+    hid_t    mspace_id = H5I_INVALID_HID, fspace_id = H5I_INVALID_HID;
     void    *data = NULL;
 
     TESTING("write to large dataset w/ hyperslab selection")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -2398,10 +2214,6 @@ test_write_dataset_large_hyperslab(void)
 
     if (H5Sselect_hyperslab(fspace_id, H5S_SELECT_SET, start, stride, count, block) < 0)
         TEST_ERROR
-
-#ifdef VOL_TEST_DEBUG
-    puts("Writing large amount of data to dataset using a hyperslab selection\n");
-#endif
 
     if (H5Dwrite(dset_id, DATASET_LARGE_WRITE_TEST_HYPERSLAB_DSET_DTYPE, mspace_id, fspace_id, H5P_DEFAULT, data) < 0) {
         H5_FAILED();
@@ -2475,20 +2287,16 @@ test_read_dataset_small_all(void)
 {
     hsize_t  dims[DATASET_SMALL_READ_TEST_ALL_DSET_SPACE_RANK] = { 10, 5, 3 };
     size_t   i, data_size;
-    hid_t    file_id = -1, fapl_id = -1;
-    hid_t    container_group = -1;
-    hid_t    dset_id = -1;
-    hid_t    fspace_id = -1;
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t    container_group = H5I_INVALID_HID;
+    hid_t    dset_id = H5I_INVALID_HID;
+    hid_t    fspace_id = H5I_INVALID_HID;
     void    *read_buf = NULL;
 
     TESTING("small read from dataset w/ H5S_ALL")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -2518,10 +2326,6 @@ test_read_dataset_small_all(void)
 
     if (NULL == (read_buf = malloc(data_size)))
         TEST_ERROR
-
-#ifdef VOL_TEST_DEBUG
-    puts("Reading entirety of small dataset\n");
-#endif
 
     if (H5Dread(dset_id, DATASET_SMALL_READ_TEST_ALL_DSET_DTYPE, H5S_ALL, H5S_ALL, H5P_DEFAULT, read_buf) < 0) {
         H5_FAILED();
@@ -2578,20 +2382,16 @@ test_read_dataset_small_hyperslab(void)
     hsize_t  block[DATASET_SMALL_READ_TEST_HYPERSLAB_DSET_SPACE_RANK];
     hsize_t  dims[DATASET_SMALL_READ_TEST_HYPERSLAB_DSET_SPACE_RANK] = { 10, 5, 3 };
     size_t   i, data_size;
-    hid_t    file_id = -1, fapl_id = -1;
-    hid_t    container_group = -1;
-    hid_t    dset_id = -1;
-    hid_t    mspace_id = -1, fspace_id = -1;
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t    container_group = H5I_INVALID_HID;
+    hid_t    dset_id = H5I_INVALID_HID;
+    hid_t    mspace_id = H5I_INVALID_HID, fspace_id = H5I_INVALID_HID;
     void    *read_buf = NULL;
 
     TESTING("small read from dataset w/ hyperslab")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -2635,10 +2435,6 @@ test_read_dataset_small_hyperslab(void)
 
     if (NULL == (read_buf = malloc(data_size)))
         TEST_ERROR
-
-#ifdef VOL_TEST_DEBUG
-    puts("Reading portion of small dataset using hyperslab selection\n");
-#endif
 
     if (H5Dread(dset_id, DATASET_SMALL_READ_TEST_HYPERSLAB_DSET_DTYPE, mspace_id, fspace_id, H5P_DEFAULT, read_buf) < 0) {
         H5_FAILED();
@@ -2696,21 +2492,17 @@ test_read_dataset_small_point_selection(void)
     hsize_t  dims[DATASET_SMALL_READ_TEST_POINT_SELECTION_DSET_SPACE_RANK] = { 10, 10, 10 };
     hsize_t  mspace_dims[] = { DATASET_SMALL_READ_TEST_POINT_SELECTION_NUM_POINTS };
     size_t   i, data_size;
-    hid_t    file_id = -1, fapl_id = -1;
-    hid_t    container_group = -1;
-    hid_t    dset_id = -1;
-    hid_t    fspace_id = -1;
-    hid_t    mspace_id = -1;
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t    container_group = H5I_INVALID_HID;
+    hid_t    dset_id = H5I_INVALID_HID;
+    hid_t    fspace_id = H5I_INVALID_HID;
+    hid_t    mspace_id = H5I_INVALID_HID;
     void    *data = NULL;
 
     TESTING("small read from dataset w/ point selection")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -2753,10 +2545,6 @@ test_read_dataset_small_point_selection(void)
         printf("    couldn't select points\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Reading portion of small dataset using a point selection\n");
-#endif
 
     if (H5Dread(dset_id, DATASET_SMALL_READ_TEST_POINT_SELECTION_DSET_DTYPE, mspace_id, fspace_id, H5P_DEFAULT, data) < 0) {
         H5_FAILED();
@@ -2813,20 +2601,16 @@ test_read_dataset_large_all(void)
 {
     hsize_t  dims[DATASET_LARGE_READ_TEST_ALL_DSET_SPACE_RANK] = { 600, 600, 600 };
     size_t   i, data_size;
-    hid_t    file_id = -1, fapl_id = -1;
-    hid_t    container_group = -1;
-    hid_t    dset_id = -1;
-    hid_t    fspace_id = -1;
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t    container_group = H5I_INVALID_HID;
+    hid_t    dset_id = H5I_INVALID_HID;
+    hid_t    fspace_id = H5I_INVALID_HID;
     void    *read_buf = NULL;
 
     TESTING("read from large dataset w/ H5S_ALL")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -2856,10 +2640,6 @@ test_read_dataset_large_all(void)
 
     if (NULL == (read_buf = malloc(data_size)))
         TEST_ERROR
-
-#ifdef VOL_TEST_DEBUG
-    puts("Reading entirety of large dataset\n");
-#endif
 
     if (H5Dread(dset_id, DATASET_LARGE_READ_TEST_ALL_DSET_DTYPE, H5S_ALL, H5S_ALL, H5P_DEFAULT, read_buf) < 0) {
         H5_FAILED();
@@ -2916,20 +2696,16 @@ test_read_dataset_large_hyperslab(void)
     hsize_t  block[DATASET_LARGE_READ_TEST_HYPERSLAB_DSET_SPACE_RANK];
     hsize_t  dims[DATASET_LARGE_READ_TEST_HYPERSLAB_DSET_SPACE_RANK] = { 600, 600, 600 };
     size_t   i, data_size;
-    hid_t    file_id = -1, fapl_id = -1;
-    hid_t    container_group = -1;
-    hid_t    dset_id = -1;
-    hid_t    mspace_id = -1, fspace_id = -1;
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t    container_group = H5I_INVALID_HID;
+    hid_t    dset_id = H5I_INVALID_HID;
+    hid_t    mspace_id = H5I_INVALID_HID, fspace_id = H5I_INVALID_HID;
     void    *read_buf = NULL;
 
     TESTING("read from large dataset w/ hyperslab selection")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -2971,10 +2747,6 @@ test_read_dataset_large_hyperslab(void)
 
     if (NULL == (read_buf = malloc(data_size)))
         TEST_ERROR
-
-#ifdef VOL_TEST_DEBUG
-    puts("Reading portion of large dataset using hyperslab selection\n");
-#endif
 
     if (H5Dread(dset_id, DATASET_LARGE_READ_TEST_HYPERSLAB_DSET_DTYPE, mspace_id, fspace_id, H5P_DEFAULT, read_buf) < 0) {
         H5_FAILED();
@@ -3030,20 +2802,16 @@ test_read_dataset_large_point_selection(void)
     hsize_t *points = NULL;
     hsize_t  dims[DATASET_LARGE_READ_TEST_POINT_SELECTION_DSET_SPACE_RANK] = { 600, 600, 600 };
     size_t   i, data_size;
-    hid_t    file_id = -1, fapl_id = -1;
-    hid_t    container_group = -1;
-    hid_t    dset_id = -1;
-    hid_t    fspace_id = -1;
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t    container_group = H5I_INVALID_HID;
+    hid_t    dset_id = H5I_INVALID_HID;
+    hid_t    fspace_id = H5I_INVALID_HID;
     void    *data = NULL;
 
     TESTING("read from large dataset w/ point selection")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -3088,10 +2856,6 @@ test_read_dataset_large_point_selection(void)
         printf("    couldn't select points\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Reading portion of large dataset using a point selection\n");
-#endif
 
     if (H5Dread(dset_id, DATASET_LARGE_READ_TEST_POINT_SELECTION_DSET_DTYPE, H5S_ALL, fspace_id, H5P_DEFAULT, data) < 0) {
         H5_FAILED();
@@ -3154,11 +2918,11 @@ test_write_dataset_data_verification(void)
     hsize_t  block[DATASET_DATA_VERIFY_WRITE_TEST_DSET_SPACE_RANK];
     hsize_t  points[DATASET_DATA_VERIFY_WRITE_TEST_NUM_POINTS * DATASET_DATA_VERIFY_WRITE_TEST_DSET_SPACE_RANK];
     size_t   i, data_size;
-    hid_t    file_id = -1, fapl_id = -1;
-    hid_t    container_group = -1;
-    hid_t    dset_id = -1;
-    hid_t    fspace_id = -1;
-    hid_t    mspace_id = -1;
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t    container_group = H5I_INVALID_HID;
+    hid_t    dset_id = H5I_INVALID_HID;
+    hid_t    fspace_id = H5I_INVALID_HID;
+    hid_t    mspace_id = H5I_INVALID_HID;
     void    *data = NULL;
     void    *write_buf = NULL;
     void    *read_buf = NULL;
@@ -3167,10 +2931,6 @@ test_write_dataset_data_verification(void)
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -3193,10 +2953,6 @@ test_write_dataset_data_verification(void)
         printf("    couldn't create dataset\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Writing to dataset using H5S_ALL\n");
-#endif
 
     for (i = 0, data_size = 1; i < DATASET_DATA_VERIFY_WRITE_TEST_DSET_SPACE_RANK; i++)
         data_size *= dims[i];
@@ -3245,10 +3001,6 @@ test_write_dataset_data_verification(void)
     if (NULL == (data = malloc((hsize_t) space_npoints * DATASET_DATA_VERIFY_WRITE_TEST_DSET_DTYPESIZE)))
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Verifying that the data that comes back is correct after writing to entire dataset\n");
-#endif
-
     if (H5Dread(dset_id, DATASET_DATA_VERIFY_WRITE_TEST_DSET_DTYPE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data) < 0) {
         H5_FAILED();
         printf("    couldn't read from dataset\n");
@@ -3266,10 +3018,6 @@ test_write_dataset_data_verification(void)
         free(data);
         data = NULL;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Writing to dataset using hyperslab selection\n");
-#endif
 
     data_size = dims[1] * 2 * DATASET_DATA_VERIFY_WRITE_TEST_DSET_DTYPESIZE;
 
@@ -3309,7 +3057,7 @@ test_write_dataset_data_verification(void)
         TEST_ERROR
 
     {
-        hsize_t mdims[] = { (hsize_t) (data_size / DATASET_DATA_VERIFY_WRITE_TEST_DSET_DTYPESIZE) };
+        hsize_t mdims[] = { (hsize_t) 2 * dims[1] };
 
         if ((mspace_id = H5Screate_simple(1, mdims, NULL)) < 0)
             TEST_ERROR
@@ -3349,10 +3097,6 @@ test_write_dataset_data_verification(void)
     if (NULL == (read_buf = malloc((hsize_t) space_npoints * DATASET_DATA_VERIFY_WRITE_TEST_DSET_DTYPESIZE)))
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Verifying that the data that comes back is correct after writing to the dataset using a hyperslab selection\n");
-#endif
-
     if (H5Dread(dset_id, DATASET_DATA_VERIFY_WRITE_TEST_DSET_DTYPE, H5S_ALL, H5S_ALL, H5P_DEFAULT, read_buf) < 0) {
         H5_FAILED();
         printf("    couldn't read from dataset\n");
@@ -3379,10 +3123,6 @@ test_write_dataset_data_verification(void)
         free(read_buf);
         read_buf = NULL;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Writing to dataset using point selection\n");
-#endif
 
     data_size = DATASET_DATA_VERIFY_WRITE_TEST_NUM_POINTS * DATASET_DATA_VERIFY_WRITE_TEST_DSET_DTYPESIZE;
 
@@ -3471,10 +3211,6 @@ test_write_dataset_data_verification(void)
     if (NULL == (read_buf = malloc((hsize_t) space_npoints * DATASET_DATA_VERIFY_WRITE_TEST_DSET_DTYPESIZE)))
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Verifying that the data that comes back is correct after writing to dataset using point selection\n");
-#endif
-
     if (H5Dread(dset_id, DATASET_DATA_VERIFY_WRITE_TEST_DSET_DTYPE, H5S_ALL, H5S_ALL, H5P_DEFAULT, read_buf) < 0) {
         H5_FAILED();
         printf("    couldn't read from dataset\n");
@@ -3544,20 +3280,16 @@ test_dataset_set_extent(void)
     hsize_t new_dims[DATASET_SET_EXTENT_TEST_SPACE_RANK];
     size_t  i;
     herr_t  err_ret = -1;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   fspace_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   fspace_id = H5I_INVALID_HID;
 
     TESTING("set dataset extent")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -3588,10 +3320,6 @@ test_dataset_set_extent(void)
         printf("    couldn't create dataset\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Testing use of H5Dset_extent to change dataset's extent\n");
-#endif
 
     H5E_BEGIN_TRY {
         err_ret = H5Dset_extent(dset_id, new_dims);
@@ -3646,23 +3374,19 @@ test_dataset_property_lists(void)
     hsize_t     chunk_dims[DATASET_PROPERTY_LIST_TEST_SPACE_RANK];
     size_t      i;
     herr_t      err_ret = -1;
-    hid_t       file_id = -1, fapl_id = -1;
-    hid_t       container_group = -1, group_id = -1;
-    hid_t       dset_id1 = -1, dset_id2 = -1, dset_id3 = -1, dset_id4 = -1;
-    hid_t       dcpl_id1 = -1, dcpl_id2 = -1;
-    hid_t       dapl_id1 = -1, dapl_id2 = -1;
-    hid_t       dset_dtype1 = -1, dset_dtype2 = -1, dset_dtype3 = -1, dset_dtype4 = -1;
-    hid_t       space_id = -1;
+    hid_t       file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t       container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t       dset_id1 = H5I_INVALID_HID, dset_id2 = H5I_INVALID_HID, dset_id3 = H5I_INVALID_HID, dset_id4 = H5I_INVALID_HID;
+    hid_t       dcpl_id1 = H5I_INVALID_HID, dcpl_id2 = H5I_INVALID_HID;
+    hid_t       dapl_id1 = H5I_INVALID_HID, dapl_id2 = H5I_INVALID_HID;
+    hid_t       dset_dtype1 = H5I_INVALID_HID, dset_dtype2 = H5I_INVALID_HID, dset_dtype3 = H5I_INVALID_HID, dset_dtype4 = H5I_INVALID_HID;
+    hid_t       space_id = H5I_INVALID_HID;
     char       *tmp_prefix = NULL;
 
     TESTING("dataset property list operations")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -3704,10 +3428,6 @@ test_dataset_property_lists(void)
         printf("    couldn't create DCPL\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Setting property on DCPL\n");
-#endif
 
     if (H5Pset_chunk(dcpl_id1, DATASET_PROPERTY_LIST_TEST_SPACE_RANK, chunk_dims) < 0) {
         H5_FAILED();
@@ -3757,10 +3477,6 @@ test_dataset_property_lists(void)
             goto error;
         }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Ensuring that the property on the DCPL was received back correctly\n");
-#endif
-
         for (i = 0; i < DATASET_PROPERTY_LIST_TEST_SPACE_RANK; i++)
             if (tmp_chunk_dims[i] != chunk_dims[i]) {
                 H5_FAILED();
@@ -3784,10 +3500,6 @@ test_dataset_property_lists(void)
         printf("    couldn't create DAPL\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Setting property on DAPL\n");
-#endif
 
     if (H5Pset_efile_prefix(dapl_id1, path_prefix) < 0) {
         H5_FAILED();
@@ -3828,10 +3540,6 @@ test_dataset_property_lists(void)
     /* Ensure that property list 1 has the property set and property list 2 does not */
     {
         ssize_t buf_size = 0;
-
-#ifdef VOL_TEST_DEBUG
-    puts("Ensuring that the property on the DAPL was received back correctly\n");
-#endif
 
         if ((buf_size = H5Pget_efile_prefix(dapl_id1, NULL, 0)) < 0) {
             H5_FAILED();
@@ -4015,20 +3723,16 @@ test_unused_dataset_API_calls(void)
     haddr_t            offset = HADDR_UNDEF;
     herr_t             err_ret = -1;
     size_t             i;
-    hid_t              file_id = -1, fapl_id = -1;
-    hid_t              container_group = -1;
-    hid_t              dset_id = -1;
-    hid_t              dset_dtype = -1;
-    hid_t              fspace_id = -1;
+    hid_t              file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t              container_group = H5I_INVALID_HID;
+    hid_t              dset_id = H5I_INVALID_HID;
+    hid_t              dset_dtype = H5I_INVALID_HID;
+    hid_t              fspace_id = H5I_INVALID_HID;
 
     TESTING("unused dataset API calls")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -4058,13 +3762,9 @@ test_unused_dataset_API_calls(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Testing that all of the unused dataset API calls don't cause application issues\n");
-#endif
-
     H5E_BEGIN_TRY {
         fake_storage_size = H5Dget_storage_size(dset_id);
-        err_ret = fake_storage_size;
+        err_ret = !fake_storage_size;
     } H5E_END_TRY;
 
     if (err_ret > 0) {
@@ -4086,6 +3786,7 @@ test_unused_dataset_API_calls(void)
     H5E_BEGIN_TRY {
         offset = H5Dget_offset(dset_id);
     } H5E_END_TRY;
+
     if (offset != HADDR_UNDEF) {
         H5_FAILED();
         printf("    unsupported API succeeded!\n");
@@ -4128,9 +3829,17 @@ vol_dataset_test(void)
     size_t i;
     int    nerrors = 0;
 
+    printf("**********************************************\n");
+    printf("*                                            *\n");
+    printf("*             VOL Dataset Tests              *\n");
+    printf("*                                            *\n");
+    printf("**********************************************\n\n");
+
     for (i = 0; i < ARRAY_LENGTH(dataset_tests); i++) {
         nerrors += (*dataset_tests[i])() ? 1 : 0;
     }
+
+    printf("\n");
 
 done:
     return nerrors;
