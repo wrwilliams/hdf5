@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -11,27 +10,37 @@
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/*-------------------------------------------------------------------------
- *
- * Created:             H5HLpublic.h
- *                      Jul 16 1997
- *                      Robb Matzke <matzke@llnl.gov>
- *
- * Purpose:             Public declarations for the H5HL (local heap) package.
- *
- *-------------------------------------------------------------------------
+/*
+ * Purpose:	The public header file for the pass-through VOL connector.
  */
-#ifndef _H5HLpublic_H
-#define _H5HLpublic_H
 
-/* Public headers needed by this file */
-#include "H5public.h"
+#ifndef _H5VLpassthru_H
+#define _H5VLpassthru_H
+
+/* Identifier for the pass-through VOL connector */
+#define H5VL_PASSTHRU	(H5VL_pass_through_register())
+
+/* Characteristics of the pass-through VOL connector */
+#define H5VL_PASSTHRU_NAME        "pass_through"
+#define H5VL_PASSTHRU_VALUE       505           /* VOL connector ID */
+#define H5VL_PASSTHRU_VERSION     0
+
+/* Pass-through VOL connector info */
+typedef struct H5VL_pass_through_info_t {
+    hid_t under_vol_id;         /* VOL ID for under VOL */
+    void *under_vol_info;       /* VOL info for under VOL */
+} H5VL_pass_through_info_t;
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+H5_DLL hid_t H5VL_pass_through_register(void);
+
 #ifdef __cplusplus
 }
 #endif
-#endif
+
+#endif /* _H5VLpassthru_H */
+
