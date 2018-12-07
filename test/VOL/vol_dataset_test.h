@@ -73,7 +73,7 @@ int vol_dataset_test(void);
 #define DATASET_SHAPE_TEST_DSET_BASE_NAME "dataset_shape_test"
 #define DATASET_SHAPE_TEST_SUBGROUP_NAME  "dataset_shape_test"
 #define DATASET_SHAPE_TEST_NUM_ITERATIONS 5
-#define DATASET_SHAPE_TEST_MAX_DIMS       32
+#define DATASET_SHAPE_TEST_MAX_DIMS       5
 
 #define DATASET_CREATION_PROPERTIES_TEST_TRACK_TIMES_YES_DSET_NAME "track_times_true_test"
 #define DATASET_CREATION_PROPERTIES_TEST_TRACK_TIMES_NO_DSET_NAME  "track_times_false_test"

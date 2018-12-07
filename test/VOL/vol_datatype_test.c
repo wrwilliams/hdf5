@@ -39,18 +39,14 @@ static int (*datatype_tests[])(void) = {
 static int
 test_create_committed_datatype(void)
 {
-    hid_t file_id = -1, fapl_id = -1;
-    hid_t container_group = -1;
-    hid_t type_id = -1;
+    hid_t file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t container_group = H5I_INVALID_HID;
+    hid_t type_id = H5I_INVALID_HID;
 
     TESTING("creation of committed datatype")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -69,10 +65,6 @@ test_create_committed_datatype(void)
         printf("    couldn't create datatype\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Committing datatype\n");
-#endif
 
     if (H5Tcommit2(container_group, DATATYPE_CREATE_TEST_TYPE_NAME, type_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0) {
         H5_FAILED();
@@ -111,18 +103,14 @@ error:
 static int
 test_create_anonymous_committed_datatype(void)
 {
-    hid_t file_id = -1, fapl_id = -1;
-    hid_t container_group = -1;
-    hid_t type_id = -1;
+    hid_t file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t container_group = H5I_INVALID_HID;
+    hid_t type_id = H5I_INVALID_HID;
 
     TESTING("creation of anonymous committed datatype")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -142,19 +130,11 @@ test_create_anonymous_committed_datatype(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Committing anonymous datatype\n");
-#endif
-
     if (H5Tcommit_anon(container_group, type_id, H5P_DEFAULT, H5P_DEFAULT) < 0) {
         H5_FAILED();
         printf("    couldn't commit anonymous datatype\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Linking anonymous datatype into file structure\n");
-#endif
 
     if (H5Olink(type_id, container_group, DATATYPE_CREATE_ANONYMOUS_TYPE_NAME, H5P_DEFAULT, H5P_DEFAULT) < 0) {
         H5_FAILED();
@@ -195,20 +175,16 @@ test_create_dataset_with_committed_type(void)
 {
     hsize_t dims[DATASET_CREATE_WITH_DATATYPE_TEST_DATASET_DIMS];
     size_t  i;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1;
-    hid_t   dset_id = -1;
-    hid_t   type_id = -1;
-    hid_t   fspace_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   type_id = H5I_INVALID_HID;
+    hid_t   fspace_id = H5I_INVALID_HID;
 
     TESTING("dataset creation w/ committed datatype")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -265,10 +241,6 @@ test_create_dataset_with_committed_type(void)
     if ((fspace_id = H5Screate_simple(DATATYPE_CREATE_TEST_DATASET_DIMS, dims, NULL)) < 0)
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating dataset with a committed type\n");
-#endif
-
     if ((dset_id = H5Dcreate2(container_group, DATASET_CREATE_WITH_DATATYPE_TEST_DSET_NAME, type_id, fspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
         printf("    couldn't create dataset using variable-length string committed datatype\n");
@@ -324,20 +296,16 @@ test_create_attribute_with_committed_type(void)
     hsize_t dims[ATTRIBUTE_CREATE_WITH_DATATYPE_TEST_SPACE_RANK];
     size_t  i;
     htri_t  attr_exists;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1;
-    hid_t   attr_id = -1;
-    hid_t   type_id = -1;
-    hid_t   space_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID;
+    hid_t   attr_id = H5I_INVALID_HID;
+    hid_t   type_id = H5I_INVALID_HID;
+    hid_t   space_id = H5I_INVALID_HID;
 
     TESTING("attribute creation w/ committed datatype")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -377,10 +345,6 @@ test_create_attribute_with_committed_type(void)
 
     if ((space_id = H5Screate_simple(ATTRIBUTE_CREATE_WITH_DATATYPE_TEST_SPACE_RANK, dims, NULL)) < 0)
         TEST_ERROR
-
-#ifdef VOL_TEST_DEBUG
-    puts("Creating attribute with a committed type\n");
-#endif
 
     if ((attr_id = H5Acreate2(container_group, ATTRIBUTE_CREATE_WITH_DATATYPE_TEST_ATTR_NAME, type_id,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
@@ -440,18 +404,14 @@ static int
 test_delete_committed_type(void)
 {
     htri_t type_exists;
-    hid_t  file_id = -1, fapl_id = -1;
-    hid_t  container_group = -1;
-    hid_t  type_id = -1;
+    hid_t  file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t  container_group = H5I_INVALID_HID;
+    hid_t  type_id = H5I_INVALID_HID;
 
     TESTING("delete committed datatype")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -488,10 +448,6 @@ test_delete_committed_type(void)
         printf("    datatype didn't exist\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Deleting committed type with H5Ldelete\n");
-#endif
 
     if (H5Ldelete(container_group, DATATYPE_DELETE_TEST_DTYPE_NAME, H5P_DEFAULT) < 0) {
         H5_FAILED();
@@ -543,19 +499,15 @@ error:
 static int
 test_datatype_property_lists(void)
 {
-    hid_t file_id = -1, fapl_id = -1;
-    hid_t container_group = -1, group_id = -1;
-    hid_t type_id1 = -1, type_id2 = -1;
-    hid_t tcpl_id1 = -1, tcpl_id2 = -1;
+    hid_t file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t type_id1 = H5I_INVALID_HID, type_id2 = H5I_INVALID_HID;
+    hid_t tcpl_id1 = H5I_INVALID_HID, tcpl_id2 = H5I_INVALID_HID;
 
     TESTING("datatype property list operations")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -701,9 +653,6 @@ test_unused_datatype_API_calls(void)
     TESTING("unused datatype API calls")
 
     /* None currently that aren't planned to be used */
-#ifdef VOL_TEST_DEBUG
-    puts("Currently no API calls to test here\n");
-#endif
 
     SKIPPED();
 
@@ -716,9 +665,17 @@ vol_datatype_test(void)
     size_t i;
     int    nerrors = 0;
 
+    printf("**********************************************\n");
+    printf("*                                            *\n");
+    printf("*             VOL Datatype Tests             *\n");
+    printf("*                                            *\n");
+    printf("**********************************************\n\n");
+
     for (i = 0; i < ARRAY_LENGTH(datatype_tests); i++) {
         nerrors += (*datatype_tests[i])() ? 1 : 0;
     }
+
+    printf("\n");
 
 done:
     return nerrors;

@@ -15,6 +15,10 @@
 
 #include "h5test.h"
 
+/* The name of the file that all of the tests will operate on */
+#define TEST_FILE_NAME "vol_test.h5"
+extern char vol_test_filename[];
+
 /* The names of a set of container groups which hold objects
  * created by each of the different types of tests.
  */
@@ -27,6 +31,8 @@
 #define MISCELLANEOUS_TEST_GROUP_NAME "miscellaneous_tests"
 
 #define ARRAY_LENGTH(array) sizeof(array) / sizeof(array[0])
+
+#define UNUSED(o) (void) (o);
 
 #define VOL_TEST_FILENAME_MAX_LENGTH 1024
 
@@ -66,9 +72,11 @@
 
 #define NO_LARGE_TESTS
 
-/* The name of the file that all of the tests will operate on */
-#define TEST_FILE_NAME "vol_test.h5"
-extern char vol_test_filename[];
+/*
+ * XXX: Set of compatibility macros that should be replaced once the
+ * VOL connector feature support situation is resolved.
+ */
+#define GROUP_CREATION_IS_SUPPORTED
 
 hid_t generate_random_datatype(H5T_class_t parent_class);
 

@@ -13,6 +13,10 @@
 #include "vol_object_test.h"
 
 /*
+ * XXX: Implement tests for H5Olink.
+ */
+
+/*
  * XXX: Difficult to implement right now.
  */
 #define NO_REF_TESTS
@@ -73,20 +77,16 @@ test_open_dataset_generically(void)
 {
     hsize_t dims[GENERIC_DATASET_OPEN_TEST_SPACE_RANK];
     size_t  i;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
-    hid_t   fspace_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
+    hid_t   fspace_id = H5I_INVALID_HID;
 
     TESTING("open dataset generically w/ H5Oopen()")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -119,21 +119,12 @@ test_open_dataset_generically(void)
     if (H5Dclose(dset_id) < 0)
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Opening dataset with H5Oopen\n");
-#endif
-
     if ((dset_id = H5Oopen(file_id, "/" OBJECT_TEST_GROUP_NAME "/" GENERIC_DATASET_OPEN_TEST_DSET_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
         printf("    couldn't open dataset with H5Oopen()\n");
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Opening dataset with H5Oopen_by_idx\n");
-#endif
-
-#ifndef PROBLEMATIC_TESTS
     if (H5Dclose(dset_id) < 0)
         TEST_ERROR
 
@@ -146,11 +137,6 @@ test_open_dataset_generically(void)
         printf("    unsupported API succeeded!\n");
         goto error;
     }
-#endif
-
-#ifdef VOL_TEST_DEBUG
-    puts("Opening dataset with H5Oopen_by_addr\n");
-#endif
 
     if (H5Dclose(dset_id) < 0)
         TEST_ERROR
@@ -202,18 +188,14 @@ error:
 static int
 test_open_group_generically(void)
 {
-    hid_t file_id = -1, fapl_id = -1;
-    hid_t container_group = -1;
-    hid_t group_id = -1;
+    hid_t file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t container_group = H5I_INVALID_HID;
+    hid_t group_id = H5I_INVALID_HID;
 
     TESTING("open group generically w/ H5Oopen()")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -236,19 +218,11 @@ test_open_group_generically(void)
     if (H5Gclose(group_id) < 0)
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Opening group with H5Oopen\n");
-#endif
-
     if ((group_id = H5Oopen(file_id, "/" OBJECT_TEST_GROUP_NAME "/" GENERIC_GROUP_OPEN_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
         printf("    couldn't open group with H5Oopen()\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Opening group with H5Oopen_by_idx\n");
-#endif
 
     if (H5Gclose(group_id) < 0)
         TEST_ERROR
@@ -262,10 +236,6 @@ test_open_group_generically(void)
         printf("    unsupported API succeeded!\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Opening group with H5Oopen_by_addr\n");
-#endif
 
     if (H5Gclose(group_id) < 0)
         TEST_ERROR
@@ -311,18 +281,14 @@ error:
 static int
 test_open_datatype_generically(void)
 {
-    hid_t file_id = -1, fapl_id = -1;
-    hid_t container_group = -1;
-    hid_t type_id = -1;
+    hid_t file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t container_group = H5I_INVALID_HID;
+    hid_t type_id = H5I_INVALID_HID;
 
     TESTING("open datatype generically w/ H5Oopen()")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -351,20 +317,11 @@ test_open_datatype_generically(void)
     if (H5Tclose(type_id) < 0)
         TEST_ERROR
 
-#ifdef VOL_TEST_DEBUG
-    puts("Opening datatype with H5Oopen\n");
-#endif
-
     if ((type_id = H5Oopen(file_id, "/" OBJECT_TEST_GROUP_NAME "/" GENERIC_DATATYPE_OPEN_TEST_TYPE_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
         printf("    couldn't open datatype generically w/ H5Oopen()\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Opening datatype with H5Oopen_by_idx\n");
-#endif
-
     if (H5Tclose(type_id) < 0)
         TEST_ERROR
 
@@ -377,10 +334,6 @@ test_open_datatype_generically(void)
         printf("    unsupported API succeeded!\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Opening datatype with H5Oopen_by_addr\n");
-#endif
 
     if (H5Tclose(type_id) < 0)
         TEST_ERROR
@@ -429,21 +382,17 @@ test_object_exists(void)
     hsize_t dims[OBJECT_EXISTS_TEST_DSET_SPACE_RANK];
     size_t  i;
     herr_t  err_ret = -1;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   dtype_id = -1;
-    hid_t   fspace_id = -1;
-    hid_t   dset_dtype = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dtype_id = H5I_INVALID_HID;
+    hid_t   fspace_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
 
     TESTING("object exists by name")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -574,26 +523,18 @@ static int
 test_incr_decr_refcount(void)
 {
     herr_t err_ret = -1;
-    hid_t  file_id = -1, fapl_id = -1;
+    hid_t  file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
 
     TESTING("H5Oincr/decr_refcount")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
         printf("    couldn't open file\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Testing unsupported APIs H5Oincr/decr_refcount\n");
-#endif
 
     H5E_BEGIN_TRY {
         err_ret = H5Oincr_refcount(file_id);
@@ -643,19 +584,15 @@ test_h5o_copy(void)
     hsize_t dims[OBJECT_COPY_TEST_SPACE_RANK];
     size_t  i;
     herr_t  err_ret = -1;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   space_id = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   space_id = H5I_INVALID_HID;
 
     TESTING("object copy")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -687,10 +624,6 @@ test_h5o_copy(void)
         printf("    couldn't create dataset\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Copying object with H5Ocopy\n");
-#endif
 
     H5E_BEGIN_TRY {
         err_ret = H5Ocopy(group_id, OBJECT_COPY_TEST_DSET_NAME, group_id, OBJECT_COPY_TEST_DSET_NAME2, H5P_DEFAULT, H5P_DEFAULT);
@@ -741,21 +674,17 @@ test_h5o_close(void)
 {
     hsize_t dims[H5O_CLOSE_TEST_SPACE_RANK];
     size_t  i;
-    hid_t   file_id = -1, fapl_id = -1;
-    hid_t   container_group = -1, group_id = -1;
-    hid_t   fspace_id = -1;
-    hid_t   dtype_id = -1;
-    hid_t   dset_id = -1;
-    hid_t   dset_dtype = -1;
+    hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t   container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t   fspace_id = H5I_INVALID_HID;
+    hid_t   dtype_id = H5I_INVALID_HID;
+    hid_t   dset_id = H5I_INVALID_HID;
+    hid_t   dset_dtype = H5I_INVALID_HID;
 
     TESTING("H5Oclose")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -821,10 +750,6 @@ test_h5o_close(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Making sure H5Oclose does its job correctly\n");
-#endif
-
     if (H5Oclose(group_id) < 0)
         TEST_ERROR
     if (H5Oclose(dtype_id) < 0)
@@ -871,17 +796,13 @@ static int
 test_object_visit(void)
 {
     herr_t err_ret = -1;
-    hid_t  file_id = -1, fapl_id = -1;
-    hid_t  container_group = -1;
+    hid_t  file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t  container_group = H5I_INVALID_HID;
 
     TESTING("H5Ovisit")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -895,10 +816,6 @@ test_object_visit(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Visiting objects with H5Ovisit\n");
-#endif
-
     H5E_BEGIN_TRY {
         err_ret = H5Ovisit2(container_group, H5_INDEX_NAME, H5_ITER_INC, object_visit_callback, NULL, H5O_INFO_ALL);
     } H5E_END_TRY;
@@ -908,10 +825,6 @@ test_object_visit(void)
         printf("    unsupported API succeeded\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Visiting objects with H5Ovisit_by_name\n");
-#endif
 
     H5E_BEGIN_TRY {
         err_ret = H5Ovisit_by_name2(file_id, "/" OBJECT_TEST_GROUP_NAME, H5_INDEX_NAME, H5_ITER_INC, object_visit_callback, NULL, H5O_INFO_ALL, H5P_DEFAULT);
@@ -949,16 +862,12 @@ static int
 test_create_obj_ref(void)
 {
     vol_test_obj_ref_t ref;
-    hid_t              file_id = -1, fapl_id = -1;
+    hid_t              file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
 
     TESTING("create an object reference")
 
     if ((fapl_id = H5Pcreate(H5P_FILE_ACCESS)) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -966,11 +875,7 @@ test_create_obj_ref(void)
         goto error;
     }
 
-#ifdef VOL_TEST_DEBUG
-    puts("Creating an object reference\n");
-#endif
-
-    if (H5Rcreate((void *) &ref, file_id, "/", H5R_OBJECT, -1) < 0) {
+    if (H5Rcreate((void *) &ref, file_id, "/", H5R_OBJECT, H5I_INVALID_HID) < 0) {
         H5_FAILED();
         printf("    couldn't create obj. ref\n");
         goto error;
@@ -1016,21 +921,17 @@ test_get_ref_type(void)
     H5O_type_t         obj_type;
     hsize_t            dims[OBJ_REF_GET_TYPE_TEST_SPACE_RANK];
     size_t             i;
-    hid_t              file_id = -1, fapl_id = -1;
-    hid_t              container_group = -1, group_id = -1;
-    hid_t              ref_dset_id = -1;
-    hid_t              ref_dtype_id = -1;
-    hid_t              ref_dset_dtype = -1;
-    hid_t              space_id = -1;
+    hid_t              file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t              container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t              ref_dset_id = H5I_INVALID_HID;
+    hid_t              ref_dtype_id = H5I_INVALID_HID;
+    hid_t              ref_dset_dtype = H5I_INVALID_HID;
+    hid_t              space_id = H5I_INVALID_HID;
 
     TESTING("retrieve type of object reference by an object/region reference")
 
     if ((fapl_id = H5Pcreate(H5P_FILE_ACCESS)) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -1093,15 +994,11 @@ test_get_ref_type(void)
 
 
     /* Create and check the group reference */
-    if (H5Rcreate(&ref_array[0], file_id, "/", H5R_OBJECT, -1) < 0) {
+    if (H5Rcreate(&ref_array[0], file_id, "/", H5R_OBJECT, H5I_INVALID_HID) < 0) {
         H5_FAILED();
         printf("    couldn't create group object reference\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving the type of the referenced object for this reference\n");
-#endif
 
     if (H5Rget_obj_type2(file_id, H5R_OBJECT, &ref_array[0], &obj_type) < 0) {
         H5_FAILED();
@@ -1116,15 +1013,11 @@ test_get_ref_type(void)
     }
 
     /* Create and check the datatype reference */
-    if (H5Rcreate(&ref_array[1], group_id, OBJ_REF_GET_TYPE_TEST_TYPE_NAME, H5R_OBJECT, -1) < 0) {
+    if (H5Rcreate(&ref_array[1], group_id, OBJ_REF_GET_TYPE_TEST_TYPE_NAME, H5R_OBJECT, H5I_INVALID_HID) < 0) {
         H5_FAILED();
         printf("    couldn't create datatype object reference\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving the type of the referenced object for this reference\n");
-#endif
 
     if (H5Rget_obj_type2(file_id, H5R_OBJECT, &ref_array[1], &obj_type) < 0) {
         H5_FAILED();
@@ -1139,15 +1032,11 @@ test_get_ref_type(void)
     }
 
     /* Create and check the dataset reference */
-    if (H5Rcreate(&ref_array[2], group_id, OBJ_REF_GET_TYPE_TEST_DSET_NAME, H5R_OBJECT, -1) < 0) {
+    if (H5Rcreate(&ref_array[2], group_id, OBJ_REF_GET_TYPE_TEST_DSET_NAME, H5R_OBJECT, H5I_INVALID_HID) < 0) {
         H5_FAILED();
         printf("    couldn't create dataset object reference\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Retrieving the type of the referenced object for this reference\n");
-#endif
 
     if (H5Rget_obj_type2(file_id, H5R_OBJECT, &ref_array[2], &obj_type) < 0) {
         H5_FAILED();
@@ -1230,21 +1119,17 @@ test_write_dataset_w_obj_refs(void)
     vol_test_obj_ref_t *ref_array = NULL;
     hsize_t             dims[OBJ_REF_DATASET_WRITE_TEST_SPACE_RANK];
     size_t              i, ref_array_size = 0;
-    hid_t               file_id = -1, fapl_id = -1;
-    hid_t               container_group = -1, group_id = -1;
-    hid_t               dset_id = -1, ref_dset_id = -1;
-    hid_t               ref_dtype_id = -1;
-    hid_t               ref_dset_dtype = -1;
-    hid_t               space_id = -1;
+    hid_t               file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t               container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t               dset_id = H5I_INVALID_HID, ref_dset_id = H5I_INVALID_HID;
+    hid_t               ref_dtype_id = H5I_INVALID_HID;
+    hid_t               ref_dset_dtype = H5I_INVALID_HID;
+    hid_t               space_id = H5I_INVALID_HID;
 
     TESTING("write to a dataset w/ object reference type")
 
     if ((fapl_id = H5Pcreate(H5P_FILE_ACCESS)) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -1323,7 +1208,7 @@ test_write_dataset_w_obj_refs(void)
         /* Create a reference to either a group, datatype or dataset */
         switch (rand() % 3) {
             case 0:
-                if (H5Rcreate(&ref_array[i], file_id, "/", H5R_OBJECT, -1) < 0) {
+                if (H5Rcreate(&ref_array[i], file_id, "/", H5R_OBJECT, H5I_INVALID_HID) < 0) {
                     H5_FAILED();
                     printf("    couldn't create reference\n");
                     goto error;
@@ -1332,7 +1217,7 @@ test_write_dataset_w_obj_refs(void)
                 break;
 
             case 1:
-                if (H5Rcreate(&ref_array[i], group_id, OBJ_REF_DATASET_WRITE_TEST_REF_TYPE_NAME, H5R_OBJECT, -1) < 0) {
+                if (H5Rcreate(&ref_array[i], group_id, OBJ_REF_DATASET_WRITE_TEST_REF_TYPE_NAME, H5R_OBJECT, H5I_INVALID_HID) < 0) {
                     H5_FAILED();
                     printf("    couldn't create reference\n");
                     goto error;
@@ -1341,7 +1226,7 @@ test_write_dataset_w_obj_refs(void)
                 break;
 
             case 2:
-                if (H5Rcreate(&ref_array[i], group_id, OBJ_REF_DATASET_WRITE_TEST_REF_DSET_NAME, H5R_OBJECT, -1) < 0) {
+                if (H5Rcreate(&ref_array[i], group_id, OBJ_REF_DATASET_WRITE_TEST_REF_DSET_NAME, H5R_OBJECT, H5I_INVALID_HID) < 0) {
                     H5_FAILED();
                     printf("    couldn't create reference\n");
                     goto error;
@@ -1353,10 +1238,6 @@ test_write_dataset_w_obj_refs(void)
                 TEST_ERROR
         }
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Writing to dataset with buffer of object references\n");
-#endif
 
     if (H5Dwrite(dset_id, H5T_STD_REF_OBJ, H5S_ALL, H5S_ALL, H5P_DEFAULT, ref_array) < 0) {
         H5_FAILED();
@@ -1415,21 +1296,17 @@ test_read_dataset_w_obj_refs(void)
     vol_test_obj_ref_t *ref_array = NULL;
     hsize_t             dims[OBJ_REF_DATASET_READ_TEST_SPACE_RANK];
     size_t              i, ref_array_size = 0;
-    hid_t               file_id = -1, fapl_id = -1;
-    hid_t               container_group = -1, group_id = -1;
-    hid_t               dset_id = -1, ref_dset_id = -1;
-    hid_t               ref_dtype_id = -1;
-    hid_t               ref_dset_dtype = -1;
-    hid_t               space_id = -1;
+    hid_t               file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t               container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t               dset_id = H5I_INVALID_HID, ref_dset_id = H5I_INVALID_HID;
+    hid_t               ref_dtype_id = H5I_INVALID_HID;
+    hid_t               ref_dset_dtype = H5I_INVALID_HID;
+    hid_t               space_id = H5I_INVALID_HID;
 
     TESTING("read from a dataset w/ object reference type")
 
     if ((fapl_id = H5Pcreate(H5P_FILE_ACCESS)) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -1508,7 +1385,7 @@ test_read_dataset_w_obj_refs(void)
         /* Create a reference to either a group, datatype or dataset */
         switch (rand() % 3) {
             case 0:
-                if (H5Rcreate(&ref_array[i], file_id, "/", H5R_OBJECT, -1) < 0) {
+                if (H5Rcreate(&ref_array[i], file_id, "/", H5R_OBJECT, H5I_INVALID_HID) < 0) {
                     H5_FAILED();
                     printf("    couldn't create reference\n");
                     goto error;
@@ -1517,7 +1394,7 @@ test_read_dataset_w_obj_refs(void)
                 break;
 
             case 1:
-                if (H5Rcreate(&ref_array[i], group_id, OBJ_REF_DATASET_READ_TEST_REF_TYPE_NAME, H5R_OBJECT, -1) < 0) {
+                if (H5Rcreate(&ref_array[i], group_id, OBJ_REF_DATASET_READ_TEST_REF_TYPE_NAME, H5R_OBJECT, H5I_INVALID_HID) < 0) {
                     H5_FAILED();
                     printf("    couldn't create reference\n");
                     goto error;
@@ -1526,7 +1403,7 @@ test_read_dataset_w_obj_refs(void)
                 break;
 
             case 2:
-                if (H5Rcreate(&ref_array[i], group_id, OBJ_REF_DATASET_READ_TEST_REF_DSET_NAME, H5R_OBJECT, -1) < 0) {
+                if (H5Rcreate(&ref_array[i], group_id, OBJ_REF_DATASET_READ_TEST_REF_DSET_NAME, H5R_OBJECT, H5I_INVALID_HID) < 0) {
                     H5_FAILED();
                     printf("    couldn't create reference\n");
                     goto error;
@@ -1554,10 +1431,6 @@ test_read_dataset_w_obj_refs(void)
         printf("    couldn't open dataset\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Reading from dataset with object reference type\n");
-#endif
 
     memset(ref_array, 0, ref_array_size * sizeof(*ref_array));
 
@@ -1652,19 +1525,15 @@ test_write_dataset_w_obj_refs_empty_data(void)
     vol_test_obj_ref_t *ref_array = NULL;
     hsize_t             dims[OBJ_REF_DATASET_EMPTY_WRITE_TEST_SPACE_RANK];
     size_t              i, ref_array_size = 0;
-    hid_t               file_id = -1, fapl_id = -1;
-    hid_t               container_group = -1, group_id = -1;
-    hid_t               dset_id = -1;
-    hid_t               space_id = -1;
+    hid_t               file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t               container_group = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t               dset_id = H5I_INVALID_HID;
+    hid_t               space_id = H5I_INVALID_HID;
 
     TESTING("write to a dataset w/ object reference type and some empty data")
 
     if ((fapl_id = H5Pcreate(H5P_FILE_ACCESS)) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
@@ -1706,7 +1575,7 @@ test_write_dataset_w_obj_refs_empty_data(void)
     for (i = 0; i < dims[0]; i++) {
         switch (rand() % 2) {
             case 0:
-                if (H5Rcreate(&ref_array[i], file_id, "/", H5R_OBJECT, -1) < 0) {
+                if (H5Rcreate(&ref_array[i], file_id, "/", H5R_OBJECT, H5I_INVALID_HID) < 0) {
                     H5_FAILED();
                     printf("    couldn't create reference\n");
                     goto error;
@@ -1721,10 +1590,6 @@ test_write_dataset_w_obj_refs_empty_data(void)
                 TEST_ERROR
         }
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Writing to dataset with buffer of empty object references\n");
-#endif
 
     if (H5Dwrite(dset_id, H5T_STD_REF_OBJ, H5S_ALL, H5S_ALL, H5P_DEFAULT, ref_array) < 0) {
         H5_FAILED();
@@ -1773,26 +1638,18 @@ test_unused_object_API_calls(void)
 {
     const char *comment = "comment";
     herr_t      err_ret = -1;
-    hid_t       file_id = -1, fapl_id = -1;
+    hid_t       file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
 
     TESTING("unused object API calls")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
-#ifdef DAOS_SPECIFIC
-    if (H5Pset_all_coll_metadata_ops(fapl_id, true) < 0)
-        TEST_ERROR
-#endif
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
         printf("    couldn't open file\n");
         goto error;
     }
-
-#ifdef VOL_TEST_DEBUG
-    puts("Testing that all of the unused object API calls don't cause application issues\n");
-#endif
 
     H5E_BEGIN_TRY {
         err_ret = H5Oset_comment(file_id, comment);
@@ -1839,6 +1696,11 @@ error:
 static herr_t
 object_visit_callback(hid_t o_id, const char *name, const H5O_info_t *object_info, void *op_data)
 {
+    UNUSED(o_id);
+    UNUSED(name);
+    UNUSED(object_info);
+    UNUSED(op_data);
+
     return 0;
 }
 
@@ -1848,9 +1710,17 @@ vol_object_test(void)
     size_t i;
     int    nerrors = 0;
 
+    printf("**********************************************\n");
+    printf("*                                            *\n");
+    printf("*              VOL Object Tests              *\n");
+    printf("*                                            *\n");
+    printf("**********************************************\n\n");
+
     for (i = 0; i < ARRAY_LENGTH(object_tests); i++) {
         nerrors += (*object_tests[i])() ? 1 : 0;
     }
+
+    printf("\n");
 
 done:
     return nerrors;
