@@ -2483,17 +2483,17 @@ H5S__hyper_deserialize(H5S_t *space, uint32_t H5_ATTR_UNUSED version, uint8_t fl
         hsize_t *tstart;	/* Temporary hyperslab pointers */
         hsize_t *tend;		/* Temporary hyperslab pointers */
         hsize_t *tblock;	/* Temporary hyperslab pointers */
-        size_t num_elem;      	/* Number of elements in selection */
+        size_t block_count;     /* Number of blocks in selection */
         unsigned v;            	/* Local counting variable */
 
-        /* Decode the number of points */
-        UINT32DECODE(pp, num_elem);
+        /* Decode the number of blocks */
+        UINT32DECODE(pp, block_count);
 
         /* Set the count & stride for all blocks */
         stride = count = H5S_hyper_ones_g;
 
         /* Retrieve the coordinates from the buffer */
-        for(u = 0; u < num_elem; u++) {
+        for(u = 0; u < block_count; u++) {
             /* Decode the starting points */
             for(tstart = start, v = 0; v < rank; v++, tstart++)
                 UINT32DECODE(pp, *tstart);
@@ -6727,8 +6727,8 @@ H5S__check_bound_overlap(const hsize_t *space1_low_bounds,
     const hsize_t *space1_high_bounds, const hsize_t *space2_low_bounds,
     const hsize_t *space2_high_bounds, unsigned ndims)
 {
-    unsigned u;                         /* Local index variable */
-    hbool_t ret_value = FALSE;          /* Return value */
+    unsigned u;                 /* Local index variable */
+    hbool_t ret_value = TRUE;   /* Return value */
 
     FUNC_ENTER_STATIC_NOERR
 
@@ -6740,29 +6740,33 @@ H5S__check_bound_overlap(const hsize_t *space1_low_bounds,
     /* Check bound box to see if they overlap or border */
     for(u = 0; u < ndims; u++) {
         /*
-         * Three conditions for overlapping/bordering:
-         * 1. the lower bound of the new span is between the lower and
-         * higher bound of the existing one. In other words, the left
-         * part of new span will at least overlap or border with the
-         * existing one.
-         * 2. the higher bound of the new span is between the lower and
-         * higher bound of the exisiting one. In other words, the right
-         * part of new span will at least overlap or border with the
-         * existing one.
-         * 3. The new span includes the existing one where the lower bound
-         * is smaller than that of the existing one, and the higher bound
-         * is larger than that of the existing one.
+         * Three possible conditions for overlapping / bordering:
+         *  1. the lower bound of the new span is between the lower and
+         *     higher bound of the existing one. In other words, the left
+         *     part of new span will at least overlap or border with the
+         *     existing one.
+         *  2. the higher bound of the new span is between the lower and
+         *     higher bound of the exisiting one. In other words, the right
+         *     part of new span will at least overlap or border with the
+         *     existing one.
+         *  3. The new span includes the existing one, i.e. the lower bound
+         *     is smaller than that of the existing one and the higher bound
+         *     is larger than that of the existing one.
+         */
+        /* One of these conditions must be true for each dimension for
+         * bounding boxes to overlap, return FALSE if one of them isn't
+         * true for a dimension.
          */
             /* condition 1 */
-        if((space1_low_bounds[u] >= space2_low_bounds[u] &&
+        if(!((space1_low_bounds[u] >= space2_low_bounds[u] &&
                     space1_low_bounds[u] <= (space2_high_bounds[u] + 1)) ||
                 /* condition 2 */
                ((space1_high_bounds[u] + 1) >= space2_low_bounds[u] &&
                     space1_high_bounds[u] <= space2_high_bounds[u]) ||
                 /* condition 3 */
                (space1_low_bounds[u] < space2_low_bounds[u] &&
-                    space1_high_bounds[u] > space2_high_bounds[u])) {
-            HGOTO_DONE(TRUE);
+                    space1_high_bounds[u] > space2_high_bounds[u]))) {
+            HGOTO_DONE(FALSE);
         } /* end if */
     } /* end for */
 
@@ -6999,7 +7003,7 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
             (*result)->select.sel_info.hslab->span_lst = a_not_b;
 
             /* Update the number of elements in current selection */
-            (*result)->select.num_elem += H5S__hyper_spans_nelem(a_not_b);
+            (*result)->select.num_elem = H5S__hyper_spans_nelem(a_not_b);
 
             /* Indicate that the spans were updated */
             *updated_spans = TRUE;
@@ -7022,7 +7026,7 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
             (*result)->select.sel_info.hslab->span_lst = a_and_b;
 
             /* Update the number of elements in current selection */
-            (*result)->select.num_elem += H5S__hyper_spans_nelem(a_and_b);
+            (*result)->select.num_elem = H5S__hyper_spans_nelem(a_and_b);
 
             /* Indicate that the spans were updated */
             *updated_spans = TRUE;
@@ -7041,9 +7045,6 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
 
             /* Indicate that the spans were updated */
             *updated_spans = TRUE;
-
-            /* Indicate that the b_not_a spans are owned */
-            b_not_a = NULL;
         } /* end if */
     } /* end else for the case the new span overlaps with the old (i.e. space) */
 
