@@ -630,6 +630,7 @@ static herr_t
 H5S_point_copy(H5S_t *dst, const H5S_t *src, hbool_t H5_ATTR_UNUSED share_selection)
 {
     H5S_pnt_node_t *curr, *new_node, *new_tail;    /* Point information nodes */
+    unsigned u;                         /* Local index variable */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -667,6 +668,12 @@ H5S_point_copy(H5S_t *dst, const H5S_t *src, hbool_t H5_ATTR_UNUSED share_select
         curr = curr->next;
     } /* end while */
     dst->select.sel_info.pnt_lst->tail = new_tail;
+
+    /* Copy the selection bounds */
+    for(u = 0; u < src->extent.rank; u++) {
+        dst->select.sel_info.pnt_lst->high_bounds[u] = src->select.sel_info.pnt_lst->high_bounds[u];
+        dst->select.sel_info.pnt_lst->low_bounds[u] = src->select.sel_info.pnt_lst->low_bounds[u];
+    } /* end for */
 
 done:
     if(ret_value < 0 && dst->select.sel_info.pnt_lst) {

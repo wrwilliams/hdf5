@@ -5870,8 +5870,10 @@ H5S__hyper_merge_spans(H5S_t *space, H5S_hyper_span_info_t *new_spans)
     HDassert(new_spans);
 
     /* If this is the first span tree in the hyperslab selection, just use it */
-    if(space->select.sel_info.hslab->span_lst == NULL)
+    if(space->select.sel_info.hslab->span_lst == NULL) {
         space->select.sel_info.hslab->span_lst = new_spans;
+        space->select.sel_info.hslab->span_lst->count++;
+    } /* end if */
     else {
         H5S_hyper_span_info_t *merged_spans;
 
@@ -6042,9 +6044,6 @@ H5S__hyper_add_disjoint_spans(H5S_t *space, H5S_hyper_span_info_t *new_spans)
 
        /* The high_order_spans should be appended to low_order_spans */
        low_order_spans->tail->next = high_order_spans->head;
-
-       /* "pstride" is only updated in IO operations, so it needs no update here */
-       /*high_order_spans->head->pstride = high_order_spans->head->low - low_order_spans->tail->low;*/
        low_order_spans->tail = high_order_spans->tail;
 
        /* Update the high bounds for the low order spans, in this dimension */
@@ -6814,7 +6813,7 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
     H5S_hyper_span_info_t *a_not_b = NULL;      /* Span tree for hyperslab spans in old span tree and not in new span tree */
     H5S_hyper_span_info_t *a_and_b = NULL;      /* Span tree for hyperslab spans in both old and new span trees */
     H5S_hyper_span_info_t *b_not_a = NULL;      /* Span tree for hyperslab spans in new span tree and not in old span tree */
-    hbool_t overlapped;                         /* Whether selections overlap */
+    hbool_t overlapped = FALSE;                 /* Whether selections overlap */
     hbool_t is_result_new = FALSE;
     herr_t ret_value = SUCCEED;         /* Return value */
 
@@ -6842,9 +6841,18 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
     } /* end if */
 
     /* Check bound box of both spaces to see if they overlap or border */
-    overlapped = H5S__check_bound_overlap(space1->select.sel_info.hslab->span_lst->low_bounds,
-            space1->select.sel_info.hslab->span_lst->high_bounds,
-            space2_span_lst->low_bounds, space2_span_lst->high_bounds, space1->extent.rank);
+//    overlapped = H5S__check_bound_overlap(space1->select.sel_info.hslab->span_lst->low_bounds,
+//            space1->select.sel_info.hslab->span_lst->high_bounds,
+//            space2_span_lst->low_bounds, space2_span_lst->high_bounds, space1->extent.rank);
+    if((space1->select.sel_info.hslab->span_lst->low_bounds[0] >= space2_span_lst->low_bounds[0] &&
+                space1->select.sel_info.hslab->span_lst->low_bounds[0] <= (space2_span_lst->high_bounds[0] + 1)) ||
+            /* condition 2 */
+           ((space1->select.sel_info.hslab->span_lst->high_bounds[0] + 1) >= space2_span_lst->low_bounds[0] &&
+                space1->select.sel_info.hslab->span_lst->high_bounds[0] <= space2_span_lst->high_bounds[0]) ||
+            /* condition 3 */
+           (space1->select.sel_info.hslab->span_lst->low_bounds[0] < space2_span_lst->low_bounds[0] &&
+                space1->select.sel_info.hslab->span_lst->high_bounds[0] > space2_span_lst->high_bounds[0]))
+        overlapped = TRUE;
 
     /* If two spans are disjoint in terms of bound box, then work could be much simplified. */
     if(!overlapped) {
@@ -7748,8 +7756,17 @@ H5S__fill_in_hyperslab(H5S_t *old_space, H5S_seloper_t op, const hsize_t start[]
         } /* end for */
 
         /* Check bound box of both spaces to see if they overlap or border */
-        overlapped = H5S__check_bound_overlap(old_low_bounds, old_high_bounds,
-                new_low_bounds, new_high_bounds, old_space->extent.rank);
+//        overlapped = H5S__check_bound_overlap(old_low_bounds, old_high_bounds,
+//                new_low_bounds, new_high_bounds, old_space->extent.rank);
+        if((old_low_bounds[0] >= new_low_bounds[0] &&
+                    old_low_bounds[0] <= (new_high_bounds[0] + 1)) ||
+                /* condition 2 */
+               ((old_high_bounds[0] + 1) >= new_low_bounds[0] &&
+                    old_high_bounds[0] <= new_high_bounds[0]) ||
+                /* condition 3 */
+               (old_low_bounds[0] < new_low_bounds[0] &&
+                    old_high_bounds[0] > new_high_bounds[0]))
+            overlapped = TRUE;
 
         if(!overlapped) {
             H5S_hyper_span_info_t *new_spans = NULL;
@@ -7984,9 +8001,6 @@ H5S__combine_select(H5S_t *space1, H5S_seloper_t op, H5S_t *space2)
         if(H5S__hyper_generate_spans(space1) < 0)
             HGOTO_ERROR(H5E_DATASPACE, H5E_UNINITIALIZED, NULL, "dataspace does not have span tree")
 
-    /* Set unlim_dim */
-    new_space->select.sel_info.hslab->unlim_dim = -1;
-
     if(NULL == space2->select.sel_info.hslab->span_lst) {
         hsize_t tmp_start[H5S_MAX_RANK];
         hsize_t tmp_stride[H5S_MAX_RANK];
@@ -8010,6 +8024,9 @@ H5S__combine_select(H5S_t *space1, H5S_seloper_t op, H5S_t *space2)
         if(H5S__fill_in_select(space1, op, space2, &new_space) < 0)
             HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCLIP, NULL, "can't clip hyperslab information")
     } /* end else */
+
+    /* Set unlim_dim */
+    new_space->select.sel_info.hslab->unlim_dim = -1;
 
     /* Set return value */
     ret_value = new_space;

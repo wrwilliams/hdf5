@@ -1832,8 +1832,8 @@ H5S_select_shape_same(const H5S_t *space1, const H5S_t *space2)
                     HDassert(low_a[space_b_dim] <= high_a[space_b_dim]);
 
                     /* Compute range in each space, for this dimension */
-                    space_a_range = high_a[space_a_dim] - low_a[space_a_dim];
-                    space_b_range = high_a[space_b_dim] - low_b[space_b_dim];
+                    space_a_range = (high_a[space_a_dim] - low_a[space_a_dim]) + 1;
+                    space_b_range = (high_b[space_b_dim] - low_b[space_b_dim]) + 1;
 
                     /* Verify that the ranges are the same */
                     if(space_a_range != space_b_range)
@@ -1850,7 +1850,7 @@ H5S_select_shape_same(const H5S_t *space1, const H5S_t *space2)
                     HDassert(low_a[space_a_dim] <= high_a[space_a_dim]);
 
                     /* Compute range in space a, for this dimension */
-                    space_a_range = high_a[space_a_dim] - low_a[space_a_dim];
+                    space_a_range = (high_a[space_a_dim] - low_a[space_a_dim]) + 1;
 
                     /* This range should be flat to be the same in a lower dimension */
                     if(space_a_range != 1)
