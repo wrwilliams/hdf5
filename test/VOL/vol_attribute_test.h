@@ -34,7 +34,6 @@ int vol_attribute_test(void);
 #define ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME       "attr_on_dataset"
 #define ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME2      "attr_on_dataset2"
 
-
 #define ATTRIBUTE_CREATE_ON_DATATYPE_SPACE_RANK 1
 #define ATTRIBUTE_CREATE_ON_DATATYPE_DTYPE_NAME "datatype_with_attr"
 #define ATTRIBUTE_CREATE_ON_DATATYPE_GROUP_NAME "attr_on_datatype_test"
@@ -104,9 +103,17 @@ int vol_attribute_test(void);
 #define ATTRIBUTE_GET_NAME_TEST_SPACE_RANK     1
 #define ATTRIBUTE_GET_NAME_TEST_GROUP_NAME     "retrieve_attr_name_test"
 
+#define ATTRIBUTE_GET_NAME_INVALID_PARAMS_TEST_ATTRIBUTE_NAME "invalid_params_attr_name_retrieval_attr"
+#define ATTRIBUTE_GET_NAME_INVALID_PARAMS_TEST_SPACE_RANK     1
+#define ATTRIBUTE_GET_NAME_INVALID_PARAMS_TEST_GROUP_NAME     "retrieve_attr_name_invalid_params_test"
+
 #define ATTRIBUTE_GET_INFO_TEST_SPACE_RANK 1
 #define ATTRIBUTE_GET_INFO_TEST_GROUP_NAME "attr_get_info_test"
 #define ATTRIBUTE_GET_INFO_TEST_ATTR_NAME  "get_info_test_attr"
+
+#define ATTRIBUTE_GET_INFO_INVALID_PARAMS_TEST_SPACE_RANK 1
+#define ATTRIBUTE_GET_INFO_INVALID_PARAMS_TEST_GROUP_NAME "attr_get_info_invalid_params_test"
+#define ATTRIBUTE_GET_INFO_INVALID_PARAMS_TEST_ATTR_NAME  "invalid_params_get_info_test_attr"
 
 #define ATTRIBUTE_RENAME_TEST_SPACE_RANK 1
 #define ATTRIBUTE_RENAME_TEST_GROUP_NAME "attr_rename_test"
@@ -114,7 +121,6 @@ int vol_attribute_test(void);
 #define ATTRIBUTE_RENAME_TEST_ATTR_NAME2 "rename_test_attr2"
 #define ATTRIBUTE_RENAME_TEST_NEW_NAME   "renamed_attr"
 #define ATTRIBUTE_RENAME_TEST_NEW_NAME2  "renamed_attr2"
-
 
 #define ATTRIBUTE_ITERATE_TEST_DSET_SPACE_RANK 2
 #define ATTRIBUTE_ITERATE_TEST_ATTR_SPACE_RANK 1
