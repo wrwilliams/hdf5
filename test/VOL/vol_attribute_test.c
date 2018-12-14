@@ -2677,13 +2677,13 @@ test_attribute_property_lists(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        printf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        printf("    couldn't open container group\n");
         goto error;
     }
 
@@ -2736,21 +2736,13 @@ test_attribute_property_lists(void)
     /* Verify the attributes have been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_PROPERTY_LIST_TEST_ATTRIBUTE_NAME1)) < 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate with an invalid loc_id!\n");
+        printf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
-    PASSED();
-
-    TESTING_2("H5Acreate with invalid attribute name")
-
-    H5E_BEGIN_TRY {
-        attr_id = H5Acreate2(container_group, NULL, attr_dtype, space_id, H5P_DEFAULT, H5P_DEFAULT);
-    } H5E_END_TRY;
-
-    if (attr_id >= 0) {
+    if (!attr_exists) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate with an invalid name!\n");
+        printf("    attribute did not exist\n");
         goto error;
     }
 
@@ -2869,8 +2861,9 @@ test_attribute_property_lists(void)
 
     PASSED();
 
-    TESTING_2("H5Acreate_by_name with invalid object name")
+    return 0;
 
+error:
     H5E_BEGIN_TRY {
         H5Pclose(acpl_id1);
         H5Pclose(acpl_id2);
@@ -2919,12 +2912,7 @@ test_get_attribute_name(void)
         goto error;
     }
 
-    H5E_BEGIN_TRY {
-        attr_id = H5Acreate_by_name(file_id, "", ATTRIBUTE_CREATE_INVALID_PARAMS_ATTR_NAME, attr_dtype,
-                space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    } H5E_END_TRY;
-
-    if (attr_id >= 0) {
+    if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
         printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
@@ -2936,55 +2924,55 @@ test_get_attribute_name(void)
         goto error;
     }
 
-    PASSED();
+    for (i = 0; i < ATTRIBUTE_GET_NAME_TEST_SPACE_RANK; i++)
+        dims[i] = (hsize_t) (rand() % MAX_DIM_SIZE + 1);
 
-    TESTING_2("H5Acreate_by_name with invalid attribute name")
+    if ((space_id = H5Screate_simple(ATTRIBUTE_GET_NAME_TEST_SPACE_RANK, dims, NULL)) < 0)
+        TEST_ERROR
 
-    H5E_BEGIN_TRY {
-        attr_id = H5Acreate_by_name(file_id, ATTRIBUTE_CREATE_INVALID_PARAMS_GROUP_NAME,
-                NULL, attr_dtype, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    } H5E_END_TRY;
+    if ((attr_dtype = generate_random_datatype(H5T_NO_CLASS)) < 0)
+        TEST_ERROR
 
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME, attr_dtype,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid attribute name!\n");
+        printf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME)) < 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid attribute name!\n");
+        printf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
-    PASSED();
+    if (!attr_exists) {
+        H5_FAILED();
+        printf("    attribute did not exist\n");
+        goto error;
+    }
 
     TESTING_2("H5Aget_name")
 
-    H5E_BEGIN_TRY {
-        attr_id = H5Acreate_by_name(file_id, ATTRIBUTE_CREATE_INVALID_PARAMS_GROUP_NAME,
-                ATTRIBUTE_CREATE_INVALID_PARAMS_ATTR_NAME, H5I_INVALID_HID, space_id, H5P_DEFAULT,
-                H5P_DEFAULT, H5P_DEFAULT);
-    } H5E_END_TRY;
-
-    if (attr_id >= 0) {
+    /* Retrieve the name buffer size */
+    if ((name_buf_size = H5Aget_name(attr_id, 0, NULL)) < 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid datatype!\n");
+        printf("    couldn't retrieve name buf size\n");
         goto error;
     }
 
-    PASSED();
+    if (NULL == (name_buf = (char *) malloc((size_t) name_buf_size + 1)))
+        TEST_ERROR
 
     if (H5Aget_name(attr_id, (size_t) name_buf_size + 1, name_buf) < 0) {
         H5_FAILED();
         printf("    couldn't retrieve attribute name\n");
     }
 
-    if (attr_id >= 0) {
+    if (strcmp(name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME)) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid dataspace!\n");
+        printf("    retrieved attribute name '%s' didn't match '%s'\n", name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME);
         goto error;
     }
 
@@ -3007,7 +2995,11 @@ test_get_attribute_name(void)
 
     PASSED();
 
-    TESTING_2("H5Acreate_by_name with invalid ACPL")
+    /* Now close the attribute and verify that we can still retrieve the attribute's name after
+     * opening (instead of creating) it
+     */
+    if (H5Aclose(attr_id) < 0)
+        TEST_ERROR
 
     if ((attr_id = H5Aopen(group_id, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
@@ -3019,11 +3011,15 @@ test_get_attribute_name(void)
 
     if (H5Aget_name(attr_id, (size_t) name_buf_size + 1, name_buf) < 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid ACPL!\n");
+        printf("    couldn't retrieve attribute name\n");
         goto error;
     }
 
-    PASSED();
+    if (strcmp(name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME)) {
+        H5_FAILED();
+        printf("    attribute name didn't match\n");
+        goto error;
+    }
 
     PASSED();
 
@@ -3032,24 +3028,19 @@ test_get_attribute_name(void)
     if (H5Aget_name_by_idx(container_group, ATTRIBUTE_GET_NAME_TEST_GROUP_NAME, H5_INDEX_NAME, H5_ITER_INC,
             0, name_buf, (size_t) name_buf_size + 1, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid AAPL!\n");
+        printf("    couldn't retrieve attribute name by index\n");
         goto error;
     }
 
-    PASSED();
-
-    TESTING_2("H5Acreate_by_name with invalid LAPL")
-
-    H5E_BEGIN_TRY {
-        attr_id = H5Acreate_by_name(file_id, ATTRIBUTE_CREATE_INVALID_PARAMS_GROUP_NAME,
-                ATTRIBUTE_CREATE_INVALID_PARAMS_ATTR_NAME, attr_dtype, space_id, H5P_DEFAULT,
-                H5P_DEFAULT, H5I_INVALID_HID);
-    } H5E_END_TRY;
-
-    if (attr_id >= 0) {
+    if (strcmp(name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME)) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid LAPL!\n");
+        printf("    attribute name didn't match\n");
         goto error;
+    }
+
+    if (name_buf) {
+        free(name_buf);
+        name_buf = NULL;
     }
 
     if (H5Sclose(space_id) < 0)
@@ -3073,6 +3064,7 @@ test_get_attribute_name(void)
 
 error:
     H5E_BEGIN_TRY {
+        if (name_buf) free(name_buf);
         H5Sclose(space_id);
         H5Tclose(attr_dtype);
         H5Aclose(attr_id);
@@ -3134,34 +3126,26 @@ test_get_attribute_name_invalid_params(void)
     if ((space_id = H5Screate_simple(ATTRIBUTE_GET_NAME_INVALID_PARAMS_TEST_SPACE_RANK, dims, NULL)) < 0)
         TEST_ERROR
 
-    if ((attr_type = generate_random_datatype(H5T_NO_CLASS)) < 0)
+    if ((attr_dtype = generate_random_datatype(H5T_NO_CLASS)) < 0)
         TEST_ERROR
 
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_GET_NAME_INVALID_PARAMS_TEST_ATTRIBUTE_NAME, attr_dtype,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open attribute '%s' using H5Aopen\n", ATTRIBUTE_OPEN_TEST_ATTR_NAME);
+        printf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_GET_NAME_INVALID_PARAMS_TEST_ATTRIBUTE_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't open attribute '%s' using H5Aopen_by_name\n", ATTRIBUTE_OPEN_TEST_ATTR_NAME);
+        printf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
-    if (H5Aclose(attr_id) < 0)
-        TEST_ERROR
-
-    PASSED();
-
-    TESTING_2("H5Aopen_by_idx")
-
-    if ((attr_id = H5Aopen_by_idx(container_group, ATTRIBUTE_OPEN_TEST_GROUP_NAME, H5_INDEX_NAME,
-            H5_ITER_INC, 0, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
+    if (!attr_exists) {
         H5_FAILED();
-        printf("    couldn't open attribute '%s' using H5Aopen_by_idx\n", ATTRIBUTE_OPEN_TEST_ATTR_NAME);
+        printf("    attribute did not exist\n");
         goto error;
     }
 
@@ -3334,9 +3318,9 @@ test_get_attribute_name_invalid_params(void)
 
     if (H5Sclose(space_id) < 0)
         TEST_ERROR
-    if (H5Tclose(attr_type) < 0)
+    if (H5Tclose(attr_dtype) < 0)
         TEST_ERROR
-    if (H5Gclose(group_id) < 0)
+    if (H5Aclose(attr_id) < 0)
         TEST_ERROR
     if (H5Gclose(group_id) < 0)
         TEST_ERROR
@@ -3355,7 +3339,7 @@ error:
     H5E_BEGIN_TRY {
         if (name_buf) free(name_buf);
         H5Sclose(space_id);
-        H5Tclose(attr_type);
+        H5Tclose(attr_dtype);
         H5Aclose(attr_id);
         H5Gclose(group_id);
         H5Gclose(container_group);
@@ -3493,7 +3477,6 @@ test_get_attribute_info(void)
 
 error:
     H5E_BEGIN_TRY {
-        if (data) free(data);
         H5Sclose(space_id);
         H5Tclose(attr_dtype);
         H5Aclose(attr_id);
@@ -3532,19 +3515,13 @@ test_get_attribute_info_invalid_params(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        printf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
-        goto error;
-    }
-
-    if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_READ_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
-        H5_FAILED();
-        printf("    could't create container group '%s'\n", ATTRIBUTE_READ_TEST_GROUP_NAME);
+        printf("    couldn't open container group\n");
         goto error;
     }
 
@@ -3798,11 +3775,7 @@ test_get_attribute_info_invalid_params(void)
         err_ret = H5Aget_info_by_idx(group_id, ".", H5_INDEX_NAME, H5_ITER_INC, 0, NULL, H5P_DEFAULT);
     } H5E_END_TRY;
 
-    PASSED();
-
-    TESTING_2("H5Aget_info_by_name")
-
-    if (H5Aget_info_by_name(group_id, ".", ATTRIBUTE_GET_INFO_TEST_ATTR_NAME, &attr_info, H5P_DEFAULT) < 0) {
+    if (err_ret >= 0) {
         H5_FAILED();
         printf("    retrieved attribute info using H5Aget_info_by_idx with an invalid attribute info pointer!\n");
         goto error;
@@ -3816,7 +3789,7 @@ test_get_attribute_info_invalid_params(void)
         err_ret = H5Aget_info_by_idx(group_id, ".", H5_INDEX_NAME, H5_ITER_INC, 0, &attr_info, H5I_INVALID_HID);
     } H5E_END_TRY;
 
-    if (H5Aget_info_by_idx(group_id, ".", H5_INDEX_NAME, H5_ITER_INC, 0, &attr_info, H5P_DEFAULT) < 0) {
+    if (err_ret >= 0) {
         H5_FAILED();
         printf("    retrieved attribute info using H5Aget_info_by_idx with an invalid LAPL!\n");
         goto error;
