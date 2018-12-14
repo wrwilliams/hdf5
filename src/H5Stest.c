@@ -299,15 +299,25 @@ H5S_check_internal_consistency(const H5S_t *space)
     if(H5S_get_select_bounds(space, low_bounds, high_bounds) < 0)
         HGOTO_ERROR(H5E_DATASPACE, H5E_INCONSISTENTSTATE, FAIL, "the bound box could not be retrieved")
 
-    for(u = 0; u < space->extent.rank; u++) {
-        if((hsize_t)((hssize_t)space->select.sel_info.hslab->diminfo.low_bounds[u] + space->select.offset[u]) != low_bounds[u]) 
-            HGOTO_ERROR(H5E_DATASPACE, H5E_INCONSISTENTSTATE, FAIL, "the lower bound box of the selection is inconsistent")
-        if((hsize_t)((hssize_t)space->select.sel_info.hslab->diminfo.high_bounds[u] + space->select.offset[u]) != high_bounds[u]) 
-            HGOTO_ERROR(H5E_DATASPACE, H5E_INCONSISTENTSTATE, FAIL, "the higher bound box of the selection is inconsistent")
-    } /* end for */
-
     if(space->select.type->type == H5S_SEL_HYPERSLABS) {
         H5S_hyper_sel_t *hslab = space->select.sel_info.hslab;
+
+        if(space->select.sel_info.hslab->diminfo_valid == H5S_DIMINFO_VALID_YES) {
+            for(u = 0; u < space->extent.rank; u++) {
+                if((hsize_t)((hssize_t)hslab->diminfo.low_bounds[u] + space->select.offset[u]) != low_bounds[u]) 
+                    HGOTO_ERROR(H5E_DATASPACE, H5E_INCONSISTENTSTATE, FAIL, "the lower bound box of the selection is inconsistent")
+                if((hsize_t)((hssize_t)hslab->diminfo.high_bounds[u] + space->select.offset[u]) != high_bounds[u]) 
+                    HGOTO_ERROR(H5E_DATASPACE, H5E_INCONSISTENTSTATE, FAIL, "the higher bound box of the selection is inconsistent")
+            } /* end for */
+        } /* end if */
+        else {
+            for(u = 0; u < space->extent.rank; u++) {
+                if((hsize_t)((hssize_t)hslab->span_lst->low_bounds[u] + space->select.offset[u]) != low_bounds[u]) 
+                    HGOTO_ERROR(H5E_DATASPACE, H5E_INCONSISTENTSTATE, FAIL, "the lower bound box of the selection is inconsistent")
+                if((hsize_t)((hssize_t)hslab->span_lst->high_bounds[u] + space->select.offset[u]) != high_bounds[u]) 
+                    HGOTO_ERROR(H5E_DATASPACE, H5E_INCONSISTENTSTATE, FAIL, "the higher bound box of the selection is inconsistent")
+            } /* end for */
+        } /* end else */
 
         /* check the tail pointer */
         if((NULL != hslab) && (NULL != hslab->span_lst))
