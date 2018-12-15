@@ -3958,10 +3958,8 @@ H5S__hyper_intersect_block_helper(const H5S_hyper_span_info_t *spans,
             /* Advance to next span in this dimension */
             curr = curr->next;
         /* If this span is past the end of the block, then we're done in this dimension */
-        else if(curr->low > *end) {
-            HDassert(0 && "Should never occur, bounds must be wrong!");
+        else if(curr->low > *end)
             HGOTO_DONE(FALSE)
-        } /* end if */
         /* block & span overlap */
         else {
             if(curr->down == NULL)
