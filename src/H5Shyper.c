@@ -3675,7 +3675,8 @@ H5S__hyper_add_span_element_helper(H5S_hyper_span_info_t *span_tree,
                         H5S__hyper_free_span(stop_span);
                     } /* end if */
                     /* Span is disjoint, but has the same "down tree" selection */
-                    else {
+                    /* (If it has a "down tree") */
+                    else if(stop_span->down) {
                         /* Release "down tree" information */
                         H5S__hyper_free_span_info(stop_span->down);
 
@@ -6617,18 +6618,26 @@ H5S__hyper_rebuild(H5S_t *space)
     else {
         H5S_hyper_dim_t *opt_diminfo;   /* Convenience pointer to optimized dimension info */
         H5S_hyper_dim_t *app_diminfo;   /* Convenience pointer to application dimension info */
+        hsize_t *st_low, *st_high;      /* Convenience pointers to span tree's low & high bounds */
+        hsize_t *di_low, *di_high;      /* Convenience pointers to diminfo's low & high bounds */
         unsigned u;                     /* Local index variable */
 
         /* Set the convenience pointers */
         opt_diminfo = space->select.sel_info.hslab->diminfo.opt;
         app_diminfo = space->select.sel_info.hslab->diminfo.app;
+        st_low = space->select.sel_info.hslab->span_lst->low_bounds;
+        st_high = space->select.sel_info.hslab->span_lst->high_bounds;
+        di_low = space->select.sel_info.hslab->diminfo.low_bounds;
+        di_high = space->select.sel_info.hslab->diminfo.high_bounds;
 
-        /* Set the dimension info for the dataspace, from the rebuilt info */
+        /* Set the dimension info & bounds for the dataspace, from the rebuilt info */
         for(u = 0; u < rank; u++) {
             app_diminfo[(rank - u) - 1].start  = opt_diminfo[(rank - u) - 1].start = top_span_slab_info[u].start;
             app_diminfo[(rank - u) - 1].stride = opt_diminfo[(rank - u) - 1].stride = top_span_slab_info[u].stride;
             app_diminfo[(rank - u) - 1].count  = opt_diminfo[(rank - u) - 1].count = top_span_slab_info[u].count;
             app_diminfo[(rank - u) - 1].block  = opt_diminfo[(rank - u) - 1].block = top_span_slab_info[u].block;
+            di_low[u] = st_low[u];
+            di_high[u] = st_high[u];
         } /* end for */
 
         space->select.sel_info.hslab->diminfo_valid = H5S_DIMINFO_VALID_YES;
@@ -7235,16 +7244,19 @@ H5S__set_regular_hyperslab(H5S_t *space, const hsize_t start[],
         space->select.sel_info.hslab->diminfo.opt[u].count = opt_count[u];
         space->select.sel_info.hslab->diminfo.opt[u].block = opt_block[u];
 
-        /* Update bound box of the hyperslab selection */
-        space->select.sel_info.hslab->diminfo.low_bounds[u] = start[u];
-        space->select.sel_info.hslab->diminfo.high_bounds[u] = start[u] + opt_stride[u] * (opt_count[u] - 1) + (opt_block[u] - 1);
-
         /* Update # of elements selected */
         space->select.num_elem *= (opt_count[u] * opt_block[u]);
 
-        /* Check for unlimited dimension */
-        if((app_count[u] == H5S_UNLIMITED) || (app_block[u] == H5S_UNLIMITED))
+        /* Set low bound of bounding box for the hyperslab selection */
+        space->select.sel_info.hslab->diminfo.low_bounds[u] = start[u];
+
+        /* Check for unlimited dimension & set high bound */
+        if((app_count[u] == H5S_UNLIMITED) || (app_block[u] == H5S_UNLIMITED)) {
             space->select.sel_info.hslab->unlim_dim = (int)u;
+            space->select.sel_info.hslab->diminfo.high_bounds[u] = H5S_UNLIMITED;
+        } /* end if */
+        else
+            space->select.sel_info.hslab->diminfo.high_bounds[u] = start[u] + opt_stride[u] * (opt_count[u] - 1) + (opt_block[u] - 1);
     } /* end for */
 
     /* Handle unlimited selections */
@@ -10171,6 +10183,13 @@ H5S_hyper_clip_unlim(H5S_t *space, hsize_t clip_size)
             /* Last block is complete, simply mark that diminfo.opt is valid */
             hslab->diminfo_valid = H5S_DIMINFO_VALID_YES;
     } /* end else */
+
+    /* Update the upper bound, if the diminfo is valid */
+    if(H5S_DIMINFO_VALID_YES == hslab->diminfo_valid)
+        hslab->diminfo.high_bounds[orig_unlim_dim] =
+                hslab->diminfo.opt[orig_unlim_dim].start +
+                hslab->diminfo.opt[orig_unlim_dim].stride * (hslab->diminfo.opt[orig_unlim_dim].count - 1) +
+                (hslab->diminfo.opt[orig_unlim_dim].block - 1);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
