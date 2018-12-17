@@ -697,10 +697,6 @@ error:
     if (array_dims)
         free(array_dims);
 
-    if (datatype >= 0) {
-        fprintf(stderr, "*** DATATYPE SIZE: %llu bytes***\n", (unsigned long long) H5Tget_size(datatype));
-    }
-
     return datatype;
 }
 

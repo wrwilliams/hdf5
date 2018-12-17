@@ -122,6 +122,13 @@ int vol_attribute_test(void);
 #define ATTRIBUTE_RENAME_TEST_NEW_NAME   "renamed_attr"
 #define ATTRIBUTE_RENAME_TEST_NEW_NAME2  "renamed_attr2"
 
+#define ATTRIBUTE_RENAME_INVALID_PARAMS_TEST_SPACE_RANK 1
+#define ATTRIBUTE_RENAME_INVALID_PARAMS_TEST_GROUP_NAME "attr_rename_invalid_params_test"
+#define ATTRIBUTE_RENAME_INVALID_PARAMS_TEST_ATTR_NAME  "invalid_params_rename_test_attr"
+#define ATTRIBUTE_RENAME_INVALID_PARAMS_TEST_ATTR_NAME2 "invalid_params_rename_test_attr2"
+#define ATTRIBUTE_RENAME_INVALID_PARAMS_TEST_NEW_NAME   "invalid_params_renamed_attr"
+#define ATTRIBUTE_RENAME_INVALID_PARAMS_TEST_NEW_NAME2  "invalid_params_renamed_attr2"
+
 #define ATTRIBUTE_ITERATE_TEST_DSET_SPACE_RANK 2
 #define ATTRIBUTE_ITERATE_TEST_ATTR_SPACE_RANK 1
 #define ATTRIBUTE_ITERATE_TEST_SUBGROUP_NAME   "attribute_iterate_test"
@@ -135,9 +142,20 @@ int vol_attribute_test(void);
 #define ATTRIBUTE_ITERATE_TEST_0_ATTRIBUTES_SUBGROUP_NAME   "attribute_iterate_test_0_attributes"
 #define ATTRIBUTE_ITERATE_TEST_0_ATTRIBUTES_DSET_NAME       "attribute_iterate_dset"
 
+#define ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_ATTR_SPACE_RANK 1
+#define ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_SUBGROUP_NAME   "attribute_iterate_invalid_params_test"
+#define ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_ATTR_NAME       "invalid_params_iter_attr1"
+#define ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_ATTR_NAME2      "invalid_params_iter_attr2"
+#define ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_ATTR_NAME3      "invalid_params_iter_attr3"
+#define ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_ATTR_NAME4      "invalid_params_iter_attr4"
+
 #define ATTRIBUTE_DELETION_TEST_SPACE_RANK 1
 #define ATTRIBUTE_DELETION_TEST_GROUP_NAME "attr_deletion_test"
 #define ATTRIBUTE_DELETION_TEST_ATTR_NAME  "attr_to_be_deleted"
+
+#define ATTRIBUTE_DELETION_INVALID_PARAMS_TEST_SPACE_RANK 1
+#define ATTRIBUTE_DELETION_INVALID_PARAMS_TEST_GROUP_NAME "attr_deletion_invalid_params_test"
+#define ATTRIBUTE_DELETION_INVALID_PARAMS_TEST_ATTR_NAME  "invalid_params_attr_to_be_deleted"
 
 #define ATTRIBUTE_GET_NUM_ATTRS_TEST_ATTRIBUTE_NAME "get_num_attrs_test_attribute"
 #define ATTRIBUTE_GET_NUM_ATTRS_TEST_SPACE_RANK     1
