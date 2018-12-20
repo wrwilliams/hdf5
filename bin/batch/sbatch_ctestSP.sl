@@ -1,6 +1,5 @@
 #!/bin/bash
 
-#SBATCH -p knl -C quad,flat
 #SBATCH --nodes=1
 #SBATCH -t 01:00:00
 #SBATCH --mail-type=BEGIN,END,FAIL
@@ -8,8 +7,6 @@
 #SBATCH --export=ALL
 #SBATCH --job-name=h5_ctestS
 
-module load cmake
-module load craype-hugepages4M
 
 cd build
 CMD="ctest . -E TEST_PAR|H5DIFF|PERFORM -C Release -j 32 -T test"

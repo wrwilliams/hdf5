@@ -144,6 +144,11 @@ if DIRECT_VFD_CONDITIONAL
   VFD_LIST += direct
 endif
 
+# Test with just the native connector, with a single pass-through connector
+# and with a doubly-stacked pass-through.
+VOL_LIST = native "pass_through under_vol=0;under_info={}" \
+           "pass_through under_vol=505;under_info={under_vol=0;under_info={}}"
+
 # Additional target for running timing test
 timings _timings: testmeta
 	@for timing in $(TIMINGS) dummy; do                                   \
@@ -216,5 +221,7 @@ use_disable_mdc_flushes_SOURCES=use_disable_mdc_flushes.c
 # Temporary files.
 DISTCLEANFILES=testerror.sh testlibinfo.sh testcheck_version.sh testlinks_env.sh test_filter_plugin.sh \
     testswmr.sh testvdsswmr.sh test_usecases.sh testflushrefresh.sh test_filenotclosed.sh
+
+SUBDIRS = . VOL
 
 include $(top_srcdir)/config/conclude.am

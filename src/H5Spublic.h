@@ -28,6 +28,9 @@
 /* Define user-level maximum number of dimensions */
 #define H5S_MAX_RANK    32
 
+/* Forward declaration of selection iterator struct */
+typedef struct H5S_sel_iter_t H5S_sel_iter_t;
+
 /* Different types of dataspaces */
 typedef enum H5S_class_t {
     H5S_NO_CLASS         = -1,  /*error                                      */
@@ -150,9 +153,9 @@ H5_DLL herr_t H5Sget_select_bounds(hid_t spaceid, hsize_t start[],
 H5_DLL H5S_sel_type H5Sget_select_type(hid_t spaceid);
 
 /* The following have been temporarily added to support the DAOS VOL plugin */
-H5_DLL herr_t H5Sselect_iter_init(hid_t space_id, size_t elmt_size, void **sel_iter);
-H5_DLL herr_t H5Sselect_iter_release(void **sel_iter);
-H5_DLL herr_t H5Sselect_get_seq_list(hid_t space_id, unsigned flags, void **sel_iter,
+H5_DLL H5S_sel_iter_t * H5Sselect_iter_init(hid_t space_id, size_t elmt_size);
+H5_DLL herr_t H5Sselect_iter_release(H5S_sel_iter_t *sel_iter);
+H5_DLL herr_t H5Sselect_get_seq_list(hid_t space_id, unsigned flags, H5S_sel_iter_t *sel_iter,
                                      size_t maxseq, size_t maxbytes, size_t *nseq,
                                      size_t *nbytes, hsize_t *off, size_t *len);
 
