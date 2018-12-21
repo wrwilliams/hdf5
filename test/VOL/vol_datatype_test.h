@@ -24,8 +24,12 @@ int vol_datatype_test(void);
  *************************************************/
 
 #define DATATYPE_CREATE_TEST_DATASET_DIMS  2
+#define DATATYPE_CREATE_TEST_GROUP_NAME    "committed_datatype_creation_test"
+#define DATATYPE_CREATE_TEST_TYPE_NAME     "test_type"
 
-#define DATATYPE_CREATE_TEST_TYPE_NAME "test_type"
+#define DATATYPE_CREATE_INVALID_PARAMS_TEST_SPACE_RANK 2
+#define DATATYPE_CREATE_INVALID_PARAMS_TEST_GROUP_NAME "committed_datatype_creation_invalid_params_test"
+#define DATATYPE_CREATE_INVALID_PARAMS_TEST_TYPE_NAME  "committed_datatype_creation_invalid_params_datatype"
 
 #define DATATYPE_CREATE_ANONYMOUS_TYPE_NAME "anon_type"
 

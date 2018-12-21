@@ -1176,7 +1176,7 @@ test_open_attribute(void)
     hid_t   space_id = H5I_INVALID_HID;
     hid_t   attr_type = H5I_INVALID_HID;
 
-    TESTING("Attribute opening"); puts("");
+    TESTING("attribute opening"); puts("");
 
     TESTING_2("H5Aopen")
 
@@ -1784,6 +1784,8 @@ test_write_attribute_invalid_params(void)
 
     TESTING("H5Awrite with invalid parameters"); puts("");
 
+    TESTING_2("H5Awrite with an invalid attr_id")
+
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
@@ -1840,8 +1842,6 @@ test_write_attribute_invalid_params(void)
 
     for (i = 0; i < data_size / ATTRIBUTE_WRITE_INVALID_PARAMS_TEST_ATTR_DTYPE_SIZE; i++)
         ((int *) data)[i] = (int) i;
-
-    TESTING_2("H5Awrite with an invalid attr_id")
 
     H5E_BEGIN_TRY {
         err_ret = H5Awrite(H5I_INVALID_HID, ATTRIBUTE_WRITE_INVALID_PARAMS_TEST_ATTR_DTYPE, data);
@@ -2405,13 +2405,14 @@ test_get_attribute_space_and_type(void)
         for (i = 0; i < ATTRIBUTE_GET_SPACE_TYPE_TEST_SPACE_RANK; i++)
             if (space_dims[i] != attr_dims[i]) {
                 H5_FAILED();
-                printf("    dataspace dims didn't match\n");
+                printf("    attribute's dataspace dims didn't match\n");
                 goto error;
             }
     }
 
     PASSED();
 
+    TESTING_2("H5Aget_type after re-opening an attribute")
 
     /* Now close the attribute and verify that this still works after opening an
      * attribute instead of creating it
@@ -2428,8 +2429,6 @@ test_get_attribute_space_and_type(void)
         printf("    couldn't open attribute\n");
         goto error;
     }
-
-    TESTING_2("H5Aget_type after re-opening an attribute")
 
     if ((tmp_type_id = H5Aget_type(attr_id)) < 0) {
         H5_FAILED();
@@ -2670,7 +2669,9 @@ test_attribute_property_lists(void)
     hid_t      acpl_id1 = H5I_INVALID_HID, acpl_id2 = H5I_INVALID_HID;
     hid_t      space_id = H5I_INVALID_HID;
 
-    TESTING("attribute property list operations")
+    TESTING("attribute property list operations"); puts("");
+
+    TESTING_2("H5Aget_create_plist")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
@@ -2799,6 +2800,10 @@ test_attribute_property_lists(void)
         printf("    ACPL property value was set!\n");
         goto error;
     }
+
+    PASSED();
+
+    TESTING_2("H5Aget_create_plist after re-opening an attribute")
 
     /* Now close the property lists and attribute and see if we can still retrieve copies of
      * the property lists upon opening (instead of creating) an attribute
@@ -3356,7 +3361,11 @@ error:
 static int
 test_get_attribute_storage_size(void)
 {
+    TESTING("H5Aget_storage_size");
 
+    SKIPPED();
+
+    return 0;
 }
 
 /*
@@ -3515,13 +3524,13 @@ test_get_attribute_info_invalid_params(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        printf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -5528,7 +5537,11 @@ error:
 static int
 test_attribute_exists(void)
 {
+    TESTING("H5Aexists")
 
+    SKIPPED();
+
+    return 0;
 }
 
 /*
@@ -5538,7 +5551,11 @@ test_attribute_exists(void)
 static int
 test_attribute_exists_invalid_params(void)
 {
+    TESTING("H5Aexists with invalid parameters")
 
+    SKIPPED();
+
+    return 0;
 }
 
 /*
@@ -5725,7 +5742,7 @@ int
 vol_attribute_test(void)
 {
     size_t i;
-    int    nerrors = 0;
+    int    nerrors;
 
     printf("**********************************************\n");
     printf("*                                            *\n");
@@ -5733,7 +5750,7 @@ vol_attribute_test(void)
     printf("*                                            *\n");
     printf("**********************************************\n\n");
 
-    for (i = 0; i < ARRAY_LENGTH(attribute_tests); i++) {
+    for (i = 0, nerrors = 0; i < ARRAY_LENGTH(attribute_tests); i++) {
         nerrors += (*attribute_tests[i])() ? 1 : 0;
     }
 

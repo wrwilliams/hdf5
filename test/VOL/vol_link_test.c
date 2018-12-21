@@ -3658,7 +3658,7 @@ int
 vol_link_test(void)
 {
     size_t i;
-    int    nerrors = 0;
+    int    nerrors;
 
     printf("**********************************************\n");
     printf("*                                            *\n");
@@ -3666,7 +3666,7 @@ vol_link_test(void)
     printf("*                                            *\n");
     printf("**********************************************\n\n");
 
-    for (i = 0; i < ARRAY_LENGTH(link_tests); i++) {
+    for (i = 0, nerrors = 0; i < ARRAY_LENGTH(link_tests); i++) {
         nerrors += (*link_tests[i])() ? 1 : 0;
     }
 
