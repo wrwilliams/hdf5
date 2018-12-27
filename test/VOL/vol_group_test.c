@@ -24,7 +24,9 @@ static int test_group_property_lists(void);
 static int test_get_group_info(void);
 static int test_get_group_info_invalid_params(void);
 static int test_flush_group(void);
+static int test_flush_group_invalid_params(void);
 static int test_refresh_group(void);
+static int test_refresh_group_invalid_params(void);
 
 /*
  * The array of group tests to be performed.
@@ -42,7 +44,9 @@ static int (*group_tests[])(void) = {
         test_get_group_info,
         test_get_group_info_invalid_params,
         test_flush_group,
+        test_flush_group_invalid_params,
         test_refresh_group,
+        test_refresh_group_invalid_params,
 };
 
 /*
@@ -1141,9 +1145,20 @@ test_flush_group(void)
 {
     TESTING("H5Gflush")
 
-    /*
-     * XXX
-     */
+    SKIPPED();
+
+    return 0;
+}
+
+/*
+ * A test to check that H5Gflush fails when it
+ * is passed invalid parameters.
+ */
+static int
+test_flush_group_invalid_params(void)
+{
+    TESTING("H5Gflush with invalid parameters")
+
     SKIPPED();
 
     return 0;
@@ -1157,9 +1172,20 @@ test_refresh_group(void)
 {
     TESTING("H5Grefresh")
 
-    /*
-     * XXX
-     */
+    SKIPPED();
+
+    return 0;
+}
+
+/*
+ * A test to check that H5Grefresh fails when it
+ * is passed invalid parameters.
+ */
+static int
+test_refresh_group_invalid_params(void)
+{
+    TESTING("H5Grefresh with invalid parameters")
+
     SKIPPED();
 
     return 0;
@@ -1169,7 +1195,7 @@ int
 vol_group_test(void)
 {
     size_t i;
-    int    nerrors = 0;
+    int    nerrors;
 
     printf("**********************************************\n");
     printf("*                                            *\n");
@@ -1177,7 +1203,7 @@ vol_group_test(void)
     printf("*                                            *\n");
     printf("**********************************************\n\n");
 
-    for (i = 0; i < ARRAY_LENGTH(group_tests); i++) {
+    for (i = 0, nerrors = 0; i < ARRAY_LENGTH(group_tests); i++) {
         nerrors += (*group_tests[i])() ? 1 : 0;
     }
 

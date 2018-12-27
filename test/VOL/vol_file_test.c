@@ -1230,7 +1230,7 @@ int
 vol_file_test(void)
 {
     size_t i;
-    int    nerrors = 0;
+    int    nerrors;
 
     printf("**********************************************\n");
     printf("*                                            *\n");
@@ -1238,7 +1238,7 @@ vol_file_test(void)
     printf("*                                            *\n");
     printf("**********************************************\n\n");
 
-    for (i = 0; i < ARRAY_LENGTH(file_tests); i++) {
+    for (i = 0, nerrors = 0; i < ARRAY_LENGTH(file_tests); i++) {
         nerrors += (*file_tests[i])() ? 1 : 0;
     }
 

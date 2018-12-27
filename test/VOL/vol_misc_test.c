@@ -711,7 +711,7 @@ int
 vol_misc_test(void)
 {
     size_t i;
-    int    nerrors = 0;
+    int    nerrors;
 
     printf("**********************************************\n");
     printf("*                                            *\n");
@@ -719,7 +719,7 @@ vol_misc_test(void)
     printf("*                                            *\n");
     printf("**********************************************\n\n");
 
-    for (i = 0; i < ARRAY_LENGTH(misc_tests); i++) {
+    for (i = 0, nerrors = 0; i < ARRAY_LENGTH(misc_tests); i++) {
         nerrors += (*misc_tests[i])() ? 1 : 0;
     }
 
