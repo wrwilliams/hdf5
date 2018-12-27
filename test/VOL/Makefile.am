@@ -18,10 +18,10 @@
 
 include $(top_srcdir)/config/commence.am
 
-AM_CFLAGS += -I$(top_srcdir)/test
+AM_CFLAGS += -I$(top_srcdir)/test -I$(top_srcdir)/src -I$(top_builddir)/test -I$(top_builddir)/src
 
 if BUILD_PARALLEL_CONDITIONAL
-   AM_CFLAGS += -I$(top_srcdir)/testpar -I$(top_srcdir)/testpar/VOL
+   AM_CFLAGS += -I$(top_srcdir)/testpar -I$(top_srcdir)/testpar/VOL -I$(top_builddir)/testpar -I$(top_builddir)/testpar/VOL
 endif
 
 check_PROGRAMS = vol_test
@@ -29,6 +29,6 @@ check_PROGRAMS = vol_test
 vol_test_SOURCES=vol_test.c vol_file_test.c vol_group_test.c vol_dataset_test.c vol_attribute_test.c \
                  vol_datatype_test.c vol_link_test.c vol_object_test.c vol_misc_test.c
 
-vol_test_LDADD=../libh5test.la $(LIBHDF5)
+vol_test_LDADD=$(LIBH5TEST) $(LIBHDF5)
 
 include $(top_srcdir)/config/conclude.am
