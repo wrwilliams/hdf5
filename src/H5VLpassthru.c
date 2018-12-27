@@ -41,6 +41,12 @@
 /* (Uncomment to enable) */
 /* #define ENABLE_PASSTHRU_LOGGING */
 
+/* Hack for missing va_copy() in old Visual Studio editions
+ * (from H5win2_defs.h - used on VS2012 and earlier)
+ */
+#if defined(_WIN32) && defined(_MSC_VER) && (_MSC_VER < 1800)
+#define va_copy(D,S)      ((D) = (S))
+#endif
 
 /************/
 /* Typedefs */
@@ -1630,7 +1636,7 @@ H5VL_pass_through_file_specific(void *file, H5VL_file_specific_t specific_type,
         hid_t plist_id;
 
         /* Retrieve parameters for 'mount' operation, so we can unwrap the child file */
-        loc_type = va_arg(arguments, H5I_type_t);
+        loc_type = (H5I_type_t)va_arg(arguments, int); /* enum work-around */
         name = va_arg(arguments, const char *);
         child_file = (H5VL_pass_through_t *)va_arg(arguments, void *);
         plist_id = va_arg(arguments, hid_t);
@@ -1639,7 +1645,7 @@ H5VL_pass_through_file_specific(void *file, H5VL_file_specific_t specific_type,
         under_vol_id = o->under_vol_id;
 
         /* Re-issue 'file specific' call, using the unwrapped pieces */
-        ret_value = H5VL_pass_through_file_specific_reissue(o->under_object, o->under_vol_id, specific_type, dxpl_id, req, loc_type, name, child_file->under_object, plist_id);
+        ret_value = H5VL_pass_through_file_specific_reissue(o->under_object, o->under_vol_id, specific_type, dxpl_id, req, (int)loc_type, name, child_file->under_object, plist_id);
     } /* end if */
     else if(specific_type == H5VL_FILE_IS_ACCESSIBLE) {
         H5VL_pass_through_info_t *info;

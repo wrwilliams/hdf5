@@ -802,10 +802,10 @@ h5_rmprefix(const char *filename)
  *
  * Purpose:     Returns a file access template which is the default template
  *              but with a file driver, VOL connector, or libver bound set
- *		according to a constant or environment variable
+ *              according to a constant or environment variable
  *
- * Return:      Success:  A file access property list
- *              Failure:  -1
+ * Return:      Success:    A file access property list
+ *              Failure:    H5I_INVALID_HID
  *
  * Programmer:  Robb Matzke
  *              Thursday, November 19, 1998
@@ -815,24 +815,29 @@ h5_rmprefix(const char *filename)
 hid_t
 h5_fileaccess(void)
 {
-    hid_t       fapl = -1;
+    hid_t       fapl_id = H5I_INVALID_HID;
 
-    if((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0)
-        return -1;
+    if((fapl_id = H5Pcreate(H5P_FILE_ACCESS)) < 0)
+        goto error;
 
     /* Attempt to set up a file driver first */
-    if(h5_get_vfd_fapl(fapl) < 0)
-         return -1;
+    if(h5_get_vfd_fapl(fapl_id) < 0)
+        goto error;
 
     /* Next, try to set up a VOL connector */
-    if(h5_get_vol_fapl(fapl) < 0)
-        return -1;
+    if(h5_get_vol_fapl(fapl_id) < 0)
+        goto error;
  
     /* Finally, check for libver bounds */
-    if(h5_get_libver_fapl(fapl) < 0)
-        return -1;
+    if(h5_get_libver_fapl(fapl_id) < 0)
+        goto error;
  
-    return(fapl);
+    return fapl_id;
+
+error:
+    if(fapl_id != H5I_INVALID_HID)
+        H5Pclose(fapl_id);
+    return H5I_INVALID_HID;
 } /* end h5_fileaccess() */
 
 
@@ -891,11 +896,11 @@ h5_get_vfd_fapl(hid_t fapl)
             goto error;
     } else if(!HDstrcmp(tok, "core")) {
         /* In-memory driver settings (backing store on, 1 MB increment) */
-        if(H5Pset_fapl_core(fapl, (size_t)1, TRUE) < 0)
+        if(H5Pset_fapl_core(fapl, (size_t)H5_MB, TRUE) < 0)
             goto error;
     } else if(!HDstrcmp(tok, "core_paged")) {
         /* In-memory driver with write tracking and paging on */
-        if(H5Pset_fapl_core(fapl, (size_t)1, TRUE) < 0)
+        if(H5Pset_fapl_core(fapl, (size_t)H5_MB, TRUE) < 0)
             goto error;
         if(H5Pset_core_write_tracking(fapl, TRUE, (size_t)4096) < 0)
             goto error;
@@ -1042,7 +1047,7 @@ error:
  *              fapl but with a VOL connector set according to the constant
  *              or environment variable HDF5_VOL_CONNECTOR.
  *
- * Return:      Success:    A file access property list ID
+ * Return:      Success:    0
  *              Failure:    -1
  *
  * Programmer:  Jordan Henderson

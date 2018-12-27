@@ -627,7 +627,7 @@ H5VL_register_connector(const void *_cls, hbool_t app_ref, hid_t vipl_id)
 done:
     if (ret_value < 0 && saved) {
         if (saved->name)
-            H5MM_xfree(saved->name);
+            H5MM_xfree((void *)(saved->name));  /* Casting away const OK -QAK */
 
         H5FL_FREE(H5VL_class_t, saved);
     }
@@ -796,7 +796,6 @@ H5VL__object(hid_t id, H5I_type_t obj_type)
         case H5I_UNINIT:
         case H5I_BADID:
         case H5I_DATASPACE:
-        case H5I_REFERENCE:
         case H5I_VFL:
         case H5I_VOL:
         case H5I_GENPROP_CLS:
