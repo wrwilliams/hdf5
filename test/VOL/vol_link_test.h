@@ -23,7 +23,8 @@ int vol_link_test(void);
  *                                           *
  *********************************************/
 
-#define HARD_LINK_TEST_LINK_NAME     "test_link"
+#define HARD_LINK_TEST_GROUP_NAME "hard_link_creation_test"
+#define HARD_LINK_TEST_LINK_NAME  "hard_link"
 
 #define H5L_SAME_LOC_TEST_DSET_SPACE_RANK 2
 #define H5L_SAME_LOC_TEST_GROUP_NAME      "h5l_same_loc_test_group"
@@ -32,6 +33,9 @@ int vol_link_test(void);
 #endif
 #define H5L_SAME_LOC_TEST_LINK_NAME2      "h5l_same_loc_test_link2"
 #define H5L_SAME_LOC_TEST_DSET_NAME       "h5l_same_loc_test_dset"
+
+#define HARD_LINK_INVALID_PARAMS_TEST_GROUP_NAME "hard_link_creation_invalid_params_test"
+#define HARD_LINK_INVALID_PARAMS_TEST_LINK_NAME  "hard_link"
 
 #define SOFT_LINK_EXISTING_RELATIVE_TEST_DSET_SPACE_RANK 2
 #define SOFT_LINK_EXISTING_RELATIVE_TEST_SUBGROUP_NAME   "soft_link_to_existing_relative_path_test"
@@ -51,6 +55,9 @@ int vol_link_test(void);
 #define SOFT_LINK_DANGLING_ABSOLUTE_TEST_DSET_NAME       "dset"
 #define SOFT_LINK_DANGLING_ABSOLUTE_TEST_LINK_NAME       "soft_link_dangling_absolute_path"
 
+#define SOFT_LINK_INVALID_PARAMS_TEST_GROUP_NAME "soft_link_creation_invalid_params_test"
+#define SOFT_LINK_INVALID_PARAMS_TEST_LINK_NAME  "soft_link_to_root"
+
 #define EXTERNAL_LINK_TEST_SUBGROUP_NAME "external_link_test"
 #define EXTERNAL_LINK_TEST_FILE_NAME     "ext_link_file"
 #define EXTERNAL_LINK_TEST_LINK_NAME     "ext_link"
@@ -60,8 +67,17 @@ int vol_link_test(void);
 #define EXTERNAL_LINK_TEST_DANGLING_LINK_NAME       "dangling_ext_link"
 #define EXTERNAL_LINK_TEST_DANGLING_DSET_NAME       "external_dataset"
 
+#define EXTERNAL_LINK_INVALID_PARAMS_TEST_GROUP_NAME "external_link_creation_invalid_params_test"
+#define EXTERNAL_LINK_INVALID_PARAMS_TEST_FILE_NAME  "ext_link_invalid_params_file"
+#define EXTERNAL_LINK_INVALID_PARAMS_TEST_LINK_NAME  "external_link"
+
 #define UD_LINK_TEST_UDATA_MAX_SIZE 256
+#define UD_LINK_TEST_GROUP_NAME     "ud_link_creation_test"
 #define UD_LINK_TEST_LINK_NAME      "ud_link"
+
+#define UD_LINK_INVALID_PARAMS_TEST_UDATA_MAX_SIZE 256
+#define UD_LINK_INVALID_PARAMS_TEST_GROUP_NAME     "ud_link_creation_invalid_params_test"
+#define UD_LINK_INVALID_PARAMS_TEST_LINK_NAME      "ud_link"
 
 #define LINK_DELETE_TEST_DSET_SPACE_RANK     2
 #define LINK_DELETE_TEST_EXTERNAL_LINK_NAME  "external_link"
@@ -72,14 +88,21 @@ int vol_link_test(void);
 #define LINK_DELETE_TEST_DSET_NAME1          "link_delete_test_dset1"
 #define LINK_DELETE_TEST_DSET_NAME2          "link_delete_test_dset2"
 
-#define COPY_LINK_TEST_SOFT_LINK_TARGET_PATH "/" COPY_LINK_TEST_GROUP_NAME "/" COPY_LINK_TEST_DSET_NAME
-#define COPY_LINK_TEST_HARD_LINK_COPY_NAME   "hard_link_to_dset_copy"
-#define COPY_LINK_TEST_SOFT_LINK_COPY_NAME   "soft_link_to_dset_copy"
-#define COPY_LINK_TEST_HARD_LINK_NAME        "hard_link_to_dset"
-#define COPY_LINK_TEST_SOFT_LINK_NAME        "soft_link_to_dset"
-#define COPY_LINK_TEST_GROUP_NAME            "link_copy_test_group"
-#define COPY_LINK_TEST_DSET_NAME             "link_copy_test_dset"
-#define COPY_LINK_TEST_DSET_SPACE_RANK       2
+#define LINK_DELETE_INVALID_PARAMS_TEST_HARD_LINK_NAME "hard_link"
+#define LINK_DELETE_INVALID_PARAMS_TEST_GROUP_NAME     "link_deletion_invalid_params_test"
+
+#define COPY_LINK_TEST_EXTERNAL_LINK_COPY_NAME "external_link_copy"
+#define COPY_LINK_TEST_SOFT_LINK_TARGET_PATH   "/" LINK_TEST_GROUP_NAME "/" COPY_LINK_TEST_GROUP_NAME
+#define COPY_LINK_TEST_HARD_LINK_COPY_NAME     "hard_link_copy"
+#define COPY_LINK_TEST_SOFT_LINK_COPY_NAME     "soft_link_copy"
+#define COPY_LINK_TEST_EXTERNAL_LINK_NAME      "external_link"
+#define COPY_LINK_TEST_HARD_LINK_NAME          "hard_link"
+#define COPY_LINK_TEST_SOFT_LINK_NAME          "soft_link"
+#define COPY_LINK_TEST_GROUP_NAME              "link_copy_test"
+
+#define COPY_LINK_INVALID_PARAMS_TEST_HARD_LINK_COPY_NAME "hard_link_copy"
+#define COPY_LINK_INVALID_PARAMS_TEST_HARD_LINK_NAME      "hard_link"
+#define COPY_LINK_INVALID_PARAMS_TEST_GROUP_NAME          "link_copy_invalid_params_test"
 
 #define MOVE_LINK_TEST_SOFT_LINK_TARGET_PATH "/" MOVE_LINK_TEST_GROUP_NAME "/" MOVE_LINK_TEST_DSET_NAME
 #define MOVE_LINK_TEST_HARD_LINK_NAME        "hard_link_to_dset"
