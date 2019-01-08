@@ -158,47 +158,8 @@ h5_clean_files(const char *base_name[], hid_t fapl)
     int i;
 
     for(i = 0; base_name[i]; i++) {
-        char filename[1024];
-        char temp[2048];
-        hid_t driver;
-
-        if(NULL == h5_fixname(base_name[i], fapl, filename, sizeof(filename)))
-            continue;
-
-        driver = H5Pget_driver(fapl);
-
-        if(driver == H5FD_FAMILY) {
-            int j;
-
-            for(j = 0; /*void*/; j++) {
-                HDsnprintf(temp, sizeof temp, filename, j);
-
-                if(HDaccess(temp, F_OK) < 0)
-                    break;
-
-                HDremove(temp);
-            } /* end for */
-        } else if(driver == H5FD_CORE) {
-            hbool_t backing;        /* Whether the core file has backing store */
-
-            H5Pget_fapl_core(fapl, NULL, &backing);
-
-            /* If the file was stored to disk with bacing store, remove it */
-            if(backing)
-                HDremove(filename);
-        } else if (driver == H5FD_MULTI) {
-            H5FD_mem_t mt;
-
-            HDassert(HDstrlen(multi_letters)==H5FD_MEM_NTYPES);
-
-            for(mt = H5FD_MEM_DEFAULT; mt < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t,mt)) {
-                HDsnprintf(temp, sizeof temp, "%s-%c.h5", filename, multi_letters[mt]);
-                HDremove(temp); /*don't care if it fails*/
-            } /* end for */
-        } else {
-            HDremove(filename);
-        }
-    } /* end for */
+        h5_delete_test_file(base_name[i], fapl);
+    }
 
     /* Close the FAPL used to access the file */
     H5Pclose(fapl);
@@ -266,10 +227,10 @@ h5_delete_test_file(const char *base_name, hid_t fapl)
         for(mt = H5FD_MEM_DEFAULT; mt < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t,mt)) {
             HDsnprintf(sub_filename, sizeof(sub_filename), "%s-%c.h5", filename, multi_letters[mt]);
             HDremove(sub_filename);
-        } /* end for */
+        }
     } else {
         HDremove(filename);
-    } /* end if */
+    } /* end driver selection tree */
 
     return;
 } /* end h5_delete_test_file() */
@@ -652,7 +613,7 @@ h5_fixname_real(const char *base_name, hid_t fapl, const char *_suffix,
                 printf("*** Hint ***\n"
                        "You can use environment variable HDF5_PARAPREFIX to "
                        "run parallel test files in a\n"
-                       "different directory or to add file type prefix. E.g.,\n"
+                       "different directory or to add file type prefix. e.g.,\n"
                        "   HDF5_PARAPREFIX=pfs:/PFS/user/me\n"
                        "   export HDF5_PARAPREFIX\n"
                        "*** End of Hint ***\n");
@@ -839,6 +800,50 @@ error:
         H5Pclose(fapl_id);
     return H5I_INVALID_HID;
 } /* end h5_fileaccess() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    h5_fileaccess_flags
+ *
+ * Purpose:     Returns a file access template which is the default template
+ *              but with a file driver, VOL connector, or libver bound set
+ *              according to a constant or environment variable
+ *
+ * Return:      Success:    A file access property list
+ *              Failure:    H5I_INVALID_HID
+ *
+ * Programmer:  Robb Matzke
+ *              Thursday, November 19, 1998
+ *
+ *-------------------------------------------------------------------------
+ */
+hid_t
+h5_fileaccess_flags(unsigned flags)
+{
+    hid_t       fapl_id = H5I_INVALID_HID;
+
+    if((fapl_id = H5Pcreate(H5P_FILE_ACCESS)) < 0)
+        goto error;
+
+    /* Attempt to set up a file driver first */
+    if((flags & H5_FILEACCESS_VFD) && h5_get_vfd_fapl(fapl_id) < 0)
+        goto error;
+
+    /* Next, try to set up a VOL connector */
+    if((flags & H5_FILEACCESS_VOL) && h5_get_vol_fapl(fapl_id) < 0)
+        goto error;
+ 
+    /* Finally, check for libver bounds */
+    if((flags & H5_FILEACCESS_LIBVER) && h5_get_libver_fapl(fapl_id) < 0)
+        goto error;
+ 
+    return fapl_id;
+
+error:
+    if(fapl_id != H5I_INVALID_HID)
+        H5Pclose(fapl_id);
+    return H5I_INVALID_HID;
+} /* end h5_fileaccess_flags() */
 
 
 /*-------------------------------------------------------------------------
