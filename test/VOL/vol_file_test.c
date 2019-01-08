@@ -76,7 +76,7 @@ test_create_file(void)
 
     if ((file_id = H5Fcreate(FILE_CREATE_TEST_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't create file '%s'\n", FILE_CREATE_TEST_FILENAME);
+        HDprintf("    couldn't create file '%s'\n", FILE_CREATE_TEST_FILENAME);
         goto error;
     }
 
@@ -107,7 +107,7 @@ test_create_file_invalid_params(void)
 {
     hid_t file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
 
-    TESTING("H5Fcreate with invalid parameters"); puts("");
+    TESTING("H5Fcreate with invalid parameters"); HDputs("");
 
     TESTING_2("H5Fcreate with invalid file name");
 
@@ -120,7 +120,7 @@ test_create_file_invalid_params(void)
 
     if (file_id >= 0) {
         H5_FAILED();
-        printf("    file was created with an invalid name!\n");
+        HDprintf("    file was created with an invalid name!\n");
         goto error;
     }
 
@@ -130,7 +130,7 @@ test_create_file_invalid_params(void)
 
     if (file_id >= 0) {
         H5_FAILED();
-        printf("    file was created with an invalid name!\n");
+        HDprintf("    file was created with an invalid name!\n");
         goto error;
     }
 
@@ -144,7 +144,7 @@ test_create_file_invalid_params(void)
 
     if (file_id >= 0) {
         H5_FAILED();
-        printf("    file was created with invalid flag H5F_ACC_RDONLY!\n");
+        HDprintf("    file was created with invalid flag H5F_ACC_RDONLY!\n");
         goto error;
     }
 
@@ -154,7 +154,7 @@ test_create_file_invalid_params(void)
 
     if (file_id >= 0) {
         H5_FAILED();
-        printf("    file was created with invalid flag H5F_ACC_RDWR!\n");
+        HDprintf("    file was created with invalid flag H5F_ACC_RDWR!\n");
         goto error;
     }
 
@@ -164,7 +164,7 @@ test_create_file_invalid_params(void)
 
     if (file_id >= 0) {
         H5_FAILED();
-        printf("    file was created with invalid flag H5F_ACC_CREAT!\n");
+        HDprintf("    file was created with invalid flag H5F_ACC_CREAT!\n");
         goto error;
     }
 
@@ -174,7 +174,7 @@ test_create_file_invalid_params(void)
 
     if (file_id >= 0) {
         H5_FAILED();
-        printf("    file was created with invalid flag H5F_ACC_SWMR_READ!\n");
+        HDprintf("    file was created with invalid flag H5F_ACC_SWMR_READ!\n");
         goto error;
     }
 
@@ -188,7 +188,7 @@ test_create_file_invalid_params(void)
 
     if (file_id >= 0) {
         H5_FAILED();
-        printf("    file was created with invalid FCPL!\n");
+        HDprintf("    file was created with invalid FCPL!\n");
         goto error;
     }
 
@@ -224,7 +224,7 @@ test_create_file_excl(void)
 
     if ((file_id = H5Fcreate(FILE_CREATE_EXCL_FILE_NAME, H5F_ACC_EXCL, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't create first file\n");
+        HDprintf("    couldn't create first file\n");
         goto error;
     }
 
@@ -237,7 +237,7 @@ test_create_file_excl(void)
 
     if (file_id >= 0) {
         H5_FAILED();
-        printf("    created already existing file using H5F_ACC_EXCL flag!\n");
+        HDprintf("    created already existing file using H5F_ACC_EXCL flag!\n");
         goto error;
     }
 
@@ -272,7 +272,7 @@ test_open_file(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDONLY, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    unable to open file '%s' in read-only mode\n", vol_test_filename);
+        HDprintf("    unable to open file '%s' in read-only mode\n", vol_test_filename);
         goto error;
     }
 
@@ -281,7 +281,7 @@ test_open_file(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    unable to open file '%s' in read-write mode\n", vol_test_filename);
+        HDprintf("    unable to open file '%s' in read-write mode\n", vol_test_filename);
         goto error;
     }
 
@@ -316,7 +316,7 @@ test_open_file_invalid_params(void)
 {
     hid_t file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
 
-    TESTING("H5Fopen with invalid parameters"); puts("");
+    TESTING("H5Fopen with invalid parameters"); HDputs("");
 
     TESTING_2("H5Fopen with invalid file name");
 
@@ -329,7 +329,7 @@ test_open_file_invalid_params(void)
 
     if (file_id >= 0) {
         H5_FAILED();
-        printf("    file was opened with an invalid name!\n");
+        HDprintf("    file was opened with an invalid name!\n");
         goto error;
     }
 
@@ -339,7 +339,7 @@ test_open_file_invalid_params(void)
 
     if (file_id >= 0) {
         H5_FAILED();
-        printf("    file was opened with an invalid name!\n");
+        HDprintf("    file was opened with an invalid name!\n");
         goto error;
     }
 
@@ -353,7 +353,7 @@ test_open_file_invalid_params(void)
 
     if (file_id >= 0) {
         H5_FAILED();
-        printf("    file was opened with invalid flag H5F_ACC_TRUNC!\n");
+        HDprintf("    file was opened with invalid flag H5F_ACC_TRUNC!\n");
         goto error;
     }
 
@@ -363,7 +363,7 @@ test_open_file_invalid_params(void)
 
     if (file_id >= 0) {
         H5_FAILED();
-        printf("    file was opened with invalid flag H5F_ACC_EXCL!\n");
+        HDprintf("    file was opened with invalid flag H5F_ACC_EXCL!\n");
         goto error;
     }
 
@@ -394,7 +394,7 @@ test_open_nonexistent_file(void)
 
     TESTING("for failure when opening a non-existent file")
 
-    snprintf(test_filename, VOL_TEST_FILENAME_MAX_LENGTH, "%s", NONEXISTENT_FILENAME);
+    HDsnprintf(test_filename, VOL_TEST_FILENAME_MAX_LENGTH, "%s", NONEXISTENT_FILENAME);
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
@@ -405,7 +405,7 @@ test_open_nonexistent_file(void)
 
     if (file_id >= 0) {
         H5_FAILED();
-        printf("    non-existent file was opened!\n");
+        HDprintf("    non-existent file was opened!\n");
         goto error;
     }
 
@@ -440,13 +440,13 @@ test_reopen_file(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((file_id2 = H5Freopen(file_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't re-open file\n");
+        HDprintf("    couldn't re-open file\n");
         goto error;
     }
 
@@ -491,7 +491,7 @@ test_close_file_invalid_id(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    closed an invalid file ID!\n");
+        HDprintf("    closed an invalid file ID!\n");
         goto error;
     }
 
@@ -522,7 +522,7 @@ test_flush_file(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    unable to open file '%s'\n", vol_test_filename);
+        HDprintf("    unable to open file '%s'\n", vol_test_filename);
         goto error;
     }
 
@@ -531,13 +531,13 @@ test_flush_file(void)
      */
     if (H5Fflush(file_id, H5F_SCOPE_LOCAL) < 0) {
         H5_FAILED();
-        printf("    unable to flush file with scope H5F_SCOPE_LOCAL\n");
+        HDprintf("    unable to flush file with scope H5F_SCOPE_LOCAL\n");
         goto error;
     }
 
     if (H5Fflush(file_id, H5F_SCOPE_GLOBAL) < 0) {
         H5_FAILED();
-        printf("    unable to flush file with scope H5F_SCOPE_GLOBAL\n");
+        HDprintf("    unable to flush file with scope H5F_SCOPE_GLOBAL\n");
         goto error;
     }
 
@@ -575,7 +575,7 @@ test_file_is_accessible(void)
 
     if ((is_accessible = H5Fis_accessible(vol_test_filename, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    file '%s' is not accessible with VOL connector\n", vol_test_filename);
+        HDprintf("    file '%s' is not accessible with VOL connector\n", vol_test_filename);
         goto error;
     }
 
@@ -609,33 +609,33 @@ test_file_property_lists(void)
 
     TESTING("file property list operations")
 
-    snprintf(test_filename1, VOL_TEST_FILENAME_MAX_LENGTH, "%s", FILE_PROPERTY_LIST_TEST_FNAME1);
-    snprintf(test_filename2, VOL_TEST_FILENAME_MAX_LENGTH, "%s", FILE_PROPERTY_LIST_TEST_FNAME2);
+    HDsnprintf(test_filename1, VOL_TEST_FILENAME_MAX_LENGTH, "%s", FILE_PROPERTY_LIST_TEST_FNAME1);
+    HDsnprintf(test_filename2, VOL_TEST_FILENAME_MAX_LENGTH, "%s", FILE_PROPERTY_LIST_TEST_FNAME2);
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
     if ((fcpl_id1 = H5Pcreate(H5P_FILE_CREATE)) < 0) {
         H5_FAILED();
-        printf("    couldn't create FCPL\n");
+        HDprintf("    couldn't create FCPL\n");
         goto error;
     }
 
     if (H5Pset_userblock(fcpl_id1, FILE_PROPERTY_LIST_TEST_FCPL_PROP_VAL) < 0) {
         H5_FAILED();
-        printf("    failed to set test property on FCPL\n");
+        HDprintf("    failed to set test property on FCPL\n");
         goto error;
     }
 
     if ((file_id1 = H5Fcreate(test_filename1, H5F_ACC_TRUNC, fcpl_id1, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't create file\n");
+        HDprintf("    couldn't create file\n");
         goto error;
     }
 
     if ((file_id2 = H5Fcreate(test_filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't create file\n");
+        HDprintf("    couldn't create file\n");
         goto error;
     }
 
@@ -645,38 +645,38 @@ test_file_property_lists(void)
     /* Try to receive copies of the two property lists, one which has the property set and one which does not */
     if ((fcpl_id1 = H5Fget_create_plist(file_id1)) < 0) {
         H5_FAILED();
-        printf("    couldn't get FCPL\n");
+        HDprintf("    couldn't get FCPL\n");
         goto error;
     }
 
     if ((fcpl_id2 = H5Fget_create_plist(file_id2)) < 0) {
         H5_FAILED();
-        printf("    couldn't get FCPL\n");
+        HDprintf("    couldn't get FCPL\n");
         goto error;
     }
 
     /* Ensure that property list 1 has the property set and property list 2 does not */
     if (H5Pget_userblock(fcpl_id1, &prop_val) < 0) {
         H5_FAILED();
-        printf("    failed to retrieve test property from FCPL\n");
+        HDprintf("    failed to retrieve test property from FCPL\n");
         goto error;
     }
 
     if (prop_val != FILE_PROPERTY_LIST_TEST_FCPL_PROP_VAL) {
         H5_FAILED();
-        printf("    retrieved test property value '%llu' did not match expected value '%llu'\n",
+        HDprintf("    retrieved test property value '%llu' did not match expected value '%llu'\n",
                 (long long unsigned) prop_val, (long long unsigned) FILE_PROPERTY_LIST_TEST_FCPL_PROP_VAL);
         goto error;
     }
 
     if (H5Pget_userblock(fcpl_id2, &prop_val) < 0) {
         H5_FAILED();
-        printf("    failed to retrieve test property from FCPL\n");
+        HDprintf("    failed to retrieve test property from FCPL\n");
         goto error;
     }
 
     if (prop_val == FILE_PROPERTY_LIST_TEST_FCPL_PROP_VAL) {
-        printf("    retrieved test property value '%llu' matched control value '%llu' when it shouldn't have\n",
+        HDprintf("    retrieved test property value '%llu' matched control value '%llu' when it shouldn't have\n",
                         (long long unsigned) prop_val, (long long unsigned) FILE_PROPERTY_LIST_TEST_FCPL_PROP_VAL);
         goto error;
     }
@@ -694,13 +694,13 @@ test_file_property_lists(void)
      */
     if ((fapl_id1 = H5Fget_access_plist(file_id1)) < 0) {
         H5_FAILED();
-        printf("    couldn't get FAPL\n");
+        HDprintf("    couldn't get FAPL\n");
         goto error;
     }
 
     if ((fapl_id2 = H5Fget_access_plist(file_id2)) < 0) {
         H5_FAILED();
-        printf("    couldn't get FAPL\n");
+        HDprintf("    couldn't get FAPL\n");
         goto error;
     }
 
@@ -721,63 +721,63 @@ test_file_property_lists(void)
 
     if ((file_id1 = H5Fopen(test_filename1, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((file_id2 = H5Fopen(test_filename2, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((fcpl_id1 = H5Fget_create_plist(file_id1)) < 0) {
         H5_FAILED();
-        printf("    couldn't get FCPL\n");
+        HDprintf("    couldn't get FCPL\n");
         goto error;
     }
 
     if ((fcpl_id2 = H5Fget_create_plist(file_id2)) < 0) {
         H5_FAILED();
-        printf("    couldn't get FCPL\n");
+        HDprintf("    couldn't get FCPL\n");
         goto error;
     }
 
     /* Check the values of the test property */
     if (H5Pget_userblock(fcpl_id1, &prop_val) < 0) {
         H5_FAILED();
-        printf("    failed to retrieve test property from FCPL\n");
+        HDprintf("    failed to retrieve test property from FCPL\n");
         goto error;
     }
 
     if (prop_val != FILE_PROPERTY_LIST_TEST_FCPL_PROP_VAL) {
         H5_FAILED();
-        printf("    retrieved test property value '%llu' did not match expected value '%llu'\n",
+        HDprintf("    retrieved test property value '%llu' did not match expected value '%llu'\n",
                 (long long unsigned) prop_val, (long long unsigned) FILE_PROPERTY_LIST_TEST_FCPL_PROP_VAL);
         goto error;
     }
 
     if (H5Pget_userblock(fcpl_id2, &prop_val) < 0) {
         H5_FAILED();
-        printf("    failed to retrieve test property from FCPL\n");
+        HDprintf("    failed to retrieve test property from FCPL\n");
         goto error;
     }
 
     if (prop_val == FILE_PROPERTY_LIST_TEST_FCPL_PROP_VAL) {
-        printf("    retrieved test property value '%llu' matched control value '%llu' when it shouldn't have\n",
+        HDprintf("    retrieved test property value '%llu' matched control value '%llu' when it shouldn't have\n",
                 (long long unsigned) prop_val, (long long unsigned) FILE_PROPERTY_LIST_TEST_FCPL_PROP_VAL);
         goto error;
     }
 
     if ((fapl_id1 = H5Fget_access_plist(file_id1)) < 0) {
         H5_FAILED();
-        printf("    couldn't get FAPL\n");
+        HDprintf("    couldn't get FAPL\n");
         goto error;
     }
 
     if ((fapl_id2 = H5Fget_access_plist(file_id2)) < 0) {
         H5_FAILED();
-        printf("    couldn't get FAPL\n");
+        HDprintf("    couldn't get FAPL\n");
         goto error;
     }
 
@@ -830,7 +830,7 @@ test_get_file_intent(void)
 
     TESTING("retrieval of file intent with H5Fget_intent")
 
-    snprintf(test_filename, VOL_TEST_FILENAME_MAX_LENGTH, "%s", FILE_INTENT_TEST_FILENAME);
+    HDsnprintf(test_filename, VOL_TEST_FILENAME_MAX_LENGTH, "%s", FILE_INTENT_TEST_FILENAME);
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
@@ -838,7 +838,7 @@ test_get_file_intent(void)
     /* Test that file intent retrieval works correctly for file create */
     if ((file_id = H5Fcreate(test_filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't create file '%s'\n", test_filename);
+        HDprintf("    couldn't create file '%s'\n", test_filename);
         goto error;
     }
 
@@ -847,7 +847,7 @@ test_get_file_intent(void)
 
     if (H5F_ACC_RDWR != file_intent) {
         H5_FAILED();
-        printf("    received incorrect file intent for file creation\n");
+        HDprintf("    received incorrect file intent for file creation\n");
         goto error;
     }
 
@@ -857,7 +857,7 @@ test_get_file_intent(void)
     /* Test that file intent retrieval works correctly for file open */
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDONLY, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
@@ -866,7 +866,7 @@ test_get_file_intent(void)
 
     if (H5F_ACC_RDONLY != file_intent) {
         H5_FAILED();
-        printf("    received incorrect file intent for read-only file open\n");
+        HDprintf("    received incorrect file intent for read-only file open\n");
         goto error;
     }
 
@@ -875,7 +875,7 @@ test_get_file_intent(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
@@ -884,7 +884,7 @@ test_get_file_intent(void)
 
     if (H5F_ACC_RDWR != file_intent) {
         H5_FAILED();
-        printf("    received incorrect file intent\n");
+        HDprintf("    received incorrect file intent\n");
         goto error;
     }
 
@@ -923,32 +923,32 @@ test_get_file_obj_count(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((obj_count = H5Fget_obj_count(file_id, H5F_OBJ_ALL)) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve number of objects in file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't retrieve number of objects in file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if (obj_count != 1) {
         H5_FAILED();
-        printf("    incorrect object count\n");
+        HDprintf("    incorrect object count\n");
         goto error;
     }
 
     /* Retrieve object count for all open HDF5 files */
     if ((obj_count = H5Fget_obj_count(H5F_OBJ_ALL, H5F_OBJ_ALL)) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve number of objects in file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't retrieve number of objects in file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if (obj_count != 1) {
         H5_FAILED();
-        printf("    incorrect object count\n");
+        HDprintf("    incorrect object count\n");
         goto error;
     }
 
@@ -1037,13 +1037,13 @@ test_get_file_freespace(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((free_space = H5Fget_freespace(file_id)) < 0) {
         H5_FAILED();
-        printf("    unable to get file freespace\n");
+        HDprintf("    unable to get file freespace\n");
         goto error;
     }
 
@@ -1076,13 +1076,13 @@ test_get_file_size(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if (H5Fget_filesize(file_id, &file_size) < 0) {
         H5_FAILED();
-        printf("    unable to get file size\n");
+        HDprintf("    unable to get file size\n");
         goto error;
     }
 
@@ -1132,7 +1132,7 @@ test_get_file_name(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
@@ -1141,21 +1141,21 @@ test_get_file_name(void)
         TEST_ERROR
 
     /* Allocate buffer for file name */
-    if (NULL == (file_name_buf = (char *) malloc((size_t) file_name_buf_len + 1)))
+    if (NULL == (file_name_buf = (char *) HDmalloc((size_t) file_name_buf_len + 1)))
         TEST_ERROR
 
     /* Retrieve the actual file name */
     if (H5Fget_name(file_id, file_name_buf, (size_t) file_name_buf_len + 1) < 0)
         TEST_ERROR
 
-    if (strncmp(file_name_buf, vol_test_filename, (size_t) file_name_buf_len)) {
+    if (HDstrncmp(file_name_buf, vol_test_filename, (size_t) file_name_buf_len)) {
         H5_FAILED();
-        printf("    file name '%s' didn't match expected name '%s'\n", file_name_buf, vol_test_filename);
+        HDprintf("    file name '%s' didn't match expected name '%s'\n", file_name_buf, vol_test_filename);
         goto error;
     }
 
     if (file_name_buf) {
-        free(file_name_buf);
+        HDfree(file_name_buf);
         file_name_buf = NULL;
     }
 
@@ -1170,7 +1170,7 @@ test_get_file_name(void)
 
 error:
     H5E_BEGIN_TRY {
-        if (file_name_buf) free(file_name_buf);
+        if (file_name_buf) HDfree(file_name_buf);
         H5Pclose(fapl_id);
         H5Fclose(file_id);
     } H5E_END_TRY;
@@ -1194,13 +1194,13 @@ test_get_file_info(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if (H5Fget_info2(file_id, &file_info) < 0) {
         H5_FAILED();
-        printf("    couldn't get file info\n");
+        HDprintf("    couldn't get file info\n");
         goto error;
     }
 
@@ -1232,17 +1232,17 @@ vol_file_test(void)
     size_t i;
     int    nerrors;
 
-    printf("**********************************************\n");
-    printf("*                                            *\n");
-    printf("*               VOL File Tests               *\n");
-    printf("*                                            *\n");
-    printf("**********************************************\n\n");
+    HDprintf("**********************************************\n");
+    HDprintf("*                                            *\n");
+    HDprintf("*               VOL File Tests               *\n");
+    HDprintf("*                                            *\n");
+    HDprintf("**********************************************\n\n");
 
     for (i = 0, nerrors = 0; i < ARRAY_LENGTH(file_tests); i++) {
         nerrors += (*file_tests[i])() ? 1 : 0;
     }
 
-    printf("\n");
+    HDprintf("\n");
 
 done:
     return nerrors;
