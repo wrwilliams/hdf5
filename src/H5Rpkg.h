@@ -41,6 +41,18 @@
 /* Package Private Typedefs */
 /****************************/
 
+/* Internal data structures */
+struct href {
+    hid_t loc_id;               /* Cached location identifier */
+    H5R_type_t ref_type;
+    union {
+        struct {
+            size_t buf_size;    /* Size of serialized reference */
+            void *buf;          /* Pointer to serialized reference */
+        } serial;
+        haddr_t addr;
+    } ref;
+};
 
 /*****************************/
 /* Package Private Variables */
@@ -50,11 +62,26 @@
 /******************************/
 /* Package Private Prototypes */
 /******************************/
-H5_DLL herr_t H5R__create(void *ref, H5G_loc_t *loc, const char *name, H5R_type_t ref_type, H5S_t *space);
-H5_DLL hid_t H5R__dereference(H5F_t *file, hid_t dapl_id, H5R_type_t ref_type, const void *_ref);
-H5_DLL H5S_t *H5R__get_region(H5F_t *file, const void *_ref);
-H5_DLL herr_t H5R__get_obj_type(H5F_t *file, H5R_type_t ref_type, const void *_ref, H5O_type_t *obj_type);
-H5_DLL ssize_t H5R__get_name(H5F_t *file, H5R_type_t ref_type, const void *_ref, char *name, size_t size);
+H5_DLL herr_t   H5R__create_object(haddr_t obj_addr, href_t *ref_ptr);
+H5_DLL herr_t   H5R__create_region(haddr_t obj_addr, H5S_t *space, href_t *ref_ptr);
+H5_DLL herr_t   H5R__create_attr(haddr_t obj_addr, const char *attr_name, href_t *ref_ptr);
+H5_DLL herr_t   H5R__destroy(href_t ref);
+
+H5_DLL herr_t   H5R__set_loc_id(href_t ref, hid_t id);
+H5_DLL hid_t    H5R__get_loc_id(href_t ref);
+
+H5_DLL H5R_type_t   H5R__get_type(href_t ref);
+H5_DLL htri_t   H5R__equal(href_t ref1, href_t ref2);
+H5_DLL herr_t   H5R__copy(href_t src_ref, href_t *dest_ref_ptr);
+
+H5_DLL herr_t   H5R__get_obj_addr(href_t ref, haddr_t *obj_addr_ptr);
+H5_DLL H5S_t *  H5R__get_region(href_t ref);
+
+H5_DLL ssize_t  H5R__get_file_name(href_t ref, char *name, size_t size);
+H5_DLL ssize_t  H5R__get_attr_name(href_t ref, char *name, size_t size);
+
+H5_DLL herr_t   H5R__encode(href_t ref, unsigned char *buf, size_t *nalloc);
+H5_DLL herr_t   H5R__decode(const unsigned char *buf, size_t *nbytes, href_t *ref_ptr);
 
 #endif /* _H5Rpkg_H */
 

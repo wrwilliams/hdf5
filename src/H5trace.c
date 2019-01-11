@@ -34,6 +34,7 @@
 #include "H5Dprivate.h"     /* Datasets                                 */
 #include "H5Eprivate.h"     /* Error handling                           */
 #include "H5FDprivate.h"    /* File drivers                             */
+#include "H5Rprivate.h"     /* References                               */
 #include "H5Ipkg.h"         /* IDs                                      */
 #include "H5MMprivate.h"    /* Memory management                        */
 #include "H5VLprivate.h"    /* Virtual Object Layer                     */
@@ -1836,9 +1837,8 @@ H5_trace(const double *returning, const char *func, const char *type, ...)
                         HDfprintf(out, "NULL");
                 } /* end if */
                 else {
-                    hobj_ref_t ref = HDva_arg(ap, hobj_ref_t);
-
-                    HDfprintf(out, "Reference Object=%a", ref);
+                    HDfprintf(out, "OPAQUE TYPE");
+                    goto error;
                 } /* end else */
                 break;
 
@@ -1863,8 +1863,12 @@ H5_trace(const double *returning, const char *func, const char *type, ...)
                                     HDfprintf(out, "H5R_OBJECT");
                                     break;
 
-                                case H5R_DATASET_REGION:
-                                    HDfprintf(out, "H5R_DATASET_REGION");
+                                case H5R_REGION:
+                                    HDfprintf(out, "H5R_REGION");
+                                    break;
+
+                                case H5R_ATTR:
+                                    HDfprintf(out, "H5R_ATTR");
                                     break;
 
                                 case H5R_MAXTYPE:
@@ -2892,17 +2896,11 @@ H5_trace(const double *returning, const char *func, const char *type, ...)
                             H5VL_object_get_t get = (H5VL_object_get_t)HDva_arg(ap, int);
 
                             switch(get) {
-                                case H5VL_REF_GET_REGION:
-                                    HDfprintf(out, "H5VL_REF_GET_REGION");
+                                case H5VL_OBJECT_GET_NAME:
+                                    HDfprintf(out, "H5VL_OBJECT_GET_NAME");
                                     break;
-                                case H5VL_REF_GET_TYPE:
-                                    HDfprintf(out, "H5VL_REF_GET_TYPE");
-                                    break;
-                                case H5VL_REF_GET_NAME:
-                                    HDfprintf(out, "H5VL_REF_GET_NAME");
-                                    break;
-                                case H5VL_ID_GET_NAME:
-                                    HDfprintf(out, "H5VL_ID_GET_NAME");
+                                case H5VL_OBJECT_GET_TYPE:
+                                    HDfprintf(out, "H5VL_OBJECT_GET_TYPE");
                                     break;
                                 default:
                                     HDfprintf(out, "%ld", (long)get);
@@ -2927,11 +2925,11 @@ H5_trace(const double *returning, const char *func, const char *type, ...)
                                 case H5VL_OBJECT_EXISTS:
                                     HDfprintf(out, "H5VL_OBJECT_EXISTS");
                                     break;
+                                case H5VL_OBJECT_LOCATE:
+                                    HDfprintf(out, "H5VL_OBJECT_LOCATE");
+                                    break;
                                 case H5VL_OBJECT_VISIT:
                                     HDfprintf(out, "H5VL_OBJECT_VISIT");
-                                    break;
-                                case H5VL_REF_CREATE:
-                                    HDfprintf(out, "H5VL_REF_CREATE");
                                     break;
                                 case H5VL_OBJECT_FLUSH:
                                     HDfprintf(out, "H5VL_OBJECT_FLUSH");
