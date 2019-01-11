@@ -162,18 +162,16 @@ typedef enum H5VL_link_specific_t {
 
 /* types for object GET callback */
 typedef enum H5VL_object_get_t {
-    H5VL_REF_GET_NAME,                 /* object name, for reference        */
-    H5VL_REF_GET_REGION,               /* dataspace of region               */
-    H5VL_REF_GET_TYPE,                 /* type of object                    */
-    H5VL_ID_GET_NAME                   /* object name, for hid_t            */
+    H5VL_OBJECT_GET_NAME,               /* object name              */
+    H5VL_OBJECT_GET_TYPE                /* object type              */
 } H5VL_object_get_t;
 
 /* types for object SPECIFIC callback */
 typedef enum H5VL_object_specific_t {
     H5VL_OBJECT_CHANGE_REF_COUNT,       /* H5Oincr/decr_refcount             */
     H5VL_OBJECT_EXISTS,                 /* H5Oexists_by_name                 */
+    H5VL_OBJECT_LOCATE,                 /* Locate object by name             */
     H5VL_OBJECT_VISIT,                  /* H5Ovisit(_by_name)                */
-    H5VL_REF_CREATE,                    /* H5Rcreate                         */
     H5VL_OBJECT_FLUSH,                  /* H5{D|G|O|T}flush                  */
     H5VL_OBJECT_REFRESH                 /* H5{D|G|O|T}refresh                */
 } H5VL_object_specific_t;
@@ -190,8 +188,7 @@ typedef enum H5VL_loc_type_t {
     H5VL_OBJECT_BY_SELF,
     H5VL_OBJECT_BY_NAME,
     H5VL_OBJECT_BY_IDX,
-    H5VL_OBJECT_BY_ADDR,
-    H5VL_OBJECT_BY_REF
+    H5VL_OBJECT_BY_ADDR
 } H5VL_loc_type_t;
 
 struct H5VL_loc_by_name {
@@ -211,14 +208,8 @@ struct H5VL_loc_by_addr {
     haddr_t addr;
 };
 
-struct H5VL_loc_by_ref {
-    H5R_type_t ref_type;
-    const void *_ref;
-    hid_t lapl_id;
-};
-
 /* Structure to hold parameters for object locations. 
- * either: BY_ADDR, BY_ID, BY_NAME, BY_IDX, BY_REF
+ * either: BY_ADDR, BY_ID, BY_NAME, BY_IDX
  *
  * Note: Leave loc_by_addr as the first union member so we
  *       can perform the simplest initialization of the struct
@@ -231,7 +222,6 @@ typedef struct H5VL_loc_params_t {
         struct H5VL_loc_by_addr loc_by_addr;
         struct H5VL_loc_by_name loc_by_name;
         struct H5VL_loc_by_idx  loc_by_idx;
-        struct H5VL_loc_by_ref  loc_by_ref;
     } loc_data;
 } H5VL_loc_params_t;
 
