@@ -844,6 +844,9 @@ error:
     return -1;
 }
 
+/*
+ * main function
+ */
 int main(int argc, char **argv)
 {
     size_t  i;
