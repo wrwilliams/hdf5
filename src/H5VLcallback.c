@@ -831,7 +831,7 @@ done:
 void *
 H5VL_wrap_object(const H5VL_class_t *connector, void *wrap_ctx, void *obj)
 {
-    void *ret_value = SUCCEED;   /* Return value */
+    void *ret_value = NULL;   /* Return value */
 
     FUNC_ENTER_NOAPI(NULL)
 
