@@ -84,14 +84,12 @@ DESCRIPTION
 herr_t
 H5R__init_package(void)
 {
-    herr_t ret_value = SUCCEED;         /* Return value */
-
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Mark "top" of interface as initialized */
     H5R_top_package_initialize_s = TRUE;
 
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5R__init_package() */
 
 

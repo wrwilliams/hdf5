@@ -21,13 +21,13 @@
 #include "H5Tmodule.h"          /* This source code file is part of the H5T module */
 #define H5R_FRIEND              /*suppress error about including H5Rpkg   */
 
-#include "H5private.h"      /* Generic Functions    */
-#include "H5Tpkg.h"         /* Datatypes            */
-#include "H5Rpkg.h"         /* References           */
-#include "H5Eprivate.h"     /* Error handling       */
-#include "H5Iprivate.h"     /* IDs                  */
-#include "H5MMprivate.h"    /* Memory management    */
-#include "H5HGprivate.h"    /* Global Heaps         */
+#include "H5private.h"          /* Generic Functions    */
+#include "H5Eprivate.h"         /* Error handling       */
+#include "H5Iprivate.h"         /* IDs                  */
+#include "H5MMprivate.h"        /* Memory management    */
+#include "H5HGprivate.h"        /* Global Heaps         */
+#include "H5Rpkg.h"             /* References           */
+#include "H5Tpkg.h"             /* Datatypes            */
 
 /****************/
 /* Local Macros */
@@ -96,6 +96,7 @@ H5T__ref_set_loc(const H5T_t *dt, H5F_t *f, H5T_loc_t loc)
     /* check parameters */
     HDassert(dt);
     HDassert(loc >= H5T_LOC_BADLOC && loc < H5T_LOC_MAXLOC);
+    /* f is NULL when loc == H5T_LOC_MEMORY */
 
     /* Only change the location if it's different */
     if(loc != dt->shared->u.atomic.u.r.loc || f != dt->shared->u.atomic.u.r.f) {
