@@ -97,9 +97,7 @@ typedef struct {
 
 /* Information a particular hyperslab span */
 struct H5S_hyper_span_t {
-    hsize_t low, high;          /* Low & high bounds of span */
-    hsize_t nelem;              /* Number of elements in span (only needed during I/O) */
-    hsize_t pstride;            /* Pseudo-stride from start of previous span (only used during I/O) */
+    hsize_t low, high;          /* Low & high bounds of elements selected for span */
     struct H5S_hyper_span_info_t *down;     /* Pointer to list of spans in next dimension down */
     struct H5S_hyper_span_t *next;     /* Pointer to next span in list */
 };

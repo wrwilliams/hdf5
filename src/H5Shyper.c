@@ -219,7 +219,7 @@ H5S__hyper_print_spans_helper(FILE *f, const H5S_hyper_span_t *span, unsigned de
     FUNC_ENTER_STATIC_NOERR
 
     while(span) {
-        HDfprintf(f,"%s: depth=%u, span=%p, (%Hu, %Hu), nelem=%Hu, pstride=%Hu\n", FUNC, depth, span, span->low, span->high, span->nelem, span->pstride);
+        HDfprintf(f,"%s: depth=%u, span=%p, (%Hu, %Hu)\n", FUNC, depth, span, span->low, span->high);
         if(span->down && span->down->head) {
             HDfprintf(f,"%s: spans=%p, count=%u, scratch=%p, head=%p\n", FUNC, span->down, span->down->count, span->down->scratch, span->down->head);
             H5S__hyper_print_spans_helper(f, span->down->head, depth + 1);
@@ -354,9 +354,8 @@ H5S__hyper_print_spans_dfs(FILE *f, const H5S_hyper_span_info_t *span_lst,
     while(cur_elem) {
         for(i = 0; i < depth; i++)
             HDfprintf(f, "\t");
-        HDfprintf(f, "ELEM[%u]: ptr=%p, low=%Hu, high=%Hu, nelem=%Hu, pstride=%Hu, down=%p\n",
-                  elem_idx++, cur_elem, cur_elem->low, cur_elem->high, cur_elem->nelem,
-                  cur_elem->pstride, cur_elem->down);
+        HDfprintf(f, "ELEM[%u]: ptr=%p, low=%Hu, high=%Hu, down=%p\n",
+                  elem_idx++, cur_elem, cur_elem->low, cur_elem->high, cur_elem->down);
         if(cur_elem->down)
             H5S__hyper_print_spans_dfs(f, cur_elem->down, depth + 1, dims);
         cur_elem = cur_elem->next;
@@ -1313,8 +1312,6 @@ H5S__hyper_new_span(hsize_t low, hsize_t high, H5S_hyper_span_info_t *down, H5S_
     /* Copy the span's basic information */
     ret_value->low = low;
     ret_value->high = high;
-    ret_value->nelem = (high - low) + 1;
-    ret_value->pstride = 0;
     ret_value->down = down;
     ret_value->next = next;
 
@@ -1440,9 +1437,6 @@ H5S__hyper_copy_span_helper(H5S_hyper_span_info_t *spans)
                 ret_value->head = new_span;
             else
                 prev_span->next = new_span;
-
-            /* Copy the pstride */
-            new_span->pstride = span->pstride;
 
             /* Recurse to copy the 'down' spans, if there are any */
             if(span->down != NULL) {
@@ -3556,7 +3550,6 @@ H5S__hyper_add_span_element_helper(H5S_hyper_span_info_t *span_tree,
                     if(tmp_span->high + 1 == stop_span->low) {
                         /* Increase size of previous span */
                         tmp_span->high++;
-                        tmp_span->nelem++;
 
                         /* Update pointers appropriately */
                         if(stop_span == prev_down_tail_span) {
@@ -3607,7 +3600,6 @@ H5S__hyper_add_span_element_helper(H5S_hyper_span_info_t *span_tree,
         if(rank == 1 && (tail_span->high + 1) == coords[0]) {
             /* Append element to current tail span */
             tail_span->high++;
-            tail_span->nelem++;
 
             /* Update high bound for current span tree */
             HDassert(coords[0] > span_tree->high_bounds[0]);
@@ -3627,9 +3619,6 @@ H5S__hyper_add_span_element_helper(H5S_hyper_span_info_t *span_tree,
             /* Add new span to span tree list */
             tail_span->next = new_span;
             span_tree->tail = new_span;
-
-            /* Set the proper 'pstride' for new span */
-            new_span->pstride = new_span->low - tail_span->low;
 
             /* Update high bounds for this dimension and lower */
             for(u = 0; u < rank; u++)
@@ -4759,7 +4748,6 @@ H5S__hyper_append_span(H5S_hyper_span_info_t **span_tree, H5S_hyper_span_t **pre
                 (down_cmp = H5S__hyper_cmp_spans(down, (*prev_span)->down))) {
             /* Extend previous merged span to include new high bound */
             (*prev_span)->high = high;
-            (*prev_span)->nelem += (high - low) + 1;
 
             /* Extend span tree's high bound in this dimension */
             /* (No need to update lower dimensions, since this span share's them with previous span) */
@@ -4788,9 +4776,6 @@ H5S__hyper_append_span(H5S_hyper_span_info_t **span_tree, H5S_hyper_span_t **pre
             /* Allocate new span node to append to list */
             if(NULL == (new_span = H5S__hyper_new_span(low, high, new_down, NULL)))
                 HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, FAIL, "can't allocate hyperslab span")
-
-            /* Indicate elements from previous span */
-            new_span->pstride = low - (*prev_span)->low;
 
             /* Update the high bounds for current dimension */
             (*span_tree)->high_bounds[0] = high;
@@ -5825,12 +5810,17 @@ H5S__hyper_spans_nelem(const H5S_hyper_span_info_t *spans)
 
         span = spans->head;
         while(span != NULL) {
+            hsize_t nelmts;     /* # of elements covered by current span */
+
+            /* Compute # of elements covered */
+            nelmts = (span->high - span->low) + 1;
+
             /* If there are down spans, multiply the size of this span by the total down span elements */
             if(span->down != NULL)
-                ret_value += span->nelem * H5S__hyper_spans_nelem(span->down);
+                ret_value += nelmts * H5S__hyper_spans_nelem(span->down);
             /* If there are no down spans, just count the elements in this span */
             else
-                ret_value += span->nelem;
+                ret_value += nelmts;
 
             /* Advance to next span */
             span = span->next;
@@ -6038,8 +6028,6 @@ H5S__hyper_make_spans(unsigned rank, const hsize_t *start, const hsize_t *stride
             /* Set the span's basic information */
             span->low = start[i] + stride_iter;
             span->high = span->low + (block[i] - 1);
-            span->nelem = block[i];
-            span->pstride = stride[i];
             span->next = NULL;
 
             /* Append to the list of spans in this dimension */
@@ -8211,7 +8199,7 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
     H5S_hyper_span_t **ispan;       /* Iterator's hyperslab span nodes */
     hsize_t slab[H5O_LAYOUT_NDIMS]; /* Cumulative size of each dimension in bytes */
     hsize_t acc;       /* Accumulator for computing cumulative sizes */
-    hsize_t loc_off;   /* Element offset in the dataspace */
+    hsize_t loc_off;   /* Byte offset in the dataspace */
     hsize_t last_span_end = 0; /* The offset of the end of the last span */
     hsize_t *abs_arr;  /* Absolute hyperslab span position */
     const hssize_t *off_arr;  /* Offset within the dataspace extent */
@@ -8293,7 +8281,6 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
         /* Decrement I/O left to perform */
         io_elmts_left -= span_elmts;
 
-        /* Advance the hyperslab iterator */
         /* Check if we are done */
         if(io_elmts_left > 0) {
             /* Move to next span in fastest changing dimension */
@@ -8308,6 +8295,7 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
             } /* end if */
         } /* end if */
         else {
+            /* Advance the hyperslab iterator */
             abs_arr[fast_dim] += span_elmts;
 
             /* Check if we are still within the span */
@@ -8402,19 +8390,24 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
 
     /* Perform the I/O on the elements, based on the position of the iterator */
     while(io_elmts_left > 0 && curr_seq < maxseq) {
+        H5S_hyper_span_t *prev_span;    /* Previous hyperslab span node */
+
         /* Sanity check */
         HDassert(curr_span);
 
-        /* Adjust location offset of destination to compensate for initial increment below */
-        loc_off -= curr_span->pstride * elem_size;
+        /* Set to current span, so the first adjustment to loc_off is 0 */
+        prev_span = curr_span;
 
         /* Loop over all the spans in the fastest changing dimension */
         while(curr_span != NULL) {
-            /* Move location offset of destination */
-            loc_off += curr_span->pstride * elem_size;
+            hsize_t nelmts;     /* # of elements covered by current span */
+
+            /* Move location offset of current span */
+            loc_off += (curr_span->low - prev_span->low) * elem_size;
 
             /* Compute the number of elements to attempt in this span */
-            H5_CHECKED_ASSIGN(span_elmts, size_t, curr_span->nelem, hsize_t);
+            nelmts = (curr_span->high - curr_span->low) + 1;
+            H5_CHECKED_ASSIGN(span_elmts, size_t, nelmts, hsize_t);
 
             /* Check number of elements against upper bounds allowed */
             if(span_elmts >= io_elmts_left) {
@@ -8474,6 +8467,7 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
             } /* end else */
 
 	    /* Move to next span in fastest changing dimension */
+            prev_span = curr_span;
 	    curr_span = curr_span->next;
         } /* end while */
 
