@@ -233,8 +233,8 @@ done:
  */
 herr_t
 H5S_select_get_seq_list(const H5S_t *space, unsigned flags,
-    H5S_sel_iter_t *iter, size_t maxseq, size_t maxbytes,
-    size_t *nseq, size_t *nbytes, hsize_t *off, size_t *len)
+    H5S_sel_iter_t *iter, size_t maxseq, size_t maxelmts,
+    size_t *nseq, size_t *nelmts, hsize_t *off, size_t *len)
 {
     herr_t ret_value = FAIL;    /* Return value */
 
@@ -243,7 +243,7 @@ H5S_select_get_seq_list(const H5S_t *space, unsigned flags,
     HDassert(space);
 
     /* Call the selection type's get_seq_list function */
-    if((ret_value = (*space->select.type->get_seq_list)(space, flags, iter, maxseq, maxbytes, nseq, nbytes, off, len)) < 0)
+    if((ret_value = (*space->select.type->get_seq_list)(space, flags, iter, maxseq, maxelmts, nseq, nelmts, off, len)) < 0)
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTGET, FAIL, "unable to get selection sequence list")
 
 done:

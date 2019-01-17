@@ -1672,8 +1672,8 @@ done:
                                     generated sequences
         size_t *nseq;           OUT: Actual number of sequences generated
         size_t *nelem;          OUT: Actual number of elements in sequences generated
-        hsize_t *off;           OUT: Array of offsets
-        size_t *len;            OUT: Array of lengths
+        hsize_t *off;           OUT: Array of offsets (in bytes)
+        size_t *len;            OUT: Array of lengths (in bytes)
  RETURNS
     Non-negative on success/Negative on failure.
  DESCRIPTION
