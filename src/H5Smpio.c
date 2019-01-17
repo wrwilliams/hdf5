@@ -1106,6 +1106,8 @@ H5S_obtain_datatype(const hsize_t *down, H5S_hyper_span_t *span,
         tspan = span;
         outercount = 0;
         while(tspan) {
+            hsize_t nelmts;     /* # of elements covered by current span */
+
             /* Check if we need to increase the size of the buffers */
             if(outercount >= alloc_count) {
                 MPI_Aint     *tmp_disp;         /* Temporary pointer to new displacement buffer */
@@ -1123,16 +1125,18 @@ H5S_obtain_datatype(const hsize_t *down, H5S_hyper_span_t *span,
                 blocklen = tmp_blocklen;
             } /* end if */
 
+            /* Compute the number of elements to attempt in this span */
+            nelmts = (tspan->high - tspan->low) + 1;
+
             /* Store displacement & block length */
             disp[outercount]      = (MPI_Aint)elmt_size * tspan->low;
-            H5_CHECK_OVERFLOW(tspan->nelem, hsize_t, int)
-            blocklen[outercount]  = (int)tspan->nelem;
-            tspan                 = tspan->next;
+            H5_CHECK_OVERFLOW(nelmts, hsize_t, int)
+            blocklen[outercount]  = (int)nelmts;
 
-            if (bigio_count < blocklen[outercount]) {
+            if(bigio_count < blocklen[outercount])
                 large_block = TRUE; /* at least one block type is large, so set this flag to true */
-            }
 
+            tspan = tspan->next;
             outercount++;
         } /* end while */
 
@@ -1203,6 +1207,7 @@ H5S_obtain_datatype(const hsize_t *down, H5S_hyper_span_t *span,
         while(tspan) {
             MPI_Datatype down_type;     /* Temporary MPI datatype for a span tree node's children */
             MPI_Aint stride;            /* Distance between inner MPI datatypes */
+            hsize_t nelmts;             /* # of elements covered by current span */
 
             /* Check if we need to increase the size of the buffers */
             if(outercount >= alloc_count) {
@@ -1236,10 +1241,13 @@ H5S_obtain_datatype(const hsize_t *down, H5S_hyper_span_t *span,
             if(H5S_obtain_datatype(down + 1, tspan->down->head, elmt_type, &down_type, elmt_size) < 0)
                 HGOTO_ERROR(H5E_DATASPACE, H5E_BADTYPE, FAIL, "couldn't obtain  MPI derived data type")
 
+            /* Compute the number of elements to attempt in this span */
+            nelmts = (tspan->high - tspan->low) + 1;
+
             /* Build the MPI datatype for this node */
             stride = (*down) * elmt_size;
-            H5_CHECK_OVERFLOW(tspan->nelem, hsize_t, int)
-            if(MPI_SUCCESS != (mpi_code = MPI_Type_create_hvector((int)tspan->nelem, 1, stride, down_type, &inner_type[outercount]))) {
+            H5_CHECK_OVERFLOW(nelmts, hsize_t, int)
+            if(MPI_SUCCESS != (mpi_code = MPI_Type_create_hvector((int)nelmts, 1, stride, down_type, &inner_type[outercount]))) {
                 MPI_Type_free(&down_type);
                 HMPI_GOTO_ERROR(FAIL, "MPI_Type_create_hvector failed", mpi_code)
             } /* end if */
