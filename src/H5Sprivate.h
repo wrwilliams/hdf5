@@ -85,6 +85,7 @@ typedef struct {
     hbool_t flattened[H5S_MAX_RANK];    /* Whether this dimension has been flattened */
 
     /* Irregular hyperslab selection fields */
+    hsize_t loc_off[H5S_MAX_RANK]; /* Byte offset in buffer, for each dimension's current offset */
     H5S_hyper_span_info_t *spans;  /* Pointer to copy of the span tree */
     H5S_hyper_span_t *span[H5S_MAX_RANK];/* Array of pointers to span nodes */
 } H5S_hyper_iter_t;

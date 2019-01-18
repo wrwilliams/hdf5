@@ -643,6 +643,14 @@ H5S__hyper_iter_init(H5S_sel_iter_t *iter, const H5S_t *space)
         acc *= slab_size[i];
     } /* end for */
 
+    /* Initialize a few more pieces of information for irregular hyperslab selections */
+    if(space->select.sel_info.hslab->diminfo_valid != H5S_DIMINFO_VALID_YES) {
+        /* Set the offset of the first element iterated on, in each dimension */
+        for(u = 0; u < rank; u++)
+            /* Compute the sequential element offset */
+            iter->u.hyp.loc_off[u] = ((hsize_t)((hssize_t)iter->u.hyp.off[u] + space->select.offset[u])) * iter->u.hyp.slab[u];
+    } /* end if */
+
     /* Initialize type of selection iterator */
     iter->type = H5S_sel_iter_hyper;
 
@@ -8221,10 +8229,11 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
     hsize_t *slab;      /* Cumulative size of each dimension in bytes */
     hsize_t loc_off;    /* Byte offset in the dataspace */
     hsize_t last_span_end = 0; /* The offset of the end of the last span */
-    hsize_t *abs_arr;   /* Absolute hyperslab span position */
+    hsize_t *abs_arr;   /* Absolute hyperslab span position, in elements */
+    hsize_t *loc_arr;   /* Byte offset of hyperslab span position within buffer */
     const hssize_t *off_arr;  /* Offset within the dataspace extent */
     size_t span_elmts = 0; /* Number of elements to actually use for this span */
-    size_t span_size;   /* Number of bytes in current span to actually process */
+    size_t span_size = 0; /* Number of bytes in current span to actually process */
     size_t io_left;     /* Initial number of elements to process */
     size_t io_elmts_left;   /* Number of elements left to process */
     size_t io_used;     /* Number of elements processed */
@@ -8254,6 +8263,7 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
     /* Get the pointers to the current span info and span nodes */
     curr_span = iter->u.hyp.span[fast_dim];
     abs_arr = iter->u.hyp.off;
+    loc_arr = iter->u.hyp.loc_off;
     slab = iter->u.hyp.slab;
     off_arr = space->select.offset;
     ispan = iter->u.hyp.span;
@@ -8265,8 +8275,7 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
 
     /* Set the offset of the first element iterated on */
     for(u = 0, loc_off = 0; u < ndims; u++)
-        /* Compute the sequential element offset */
-        loc_off += ((hsize_t)((hssize_t)abs_arr[u] + off_arr[u])) * slab[u];
+        loc_off += loc_arr[u];
 
     /* Take care of any partial spans leftover from previous I/Os */
     if(abs_arr[fast_dim] != curr_span->low) {
@@ -8306,6 +8315,8 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
 
                 /* Move iterator for fastest changing dimension */
                 abs_arr[fast_dim] = curr_span->low;
+                loc_arr[fast_dim] = ((hsize_t)((hssize_t)curr_span->low + off_arr[fast_dim])) * slab[fast_dim];
+                ispan[fast_dim] = curr_span;
             } /* end if */
         } /* end if */
         else {
@@ -8313,8 +8324,13 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
             abs_arr[fast_dim] += span_elmts;
 
             /* Check if we are still within the span */
-            if(abs_arr[fast_dim] <= curr_span->high)
-                iter->u.hyp.span[fast_dim] = curr_span;
+            if(abs_arr[fast_dim] <= curr_span->high) {
+                /* Sanity check */
+                HDassert(ispan[fast_dim] == curr_span);
+
+                /* Update byte offset */
+                loc_arr[fast_dim] += span_size;
+            } /* end if */
             /* If we walked off that span, advance to the next span */
             else {
                 /* Advance span in this dimension */
@@ -8324,7 +8340,12 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
                 if(NULL != curr_span) {
                     /* Reset absolute position */
                     abs_arr[fast_dim] = curr_span->low;
-                    iter->u.hyp.span[fast_dim] = curr_span;
+
+                    /* Update location offset */
+                    loc_arr[fast_dim] = ((hsize_t)((hssize_t)curr_span->low + off_arr[fast_dim])) * slab[fast_dim];
+
+                    /* Reset the span in the current dimension */
+                    ispan[fast_dim] = curr_span;
                 } /* end if */
             } /* end else */
         } /* end else */
@@ -8339,14 +8360,18 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
             /* Work back up through the dimensions */
             while(curr_dim >= 0) {
                 /* Reset the current span */
-                curr_span = iter->u.hyp.span[curr_dim];
+                curr_span = ispan[curr_dim];
 
                 /* Increment absolute position */
                 abs_arr[curr_dim]++;
 
                 /* Check if we are still within the span */
-                if(abs_arr[curr_dim] <= curr_span->high)
+                if(abs_arr[curr_dim] <= curr_span->high) {
+                    /* Update location offset */
+                    loc_arr[curr_dim] += slab[curr_dim];
+
                     break;
+                } /* end if */
                 /* If we walked off that span, advance to the next span */
                 else {
                     /* Advance span in this dimension */
@@ -8359,6 +8384,9 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
 
                         /* Reset absolute position */
                         abs_arr[curr_dim] = curr_span->low;
+
+                        /* Update byte location */
+                        loc_arr[curr_dim] = ((hsize_t)((hssize_t)curr_span->low + off_arr[curr_dim])) * slab[curr_dim];
 
                         break;
                     } /* end if */
@@ -8380,21 +8408,24 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
                     curr_dim++;
 
                     /* Set the new span_info & span for this dimension */
-                    iter->u.hyp.span[curr_dim] = curr_span->down->head;
+                    ispan[curr_dim] = curr_span->down->head;
 
                     /* Advance span down the tree */
                     curr_span = curr_span->down->head;
 
                     /* Reset the absolute offset for the dim */
                     abs_arr[curr_dim] = curr_span->low;
+
+                    /* Update the location offset */
+                    loc_arr[curr_dim] = ((hsize_t)((hssize_t)curr_span->low + off_arr[curr_dim])) * slab[curr_dim];
                 } /* end while */
 
                 /* Verify that the curr_span points to the fastest dim */
-                HDassert(curr_span == iter->u.hyp.span[fast_dim]);
+                HDassert(curr_span == ispan[fast_dim]);
 
                 /* Reset the buffer offset */
                 for(u = 0, loc_off = 0; u < ndims; u++)
-                    loc_off += ((hsize_t)((hssize_t)abs_arr[u] + off_arr[u])) * slab[u];
+                    loc_off += loc_arr[u];
             } /* end else */
             else
                 /* We had better be done with I/O or bad things are going to happen... */
@@ -8487,12 +8518,24 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
 
         /* Check if we are done */
         if(io_elmts_left == 0 || curr_seq >= maxseq) {
+            /* Sanity checks */
             HDassert(curr_span);
+
+            /* Update absolute position */
             abs_arr[fast_dim] = curr_span->low + span_elmts;
 
             /* Check if we are still within the span */
             if(abs_arr[fast_dim] <= curr_span->high) {
-                iter->u.hyp.span[fast_dim] = curr_span;
+                /* Sanity check */
+                HDassert(span_size > 0);
+                HDassert(span_size == (span_elmts * elem_size));
+
+                /* Reset the span for the fast dimension */
+                ispan[fast_dim] = curr_span;
+
+                /* Update location offset */
+                loc_arr[fast_dim] = ((hsize_t)((hssize_t)curr_span->low + (hssize_t)span_elmts + off_arr[fast_dim])) * slab[fast_dim];
+
                 break;
             } /* end if */
             /* If we walked off that span, advance to the next span */
@@ -8504,7 +8547,9 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
                 if(curr_span != NULL) {
                     /* Reset absolute position */
                     abs_arr[fast_dim] = curr_span->low;
-                    iter->u.hyp.span[fast_dim] = curr_span;
+                    loc_arr[fast_dim] = ((hsize_t)((hssize_t)curr_span->low + off_arr[fast_dim])) * slab[fast_dim];
+                    ispan[fast_dim] = curr_span;
+
                     break;
                 } /* end if */
             } /* end else */
@@ -8518,14 +8563,18 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
         /* Work back up through the dimensions */
         while(curr_dim >= 0) {
             /* Reset the current span */
-	    curr_span = iter->u.hyp.span[curr_dim];
+	    curr_span = ispan[curr_dim];
 
             /* Increment absolute position */
             abs_arr[curr_dim]++;
 
             /* Check if we are still within the span */
-            if(abs_arr[curr_dim] <= curr_span->high)
+            if(abs_arr[curr_dim] <= curr_span->high) {
+                /* Update location offset */
+                loc_arr[curr_dim] += slab[curr_dim];
+
                 break;
+            } /* end if */
             /* If we walked off that span, advance to the next span */
             else {
                 /* Advance span in this dimension */
@@ -8538,6 +8587,9 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
 
                     /* Reset absolute position */
                     abs_arr[curr_dim] = curr_span->low;
+
+                    /* Update location offset */
+                    loc_arr[curr_dim] = ((hsize_t)((hssize_t)curr_span->low + off_arr[curr_dim])) * slab[curr_dim];
 
                     break;
                 } /* end if */
@@ -8564,22 +8616,25 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
                 curr_dim++;
 
                 /* Set the new span for the next dimension down */
-                iter->u.hyp.span[curr_dim] = curr_span->down->head;
+                ispan[curr_dim] = curr_span->down->head;
 
                 /* Advance span down the tree */
                 curr_span = curr_span->down->head;
 
                 /* Reset the absolute offset for the dim */
                 abs_arr[curr_dim] = curr_span->low;
+
+                /* Update location offset */
+                loc_arr[curr_dim] = ((hsize_t)((hssize_t)curr_span->low + off_arr[curr_dim])) * slab[curr_dim];
             } /* end while */
 
             /* Verify that the curr_span points to the fastest dim */
-            HDassert(curr_span == iter->u.hyp.span[fast_dim]);
+            HDassert(curr_span == ispan[fast_dim]);
         } /* end else */
 
         /* Reset the buffer offset */
         for(u = 0, loc_off = 0; u < ndims; u++)
-            loc_off += ((hsize_t)((hssize_t)abs_arr[u] + off_arr[u])) * slab[u];
+            loc_off += loc_arr[u];
     } /* end while */
 
     /* Decrement number of elements left in iterator */
@@ -8865,15 +8920,15 @@ H5S__hyper_get_seq_list_opt(const H5S_t *space, H5S_sel_iter_t *iter,
     /* Read in data until an entire sequence can't be written out any longer */
     while(curr_rows > 0) {
 
-#define DUFF_GUTS							      \
+#define DUFF_GUTS						      \
 /* Store the sequence information */				      \
 off[curr_seq] = loc;						      \
 len[curr_seq] = actual_bytes;					      \
-                                                                          \
+                                                                      \
 /* Increment sequence count */					      \
-curr_seq++;								      \
-                                                                          \
-/* Increment information to reflect block just processed */		      \
+curr_seq++;							      \
+                                                                      \
+/* Increment information to reflect block just processed */	      \
 loc += fast_dim_buf_off;
 
 #ifdef NO_DUFFS_DEVICE
