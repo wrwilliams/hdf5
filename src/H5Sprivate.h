@@ -68,14 +68,15 @@ typedef struct {
 /* Hyperslab selection iteration container */
 typedef struct {
     /* Common fields for all hyperslab selections */
-    hsize_t off[H5S_MAX_RANK];          /* Offset in span node (used as position for regular hyperslabs) */
+    hsize_t off[H5S_MAX_RANK];  /* Offset in span node (used as position for regular hyperslabs) */
+    hsize_t slab[H5S_MAX_RANK]; /* Cumulative size of each dimension in bytes */
     unsigned iter_rank;     /* Rank of iterator information */
                             /* (This should always be the same as the dataspace
-                             * rank, except for regular hyperslab selections in
-                             * which there are contiguous regions in the lower
-                             * dimensions which have been "flattened" out
+                             *  rank, except for regular hyperslab selections in
+                             *  which there are contiguous regions in the lower
+                             *  dimensions that have been "flattened")
                              */
-    hbool_t diminfo_valid;         /* Whether the dimension information is valid */
+    hbool_t diminfo_valid;  /* Whether the dimension information is valid */
 
     /* "Flattened" regular hyperslab selection fields */
     H5S_hyper_dim_t diminfo[H5S_MAX_RANK];   /* "Flattened" regular selection information */
