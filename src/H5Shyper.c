@@ -3877,72 +3877,6 @@ done:
 
 /*--------------------------------------------------------------------------
  NAME
-    H5S_hyper_convert
- PURPOSE
-    Convert a compatible selection to span tree form
- USAGE
-    herr_t H5S_hyper_convert(space)
-        H5S_t *space;           IN/OUT: Pointer to dataspace to convert
- RETURNS
-    Non-negative on success, negative on failure
- DESCRIPTION
-    Converts a compatible selection (currently only "all" selections) to the
-    span-tree form of a hyperslab selection. (Point and "none" selection aren't
-    currently supported and hyperslab selection always have the span-tree form
-    available).
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_hyper_convert(H5S_t *space)
-{
-    herr_t      ret_value = SUCCEED;       /* Return value */
-
-    FUNC_ENTER_NOAPI(FAIL)
-
-    HDassert(space);
-
-    /* Check the type of selection */
-    switch(H5S_GET_SELECT_TYPE(space)) {
-        case H5S_SEL_ALL:    /* All elements selected in dataspace */
-            /* Convert current "all" selection to "real" hyperslab selection */
-            {
-                const hsize_t *tmp_start;       /* Temporary start information */
-                const hsize_t *tmp_stride;      /* Temporary stride information */
-                const hsize_t *tmp_count;       /* Temporary count information */
-                const hsize_t *tmp_block;       /* Temporary block information */
-
-                /* Set up temporary information for the dimensions */
-                tmp_start = H5S_hyper_zeros_g;
-                tmp_stride = tmp_count = H5S_hyper_ones_g;
-                tmp_block = space->extent.size;
-
-                /* Convert to hyperslab selection */
-                if(H5S__set_regular_hyperslab(space, tmp_start, tmp_stride, tmp_count, tmp_block, tmp_stride, tmp_count, tmp_block) < 0)
-                    HGOTO_ERROR(H5E_DATASPACE, H5E_CANTSET, FAIL, "can't set regular selection")
-            } /* end case */
-            break;
-
-        case H5S_SEL_HYPERSLABS:        /* Hyperslab selection */
-            break;
-
-        case H5S_SEL_NONE:   /* No elements selected in dataspace */
-        case H5S_SEL_POINTS: /* Point selection */
-        case H5S_SEL_ERROR:  /* Selection error */
-        case H5S_SEL_N:      /* Selection count */
-        default:
-            HGOTO_ERROR(H5E_ARGS, H5E_UNSUPPORTED, FAIL, "can't convert to span tree selection")
-    } /* end switch */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_hyper_convert() */
-
-
-/*--------------------------------------------------------------------------
- NAME
     H5S__hyper_intersect_block_helper
  PURPOSE
     Helper routine to detect intersections in span trees
