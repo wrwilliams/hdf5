@@ -3952,6 +3952,7 @@ done:
         unsigned rank;     IN: Number of dimensions for span tree
         hsize_t *start;    IN: Starting coordinate for block
         hsize_t *end;      IN: Ending coordinate for block
+        uint64_t op_gen;   IN: Operation generation
  RETURN
     Non-negative (TRUE/FALSE) on success, can't fail
  DESCRIPTION
@@ -3962,8 +3963,8 @@ done:
  REVISION LOG
 --------------------------------------------------------------------------*/
 static hbool_t
-H5S__hyper_intersect_block_helper(const H5S_hyper_span_info_t *spans,
-    unsigned rank, const hsize_t *start, const hsize_t *end)
+H5S__hyper_intersect_block_helper(H5S_hyper_span_info_t *spans,
+    unsigned rank, const hsize_t *start, const hsize_t *end, uint64_t op_gen)
 {
     H5S_hyper_span_t *curr;         /* Pointer to current span in 1st span tree */
     unsigned u;                     /* Local index variable */
@@ -3976,44 +3977,50 @@ H5S__hyper_intersect_block_helper(const H5S_hyper_span_info_t *spans,
     HDassert(start);
     HDassert(end);
 
-    /* Verify that there is a possibility of an overlap by checking the block
-     *  against the low & high bounds for the span tree.
-     */
-    for(u = 0; u < rank; u++)
-        if(start[u] > spans->high_bounds[u] || end[u] < spans->low_bounds[u])
-            HGOTO_DONE(FALSE)
+    /* Check if we've already visited this span tree */
+    if(spans->op_gen != op_gen) {
+        /* Verify that there is a possibility of an overlap by checking the block
+         *  against the low & high bounds for the span tree.
+         */
+        for(u = 0; u < rank; u++)
+            if(start[u] > spans->high_bounds[u] || end[u] < spans->low_bounds[u])
+                HGOTO_DONE(FALSE)
 
-    /* Get the span list for spans in this tree */
-    curr = spans->head;
+        /* Get the span list for spans in this tree */
+        curr = spans->head;
 
-    /* Iterate over the spans in the tree */
-    while(curr != NULL) {
-        /* Check for span entirely before block */
-        if(curr->high < *start)
-            /* Advance to next span in this dimension */
-            curr = curr->next;
-        /* If this span is past the end of the block, then we're done in this dimension */
-        else if(curr->low > *end)
-            HGOTO_DONE(FALSE)
-        /* block & span overlap */
-        else {
-            if(curr->down == NULL)
-                HGOTO_DONE(TRUE)
-            else {
-                hbool_t status;         /* Status from recursive call */
-
-                /* Recursively check spans in next dimension down */
-                status = H5S__hyper_intersect_block_helper(curr->down, rank - 1, start + 1, end + 1);
-
-                /* If there is a span intersection in the down dimensions, the span trees overlap */
-                if(status == TRUE)
-                    HGOTO_DONE(TRUE);
-
-                /* No intersection in down dimensions, advance to next span */
+        /* Iterate over the spans in the tree */
+        while(curr != NULL) {
+            /* Check for span entirely before block */
+            if(curr->high < *start)
+                /* Advance to next span in this dimension */
                 curr = curr->next;
+            /* If this span is past the end of the block, then we're done in this dimension */
+            else if(curr->low > *end)
+                HGOTO_DONE(FALSE)
+            /* block & span overlap */
+            else {
+                if(curr->down == NULL)
+                    HGOTO_DONE(TRUE)
+                else {
+                    hbool_t status;         /* Status from recursive call */
+
+                    /* Recursively check spans in next dimension down */
+                    status = H5S__hyper_intersect_block_helper(curr->down, rank - 1, start + 1, end + 1, op_gen);
+
+                    /* If there is a span intersection in the down dimensions, the span trees overlap */
+                    if(status == TRUE)
+                        HGOTO_DONE(TRUE);
+
+                    /* No intersection in down dimensions, advance to next span */
+                    curr = curr->next;
+                } /* end else */
             } /* end else */
-        } /* end else */
-    } /* end while */
+        } /* end while */
+
+        /* Set the tree's operation generation */
+        spans->op_gen = op_gen;
+    } /* end if */
 
     /* Fall through with 'FALSE' return value */
 
@@ -4044,6 +4051,7 @@ done:
 htri_t
 H5S_hyper_intersect_block(H5S_t *space, const hsize_t *start, const hsize_t *end)
 {
+    uint64_t op_gen;            /* Operation generation value */
     htri_t ret_value = FAIL;    /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -4063,8 +4071,11 @@ H5S_hyper_intersect_block(H5S_t *space, const hsize_t *start, const hsize_t *end
         if(H5S__hyper_generate_spans(space) < 0)
             HGOTO_ERROR(H5E_DATASPACE, H5E_UNINITIALIZED, FAIL, "dataspace does not have span tree")
 
+    /* Acquire an operation generation value for this operation */
+    op_gen = H5S__hyper_get_op_gen();
+
     /* Perform the span-by-span intersection check */
-    ret_value = H5S__hyper_intersect_block_helper(space->select.sel_info.hslab->span_lst, space->extent.rank, start, end);
+    ret_value = H5S__hyper_intersect_block_helper(space->select.sel_info.hslab->span_lst, space->extent.rank, start, end, op_gen);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -4101,7 +4112,7 @@ H5S__hyper_adjust_u_helper(H5S_hyper_span_info_t *spans, unsigned rank,
     HDassert(spans);
     HDassert(offset);
 
-    /* Check if we've already set this down span tree */
+    /* Check if we've already set this span tree */
     if(spans->op_gen != op_gen) {
         H5S_hyper_span_t *span;     /* Pointer to current span in span tree */
         unsigned u;                 /* Local index variable */
@@ -4112,9 +4123,6 @@ H5S__hyper_adjust_u_helper(H5S_hyper_span_info_t *spans, unsigned rank,
             spans->low_bounds[u] -= offset[u];
             spans->high_bounds[u] -= offset[u];
         } /* end for */
-
-        /* Set the tree's operation generation */
-        spans->op_gen = op_gen;
 
         /* Iterate over the spans in tree */
         span = spans->head;
@@ -4131,6 +4139,9 @@ H5S__hyper_adjust_u_helper(H5S_hyper_span_info_t *spans, unsigned rank,
             /* Advance to next span in this dimension */
             span = span->next;
         } /* end while */
+
+        /* Set the tree's operation generation */
+        spans->op_gen = op_gen;
     } /* end if */
 
     FUNC_LEAVE_NOAPI_VOID
@@ -4617,7 +4628,7 @@ H5S__hyper_adjust_s_helper(H5S_hyper_span_info_t *spans, unsigned rank,
     HDassert(spans);
     HDassert(offset);
 
-    /* Check if we've already set this down span tree */
+    /* Check if we've already set this span tree */
     if(spans->op_gen != op_gen) {
         H5S_hyper_span_t *span;     /* Pointer to current span in span tree */
         unsigned u;                 /* Local index variable */
@@ -4628,9 +4639,6 @@ H5S__hyper_adjust_s_helper(H5S_hyper_span_info_t *spans, unsigned rank,
             spans->low_bounds[u] = (hsize_t)((hssize_t)spans->low_bounds[u] - offset[u]);
             spans->high_bounds[u] = (hsize_t)((hssize_t)spans->high_bounds[u] - offset[u]);
         } /* end for */
-
-        /* Set the tree's operation generation */
-        spans->op_gen = op_gen;
 
         /* Iterate over the spans in tree */
         span = spans->head;
@@ -4647,6 +4655,9 @@ H5S__hyper_adjust_s_helper(H5S_hyper_span_info_t *spans, unsigned rank,
             /* Advance to next span in this dimension */
             span = span->next;
         } /* end while */
+
+        /* Set the tree's operation generation */
+        spans->op_gen = op_gen;
     } /* end if */
 
     FUNC_LEAVE_NOAPI_VOID
