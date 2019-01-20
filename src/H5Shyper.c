@@ -239,7 +239,7 @@ H5FL_BARR_DEFINE_STATIC(H5S_hyper_span_info_t, hbounds_t, H5S_MAX_RANK * 2);
 H5FL_EXTERN(H5S_sel_iter_t);
 
 #ifndef H5_HAVE_THREADSAFE
-static uint64_t H5S_hyper_op_gen_g = 0; /* Current operation generation */
+static uint64_t H5S_hyper_op_gen_g = 1; /* Current operation generation */
 #endif /* H5_HAVE_THREADSAFE */
 
 /* #define H5S_HYPER_DEBUG */
@@ -506,7 +506,7 @@ H5S__hyper_op_gen(void)
         HDassert(op_gen);
 
         /* Reset the thread-specific info */
-        *op_gen = 0;
+        *op_gen = 1;
 
         /* (It's not necessary to release this in this API, it is
          *      released by the "key destructor" set up in the H5TS
