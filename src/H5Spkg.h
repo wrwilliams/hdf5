@@ -121,10 +121,11 @@ struct H5S_hyper_span_info_t {
     hsize_t *low_bounds;        /* The smallest element selected in each dimension */
     hsize_t *high_bounds;       /* The largest element selected in each dimension */
 
-    struct H5S_hyper_span_info_t *scratch;  /* Scratch pointer
-                                             * (used during copies & during
-                                             *  'adjust' operations)
-                                             */
+    /* "Operation generation" fields */
+    /* (Used during copies and 'adjust' operations) */
+    uint64_t op_gen;            /* Generation of the scratch info */
+    struct H5S_hyper_span_info_t *scratch;  /* Scratch pointer */
+
     struct H5S_hyper_span_t *head;  /* Pointer to the first span of list of spans in the current dimension */
     struct H5S_hyper_span_t *tail;  /* Pointer to the last span of list of spans in the current dimension */
     hsize_t bounds[];           /* Array for low & high bounds */

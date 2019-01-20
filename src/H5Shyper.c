@@ -48,17 +48,39 @@
         curr_span = next_span;                                  \
     } while(0)
 
+#ifdef H5_HAVE_THREADSAFE
+/*
+ * The per-thread operation generation. pthread_once() initializes a special
+ * key that will be used by all threads to create a stack specific to
+ * each thread individually. The association of operation generations to threads
+ * will be handled by the pthread library.
+ *
+ * In order for this macro to work, H5S_hyper_get_my_op_gen() must be preceeded
+ * by "uint64_t *gen =".
+ */
+#define H5S_hyper_get_my_op_gen()  H5S__hyper_op_gen()
+#else /* H5_HAVE_THREADSAFE */
+/*
+ * The current operation generation.
+ */
+#define H5S_hyper_get_my_op_gen() (&H5S_hyper_op_gen_g)
+#endif /* H5_HAVE_THREADSAFE */
+
 
 /* Local datatypes */
 
 /* Define alias for hsize_t, for allocating H5S_hyper_span_info_t + bounds objects */
+/* (Makes it easier to understand the allow / free calls) */
 typedef hsize_t hbounds_t;
 
 /* Static function prototypes */
+#ifdef H5_HAVE_THREADSAFE
+static uint64_t *H5S__hyper_op_gen(void);
+#endif /* H5_HAVE_THREADSAFE */
+static uint64_t H5S__hyper_get_op_gen(void);
 static H5S_hyper_span_t *H5S__hyper_new_span(hsize_t low, hsize_t high,
     H5S_hyper_span_info_t *down, H5S_hyper_span_t *next);
 static H5S_hyper_span_info_t *H5S__hyper_new_span_info(unsigned rank);
-static void H5S__hyper_span_scratch(H5S_hyper_span_info_t *spans);
 static H5S_hyper_span_info_t *H5S__hyper_copy_span(H5S_hyper_span_info_t *spans,
     unsigned rank);
 static hbool_t H5S__hyper_cmp_spans(const H5S_hyper_span_info_t *span_info1,
@@ -215,6 +237,10 @@ H5FL_BARR_DEFINE_STATIC(H5S_hyper_span_info_t, hbounds_t, H5S_MAX_RANK * 2);
 
 /* Declare extern free list to manage the H5S_sel_iter_t struct */
 H5FL_EXTERN(H5S_sel_iter_t);
+
+#ifndef H5_HAVE_THREADSAFE
+static uint64_t H5S_hyper_op_gen_g = 0; /* Current operation generation */
+#endif /* H5_HAVE_THREADSAFE */
 
 /* #define H5S_HYPER_DEBUG */
 #ifdef H5S_HYPER_DEBUG
@@ -442,6 +468,87 @@ H5S__hyper_print_space_dfs(FILE *f, const H5S_t *space)
 } /* end H5S__hyper_print_space_dfs() */
 #endif /* H5S_HYPER_DEBUG */
 
+#ifdef H5_HAVE_THREADSAFE
+/*-------------------------------------------------------------------------
+ * Function:	H5S__hyper_op_gen
+ *
+ * Purpose:	Support function for H5S_hyper_get_my_op_gen() to initialize and
+ *              acquire per-thread hyperslab operation generation.
+ *
+ * Return:	Success: Non-NULL pointer to hyperslab operation generation for thread
+ *		Failure: NULL
+ *
+ * Programmer:	Quincey Koziol
+ *              January 19, 2019
+ *
+ *-------------------------------------------------------------------------
+ */
+static uint64_t *
+H5S__hyper_op_gen(void)
+{
+    uint64_t *op_gen = NULL;
+
+    FUNC_ENTER_STATIC_NOERR
+
+    op_gen = (uint64_t *)H5TS_get_thread_local_value(H5TS_hyper_op_gen_key_g);
+
+    if(!op_gen) {
+        /* No associated value with current thread - create one */
+#ifdef H5_HAVE_WIN_THREADS
+        /* Win32 has to use LocalAlloc to match the LocalFree in DllMain */
+        op_gen = (H5CX_node_t **)LocalAlloc(LPTR, sizeof(uint64_t)); 
+#else
+        /* Use HDmalloc here since this has to match the HDfree in the
+         * destructor and we want to avoid the codestack there.
+         */
+        op_gen = (uint64_t *)HDmalloc(sizeof(uint64_t));
+#endif /* H5_HAVE_WIN_THREADS */
+        HDassert(op_gen);
+
+        /* Reset the thread-specific info */
+        *op_gen = 0;
+
+        /* (It's not necessary to release this in this API, it is
+         *      released by the "key destructor" set up in the H5TS
+         *      routines.  See calls to pthread_key_create() in H5TS.c -QAK)
+         */
+        H5TS_set_thread_local_value(H5TS_hyper_op_gen_key_g, (void *)op_gen);
+    } /* end if */
+
+    /* Set return value */
+    FUNC_LEAVE_NOAPI(op_gen)
+} /* end H5S__hyper_op_gen() */
+#endif  /* H5_HAVE_THREADSAFE */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5S__hyper_get_op_gen
+ *
+ * Purpose:	Acquire a unique operation generation value
+ *
+ * Return:	Operation generation value (can't fail)
+ *
+ * Programmer:	Quincey Koziol
+ *              Saturday, January 19, 2019
+ *
+ * Notes:       Assumes that a 64-bit value will not wrap around during
+ *              the lifespan of the process.
+ *
+ *-------------------------------------------------------------------------
+ */
+static uint64_t
+H5S__hyper_get_op_gen(void)
+{
+    uint64_t *op_gen = H5S_hyper_get_my_op_gen();  /* Get the pointer to the hyperslab operation generation, for this thread */
+
+    FUNC_ENTER_STATIC_NOERR
+
+    /* Check args */
+    HDassert(op_gen);
+
+    FUNC_LEAVE_NOAPI((*op_gen)++);
+} /* end H5S__hyper_op_gen() */
+
 
 /*-------------------------------------------------------------------------
  * Function:	H5S__hyper_iter_init
@@ -453,7 +560,7 @@ H5S__hyper_print_space_dfs(FILE *f, const H5S_t *space)
  * Programmer:	Quincey Koziol
  *              Saturday, February 24, 2001
  *
- * Notes:       If the 'elmt_size' parameter is set to zero, the regular
+ * Notes:       If the 'iter->elmt_size' field is set to zero, the regular
  *              hyperslab selection iterator will not be 'flattened'.  This
  *              is used by the H5S_select_shape_same() code to avoid changing
  *              the rank and appearance of the selection.
@@ -780,20 +887,18 @@ H5S__hyper_iter_block(const H5S_sel_iter_t *iter, hsize_t *start, hsize_t *end)
 
     /* Check for a single "regular" hyperslab */
     if(iter->u.hyp.diminfo_valid) {
-        /* Compute the end of the block */
+        /* Copy the start and compute the end of the block */
         for(u = 0; u < iter->rank; u++) {
             start[u] = iter->u.hyp.off[u];
             end[u] = (start[u] + iter->u.hyp.diminfo[u].block) - 1;
         } /* end for */
     } /* end if */
     else {
-        /* Copy the start of the block */
-        for(u = 0; u < iter->rank; u++)
+        /* Copy the start & end of the block */
+        for(u = 0; u < iter->rank; u++) {
             start[u] = iter->u.hyp.span[u]->low;
-
-        /* Copy the end of the block */
-        for(u = 0; u < iter->rank; u++)
             end[u] = iter->u.hyp.span[u]->high;
+        } /* end for */
     } /* end else */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
@@ -1403,53 +1508,6 @@ done:
 
 /*--------------------------------------------------------------------------
  NAME
-    H5S__hyper_span_scratch
- PURPOSE
-    Reset the scratch pointers on hyperslab span trees
- USAGE
-    void H5S__hyper_span_scratch(span_info)
-        H5S_hyper_span_info_t *span_info;      IN: Span tree to reset
- RETURNS
-    <none>
- DESCRIPTION
-    Reset the scratch pointers on a hyperslab span tree to NULL.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static void
-H5S__hyper_span_scratch(H5S_hyper_span_info_t *spans)
-{
-    FUNC_ENTER_STATIC_NOERR
-
-    HDassert(spans);
-
-    /* Check if we've already set this down span tree */
-    if(spans->scratch != NULL) {
-        H5S_hyper_span_t *span;             /* Hyperslab span */
-
-        /* Reset the tree's scratch pointer */
-        spans->scratch = NULL;
-
-        /* Reset the scratch pointers in all the nodes */
-        span = spans->head;
-        while(span != NULL) {
-            /* If there are down spans, reset their scratch value also */
-            if(span->down != NULL)
-                H5S__hyper_span_scratch(span->down);
-
-            /* Advance to next span */
-            span = span->next;
-        } /* end while */
-    } /* end if */
-
-    FUNC_LEAVE_NOAPI_VOID
-} /* end H5S__hyper_span_scratch() */
-
-
-/*--------------------------------------------------------------------------
- NAME
     H5S__hyper_copy_span_helper
  PURPOSE
     Helper routine to copy a hyperslab span tree
@@ -1457,6 +1515,7 @@ H5S__hyper_span_scratch(H5S_hyper_span_info_t *spans)
     H5S_hyper_span_info_t * H5S__hyper_copy_span_helper(spans, rank)
         H5S_hyper_span_info_t *spans;   IN: Span tree to copy
         unsigned rank;                  IN: Rank of span tree
+        uint64_t op_gen;                IN: Operation generation
  RETURNS
     Pointer to the copied span tree on success, NULL on failure
  DESCRIPTION
@@ -1467,7 +1526,8 @@ H5S__hyper_span_scratch(H5S_hyper_span_info_t *spans)
  REVISION LOG
 --------------------------------------------------------------------------*/
 static H5S_hyper_span_info_t *
-H5S__hyper_copy_span_helper(H5S_hyper_span_info_t *spans, unsigned rank)
+H5S__hyper_copy_span_helper(H5S_hyper_span_info_t *spans, unsigned rank,
+    uint64_t op_gen)
 {
     H5S_hyper_span_t *span;         /* Hyperslab span */
     H5S_hyper_span_t *new_span;     /* Temporary hyperslab span */
@@ -1482,7 +1542,7 @@ H5S__hyper_copy_span_helper(H5S_hyper_span_info_t *spans, unsigned rank)
     HDassert(spans->scratch != (H5S_hyper_span_info_t *)~((size_t)NULL));
 
     /* Check if the span tree was already copied */
-    if(spans->scratch != NULL) {
+    if(spans->op_gen == op_gen) {
         /* Just return the value of the already copied span tree */
         ret_value = spans->scratch;
 
@@ -1498,6 +1558,9 @@ H5S__hyper_copy_span_helper(H5S_hyper_span_info_t *spans, unsigned rank)
         HDmemcpy(ret_value->low_bounds, spans->low_bounds, rank * sizeof(hsize_t));
         HDmemcpy(ret_value->high_bounds, spans->high_bounds, rank * sizeof(hsize_t));
         ret_value->count = 1;
+
+        /* Set the operation generation for the span info, to avoid future copies */
+        spans->op_gen = op_gen;
 
         /* Set the scratch pointer in the node being copied to the newly allocated node */
         spans->scratch = ret_value;
@@ -1518,7 +1581,7 @@ H5S__hyper_copy_span_helper(H5S_hyper_span_info_t *spans, unsigned rank)
 
             /* Recurse to copy the 'down' spans, if there are any */
             if(span->down != NULL) {
-                if(NULL == (new_down = H5S__hyper_copy_span_helper(span->down, rank - 1)))
+                if(NULL == (new_down = H5S__hyper_copy_span_helper(span->down, rank - 1, op_gen)))
                     HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, NULL, "can't copy hyperslab spans")
                 new_span->down = new_down;
             } /* end if */
@@ -1562,6 +1625,7 @@ done:
 static H5S_hyper_span_info_t *
 H5S__hyper_copy_span(H5S_hyper_span_info_t *spans, unsigned rank)
 {
+    uint64_t op_gen;            /* Operation generation value */
     H5S_hyper_span_info_t *ret_value = NULL;    /* Return value */
 
     FUNC_ENTER_STATIC
@@ -1569,12 +1633,12 @@ H5S__hyper_copy_span(H5S_hyper_span_info_t *spans, unsigned rank)
     /* Sanity check */
     HDassert(spans);
 
-    /* Copy the hyperslab span tree */
-    if(NULL == (ret_value = H5S__hyper_copy_span_helper(spans, rank)))
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, NULL, "can't copy hyperslab span tree")
+    /* Acquire an operation generation value for this operation */
+    op_gen = H5S__hyper_get_op_gen();
 
-    /* Reset the scratch pointers for the next routine which needs them */
-    H5S__hyper_span_scratch(spans);
+    /* Copy the hyperslab span tree */
+    if(NULL == (ret_value = H5S__hyper_copy_span_helper(spans, rank, op_gen)))
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, NULL, "can't copy hyperslab span tree")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -4018,6 +4082,7 @@ done:
         H5S_hyper_span_info_t *spans;   IN: Span tree to operate with
         unsigned rank;                  IN: Number of dimensions for span tree
         const hsize_t *offset;          IN: Offset to subtract
+        uint64_t op_gen;                IN: Operation generation
  RETURNS
     None
  DESCRIPTION
@@ -4029,18 +4094,16 @@ done:
 --------------------------------------------------------------------------*/
 static void
 H5S__hyper_adjust_u_helper(H5S_hyper_span_info_t *spans, unsigned rank,
-    const hsize_t *offset)
+    const hsize_t *offset, uint64_t op_gen)
 {
     FUNC_ENTER_STATIC_NOERR
 
     /* Sanity checks */
     HDassert(spans);
-    HDassert(spans->scratch == (H5S_hyper_span_info_t *)~((size_t)NULL) ||
-        spans->scratch == NULL);
     HDassert(offset);
 
     /* Check if we've already set this down span tree */
-    if(spans->scratch != (H5S_hyper_span_info_t *)~((size_t)NULL)) {
+    if(spans->op_gen != op_gen) {
         H5S_hyper_span_t *span;     /* Pointer to current span in span tree */
         unsigned u;                 /* Local index variable */
 
@@ -4051,8 +4114,8 @@ H5S__hyper_adjust_u_helper(H5S_hyper_span_info_t *spans, unsigned rank,
             spans->high_bounds[u] -= offset[u];
         } /* end for */
 
-        /* Set the tree's scratch pointer */
-        spans->scratch = (H5S_hyper_span_info_t *)~((size_t)NULL);
+        /* Set the tree's operation generation */
+        spans->op_gen = op_gen;
 
         /* Iterate over the spans in tree */
         span = spans->head;
@@ -4064,7 +4127,7 @@ H5S__hyper_adjust_u_helper(H5S_hyper_span_info_t *spans, unsigned rank,
 
             /* Recursively adjust spans in next dimension down */
             if(span->down != NULL)
-                H5S__hyper_adjust_u_helper(span->down, rank - 1, offset + 1);
+                H5S__hyper_adjust_u_helper(span->down, rank - 1, offset + 1, op_gen);
 
             /* Advance to next span in this dimension */
             span = span->next;
@@ -4120,10 +4183,12 @@ H5S__hyper_adjust_u(H5S_t *space, const hsize_t *offset)
 
     /* Subtract the offset from the span tree coordinates, if they exist */
     if(space->select.sel_info.hslab->span_lst) {
-        H5S__hyper_adjust_u_helper(space->select.sel_info.hslab->span_lst, space->extent.rank, offset);
+        uint64_t op_gen;            /* Operation generation value */
 
-        /* Reset the scratch pointers for the next routine which needs them */
-        H5S__hyper_span_scratch(space->select.sel_info.hslab->span_lst);
+        /* Acquire an operation generation value for this operation */
+        op_gen = H5S__hyper_get_op_gen();
+
+        H5S__hyper_adjust_u_helper(space->select.sel_info.hslab->span_lst, space->extent.rank, offset, op_gen);
     } /* end if */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
@@ -4533,6 +4598,7 @@ done:
         H5S_hyper_span_info_t *spans;   IN: Span tree to operate with
         unsigned rank;                  IN: Number of dimensions for span tree
         const hssize_t *offset;         IN: Offset to subtract
+        uint64_t op_gen;                IN: Operation generation
  RETURNS
     None
  DESCRIPTION
@@ -4544,18 +4610,16 @@ done:
 --------------------------------------------------------------------------*/
 static void
 H5S__hyper_adjust_s_helper(H5S_hyper_span_info_t *spans, unsigned rank,
-    const hssize_t *offset)
+    const hssize_t *offset, uint64_t op_gen)
 {
     FUNC_ENTER_STATIC_NOERR
 
     /* Sanity checks */
     HDassert(spans);
-    HDassert(spans->scratch == (H5S_hyper_span_info_t *)~((size_t)NULL) ||
-        spans->scratch == NULL);
     HDassert(offset);
 
     /* Check if we've already set this down span tree */
-    if(spans->scratch != (H5S_hyper_span_info_t *)~((size_t)NULL)) {
+    if(spans->op_gen != op_gen) {
         H5S_hyper_span_t *span;     /* Pointer to current span in span tree */
         unsigned u;                 /* Local index variable */
 
@@ -4566,8 +4630,8 @@ H5S__hyper_adjust_s_helper(H5S_hyper_span_info_t *spans, unsigned rank,
             spans->high_bounds[u] = (hsize_t)((hssize_t)spans->high_bounds[u] - offset[u]);
         } /* end for */
 
-        /* Set the tree's scratch pointer */
-        spans->scratch = (H5S_hyper_span_info_t *)~((size_t)NULL);
+        /* Set the tree's operation generation */
+        spans->op_gen = op_gen;
 
         /* Iterate over the spans in tree */
         span = spans->head;
@@ -4579,7 +4643,7 @@ H5S__hyper_adjust_s_helper(H5S_hyper_span_info_t *spans, unsigned rank,
 
             /* Recursively adjust spans in next dimension down */
             if(span->down != NULL)
-                H5S__hyper_adjust_s_helper(span->down, rank - 1, offset + 1);
+                H5S__hyper_adjust_s_helper(span->down, rank - 1, offset + 1, op_gen);
 
             /* Advance to next span in this dimension */
             span = span->next;
@@ -4637,10 +4701,12 @@ H5S_hyper_adjust_s(H5S_t *space, const hssize_t *offset)
 
     /* Subtract the offset from the span tree coordinates, if they exist */
     if(space->select.sel_info.hslab->span_lst) {
-        H5S__hyper_adjust_s_helper(space->select.sel_info.hslab->span_lst, space->extent.rank, offset);
+        uint64_t op_gen;            /* Operation generation value */
 
-        /* Reset the scratch pointers for the next routine which needs them */
-        H5S__hyper_span_scratch(space->select.sel_info.hslab->span_lst);
+        /* Acquire an operation generation value for this operation */
+        op_gen = H5S__hyper_get_op_gen();
+
+        H5S__hyper_adjust_s_helper(space->select.sel_info.hslab->span_lst, space->extent.rank, offset, op_gen);
     } /* end if */
 
 done:
