@@ -122,9 +122,12 @@ struct H5S_hyper_span_info_t {
     hsize_t *high_bounds;       /* The largest element selected in each dimension */
 
     /* "Operation generation" fields */
-    /* (Used during copies and 'adjust' operations) */
+    /* (Used during copies, 'adjust', and 'nelem' operations) */
     uint64_t op_gen;            /* Generation of the scratch info */
-    struct H5S_hyper_span_info_t *scratch;  /* Scratch pointer */
+    union {
+        struct H5S_hyper_span_info_t *copied;  /* Pointer to already copied span tree */
+        hsize_t nelmts;         /* # of elements */
+    }u;
 
     struct H5S_hyper_span_t *head;  /* Pointer to the first span of list of spans in the current dimension */
     struct H5S_hyper_span_t *tail;  /* Pointer to the last span of list of spans in the current dimension */

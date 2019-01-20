@@ -101,7 +101,7 @@ static herr_t H5S__hyper_clip_spans(H5S_hyper_span_info_t *a_spans,
     unsigned ndims, H5S_hyper_span_info_t **a_not_b,
     H5S_hyper_span_info_t **a_and_b, H5S_hyper_span_info_t **b_not_a);
 static herr_t H5S__hyper_merge_spans(H5S_t *space, H5S_hyper_span_info_t *new_spans);
-static hsize_t H5S__hyper_spans_nelem(const H5S_hyper_span_info_t *spans);
+static hsize_t H5S__hyper_spans_nelem(H5S_hyper_span_info_t *spans);
 static herr_t H5S__hyper_add_disjoint_spans(H5S_t *space, H5S_hyper_span_info_t *new_spans);
 static H5S_hyper_span_info_t *H5S__hyper_make_spans(unsigned rank,
     const hsize_t *start, const hsize_t *stride,
@@ -253,7 +253,7 @@ H5S__hyper_print_spans_helper(FILE *f, const H5S_hyper_span_t *span, unsigned de
     while(span) {
         HDfprintf(f,"%s: depth=%u, span=%p, (%Hu, %Hu)\n", FUNC, depth, span, span->low, span->high);
         if(span->down && span->down->head) {
-            HDfprintf(f,"%s: spans=%p, count=%u, scratch=%p, head=%p\n", FUNC, span->down, span->down->count, span->down->scratch, span->down->head);
+            HDfprintf(f,"%s: spans=%p, count=%u, head=%p\n", FUNC, span->down, span->down->count, span->down->head);
             H5S__hyper_print_spans_helper(f, span->down->head, depth + 1);
         } /* end if */
         span = span->next;
@@ -268,7 +268,7 @@ H5S__hyper_print_spans(FILE *f, const H5S_hyper_span_info_t *span_lst)
     FUNC_ENTER_STATIC_NOERR
 
     if(span_lst != NULL) {
-        HDfprintf(f, "%s: spans=%p, count=%u, scratch=%p, head=%p\n", FUNC, span_lst, span_lst->count, span_lst->scratch, span_lst->head);
+        HDfprintf(f, "%s: spans=%p, count=%u, head=%p\n", FUNC, span_lst, span_lst->count, span_lst->head);
         H5S__hyper_print_spans_helper(f, span_lst->head, 0);
     } /* end if */
 
@@ -363,8 +363,8 @@ H5S__hyper_print_spans_dfs(FILE *f, const H5S_hyper_span_info_t *span_lst,
 
     for(u = 0; u < depth; u++)
         HDfprintf(f, "\t");
-    HDfprintf(f, "DIM[%u]: ref_count=%u, #elems=%u, scratch=%p, head=%p, tail=%p, actual_tail=%p, matched=%t\n", depth,
-              span_lst->count, num_elems, span_lst->scratch, span_lst->head,
+    HDfprintf(f, "DIM[%u]: ref_count=%u, #elems=%u, head=%p, tail=%p, actual_tail=%p, matched=%t\n", depth,
+              span_lst->count, num_elems, span_lst->head,
               span_lst->tail, actual_tail, (span_lst->tail == actual_tail));
 
     for(u = 0; u < depth; u++)
@@ -1541,12 +1541,11 @@ H5S__hyper_copy_span_helper(H5S_hyper_span_info_t *spans, unsigned rank,
 
     /* Sanity checks */
     HDassert(spans);
-    HDassert(spans->scratch != (H5S_hyper_span_info_t *)~((size_t)NULL));
 
     /* Check if the span tree was already copied */
     if(spans->op_gen == op_gen) {
         /* Just return the value of the already copied span tree */
-        ret_value = spans->scratch;
+        ret_value = spans->u.copied;
 
         /* Increment the reference count of the span tree */
         ret_value->count++;
@@ -1564,8 +1563,8 @@ H5S__hyper_copy_span_helper(H5S_hyper_span_info_t *spans, unsigned rank,
         /* Set the operation generation for the span info, to avoid future copies */
         spans->op_gen = op_gen;
 
-        /* Set the scratch pointer in the node being copied to the newly allocated node */
-        spans->scratch = ret_value;
+        /* Set the 'copied' pointer in the node being copied to the newly allocated node */
+        spans->u.copied = ret_value;
 
         /* Copy over the nodes in the span list */
         span = spans->head;
@@ -5929,6 +5928,77 @@ done:
 
 /*--------------------------------------------------------------------------
  NAME
+    H5S__hyper_spans_nelem_helper
+ PURPOSE
+    Count the number of elements in a span tree
+ USAGE
+    hsize_t H5S__hyper_spans_nelem_helper(spans, op_gen)
+        const H5S_hyper_span_info_t *spans; IN: Hyperslan span tree to count elements of
+        uint64_t op_gen;                IN: Operation generation
+ RETURNS
+    Number of elements in span tree on success; negative on failure
+ DESCRIPTION
+    Counts the number of elements described by the spans in a span tree.
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
+static hsize_t
+H5S__hyper_spans_nelem_helper(H5S_hyper_span_info_t *spans, uint64_t op_gen)
+{
+    hsize_t ret_value = 0;          /* Return value */
+
+    FUNC_ENTER_STATIC_NOERR
+
+    /* Sanity check */
+    HDassert(spans);
+
+    /* Check if the span tree was already counted */
+    if(spans->op_gen == op_gen)
+        /* Just return the # of elements in the already counted span tree */
+        ret_value = spans->u.nelmts;
+    else {      /* Count the number of elements in the span tree */
+        const H5S_hyper_span_t *span;     /* Hyperslab span */
+
+        span = spans->head;
+        if(NULL == span->down) {
+            while(span != NULL) {
+                /* Compute # of elements covered */
+                ret_value += (span->high - span->low) + 1;
+
+                /* Advance to next span */
+                span = span->next;
+            } /* end while */
+        } /* end if */
+        else {
+            while(span != NULL) {
+                hsize_t nelmts;     /* # of elements covered by current span */
+
+                /* Compute # of elements covered */
+                nelmts = (span->high - span->low) + 1;
+
+                /* Multiply the size of this span by the total down span elements */
+                ret_value += nelmts * H5S__hyper_spans_nelem_helper(span->down, op_gen);
+
+                /* Advance to next span */
+                span = span->next;
+            } /* end while */
+        } /* end else */
+
+        /* Set the operation generation for this span tree, to avoid re-computing */
+        spans->op_gen = op_gen;
+
+        /* Hold a copy of the # of elements */
+        spans->u.nelmts = ret_value;
+    } /* end else */
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5S__hyper_spans_nelem_helper() */
+
+
+/*--------------------------------------------------------------------------
+ NAME
     H5S__hyper_spans_nelem
  PURPOSE
     Count the number of elements in a span tree
@@ -5945,34 +6015,21 @@ done:
  REVISION LOG
 --------------------------------------------------------------------------*/
 static hsize_t
-H5S__hyper_spans_nelem(const H5S_hyper_span_info_t *spans)
+H5S__hyper_spans_nelem(H5S_hyper_span_info_t *spans)
 {
-    hsize_t ret_value = 0;          /* Return value */
+    uint64_t op_gen;            /* Operation generation value */
+    hsize_t ret_value = 0;      /* Return value */
 
     FUNC_ENTER_STATIC_NOERR
 
+    /* Sanity check */
+    HDassert(spans);
+
+    /* Acquire an operation generation value for this operation */
+    op_gen = H5S__hyper_get_op_gen();
+
     /* Count the number of elements in the span tree */
-    if(spans != NULL) {
-        const H5S_hyper_span_t *span;     /* Hyperslab span */
-
-        span = spans->head;
-        while(span != NULL) {
-            hsize_t nelmts;     /* # of elements covered by current span */
-
-            /* Compute # of elements covered */
-            nelmts = (span->high - span->low) + 1;
-
-            /* If there are down spans, multiply the size of this span by the total down span elements */
-            if(span->down != NULL)
-                ret_value += nelmts * H5S__hyper_spans_nelem(span->down);
-            /* If there are no down spans, just count the elements in this span */
-            else
-                ret_value += nelmts;
-
-            /* Advance to next span */
-            span = span->next;
-        } /* end while */
-    } /* end else */
+    ret_value = H5S__hyper_spans_nelem_helper(spans, op_gen);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5S__hyper_spans_nelem() */
