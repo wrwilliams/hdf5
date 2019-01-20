@@ -1569,6 +1569,12 @@ H5D__create_chunk_file_map_hyper(H5D_chunk_map_t *fm, const H5D_io_info_t
             if(NULL == (tmp_fchunk = H5S_copy(fm->file_space, TRUE, FALSE)))
                 HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, FAIL, "unable to copy memory space")
 
+            /* Make certain selections are stored in span tree form (not "optimized hyperslab" or "all") */
+            if(H5S_hyper_convert(tmp_fchunk) < 0) {
+                (void)H5S_close(tmp_fchunk);
+                HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to convert selection to span trees")
+            } /* end if */
+
             /* "AND" temporary chunk and current chunk */
             if(H5S_select_hyperslab(tmp_fchunk, H5S_SELECT_AND, coords, NULL, fm->chunk_dim, NULL) < 0) {
                 (void)H5S_close(tmp_fchunk);
