@@ -240,6 +240,7 @@ H5FL_EXTERN(H5S_sel_iter_t);
 
 #ifndef H5_HAVE_THREADSAFE
 static uint64_t H5S_hyper_op_gen_g = 1; /* Current operation generation */
+                                        /* (Use '1' to avoid clashing with '0' value in newly allocated structs) */
 #endif /* H5_HAVE_THREADSAFE */
 
 /* #define H5S_HYPER_DEBUG */
@@ -506,6 +507,7 @@ H5S__hyper_op_gen(void)
         HDassert(op_gen);
 
         /* Reset the thread-specific info */
+        /* (Use '1' to avoid clashing with '0' value in newly allocated structs) */
         *op_gen = 1;
 
         /* (It's not necessary to release this in this API, it is
