@@ -4117,7 +4117,6 @@ H5S__hyper_project_scalar(const H5S_t *space, hsize_t *offset)
 
             /* Sanity check bounds, while we're here */
             HDassert(diminfo[u].start == space->select.sel_info.hslab->diminfo.low_bounds[u]);
-            HDassert(diminfo[u].start == space->select.sel_info.hslab->diminfo.low_bounds[u]);
 
             /* Keep the offset for later */
             block[u] = diminfo[u].start;
@@ -6020,9 +6019,7 @@ H5S__hyper_make_spans(unsigned rank, const hsize_t *start, const hsize_t *stride
     H5S_hyper_span_info_t *down = NULL;     /* Pointer to spans in next dimension down */
     H5S_hyper_span_t      *last_span;       /* Current position in hyperslab span list */
     H5S_hyper_span_t      *head = NULL;     /* Head of new hyperslab span list */
-    hsize_t                stride_iter;     /* Iterator over the stride values */
     int                    i;               /* Counters */
-    unsigned               u;               /* Counters */
     H5S_hyper_span_info_t *ret_value = NULL;    /* Return value */
 
     FUNC_ENTER_STATIC
@@ -6036,6 +6033,9 @@ H5S__hyper_make_spans(unsigned rank, const hsize_t *start, const hsize_t *stride
 
     /* Start creating spans in fastest changing dimension */
     for(i = (int)(rank - 1); i >= 0; i--) {
+        hsize_t curr_low, curr_high;    /* Current low & high values */
+        hsize_t dim_stride;             /* Current dim's stride */
+        unsigned u;                     /* Local index variable */
 
         /* Sanity check */
         if(0 == count[i])
@@ -6046,8 +6046,10 @@ H5S__hyper_make_spans(unsigned rank, const hsize_t *start, const hsize_t *stride
         last_span = NULL;
 
         /* Generate all the span segments for this dimension */
-        for(u = 0, stride_iter = 0; u < count[i]; u++, stride_iter += stride[i])
-        {
+        curr_low = start[i];
+        curr_high = start[i] + (block[i] - 1);
+        dim_stride = stride[i];
+        for(u = 0; u < count[i]; u++, curr_low += dim_stride, curr_high += dim_stride) {
             H5S_hyper_span_t      *span;            /* New hyperslab span */
 
             /* Allocate a span node */
@@ -6055,9 +6057,13 @@ H5S__hyper_make_spans(unsigned rank, const hsize_t *start, const hsize_t *stride
                 HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, NULL, "can't allocate hyperslab span")
 
             /* Set the span's basic information */
-            span->low = start[i] + stride_iter;
-            span->high = span->low + (block[i] - 1);
+            span->low = curr_low;
+            span->high = curr_high;
             span->next = NULL;
+
+            /* Set the information for the next dimension down's spans */
+            /* (Will be NULL for fastest changing dimension) */
+            span->down = down;
 
             /* Append to the list of spans in this dimension */
             if(head == NULL)
@@ -6067,15 +6073,11 @@ H5S__hyper_make_spans(unsigned rank, const hsize_t *start, const hsize_t *stride
 
             /* Move current pointer */
             last_span = span;
-
-            /* Set the information for the next dimension down's spans, if appropriate */
-            if(down != NULL) {
-                span->down = down;
-                down->count++;  /* Increment reference count for shared span */
-            } /* end if */
-            else
-                span->down = NULL;
         } /* end for */
+
+        /* Increment ref. count of shared span */
+        if(down != NULL)
+            down->count = (unsigned)count[i];
 
         /* Allocate a span info node */
         if(NULL == (down = H5FL_CALLOC(H5S_hyper_span_info_t)))
