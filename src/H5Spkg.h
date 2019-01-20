@@ -131,7 +131,7 @@ struct H5S_hyper_span_info_t {
 
     struct H5S_hyper_span_t *head;  /* Pointer to the first span of list of spans in the current dimension */
     struct H5S_hyper_span_t *tail;  /* Pointer to the last span of list of spans in the current dimension */
-    hsize_t bounds[];           /* Array for low & high bounds */
+    hsize_t bounds[];           /* Array for storing low & high bounds */
                                 /* (NOTE: This uses the C99 "flexible array member" feature) */
 };
 

@@ -108,8 +108,6 @@ static H5S_hyper_span_info_t *H5S__hyper_make_spans(unsigned rank,
     const hsize_t *count, const hsize_t *block);
 static herr_t H5S__hyper_update_diminfo(H5S_t *space, H5S_seloper_t op,
     const H5S_hyper_dim_t *new_hyper_diminfo);
-static hbool_t H5S__hyper_rebuild_helper(const H5S_hyper_span_t *span,
-    H5S_hyper_dim_t span_slab_info[], unsigned rank);
 static herr_t H5S__hyper_generate_spans(H5S_t *space);
 static herr_t H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
     H5S_hyper_span_info_t *space2_span_lst, hbool_t can_own_span2,
@@ -6547,6 +6545,7 @@ H5S__hyper_update_diminfo(H5S_t *space, H5S_seloper_t op,
         const H5S_hyper_span_t *span;   IN: Portion of span tree to check
         H5S_hyper_dim_t span_slab[];    OUT: Rebuilt section of hyperslab description
         unsigned rank;                  IN: Current dimension to work on
+        uint64_t op_gen;                IN: Operation generation
  RETURNS
     TRUE/FALSE for hyperslab selection rebuilt
  DESCRIPTION
@@ -6561,14 +6560,19 @@ H5S__hyper_update_diminfo(H5S_t *space, H5S_seloper_t op,
     KY, 2005/9/22
 --------------------------------------------------------------------------*/
 static hbool_t
-H5S__hyper_rebuild_helper(const H5S_hyper_span_t *span, H5S_hyper_dim_t span_slab_info[],
-    unsigned rank)
+H5S__hyper_rebuild_helper(H5S_hyper_span_info_t *spans, H5S_hyper_dim_t span_slab_info[],
+    unsigned rank, uint64_t op_gen)
 {
     hbool_t ret_value = TRUE;   /* Return value */
 
     FUNC_ENTER_STATIC_NOERR
 
-    if(span) {
+    /* Sanity check */
+    HDassert(spans);
+
+    /* Check if the span tree was already checked */
+    if(spans->op_gen != op_gen) {
+        const H5S_hyper_span_t *span;     /* Hyperslab span */
         const H5S_hyper_span_t *prev_span = NULL;     /* Previous span in list */
         H5S_hyper_dim_t canon_down_span_slab_info[H5S_MAX_RANK];
         hsize_t curr_stride;
@@ -6578,6 +6582,7 @@ H5S__hyper_rebuild_helper(const H5S_hyper_span_t *span, H5S_hyper_dim_t span_sla
         size_t outcount;        /* Number of spans encountered in this dimension */
 
         /* Initialization */
+        span = spans->head;
         curr_stride = 1;
         curr_low = 0;
         outcount = 0;
@@ -6587,7 +6592,7 @@ H5S__hyper_rebuild_helper(const H5S_hyper_span_t *span, H5S_hyper_dim_t span_sla
             HDassert(span->down->head);
 
             /* Go to the next down span and check whether the selection can be rebuilt */
-            if(!H5S__hyper_rebuild_helper(span->down->head, span_slab_info, rank - 1))
+            if(!H5S__hyper_rebuild_helper(span->down, span_slab_info, rank - 1, op_gen))
                 HGOTO_DONE(FALSE)
 
             HDmemcpy(canon_down_span_slab_info, span_slab_info, sizeof(H5S_hyper_dim_t) * rank);
@@ -6612,7 +6617,7 @@ H5S__hyper_rebuild_helper(const H5S_hyper_span_t *span, H5S_hyper_dim_t span_sla
                     HDassert(span->down->head);
 
                     /* Go to the next down span and check whether the selection can be rebuilt.*/
-                    if(!H5S__hyper_rebuild_helper(span->down->head, span_slab_info, rank - 1))
+                    if(!H5S__hyper_rebuild_helper(span->down, span_slab_info, rank - 1, op_gen))
                         HGOTO_DONE(FALSE)
 
                     /* Compare the slab information of the adjacent spans in the down span tree.
@@ -6662,7 +6667,10 @@ H5S__hyper_rebuild_helper(const H5S_hyper_span_t *span, H5S_hyper_dim_t span_sla
         span_slab_info[rank - 1].count  = outcount;
         span_slab_info[rank - 1].block  = curr_block;
         span_slab_info[rank - 1].stride = curr_stride;
-    } /* end if */
+
+        /* Remember that we've visited this node */
+        spans->op_gen = op_gen;
+    } /* end else */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -6698,6 +6706,7 @@ void
 H5S__hyper_rebuild(H5S_t *space)
 {
     H5S_hyper_dim_t top_span_slab_info[H5O_LAYOUT_NDIMS];
+    uint64_t op_gen;            /* Operation generation value */
     unsigned rank;              /* Dataspace rank */
 
     FUNC_ENTER_PACKAGE_NOERR
@@ -6709,8 +6718,11 @@ H5S__hyper_rebuild(H5S_t *space)
     /* Check the rank of space */
     rank = space->extent.rank;
 
+    /* Acquire an operation generation value for this operation */
+    op_gen = H5S__hyper_get_op_gen();
+
     /* Check whether the slab can be rebuilt. Only regular selection can be rebuilt. If yes, fill in correct values.*/
-    if(FALSE == H5S__hyper_rebuild_helper(space->select.sel_info.hslab->span_lst->head, top_span_slab_info, rank))
+    if(FALSE == H5S__hyper_rebuild_helper(space->select.sel_info.hslab->span_lst, top_span_slab_info, rank, op_gen))
         space->select.sel_info.hslab->diminfo_valid = H5S_DIMINFO_VALID_IMPOSSIBLE;
     else {
         H5S_hyper_dim_t *opt_diminfo;   /* Convenience pointer to optimized dimension info */
