@@ -607,10 +607,10 @@ H5S__hyper_iter_init(H5S_sel_iter_t *iter, const H5S_t *space)
     else {      /* Initialize the information needed for non-regular hyperslab I/O */
         H5S_hyper_span_info_t *spans;   /* Pointer to hyperslab span info node */
 
+        /* Share the source dataspace's span tree by incrementing the reference count on it */
         HDassert(space->select.sel_info.hslab->span_lst);
-
-        /* Make a copy of the span tree to iterate over */
-        iter->u.hyp.spans = H5S__hyper_copy_span(space->select.sel_info.hslab->span_lst);
+        iter->u.hyp.spans = space->select.sel_info.hslab->span_lst;
+        iter->u.hyp.spans->count++;
 
         /* Initialize the starting span_info's and spans */
         spans = iter->u.hyp.spans;
@@ -643,7 +643,7 @@ H5S__hyper_iter_init(H5S_sel_iter_t *iter, const H5S_t *space)
         acc *= slab_size[i];
     } /* end for */
 
-    /* Initialize a few more pieces of information for irregular hyperslab selections */
+    /* Initialize more information for irregular hyperslab selections */
     if(space->select.sel_info.hslab->diminfo_valid != H5S_DIMINFO_VALID_YES) {
         /* Set the offset of the first element iterated on, in each dimension */
         for(u = 0; u < rank; u++)
@@ -8526,10 +8526,6 @@ H5S__hyper_get_seq_list_gen(const H5S_t *space, H5S_sel_iter_t *iter,
 
             /* Check if we are still within the span */
             if(abs_arr[fast_dim] <= curr_span->high) {
-                /* Sanity check */
-                HDassert(span_size > 0);
-                HDassert(span_size == (span_elmts * elem_size));
-
                 /* Reset the span for the fast dimension */
                 ispan[fast_dim] = curr_span;
 
