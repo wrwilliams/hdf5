@@ -51,11 +51,16 @@
 
 /* Local datatypes */
 
+/* Define alias for hsize_t, for allocating H5S_hyper_span_info_t + bounds objects */
+typedef hsize_t hbounds_t;
+
 /* Static function prototypes */
 static H5S_hyper_span_t *H5S__hyper_new_span(hsize_t low, hsize_t high,
     H5S_hyper_span_info_t *down, H5S_hyper_span_t *next);
+static H5S_hyper_span_info_t *H5S__hyper_new_span_info(unsigned rank);
 static void H5S__hyper_span_scratch(H5S_hyper_span_info_t *spans);
-static H5S_hyper_span_info_t *H5S__hyper_copy_span(H5S_hyper_span_info_t *spans);
+static H5S_hyper_span_info_t *H5S__hyper_copy_span(H5S_hyper_span_info_t *spans,
+    unsigned rank);
 static hbool_t H5S__hyper_cmp_spans(const H5S_hyper_span_info_t *span_info1,
     const H5S_hyper_span_info_t *span_info2);
 static herr_t H5S__hyper_free_span_info(H5S_hyper_span_info_t *span_info);
@@ -205,8 +210,8 @@ H5FL_DEFINE_STATIC(H5S_hyper_sel_t);
 /* Declare a free list to manage the H5S_hyper_span_t struct */
 H5FL_DEFINE_STATIC(H5S_hyper_span_t);
 
-/* Declare a free list to manage the H5S_hyper_span_info_t struct */
-H5FL_DEFINE_STATIC(H5S_hyper_span_info_t);
+/* Declare a free list to manage the H5S_hyper_span_info_t + hsize_t array struct */
+H5FL_BARR_DEFINE_STATIC(H5S_hyper_span_info_t, hbounds_t, H5S_MAX_RANK * 2);
 
 /* Declare extern free list to manage the H5S_sel_iter_t struct */
 H5FL_EXTERN(H5S_sel_iter_t);
@@ -1316,7 +1321,7 @@ H5S__hyper_iter_release(H5S_sel_iter_t *iter)
         H5S_hyper_span_info_t *down;     IN: Down span tree for new node
         H5S_hyper_span_t *next;     IN: Next span for new node
  RETURNS
-    Pointer to next span node on success, NULL on failure
+    Pointer to new span node on success, NULL on failure
  DESCRIPTION
     Allocate and initialize a new hyperslab span node, filling in the low &
     high bounds, the down span and next span pointers also.  Increment the
@@ -1351,6 +1356,49 @@ H5S__hyper_new_span(hsize_t low, hsize_t high, H5S_hyper_span_info_t *down,
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5S__hyper_new_span() */
+
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5S__hyper_new_span_info
+ PURPOSE
+    Make a new hyperslab span info node
+ USAGE
+    H5S_hyper_span_info_t *H5S__hyper_new_span_info(rank)
+        unsigned rank;          IN: Rank of span info, in selection
+ RETURNS
+    Pointer to new span node info on success, NULL on failure
+ DESCRIPTION
+    Allocate and initialize a new hyperslab span info node of a given rank,
+    setting up the low & high bound array pointers.
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+    Note that this uses the C99 "flexible array member" feature.
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
+static H5S_hyper_span_info_t *
+H5S__hyper_new_span_info(unsigned rank)
+{
+    H5S_hyper_span_info_t *ret_value = NULL;         /* Return value */
+
+    FUNC_ENTER_STATIC
+
+    /* Sanity check */
+    HDassert(rank > 0);
+    HDassert(rank <= H5S_MAX_RANK);
+
+    /* Allocate a new span info node */
+    if(NULL == (ret_value = (H5S_hyper_span_info_t *)H5FL_ARR_CALLOC(hbounds_t, rank * 2)))
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, NULL, "can't allocate hyperslab span info")
+
+    /* Set low & high bound pointers into the 'bounds' array */
+    ret_value->low_bounds = ret_value->bounds;
+    ret_value->high_bounds = &ret_value->bounds[rank];
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5S__hyper_new_span_info() */
 
 
 /*--------------------------------------------------------------------------
@@ -1406,8 +1454,9 @@ H5S__hyper_span_scratch(H5S_hyper_span_info_t *spans)
  PURPOSE
     Helper routine to copy a hyperslab span tree
  USAGE
-    H5S_hyper_span_info_t * H5S__hyper_copy_span_helper(spans)
-        H5S_hyper_span_info_t *spans;      IN: Span tree to copy
+    H5S_hyper_span_info_t * H5S__hyper_copy_span_helper(spans, rank)
+        H5S_hyper_span_info_t *spans;   IN: Span tree to copy
+        unsigned rank;                  IN: Rank of span tree
  RETURNS
     Pointer to the copied span tree on success, NULL on failure
  DESCRIPTION
@@ -1418,7 +1467,7 @@ H5S__hyper_span_scratch(H5S_hyper_span_info_t *spans)
  REVISION LOG
 --------------------------------------------------------------------------*/
 static H5S_hyper_span_info_t *
-H5S__hyper_copy_span_helper(H5S_hyper_span_info_t *spans)
+H5S__hyper_copy_span_helper(H5S_hyper_span_info_t *spans, unsigned rank)
 {
     H5S_hyper_span_t *span;         /* Hyperslab span */
     H5S_hyper_span_t *new_span;     /* Temporary hyperslab span */
@@ -1442,12 +1491,12 @@ H5S__hyper_copy_span_helper(H5S_hyper_span_info_t *spans)
     } /* end if */
     else {
         /* Allocate a new span_info node */
-        if(NULL == (ret_value = H5FL_CALLOC(H5S_hyper_span_info_t)))
+        if(NULL == (ret_value = H5S__hyper_new_span_info(rank)))
             HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, NULL, "can't allocate hyperslab span info")
 
         /* Set the non-zero span_info information */
-        HDmemcpy(ret_value->low_bounds, spans->low_bounds, sizeof(spans->low_bounds));
-        HDmemcpy(ret_value->high_bounds, spans->high_bounds, sizeof(spans->high_bounds));
+        HDmemcpy(ret_value->low_bounds, spans->low_bounds, rank * sizeof(hsize_t));
+        HDmemcpy(ret_value->high_bounds, spans->high_bounds, rank * sizeof(hsize_t));
         ret_value->count = 1;
 
         /* Set the scratch pointer in the node being copied to the newly allocated node */
@@ -1469,7 +1518,7 @@ H5S__hyper_copy_span_helper(H5S_hyper_span_info_t *spans)
 
             /* Recurse to copy the 'down' spans, if there are any */
             if(span->down != NULL) {
-                if(NULL == (new_down = H5S__hyper_copy_span_helper(span->down)))
+                if(NULL == (new_down = H5S__hyper_copy_span_helper(span->down, rank - 1)))
                     HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, NULL, "can't copy hyperslab spans")
                 new_span->down = new_down;
             } /* end if */
@@ -1496,8 +1545,9 @@ done:
  PURPOSE
     Copy a hyperslab span tree
  USAGE
-    H5S_hyper_span_info_t * H5S__hyper_copy_span(span_info)
-        H5S_hyper_span_info_t *span_info;      IN: Span tree to copy
+    H5S_hyper_span_info_t * H5S__hyper_copy_span(span_info, rank)
+        H5S_hyper_span_info_t *span_info;       IN: Span tree to copy
+        unsigned rank;                          IN: Rank of span tree
  RETURNS
     Non-negative on success, negative on failure
  DESCRIPTION
@@ -1510,16 +1560,17 @@ done:
  REVISION LOG
 --------------------------------------------------------------------------*/
 static H5S_hyper_span_info_t *
-H5S__hyper_copy_span(H5S_hyper_span_info_t *spans)
+H5S__hyper_copy_span(H5S_hyper_span_info_t *spans, unsigned rank)
 {
     H5S_hyper_span_info_t *ret_value = NULL;    /* Return value */
 
     FUNC_ENTER_STATIC
 
+    /* Sanity check */
     HDassert(spans);
 
     /* Copy the hyperslab span tree */
-    if(NULL == (ret_value = H5S__hyper_copy_span_helper(spans)))
+    if(NULL == (ret_value = H5S__hyper_copy_span_helper(spans, rank)))
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, NULL, "can't copy hyperslab span tree")
 
     /* Reset the scratch pointers for the next routine which needs them */
@@ -1667,7 +1718,7 @@ H5S__hyper_free_span_info(H5S_hyper_span_info_t *span_info)
         } /* end while */
 
         /* Free this span info */
-        span_info = H5FL_FREE(H5S_hyper_span_info_t, span_info);
+        span_info = (H5S_hyper_span_info_t *)H5FL_ARR_FREE(hbounds_t, span_info);
     } /* end if */
 
 done:
@@ -1776,7 +1827,7 @@ H5S__hyper_copy(H5S_t *dst, const H5S_t *src, hbool_t share_selection)
         } /* end if */
         else
             /* Copy the hyperslab span information */
-            dst->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(src->select.sel_info.hslab->span_lst);
+            dst->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(src->select.sel_info.hslab->span_lst, src->extent.rank);
     } /* end if */
     else
         dst->select.sel_info.hslab->span_lst = NULL;
@@ -3417,8 +3468,8 @@ H5S__hyper_coord_to_span(unsigned rank, const hsize_t *coords)
 
     /* Search for location to insert new element in tree */
     if(rank > 1) {
-        /* Allocate a span info node */
-        if(NULL == (down = H5FL_CALLOC(H5S_hyper_span_info_t)))
+        /* Allocate a span info node for coordinates below this one */
+        if(NULL == (down = H5S__hyper_new_span_info(rank - 1)))
             HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, NULL, "can't allocate hyperslab span")
 
         /* Set the low & high bounds for this span info node */
@@ -3705,7 +3756,7 @@ H5S_hyper_add_span_element(H5S_t *space, unsigned rank, const hsize_t *coords)
     /* Check if this is the first element in the selection */
     if(NULL == space->select.sel_info.hslab) {
         /* Allocate a span info node */
-        if(NULL == (head = H5FL_CALLOC(H5S_hyper_span_info_t)))
+        if(NULL == (head = H5S__hyper_new_span_info(rank)))
             HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, FAIL, "can't allocate hyperslab span info")
 
         /* Set the low & high bounds for this span info node */
@@ -4235,7 +4286,7 @@ H5S__hyper_project_simple_higher(const H5S_t *base_space, H5S_t *new_space)
         H5S_hyper_span_t *new_span;     /* Temporary hyperslab span */
 
         /* Allocate a new span_info node */
-        if(NULL == (new_span_info = H5FL_CALLOC(H5S_hyper_span_info_t))) {
+        if(NULL == (new_span_info = H5S__hyper_new_span_info(new_space->extent.rank))) {
             if(prev_span)
                 if(H5S__hyper_free_span(prev_span) < 0)
                     HERROR(H5E_DATASPACE, H5E_CANTFREE, "can't free hyperslab span");
@@ -4250,7 +4301,7 @@ H5S__hyper_project_simple_higher(const H5S_t *base_space, H5S_t *new_space)
         if(NULL == (new_span = H5S__hyper_new_span((hsize_t)0, (hsize_t)0, NULL, NULL))) {
             HDassert(new_span_info);
             if(!prev_span)
-                (void)H5FL_FREE(H5S_hyper_span_info_t, new_span_info);
+                (void)H5FL_ARR_FREE(hbounds_t, new_span_info);
             HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, FAIL, "can't allocate hyperslab span")
         } /* end if */
 
@@ -4292,7 +4343,7 @@ done:
             if(H5S__hyper_free_span(new_space->select.sel_info.hslab->span_lst->head) < 0)
                 HDONE_ERROR(H5E_DATASPACE, H5E_CANTFREE, FAIL, "can't free hyperslab span")
 
-        new_space->select.sel_info.hslab->span_lst = H5FL_FREE(H5S_hyper_span_info_t, new_space->select.sel_info.hslab->span_lst);
+        new_space->select.sel_info.hslab->span_lst = (H5S_hyper_span_info_t *)H5FL_ARR_FREE(hbounds_t, new_space->select.sel_info.hslab->span_lst);
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -4745,7 +4796,7 @@ H5S__hyper_append_span(H5S_hyper_span_info_t **span_tree, H5S_hyper_span_t **pre
         HDassert(*span_tree == NULL);
 
         /* Allocate a new span_info node */
-        if(NULL == (*span_tree = H5FL_CALLOC(H5S_hyper_span_info_t)))
+        if(NULL == (*span_tree = H5S__hyper_new_span_info(ndims)))
             HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, FAIL, "can't allocate hyperslab span")
 
         /* Set the span tree's basic information */
@@ -4922,7 +4973,7 @@ H5S__hyper_clip_spans(H5S_hyper_span_info_t *a_spans, H5S_hyper_span_info_t *b_s
         *a_not_b = NULL;
         *a_and_b = NULL;
         if(need_b_not_a) {
-            if(NULL == (*b_not_a = H5S__hyper_copy_span(b_spans)))
+            if(NULL == (*b_not_a = H5S__hyper_copy_span(b_spans, ndims)))
                 HGOTO_ERROR(H5E_INTERNAL, H5E_CANTCOPY, FAIL, "can't copy hyperslab span tree")
         } /* end if */
         else
@@ -4933,7 +4984,7 @@ H5S__hyper_clip_spans(H5S_hyper_span_info_t *a_spans, H5S_hyper_span_info_t *b_s
         *a_and_b = NULL;
         *b_not_a = NULL;
         if(need_a_not_b) {
-            if(NULL == (*a_not_b = H5S__hyper_copy_span(a_spans)))
+            if(NULL == (*a_not_b = H5S__hyper_copy_span(a_spans, ndims)))
                 HGOTO_ERROR(H5E_INTERNAL, H5E_CANTCOPY, FAIL, "can't copy hyperslab span tree")
         } /* end if */
         else
@@ -4946,7 +4997,7 @@ H5S__hyper_clip_spans(H5S_hyper_span_info_t *a_spans, H5S_hyper_span_info_t *b_s
             *a_not_b = NULL;
             *b_not_a = NULL;
             if(need_a_and_b) {
-                if(NULL == (*a_and_b = H5S__hyper_copy_span(a_spans)))
+                if(NULL == (*a_and_b = H5S__hyper_copy_span(a_spans, ndims)))
                     HGOTO_ERROR(H5E_INTERNAL, H5E_CANTCOPY, FAIL, "can't copy hyperslab span tree")
             } /* end if */
             else
@@ -5471,7 +5522,7 @@ H5S__hyper_merge_spans_helper(H5S_hyper_span_info_t *a_spans, H5S_hyper_span_inf
             merged_spans = NULL;
         else {
             /* Copy one of the span trees to return */
-            if(NULL == (merged_spans = H5S__hyper_copy_span(a_spans)))
+            if(NULL == (merged_spans = H5S__hyper_copy_span(a_spans, ndims)))
                 HGOTO_ERROR(H5E_INTERNAL, H5E_CANTCOPY, NULL, "can't copy hyperslab span tree")
         } /* end else */
     } /* end if */
@@ -5980,7 +6031,7 @@ H5S__hyper_add_disjoint_spans(H5S_t *space, H5S_hyper_span_info_t *new_spans)
        space->select.sel_info.hslab->span_lst = low_order_spans;
 
        /* free the memory space for "new_spans" node */
-       high_order_spans = H5FL_FREE(H5S_hyper_span_info_t, high_order_spans);
+       high_order_spans = (H5S_hyper_span_info_t *)H5FL_ARR_FREE(hbounds_t, high_order_spans);
     } /* end else */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
@@ -6080,7 +6131,7 @@ H5S__hyper_make_spans(unsigned rank, const hsize_t *start, const hsize_t *stride
             down->count = (unsigned)count[i];
 
         /* Allocate a span info node */
-        if(NULL == (down = H5FL_CALLOC(H5S_hyper_span_info_t)))
+        if(NULL == (down = H5S__hyper_new_span_info(rank)))
             HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, NULL, "can't allocate hyperslab span")
 
         /* Keep the pointer to the next dimension down's completed list */
@@ -6119,7 +6170,7 @@ done:
             do {
                 if(down) {
                     head = down->head;
-                    down = H5FL_FREE(H5S_hyper_span_info_t, down);
+                    down = (H5S_hyper_span_info_t *)H5FL_ARR_FREE(hbounds_t, down);
                 } /* end if */
                 down = head->down;
 
@@ -6790,9 +6841,9 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
                 /* Add the new disjoint spans to the space */
                 /* A copy of space1's spans to *result, and another copy of space2's spans */
                 if(is_result_new)
-                    (*result)->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(space1->select.sel_info.hslab->span_lst);
+                    (*result)->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(space1->select.sel_info.hslab->span_lst, space1->extent.rank);
                 if(!can_own_span2) {
-                    b_not_a = H5S__hyper_copy_span(space2_span_lst);
+                    b_not_a = H5S__hyper_copy_span(space2_span_lst, space1->extent.rank);
                     if(H5S__hyper_add_disjoint_spans(*result, b_not_a) < 0)
                         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINSERT, FAIL, "can't append hyperslabs")
 
@@ -6818,7 +6869,7 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
             case H5S_SELECT_NOTB:
                 /* Copy space1's spans to *result */
                 if(is_result_new)
-                    (*result)->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(space1->select.sel_info.hslab->span_lst);
+                    (*result)->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(space1->select.sel_info.hslab->span_lst, space1->extent.rank);
 
                 /* Indicate that the spans changed */
                 *updated_spans = TRUE;
@@ -6836,7 +6887,7 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
 
                 /* Copy space2's spans to *result */
                 if(!can_own_span2)
-                    (*result)->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(space2_span_lst);
+                    (*result)->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(space2_span_lst, space1->extent.rank);
                 else {
                     (*result)->select.sel_info.hslab->span_lst = space2_span_lst;
                     *span2_owned = TRUE;
@@ -6900,7 +6951,7 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
         switch(op) {
             case H5S_SELECT_OR:
                 if(is_result_new)
-                    (*result)->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(space1->select.sel_info.hslab->span_lst);
+                    (*result)->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(space1->select.sel_info.hslab->span_lst, space1->extent.rank);
                 break;
 
             case H5S_SELECT_AND:
@@ -7718,7 +7769,7 @@ H5S__fill_in_hyperslab(H5S_t *old_space, H5S_seloper_t op, const hsize_t start[]
                     if(NULL == (new_spans = H5S__hyper_make_spans(old_space->extent.rank, start, stride, count, block)))
                         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINSERT, FAIL, "can't create hyperslab information")
                     if(NULL != old_space->select.sel_info.hslab->span_lst)
-                        (*new_space)->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(old_space->select.sel_info.hslab->span_lst);
+                        (*new_space)->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(old_space->select.sel_info.hslab->span_lst, old_space->extent.rank);
                     if(H5S__hyper_add_disjoint_spans(*new_space, new_spans) < 0)
                         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINSERT, FAIL, "can't append hyperslabs")
 
@@ -7742,7 +7793,7 @@ H5S__fill_in_hyperslab(H5S_t *old_space, H5S_seloper_t op, const hsize_t start[]
 
                 case H5S_SELECT_NOTB:
                     if(NULL != old_space->select.sel_info.hslab->span_lst) {
-                        if(NULL == ((*new_space)->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(old_space->select.sel_info.hslab->span_lst)))
+                        if(NULL == ((*new_space)->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(old_space->select.sel_info.hslab->span_lst, old_space->extent.rank)))
                             HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, FAIL, "unable to copy dataspace")
                     } /* end if */
                     else {

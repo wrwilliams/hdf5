@@ -107,7 +107,9 @@ struct H5S_hyper_span_t {
 struct H5S_hyper_span_info_t {
     unsigned count;     /* Ref. count of number of spans which share this span */
 
-    /* The following two fields defines the bounding box of this set of spans and all lower dimensions, relative to the offset */
+    /* The following two fields define the bounding box of this set of spans
+     *  and all lower dimensions, relative to the offset.
+     */
     /* (NOTE: The bounds arrays are _relative_ to the depth of the span_info
      *          node in the span tree, so the top node in a 5-D span tree will
      *          use indices 0-4 in the arrays to store it's bounds information,
@@ -116,8 +118,8 @@ struct H5S_hyper_span_info_t {
      *          arrays correspond to the bounds in "this" dimension, even if
      *          it's not the highest level in the span tree.
      */
-    hsize_t low_bounds[H5S_MAX_RANK];   /* The smallest element selected in each dimension */
-    hsize_t high_bounds[H5S_MAX_RANK];  /* The largest element selected in each dimension */
+    hsize_t *low_bounds;        /* The smallest element selected in each dimension */
+    hsize_t *high_bounds;       /* The largest element selected in each dimension */
 
     struct H5S_hyper_span_info_t *scratch;  /* Scratch pointer
                                              * (used during copies & during
@@ -125,6 +127,8 @@ struct H5S_hyper_span_info_t {
                                              */
     struct H5S_hyper_span_t *head;  /* Pointer to the first span of list of spans in the current dimension */
     struct H5S_hyper_span_t *tail;  /* Pointer to the last span of list of spans in the current dimension */
+    hsize_t bounds[];           /* Array for low & high bounds */
+                                /* (NOTE: This uses the C99 "flexible array member" feature) */
 };
 
 /* Enum for diminfo_valid field in H5S_hyper_sel_t */
