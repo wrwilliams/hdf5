@@ -4685,6 +4685,8 @@ H5S__hyper_adjust_s_helper(H5S_hyper_span_info_t *spans, unsigned rank,
 herr_t
 H5S_hyper_adjust_s(H5S_t *space, const hssize_t *offset)
 {
+    hbool_t non_zero_offset = FALSE;    /* Whether any offset is non-zero */
+    unsigned u;                         /* Local index variable */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -4693,30 +4695,38 @@ H5S_hyper_adjust_s(H5S_t *space, const hssize_t *offset)
     HDassert(space);
     HDassert(offset);
 
-    /* Subtract the offset from the "regular" coordinates, if they exist */
-    /* (No need to rebuild the dimension info yet -QAK) */
-    if(space->select.sel_info.hslab->diminfo_valid == H5S_DIMINFO_VALID_YES) {
-        unsigned u;                         /* Local index variable */
+    /* Check for an all-zero offset vector */
+    for(u = 0; u < space->extent.rank; u++)
+        if(0 != offset[u]) {
+            non_zero_offset = TRUE;
+            break;
+        } /* end if */
 
-        for(u = 0; u < space->extent.rank; u++) {
-            HDassert((hssize_t)space->select.sel_info.hslab->diminfo.opt[u].start >= offset[u]);
-            space->select.sel_info.hslab->diminfo.opt[u].start = (hsize_t)((hssize_t)space->select.sel_info.hslab->diminfo.opt[u].start - offset[u]);
+    /* Only perform operation if the offset is non-zero */
+    if(non_zero_offset) {
+        /* Subtract the offset from the "regular" coordinates, if they exist */
+        /* (No need to rebuild the dimension info yet -QAK) */
+        if(space->select.sel_info.hslab->diminfo_valid == H5S_DIMINFO_VALID_YES) {
+            for(u = 0; u < space->extent.rank; u++) {
+                HDassert((hssize_t)space->select.sel_info.hslab->diminfo.opt[u].start >= offset[u]);
+                space->select.sel_info.hslab->diminfo.opt[u].start = (hsize_t)((hssize_t)space->select.sel_info.hslab->diminfo.opt[u].start - offset[u]);
 
-            /* Adjust the low & high bounds */
-            HDassert((hssize_t)space->select.sel_info.hslab->diminfo.low_bounds[u] >= offset[u]);
-            space->select.sel_info.hslab->diminfo.low_bounds[u] = (hsize_t)((hssize_t)space->select.sel_info.hslab->diminfo.low_bounds[u] - offset[u]);
-            space->select.sel_info.hslab->diminfo.high_bounds[u] = (hsize_t)((hssize_t)space->select.sel_info.hslab->diminfo.high_bounds[u] - offset[u]);
-        } /* end for */
-    } /* end if */
+                /* Adjust the low & high bounds */
+                HDassert((hssize_t)space->select.sel_info.hslab->diminfo.low_bounds[u] >= offset[u]);
+                space->select.sel_info.hslab->diminfo.low_bounds[u] = (hsize_t)((hssize_t)space->select.sel_info.hslab->diminfo.low_bounds[u] - offset[u]);
+                space->select.sel_info.hslab->diminfo.high_bounds[u] = (hsize_t)((hssize_t)space->select.sel_info.hslab->diminfo.high_bounds[u] - offset[u]);
+            } /* end for */
+        } /* end if */
 
-    /* Subtract the offset from the span tree coordinates, if they exist */
-    if(space->select.sel_info.hslab->span_lst) {
-        uint64_t op_gen;            /* Operation generation value */
+        /* Subtract the offset from the span tree coordinates, if they exist */
+        if(space->select.sel_info.hslab->span_lst) {
+            uint64_t op_gen;            /* Operation generation value */
 
-        /* Acquire an operation generation value for this operation */
-        op_gen = H5S__hyper_get_op_gen();
+            /* Acquire an operation generation value for this operation */
+            op_gen = H5S__hyper_get_op_gen();
 
-        H5S__hyper_adjust_s_helper(space->select.sel_info.hslab->span_lst, space->extent.rank, offset, op_gen);
+            H5S__hyper_adjust_s_helper(space->select.sel_info.hslab->span_lst, space->extent.rank, offset, op_gen);
+        } /* end if */
     } /* end if */
 
 done:
