@@ -77,6 +77,7 @@ struct H5S_extent_t {
 /*
  * Dataspace selection information
  */
+
 /* Node in point selection list (typedef'd in H5Sprivate.h) */
 struct H5S_pnt_node_t {
     hsize_t *pnt;          /* Pointer to a selected point */
@@ -93,18 +94,18 @@ typedef struct {
     H5S_pnt_node_t *tail;   /* Pointer to tail of point list */
 } H5S_pnt_list_t;
 
-/* Information about new-style hyperslab spans */
+/* Information about hyperslab spans */
 
 /* Information a particular hyperslab span */
 struct H5S_hyper_span_t {
-    hsize_t low, high;          /* Low & high bounds of elements selected for span */
-    struct H5S_hyper_span_info_t *down;     /* Pointer to list of spans in next dimension down */
-    struct H5S_hyper_span_t *next;     /* Pointer to next span in list */
+    hsize_t low, high;  /* Low & high bounds of elements selected for span, inclusive */
+    struct H5S_hyper_span_info_t *down; /* Pointer to list of spans in next dimension down */
+    struct H5S_hyper_span_t *next;      /* Pointer to next span in list */
 };
 
 /* Information about a list of hyperslab spans in one dimension */
 struct H5S_hyper_span_info_t {
-    unsigned count;                    /* Ref. count of number of spans which share this span */
+    unsigned count;     /* Ref. count of number of spans which share this span */
 
     /* The following two fields defines the bounding box of this set of spans and all lower dimensions, relative to the offset */
     /* (NOTE: The bounds arrays are _relative_ to the depth of the span_info
@@ -119,10 +120,8 @@ struct H5S_hyper_span_info_t {
     hsize_t high_bounds[H5S_MAX_RANK];  /* The largest element selected in each dimension */
 
     struct H5S_hyper_span_info_t *scratch;  /* Scratch pointer
-                                             * (used during copies, as mark
-                                             * during precomputes for I/O &
-                                             * to point to the last span in a
-                                             * list during single element adds)
+                                             * (used during copies & during
+                                             *  'adjust' operations)
                                              */
     struct H5S_hyper_span_t *head;  /* Pointer to the first span of list of spans in the current dimension */
     struct H5S_hyper_span_t *tail;  /* Pointer to the last span of list of spans in the current dimension */
