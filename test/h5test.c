@@ -1109,7 +1109,11 @@ h5_get_vol_fapl(hid_t fapl)
             connector_id = H5VL_PASSTHRU;
             if(H5Iinc_ref(connector_id) < 0)
                 goto error;
-        } else {
+        } else if(!HDstrcmp(tok, "provenance")) {
+            connector_id = H5VL_PROVNC;
+			if(H5Iinc_ref(connector_id) < 0)
+				goto error;
+		} else {
             /* Register the VOL connector */
             /* (NOTE: No provisions for vipl_id currently) */
             if((connector_id = H5VLregister_connector_by_name(tok, H5P_DEFAULT)) < 0)
