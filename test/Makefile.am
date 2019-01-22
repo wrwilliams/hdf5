@@ -61,7 +61,7 @@ TEST_PROG= testhdf5 \
            flush1 flush2 app_ref enum set_extent ttsafe enc_dec_plist \
            enc_dec_plist_cross_platform getname vfd ntypes dangle dtransform \
            reserved cross_read freespace mf vds file_image unregister \
-           cache_logging cork swmr vol
+           cache_logging cork swmr vol prov_test
 
 # List programs to be built when testing here.
 # error_test and err_compat are built at the same time as the other tests, but executed by testerror.sh.
@@ -149,7 +149,9 @@ endif
 # Test with just the native connector, with a single pass-through connector
 # and with a doubly-stacked pass-through.
 VOL_LIST = native "pass_through under_vol=0;under_info={}" \
-           "pass_through under_vol=505;under_info={under_vol=0;under_info={}}"
+           "pass_through under_vol=505;under_info={under_vol=0;under_info={}}" \
+           "provenance under_vol=0;under_info={}" \
+           "provenance under_vol=509;under_info={}" 
 
 # Additional target for running timing test
 timings _timings: testmeta
