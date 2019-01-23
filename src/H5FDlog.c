@@ -1272,9 +1272,7 @@ H5FD_log_read(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, hadd
             int myerrno = errno;
             time_t mytime = HDtime(NULL);
 
-#ifndef H5_HAVE_PREAD
             offset = HDlseek(file->fd, (HDoff_t)0, SEEK_CUR);
-#endif /* H5_HAVE_PREAD */
 
             if(file->fa.flags & H5FD_LOG_LOC_READ)
                 HDfprintf(file->logfp, "Error! Reading: %10a-%10a (%10Zu bytes)\n", orig_addr, (orig_addr + orig_size) - 1, orig_size);
@@ -1490,10 +1488,7 @@ H5FD_log_write(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, had
             int myerrno = errno;
             time_t mytime = HDtime(NULL);
 
-#ifndef H5_HAVE_PWRITE
-            /* Seek back to the file's start (if we don't have pwrite) */
             offset = HDlseek(file->fd, (HDoff_t)0, SEEK_CUR);
-#endif /* H5_HAVE_PWRITE */
 
             if(file->fa.flags & H5FD_LOG_LOC_WRITE)
                 HDfprintf(file->logfp, "Error! Writing: %10a-%10a (%10Zu bytes)\n", orig_addr, (orig_addr + orig_size) - 1, orig_size);

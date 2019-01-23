@@ -720,10 +720,7 @@ H5FD_sec2_read(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UNUS
             int myerrno = errno;
             time_t mytime = HDtime(NULL);
 
-#ifndef H5_HAVE_PREAD
-            /* Seek back to the file's start (if we don't have pread) */
             offset = HDlseek(file->fd, (HDoff_t)0, SEEK_CUR);
-#endif /* H5_HAVE_PREAD */
 
             HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "file read failed: time = %s, filename = '%s', file descriptor = %d, errno = %d, error message = '%s', buf = %p, total read size = %llu, bytes this sub-read = %llu, bytes actually read = %llu, offset = %llu", HDctime(&mytime), file->filename, file->fd, myerrno, HDstrerror(myerrno), buf, (unsigned long long)size, (unsigned long long)bytes_in, (unsigned long long)bytes_read, (unsigned long long)offset);
         } /* end if */
@@ -827,10 +824,7 @@ H5FD_sec2_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UNU
             int myerrno = errno;
             time_t mytime = HDtime(NULL);
 
-#ifndef H5_HAVE_PWRITE
-            /* Seek back to the file's start (if we don't have pwrite) */
             offset = HDlseek(file->fd, (HDoff_t)0, SEEK_CUR);
-#endif /* H5_HAVE_PWRITE */
 
             HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "file write failed: time = %s, filename = '%s', file descriptor = %d, errno = %d, error message = '%s', buf = %p, total write size = %llu, bytes this sub-write = %llu, bytes actually written = %llu, offset = %llu", HDctime(&mytime), file->filename, file->fd, myerrno, HDstrerror(myerrno), buf, (unsigned long long)size, (unsigned long long)bytes_in, (unsigned long long)bytes_wrote, (unsigned long long)offset);
         } /* end if */
