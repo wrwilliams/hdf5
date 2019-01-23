@@ -697,9 +697,6 @@ H5FD_sec2_read(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UNUS
 
         h5_posix_io_t       bytes_in        = 0;    /* # of bytes to read       */
         h5_posix_io_ret_t   bytes_read      = -1;   /* # of bytes actually read */
-        /* Have to track the offset for partial I/O with pread().
-         * (also used for error reporting when read() fails)
-         */
         HDoff_t             offset          = (HDoff_t)addr;
 
         /* Trying to read more bytes than the return type can handle is
@@ -807,9 +804,6 @@ H5FD_sec2_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UNU
 
         h5_posix_io_t       bytes_in        = 0;    /* # of bytes to write  */
         h5_posix_io_ret_t   bytes_wrote     = -1;   /* # of bytes written   */ 
-        /* Have to track the offset for partial I/O with pwrite().
-         * (also used for error reporting when write() fails)
-         */
         HDoff_t             offset          = (HDoff_t)addr;
 
         /* Trying to write more bytes than the return type can handle is
