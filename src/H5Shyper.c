@@ -1646,6 +1646,108 @@ done:
 
 /*--------------------------------------------------------------------------
  NAME
+    H5S__hyper_cmp_spans_helper
+ PURPOSE
+    Helper routine to check if two hyperslab slabs are the same
+ USAGE
+    hbool_t H5S__hyper_cmp_spans(span1, span2)
+        H5S_hyper_span_t *span1;    IN: First span tree to compare
+        H5S_hyper_span_t *span2;    IN: Second span tree to compare
+ RETURNS
+    TRUE (1) or FALSE (0) on success, can't fail
+ DESCRIPTION
+    Compare two hyperslab slabs to determine if they refer to the same
+    selection.  If span1 & span2 are both NULL, that counts as equal
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
+static hbool_t
+H5S__hyper_cmp_spans_helper(const H5S_hyper_span_info_t *span_info1,
+    const H5S_hyper_span_info_t *span_info2, uint64_t op_gen)
+{
+    hbool_t ret_value = TRUE;   /* Return value */
+
+    FUNC_ENTER_STATIC_NOERR
+
+    /* Check for redundant comparison (or both spans being NULL) */
+    if(span_info1 == span_info2)
+        ret_value = TRUE;
+    else {
+        /* Check for one span being NULL */
+        if(span_info1 == NULL || span_info2 == NULL)
+            ret_value = FALSE;
+        else {
+            /* Check if we've already visited this span tree */
+            if(span_info1->op_gen != op_gen) {
+                const H5S_hyper_span_t *span1;
+                const H5S_hyper_span_t *span2;
+
+                /* Get the pointers to the actual lists of spans */
+                span1 = span_info1->head;
+                span2 = span_info2->head;
+
+                /* Sanity checking */
+                HDassert(span1);
+                HDassert(span2);
+
+                /* infinite loop which must be broken out of */
+                while(1) {
+                    /* Check for both spans being NULL */
+                    if(span1 == NULL && span2 == NULL) {
+                        ret_value = TRUE;
+                        break;
+                    } /* end if */
+                    else {
+                        /* Check for one span being NULL */
+                        if(span1 == NULL || span2 == NULL) {
+                            ret_value = FALSE;
+                            break;
+                        } /* end if */
+                        else {
+                            /* Check if the actual low & high span information is the same */
+                            if(span1->low != span2->low || span1->high != span2->high) {
+                                ret_value = FALSE;
+                                break;
+                            } /* end if */
+                            else {
+                                if(span1->down != NULL || span2->down != NULL) {
+                                    if(!H5S__hyper_cmp_spans_helper(span1->down, span2->down, op_gen)) {
+                                        ret_value = FALSE;
+                                        break;
+                                    } /* end if */
+                                    else {
+                                        /* Set the tree's operation generation */
+                                        span1->down->op_gen = op_gen;
+
+                                        /* Keep going... */
+
+                                    } /* end else */
+                                } /* end if */
+                                else {
+                                    /* Keep going... */
+                                } /* end else */
+                            } /* end else */
+                        } /* end else */
+                    } /* end else */
+
+                    /* Advance to the next nodes in the span list */
+                    span1 = span1->next;
+                    span2 = span2->next;
+                } /* end while */
+            } /* end if */
+        } /* end else */
+    } /* end else */
+
+    /* Fall through, with default return value of 'TRUE' if spans were already visited */
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5S__hyper_cmp_spans() */
+
+
+/*--------------------------------------------------------------------------
+ NAME
     H5S__hyper_cmp_spans
  PURPOSE
     Check if two hyperslab slabs are the same
@@ -1664,73 +1766,19 @@ done:
  REVISION LOG
 --------------------------------------------------------------------------*/
 static hbool_t
-H5S__hyper_cmp_spans(const H5S_hyper_span_info_t *span_info1, const H5S_hyper_span_info_t *span_info2)
+H5S__hyper_cmp_spans(const H5S_hyper_span_info_t *span_info1,
+    const H5S_hyper_span_info_t *span_info2)
 {
-    hbool_t ret_value = FALSE;    /* Return value */
+    uint64_t op_gen;            /* Operation generation value */
+    hbool_t ret_value = FALSE;  /* Return value */
 
     FUNC_ENTER_STATIC_NOERR
 
-    /* Check for redundant comparison (or both spans being NULL) */
-    if(span_info1 == span_info2)
-        ret_value = TRUE;
-    else {
-        /* Check for one span being NULL */
-        if(span_info1 == NULL || span_info2 == NULL)
-            ret_value = FALSE;
-        else {
-            const H5S_hyper_span_t *span1;
-            const H5S_hyper_span_t *span2;
+    /* Acquire an operation generation value for this operation */
+    op_gen = H5S__hyper_get_op_gen();
 
-            /* Get the pointers to the actual lists of spans */
-            span1 = span_info1->head;
-            span2 = span_info2->head;
-
-            /* Sanity checking */
-            HDassert(span1);
-            HDassert(span2);
-
-            /* infinite loop which must be broken out of */
-            while(1) {
-                /* Check for both spans being NULL */
-                if(span1 == NULL && span2 == NULL) {
-                    ret_value = TRUE;
-                    break;
-                } /* end if */
-                else {
-                    /* Check for one span being NULL */
-                    if(span1 == NULL || span2 == NULL) {
-                        ret_value = FALSE;
-                        break;
-                    } /* end if */
-                    else {
-                        /* Check if the actual low & high span information is the same */
-                        if(span1->low != span2->low || span1->high != span2->high) {
-                            ret_value = FALSE;
-                            break;
-                        } /* end if */
-                        else {
-                            if(span1->down != NULL || span2 != NULL) {
-                                if(!H5S__hyper_cmp_spans(span1->down, span2->down)) {
-                                    ret_value = FALSE;
-                                    break;
-                                } /* end if */
-                                else {
-                                    /* Keep going... */
-                                } /* end else */
-                            } /* end if */
-                            else {
-                                /* Keep going... */
-                            } /* end else */
-                        } /* end else */
-                    } /* end else */
-                } /* end else */
-
-                /* Advance to the next nodes in the span list */
-                span1 = span1->next;
-                span2 = span2->next;
-            } /* end while */
-        } /* end else */
-    } /* end else */
+    /* Perform the span-by-span comparison */
+    ret_value = H5S__hyper_cmp_spans_helper(span_info1, span_info2, op_gen);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5S__hyper_cmp_spans() */
