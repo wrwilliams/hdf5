@@ -1650,7 +1650,7 @@ done:
  PURPOSE
     Helper routine to check if two hyperslab slabs are the same
  USAGE
-    hbool_t H5S__hyper_cmp_spans(span1, span2)
+    hbool_t H5S__hyper_cmp_spans_helper(span1, span2, op_gen)
         H5S_hyper_span_info_t *span_info1;      IN: First span tree to compare
         H5S_hyper_span_info_t *span_info2;      IN: Second span tree to compare
         uint64_t op_gen;                        IN: Operation generation
@@ -3741,57 +3741,72 @@ H5S__hyper_add_span_element_helper(H5S_hyper_span_info_t *span_tree,
              */
             tmp_span = tail_span->down->head;
             while(tmp_span != stop_span) {
-                /* Check if we've compared the 'stop' span's "down tree" to
-                 *      this span's "down tree" already.
+                hbool_t attempt_merge_spans = FALSE;    /* Whether to merge spans */
+
+                /* Different tests for when to run the 'merge' algorithm,
+                 * depending whether there's "down trees" or not.
                  */
-                if(tmp_span->down->op_gen != op_gen) {
-                    if(H5S__hyper_cmp_spans(tmp_span->down, stop_span->down)) {
-                        /* Check for merging into previous span */
-                        if(tmp_span->high + 1 == stop_span->low) {
-                            /* Increase size of previous span */
-                            tmp_span->high++;
+                if(NULL == tmp_span->down) {
+                    /* Spin through spans until we find the one before the 'stop' span */
+                    if(tmp_span->next == stop_span)
+                        attempt_merge_spans = TRUE;
+                } /* end if */
+                else {
+                    /* Check if we've compared the 'stop' span's "down tree" to
+                     *      this span's "down tree" already.
+                     */
+                    if(tmp_span->down->op_gen != op_gen) {
+                        if(H5S__hyper_cmp_spans(tmp_span->down, stop_span->down))
+                            attempt_merge_spans = TRUE;
 
-                            /* Update pointers appropriately */
-                            if(stop_span == prev_down_tail_span) {
-                                /* Sanity check */
-                                HDassert(stop_span->next == tail_span->down->tail);
+                        /* Remember that we visited this span's "down tree" already */
+                        /* (Because it wasn't the same as the 'stop' span's down tree
+                         *      and we don't need to compare it again)
+                         */
+                        tmp_span->down->op_gen = op_gen;
+                    } /* end if */
+                } /* end else */
 
-                                tmp_span->next = stop_span->next;
-                            } /* end if */
-                            else {
-                                /* Sanity check */
-                                HDassert(tmp_span->next == tail_span->down->tail);
+                /* Check for merging into previous span */
+                if(attempt_merge_spans) {
+                    if(tmp_span->high + 1 == stop_span->low) {
+                        /* Increase size of previous span */
+                        tmp_span->high++;
 
-                                tmp_span->next = NULL;
-                                tail_span->down->tail = tmp_span;
-                            } /* end else */
+                        /* Update pointers appropriately */
+                        if(stop_span == prev_down_tail_span) {
+                            /* Sanity check */
+                            HDassert(stop_span->next == tail_span->down->tail);
 
-                            /* Release last span created */
-                            H5S__hyper_free_span(stop_span);
+                            tmp_span->next = stop_span->next;
                         } /* end if */
-                        /* Span is disjoint, but has the same "down tree" selection */
-                        /* (If it has a "down tree") */
-                        else if(stop_span->down) {
-                            /* Release "down tree" information */
-                            H5S__hyper_free_span_info(stop_span->down);
+                        else {
+                            /* Sanity check */
+                            HDassert(tmp_span->next == tail_span->down->tail);
 
-                            /* Point at earlier span's "down tree" */
-                            stop_span->down = tmp_span->down;
-
-                            /* Increment reference count on shared "down tree" */
-                            stop_span->down->count++;
+                            tmp_span->next = NULL;
+                            tail_span->down->tail = tmp_span;
                         } /* end else */
 
-                        /* Found span to merge into, break out now */
-                        break;
+                        /* Release last span created */
+                        H5S__hyper_free_span(stop_span);
                     } /* end if */
-                } /* end if */
+                    /* Span is disjoint, but has the same "down tree" selection */
+                    /* (If it has a "down tree") */
+                    else if(stop_span->down) {
+                        /* Release "down tree" information */
+                        H5S__hyper_free_span_info(stop_span->down);
 
-                /* Remember that we visited this span's "down tree" already */
-                /* (Because it wasn't the same as the 'stop' span's down tree
-                 *      and we don't need to compare it again)
-                 */
-                tmp_span->down->op_gen = op_gen;
+                        /* Point at earlier span's "down tree" */
+                        stop_span->down = tmp_span->down;
+
+                        /* Increment reference count on shared "down tree" */
+                        stop_span->down->count++;
+                    } /* end else */
+
+                    /* Found span to merge into, break out now */
+                    break;
+                } /* end if */
 
                 /* Advance to next span to check */
                 tmp_span = tmp_span->next;
@@ -3855,15 +3870,23 @@ done:
  COMMENTS, BUGS, ASSUMPTIONS
     Assumes that the element is not already in the dataspace's selection
 
-    NOTE: There's an assumption about the context of this function call.
-    This function is only called  is only being called from
-    H5D_chunk_mem_cb in src/H5Dchunk, when the library is
-    iterating over a memory selection, so the coordinates passed
-    to H5S_hyper_add_span_element will always be in increasing
-    order (according to a row-major (i.e. C, not FORTRAN) scan
-    over the dataset. Therefore, for every input of coordinates,
-    only the last span element (i.e., the tail pointer) in one
-    dimension is checked against the input.
+    NOTE: There's also an assumption about the context of this function call -
+        This function is only called is only being called from H5D_chunk_mem_cb
+        in src/H5Dchunk.c, when the library is iterating over a memory
+        selection, so the coordinates passed to H5S_hyper_add_span_element will
+        always be in increasing order (according to a row-major (i.e. C, not
+        FORTRAN) scan) over the dataset. Therefore, for every input of
+        coordinates, only the last span element (i.e., the tail pointer) in
+        one dimension is checked against the input.
+
+    NOTE: This algorithm is definitely "correct" and tries to conserve memory
+        as much as possible, but it's doing a _lot_ of work that might be
+        better spent running a similar algorithm to "condense" the span tree
+        (possibly even back into a regular selection) just before the selection
+        is used for I/O on the chunk.  I'm not going to spend the time on this
+        currently, but it does sound like a good direction to explore.
+        QAK, 2019/01/24
+
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
