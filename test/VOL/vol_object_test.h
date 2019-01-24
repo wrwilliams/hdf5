@@ -23,27 +23,51 @@ int vol_object_test(void);
  *                                             *
  ***********************************************/
 
-#define GENERIC_DATASET_OPEN_TEST_SPACE_RANK 2
-#define GENERIC_DATASET_OPEN_TEST_DSET_NAME  "generic_dataset_open_test"
+#define OBJECT_OPEN_TEST_SPACE_RANK 2
+#define OBJECT_OPEN_TEST_GROUP_NAME "object_open_test"
+#define OBJECT_OPEN_TEST_GRP_NAME   "object_open_test_group"
+#define OBJECT_OPEN_TEST_DSET_NAME  "object_open_test_dset"
+#define OBJECT_OPEN_TEST_TYPE_NAME  "object_open_test_type"
 
-#define GENERIC_GROUP_OPEN_TEST_GROUP_NAME "generic_group_open_test"
-
-#define GENERIC_DATATYPE_OPEN_TEST_TYPE_NAME "generic_datatype_open_test"
+#define OBJECT_OPEN_INVALID_PARAMS_TEST_GROUP_NAME "object_open_invalid_params_test"
+#define OBJECT_OPEN_INVALID_PARAMS_TEST_GRP_NAME   "object_open_invalid_params_test_group"
 
 #define OBJECT_EXISTS_TEST_DSET_SPACE_RANK 2
-#define OBJECT_EXISTS_TEST_SUBGROUP_NAME   "h5o_exists_by_name_test"
-#define OBJECT_EXISTS_TEST_DTYPE_NAME      "h5o_exists_by_name_dtype"
-#define OBJECT_EXISTS_TEST_DSET_NAME       "h5o_exists_by_name_dset"
+#define OBJECT_EXISTS_TEST_SUBGROUP_NAME   "object_exists_test"
+#define OBJECT_EXISTS_TEST_GRP_NAME        "object_exists_test_group"
+#define OBJECT_EXISTS_TEST_TYPE_NAME       "object_exists_test_type"
+#define OBJECT_EXISTS_TEST_DSET_NAME       "object_exists_test_dset"
+
+#define OBJECT_EXISTS_INVALID_PARAMS_TEST_SUBGROUP_NAME "object_exists_invalid_params_test"
+#define OBJECT_EXISTS_INVALID_PARAMS_TEST_GRP_NAME      "object_exists_invalid_params_test_group"
 
 #define OBJECT_COPY_TEST_SUBGROUP_NAME "object_copy_test"
 #define OBJECT_COPY_TEST_SPACE_RANK    2
-#define OBJECT_COPY_TEST_DSET_DTYPE    H5T_NATIVE_INT
-#define OBJECT_COPY_TEST_DSET_NAME     "dset"
-#define OBJECT_COPY_TEST_DSET_NAME2    "dset_copy"
+#define OBJECT_COPY_TEST_GROUP_NAME    "object_copy_test_group"
+#define OBJECT_COPY_TEST_GROUP_NAME2   "object_copy_test_group_copy"
+#define OBJECT_COPY_TEST_DSET_NAME     "object_copy_test_dset"
+#define OBJECT_COPY_TEST_DSET_NAME2    "object_copy_test_dset_copy"
+#define OBJECT_COPY_TEST_TYPE_NAME     "object_copy_test_type"
+#define OBJECT_COPY_TEST_TYPE_NAME2    "object_copy_test_type_copy"
 
-#define H5O_CLOSE_TEST_SPACE_RANK 2
-#define H5O_CLOSE_TEST_DSET_NAME  "h5o_close_test_dset"
-#define H5O_CLOSE_TEST_TYPE_NAME  "h5o_close_test_type"
+#define OBJECT_COPY_INVALID_PARAMS_TEST_SUBGROUP_NAME "object_copy_invalid_params_test"
+#define OBJECT_COPY_INVALID_PARAMS_TEST_GROUP_NAME    "object_copy_invalid_params_group"
+#define OBJECT_COPY_INVALID_PARAMS_TEST_GROUP_NAME2   "object_copy_invalid_params_group_copy"
+
+#define OBJECT_VISIT_TEST_SUBGROUP_NAME "object_visit_test"
+#define OBJECT_VISIT_TEST_SPACE_RANK    2
+#define OBJECT_VISIT_TEST_GROUP_NAME    "object_visit_test_group"
+#define OBJECT_VISIT_TEST_DSET_NAME     "object_visit_test_dset"
+#define OBJECT_VISIT_TEST_TYPE_NAME     "object_visit_test_type"
+
+#define OBJECT_VISIT_INVALID_PARAMS_TEST_SUBGROUP_NAME "object_visit_invalid_params_test"
+#define OBJECT_VISIT_INVALID_PARAMS_TEST_GROUP_NAME    "object_visit_invalid_params_group"
+
+#define OBJECT_CLOSE_TEST_SPACE_RANK 2
+#define OBJECT_CLOSE_TEST_GROUP_NAME "object_close_test"
+#define OBJECT_CLOSE_TEST_GRP_NAME   "object_close_test_group"
+#define OBJECT_CLOSE_TEST_DSET_NAME  "object_close_test_dset"
+#define OBJECT_CLOSE_TEST_TYPE_NAME  "object_close_test_type"
 
 #define OBJ_REF_GET_TYPE_TEST_SUBGROUP_NAME "obj_ref_get_obj_type_test"
 #define OBJ_REF_GET_TYPE_TEST_DSET_NAME "ref_dset"
