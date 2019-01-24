@@ -30,6 +30,30 @@
 
 /* Local Macros */
 
+/* Macro for checking if two ranges overlap or border one another*/
+/*
+ * Three possible conditions for overlapping / bordering:
+ *  1. the lower bound of the new span is between the lower and
+ *     higher bound of the existing one. In other words, the left
+ *     part of new span will at least overlap or border with the
+ *     existing one.
+ *  2. the higher bound of the new span is between the lower and
+ *     higher bound of the exisiting one. In other words, the right
+ *     part of new span will at least overlap or border with the
+ *     existing one.
+ *  3. The new span includes the existing one, i.e. the lower bound
+ *     is smaller than that of the existing one and the higher bound
+ *     is larger than that of the existing one.
+ */
+/* (Assumes that low & high bounds are _inclusive_) */
+#define H5S_RANGE_OVERLAP_OR_BORDER(L1, H1, L2, H2)             \
+    /* condition 1 */                                           \
+    (((L1) >= (L2) && (L1) <= ((H2) + 1)) ||                    \
+    /* condition 2 */                                           \
+    (((H1) + 1) >= (L2) && (H1) <= (H2)) ||                     \
+    /* condition 3 */                                           \
+    ((L1) < (L2) && (H1) > (H2)))
+
 /* Flags for which hyperslab fragments to compute */
 #define H5S_HYPER_COMPUTE_B_NOT_A 0x01
 #define H5S_HYPER_COMPUTE_A_AND_B 0x02
@@ -1017,14 +1041,12 @@ H5S__hyper_iter_next(H5S_sel_iter_t *iter, size_t nelem)
         int temp_dim;  /* Temporary rank holder */
 
         /* Check if this is a "flattened" regular hyperslab selection */
-        if(iter->u.hyp.iter_rank != 0 && iter->u.hyp.iter_rank < iter->rank) {
+        if(iter->u.hyp.iter_rank != 0 && iter->u.hyp.iter_rank < iter->rank)
             /* Set the aliases for the dimension rank */
             ndims = iter->u.hyp.iter_rank;
-        } /* end if */
-        else {
+        else
             /* Set the aliases for the dimension rank */
             ndims = iter->rank;
-        } /* end else */
 
         /* Set the fastest dimension rank */
         fast_dim = (int)ndims - 1;
@@ -1065,10 +1087,9 @@ H5S__hyper_iter_next(H5S_sel_iter_t *iter, size_t nelem)
                     /* Decrement the number of elements advanced */
                     nelem -= actual_elem;
                 } /* end if */
-                else {
+                else
                     /* Move to the next row in the current dimension */
                     iter_offset[temp_dim]++;
-                } /* end else */
 
                 /* If this block is still in the range of blocks to output for the dimension, break out of loop */
                 if(iter_offset[temp_dim] < tdiminfo[temp_dim].block)
@@ -1136,15 +1157,13 @@ H5S__hyper_iter_next(H5S_sel_iter_t *iter, size_t nelem)
                     /* Decrement the number of elements advanced */
                     nelem -= actual_elem;
                 } /* end if */
-                else {
+                else
                     /* Move to the next row in the current dimension */
                     abs_arr[curr_dim]++;
-                } /* end else */
 
                 /* Check if we are still within the span */
-                if(abs_arr[curr_dim] <= curr_span->high) {
+                if(abs_arr[curr_dim] <= curr_span->high)
                     break;
-                } /* end if */
                 /* If we walked off that span, advance to the next span */
                 else {
                     /* Advance span in this dimension */
@@ -1160,10 +1179,9 @@ H5S__hyper_iter_next(H5S_sel_iter_t *iter, size_t nelem)
 
                         break;
                     } /* end if */
-                    else {
+                    else
                         /* If we finished the span list in this dimension, decrement the dimension worked on and loop again */
                         curr_dim--;
-                    } /* end else */
                 } /* end else */
             } /* end while */
 
@@ -1230,14 +1248,12 @@ H5S__hyper_iter_next_block(H5S_sel_iter_t *iter)
         int temp_dim;  /* Temporary rank holder */
 
         /* Check if this is a "flattened" regular hyperslab selection */
-        if(iter->u.hyp.iter_rank != 0 && iter->u.hyp.iter_rank < iter->rank) {
+        if(iter->u.hyp.iter_rank != 0 && iter->u.hyp.iter_rank < iter->rank)
             /* Set the aliases for the dimension rank */
             ndims = iter->u.hyp.iter_rank;
-        } /* end if */
-        else {
+        else
             /* Set the aliases for the dimension rank */
             ndims = iter->rank;
-        } /* end else */
 
         /* Set the fastest dimension rank */
         fast_dim = (int)ndims - 1;
@@ -1260,14 +1276,12 @@ H5S__hyper_iter_next_block(H5S_sel_iter_t *iter)
         /* Advance one block */
         temp_dim = fast_dim; /* Start with the fastest changing dimension */
         while(temp_dim >= 0) {
-            if(temp_dim == fast_dim) {
+            if(temp_dim == fast_dim)
                 /* Move iterator over current block */
                 iter_offset[temp_dim] += tdiminfo[temp_dim].block;
-            } /* end if */
-            else {
+            else
                 /* Move to the next row in the current dimension */
                 iter_offset[temp_dim]++;
-            } /* end else */
 
             /* If this block is still in the range of blocks to output for the dimension, break out of loop */
             if(iter_offset[temp_dim] < tdiminfo[temp_dim].block)
@@ -1316,19 +1330,16 @@ H5S__hyper_iter_next_block(H5S_sel_iter_t *iter)
             curr_span = ispan[curr_dim];
 
             /* Increment absolute position */
-            if(curr_dim == fast_dim) {
+            if(curr_dim == fast_dim)
                 /* Move the iterator over rest of element in span */
                 abs_arr[curr_dim] = curr_span->high + 1;
-            } /* end if */
-            else {
+            else
                 /* Move to the next row in the current dimension */
                 abs_arr[curr_dim]++;
-            } /* end else */
 
             /* Check if we are still within the span */
-            if(abs_arr[curr_dim] <= curr_span->high) {
+            if(abs_arr[curr_dim] <= curr_span->high)
                 break;
-            } /* end if */
             /* If we walked off that span, advance to the next span */
             else {
                 /* Advance span in this dimension */
@@ -1344,10 +1355,9 @@ H5S__hyper_iter_next_block(H5S_sel_iter_t *iter)
 
                     break;
                 } /* end if */
-                else {
+                else
                     /* If we finished the span list in this dimension, decrement the dimension worked on and loop again */
                     curr_dim--;
-                } /* end else */
             } /* end else */
         } /* end while */
 
@@ -1817,7 +1827,6 @@ H5S__hyper_cmp_spans(const H5S_hyper_span_info_t *span_info1,
 static herr_t
 H5S__hyper_free_span_info(H5S_hyper_span_info_t *span_info)
 {
-    H5S_hyper_span_t *span, *next_span;
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_STATIC
@@ -1829,6 +1838,7 @@ H5S__hyper_free_span_info(H5S_hyper_span_info_t *span_info)
 
     /* Free the span tree if the reference count drops to zero */
     if(span_info->count == 0) {
+        H5S_hyper_span_t *span, *next_span;     /* Pointers to spans to iterate over */
 
         /* Work through the list of spans pointed to by this 'info' node */
         span = span_info->head;
@@ -3294,10 +3304,10 @@ H5S__hyper_is_contiguous(const H5S_t *space)
 
         /*
          * For a hyperslab to be contiguous, it must have only one block and
-         * (either it's size must be the same as the dataspace extent's in all
-         * but the slowest changing dimension
-         * OR
-         * block size must be 1 in all but the fastest changing dimension).
+         * either it's size must be the same as the dataspace extent's in all
+         *      but the slowest changing dimension
+         *   OR
+         *      block size must be 1 in all but the fastest changing dimension.
          */
         /* Initialize flags */
         large_contiguous = TRUE;	/* assume true and reset if the dimensions don't match */
@@ -3524,11 +3534,6 @@ H5S__hyper_is_regular(const H5S_t *space)
  COMMENTS, BUGS, ASSUMPTIONS
  EXAMPLES
  REVISION LOG
- * 	Robb Matzke, 1998-08-25
- *	The fields which are freed are set to NULL to prevent them from being
- *	freed again later.  This fixes some allocation problems where
- *	changing the hyperslab selection of one dataspace causes a core dump
- *	when closing some other dataspace.
 --------------------------------------------------------------------------*/
 static herr_t
 H5S__hyper_release(H5S_t *space)
@@ -3964,72 +3969,6 @@ done:
 
 /*--------------------------------------------------------------------------
  NAME
-    H5S_hyper_convert
- PURPOSE
-    Convert a compatible selection to span tree form
- USAGE
-    herr_t H5S_hyper_convert(space)
-        H5S_t *space;           IN/OUT: Pointer to dataspace to convert
- RETURNS
-    Non-negative on success, negative on failure
- DESCRIPTION
-    Converts a compatible selection (currently only "all" selections) to the
-    span-tree form of a hyperslab selection. (Point and "none" selection aren't
-    currently supported and hyperslab selection always have the span-tree form
-    available).
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_hyper_convert(H5S_t *space)
-{
-    herr_t      ret_value = SUCCEED;       /* Return value */
-
-    FUNC_ENTER_NOAPI(FAIL)
-
-    HDassert(space);
-
-    /* Check the type of selection */
-    switch(H5S_GET_SELECT_TYPE(space)) {
-        case H5S_SEL_ALL:    /* All elements selected in dataspace */
-            /* Convert current "all" selection to "real" hyperslab selection */
-            {
-                const hsize_t *tmp_start;       /* Temporary start information */
-                const hsize_t *tmp_stride;      /* Temporary stride information */
-                const hsize_t *tmp_count;       /* Temporary count information */
-                const hsize_t *tmp_block;       /* Temporary block information */
-
-                /* Set up temporary information for the dimensions */
-                tmp_start = H5S_hyper_zeros_g;
-                tmp_stride = tmp_count = H5S_hyper_ones_g;
-                tmp_block = space->extent.size;
-
-                /* Convert to hyperslab selection */
-                if(H5S__set_regular_hyperslab(space, tmp_start, tmp_stride, tmp_count, tmp_block, tmp_stride, tmp_count, tmp_block) < 0)
-                    HGOTO_ERROR(H5E_DATASPACE, H5E_CANTSET, FAIL, "can't set regular selection")
-            } /* end case */
-            break;
-
-        case H5S_SEL_HYPERSLABS:        /* Hyperslab selection */
-            break;
-
-        case H5S_SEL_NONE:   /* No elements selected in dataspace */
-        case H5S_SEL_POINTS: /* Point selection */
-        case H5S_SEL_ERROR:  /* Selection error */
-        case H5S_SEL_N:      /* Selection count */
-        default:
-            HGOTO_ERROR(H5E_ARGS, H5E_UNSUPPORTED, FAIL, "can't convert to span tree selection")
-    } /* end switch */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_hyper_convert() */
-
-
-/*--------------------------------------------------------------------------
- NAME
     H5S__hyper_intersect_block_helper
  PURPOSE
     Helper routine to detect intersections in span trees
@@ -4053,8 +3992,6 @@ static hbool_t
 H5S__hyper_intersect_block_helper(H5S_hyper_span_info_t *spans,
     unsigned rank, const hsize_t *start, const hsize_t *end, uint64_t op_gen)
 {
-    H5S_hyper_span_t *curr;         /* Pointer to current span in 1st span tree */
-    unsigned u;                     /* Local index variable */
     hbool_t ret_value = FALSE;      /* Return value */
 
     FUNC_ENTER_STATIC_NOERR
@@ -4066,6 +4003,9 @@ H5S__hyper_intersect_block_helper(H5S_hyper_span_info_t *spans,
 
     /* Check if we've already visited this span tree */
     if(spans->op_gen != op_gen) {
+        H5S_hyper_span_t *curr;         /* Pointer to current span in 1st span tree */
+        unsigned u;                     /* Local index variable */
+
         /* Verify that there is a possibility of an overlap by checking the block
          *  against the low & high bounds for the span tree.
          */
@@ -6181,88 +6121,88 @@ H5S__hyper_add_disjoint_spans(H5S_t *space, H5S_hyper_span_info_t *new_spans)
     if(space->select.sel_info.hslab->span_lst == NULL)
         space->select.sel_info.hslab->span_lst = new_spans;
     else {
-       H5S_hyper_span_info_t *old_spans = space->select.sel_info.hslab->span_lst;
-       H5S_hyper_span_info_t *high_order_spans = NULL;
-       H5S_hyper_span_info_t *low_order_spans = NULL;
-       unsigned u;              /* Local index variable */
+        H5S_hyper_span_info_t *old_spans = space->select.sel_info.hslab->span_lst;
+        H5S_hyper_span_info_t *high_order_spans = NULL;
+        H5S_hyper_span_info_t *low_order_spans = NULL;
+        unsigned u;              /* Local index variable */
 
-       /* Combine the new_spans with the old_spans only in the highest-order of dimension */
-       /* Example:
-        * old_spans:           ------------------> X
-        *            | (1,2)--->(1,3)--->(6,4)--->||
-        *            |   |        ^
-        *            |   |        |
-        *      Y     |   V        |
-        *            | (5,2)------.
-        *            |   |
-        *            |   |
-        *            |   V
-        *            |   =
-        *            V
-        * new_spans:           --------------------> X
-        *            | (8,2)--->(12,3)--->(17,4)--->||
-        *            |   |
-        *      Y     |   |
-        *            |   V
-        *            |   =
-        *            V
-        *
-        * After merging, the old_spans becomes
-        *
-        * old_spans:           ------------------> X
-        *            | (1,2)--->(1,3)--->(6,4)--->||
-        *            |   |        ^
-        *            |   |        |
-        *            |   V        |
-        *            | (5,2)------.
-        *            |   |
-        *      Y     |   |
-        *            | (8,2)--->(12,3)--->(17,4)--->||
-        *            |   |
-        *            |   |
-        *            |   V
-        *            |   =
-        *            V
-        */
+        /* Combine the new_spans with the old_spans only in the highest-order of dimension */
+        /* Example:
+         * old_spans:           ------------------> X
+         *            | (1,2)--->(1,3)--->(6,4)--->||
+         *            |   |        ^
+         *            |   |        |
+         *      Y     |   V        |
+         *            | (5,2)------.
+         *            |   |
+         *            |   |
+         *            |   V
+         *            |   =
+         *            V
+         * new_spans:           --------------------> X
+         *            | (8,2)--->(12,3)--->(17,4)--->||
+         *            |   |
+         *      Y     |   |
+         *            |   V
+         *            |   =
+         *            V
+         *
+         * After merging, the old_spans becomes
+         *
+         * old_spans:           ------------------> X
+         *            | (1,2)--->(1,3)--->(6,4)--->||
+         *            |   |        ^
+         *            |   |        |
+         *            |   V        |
+         *            | (5,2)------.
+         *            |   |
+         *      Y     |   |
+         *            | (8,2)--->(12,3)--->(17,4)--->||
+         *            |   |
+         *            |   |
+         *            |   V
+         *            |   =
+         *            V
+         */
 
-       /* Make sure the tail pointers are updated correctly */
-       HDassert(old_spans->tail);
-       HDassert(NULL == old_spans->tail->next);
-       HDassert(new_spans->tail);
-       HDassert(NULL == new_spans->tail->next);
+        /* Make sure the tail pointers are updated correctly */
+        HDassert(old_spans->tail);
+        HDassert(NULL == old_spans->tail->next);
+        HDassert(new_spans->tail);
+        HDassert(NULL == new_spans->tail->next);
 
-       /* Check old_spans and new_spans to see which one is of higher order,
-        * and append the higher order spans to the lower order ones.
-        */
-       if(new_spans->head->low > old_spans->tail->high) {
-           high_order_spans = new_spans;
-           low_order_spans = old_spans;
-       } /* end if */
-       else{
-           high_order_spans = old_spans;
-           low_order_spans = new_spans;
-       } /* end else */
+        /* Check old_spans and new_spans to see which one is of higher order,
+         * and append the higher order spans to the lower order ones.
+         */
+        if(new_spans->head->low > old_spans->tail->high) {
+            high_order_spans = new_spans;
+            low_order_spans = old_spans;
+        } /* end if */
+        else {
+            high_order_spans = old_spans;
+            low_order_spans = new_spans;
+        } /* end else */
 
-       /* The high_order_spans should be appended to low_order_spans */
-       low_order_spans->tail->next = high_order_spans->head;
-       low_order_spans->tail = high_order_spans->tail;
+        /* The high_order_spans should be appended to low_order_spans */
+        low_order_spans->tail->next = high_order_spans->head;
+        low_order_spans->tail = high_order_spans->tail;
 
-       /* Update the high bounds for the low order spans, in this dimension */
-       low_order_spans->high_bounds[0] = high_order_spans->high_bounds[0];
+        /* Update the high bounds for the low order spans, in this dimension */
+        low_order_spans->high_bounds[0] = high_order_spans->high_bounds[0];
 
-       /* Check and update the low & high bounds in lower dimensions */
-       for(u = 1; u < space->extent.rank; u++) {
-           if(high_order_spans->low_bounds[u] < low_order_spans->low_bounds[u])
-               low_order_spans->low_bounds[u] = high_order_spans->low_bounds[u];
-           if(high_order_spans->high_bounds[u] > low_order_spans->high_bounds[u])
-               low_order_spans->high_bounds[u] = high_order_spans->high_bounds[u];
-       } /* end for */
+        /* Check and update the low & high bounds in lower dimensions */
+        for(u = 1; u < space->extent.rank; u++) {
+            if(high_order_spans->low_bounds[u] < low_order_spans->low_bounds[u])
+                low_order_spans->low_bounds[u] = high_order_spans->low_bounds[u];
+            if(high_order_spans->high_bounds[u] > low_order_spans->high_bounds[u])
+                low_order_spans->high_bounds[u] = high_order_spans->high_bounds[u];
+        } /* end for */
 
-       /* Fix the selection's 1st span info node */
-       space->select.sel_info.hslab->span_lst = low_order_spans;
+        /* Fix the selection's 1st span info node */
+        space->select.sel_info.hslab->span_lst = low_order_spans;
 
-       /* free the memory space for "new_spans" node */
-       high_order_spans = (H5S_hyper_span_info_t *)H5FL_ARR_FREE(hbounds_t, high_order_spans);
+        /* free the memory space for "new_spans" node */
+        high_order_spans = (H5S_hyper_span_info_t *)H5FL_ARR_FREE(hbounds_t, high_order_spans);
     } /* end else */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
@@ -6276,12 +6216,12 @@ H5S__hyper_add_disjoint_spans(H5S_t *space, H5S_hyper_span_info_t *new_spans)
     Create a span tree
  USAGE
     H5S_hyper_span_t *H5S__hyper_make_spans(rank, start, stride, count, block)
-        unsigned rank;               IN: # of dimensions of the space
-        const hsize_t *start;    IN: Starting location of the hyperslabs
-        const hsize_t *stride;    IN: Stride from the beginning of one block to
+        unsigned rank;          IN: # of dimensions of the space
+        const hsize_t *start;   IN: Starting location of the hyperslabs
+        const hsize_t *stride;  IN: Stride from the beginning of one block to
                                         the next
-        const hsize_t *count;     IN: Number of blocks
-        const hsize_t *block;     IN: Size of hyperslab block
+        const hsize_t *count;   IN: Number of blocks
+        const hsize_t *block;   IN: Size of hyperslab block
  RETURNS
     Pointer to new span tree on success, NULL on failure
  DESCRIPTION
@@ -6962,35 +6902,13 @@ H5S__check_bound_overlap(const hsize_t *space1_low_bounds,
 
     /* Check bound box to see if they overlap or border */
     for(u = 0; u < ndims; u++) {
-        /*
-         * Three possible conditions for overlapping / bordering:
-         *  1. the lower bound of the new span is between the lower and
-         *     higher bound of the existing one. In other words, the left
-         *     part of new span will at least overlap or border with the
-         *     existing one.
-         *  2. the higher bound of the new span is between the lower and
-         *     higher bound of the exisiting one. In other words, the right
-         *     part of new span will at least overlap or border with the
-         *     existing one.
-         *  3. The new span includes the existing one, i.e. the lower bound
-         *     is smaller than that of the existing one and the higher bound
-         *     is larger than that of the existing one.
-         */
         /* One of these conditions must be true for each dimension for
          * bounding boxes to overlap, return FALSE if one of them isn't
          * true for a dimension.
          */
-            /* condition 1 */
-        if(!((space1_low_bounds[u] >= space2_low_bounds[u] &&
-                    space1_low_bounds[u] <= (space2_high_bounds[u] + 1)) ||
-                /* condition 2 */
-               ((space1_high_bounds[u] + 1) >= space2_low_bounds[u] &&
-                    space1_high_bounds[u] <= space2_high_bounds[u]) ||
-                /* condition 3 */
-               (space1_low_bounds[u] < space2_low_bounds[u] &&
-                    space1_high_bounds[u] > space2_high_bounds[u]))) {
+        if(!H5S_RANGE_OVERLAP_OR_BORDER(space1_low_bounds[u], space1_high_bounds[u],
+                space2_low_bounds[u], space2_high_bounds[u]))
             HGOTO_DONE(FALSE);
-        } /* end if */
     } /* end for */
 
 done:
@@ -7024,8 +6942,6 @@ done:
     Chao Mei July 8, 2011
  GLOBAL VARIABLES
  COMMENTS, BUGS, ASSUMPTIONS
-    The function is extracted from H5S__generate_hyperslab, and then modified
-    to be general enough for hyperslab selection operations.
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
@@ -7068,23 +6984,20 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
 //    overlapped = H5S__check_bound_overlap(space1->select.sel_info.hslab->span_lst->low_bounds,
 //            space1->select.sel_info.hslab->span_lst->high_bounds,
 //            space2_span_lst->low_bounds, space2_span_lst->high_bounds, space1->extent.rank);
-    if((space1->select.sel_info.hslab->span_lst->low_bounds[0] >= space2_span_lst->low_bounds[0] &&
-                space1->select.sel_info.hslab->span_lst->low_bounds[0] <= (space2_span_lst->high_bounds[0] + 1)) ||
-            /* condition 2 */
-           ((space1->select.sel_info.hslab->span_lst->high_bounds[0] + 1) >= space2_span_lst->low_bounds[0] &&
-                space1->select.sel_info.hslab->span_lst->high_bounds[0] <= space2_span_lst->high_bounds[0]) ||
-            /* condition 3 */
-           (space1->select.sel_info.hslab->span_lst->low_bounds[0] < space2_span_lst->low_bounds[0] &&
-                space1->select.sel_info.hslab->span_lst->high_bounds[0] > space2_span_lst->high_bounds[0]))
+    if(H5S_RANGE_OVERLAP_OR_BORDER(space1->select.sel_info.hslab->span_lst->low_bounds[0],
+            space1->select.sel_info.hslab->span_lst->high_bounds[0],
+            space2_span_lst->low_bounds[0], space2_span_lst->high_bounds[0]))
         overlapped = TRUE;
 
-    /* If two spans are disjoint in terms of bound box, then work could be much simplified. */
+    /* If two spans are disjoint in terms of their bounding box, then work
+     * can be much simplified.
+     */
     if(!overlapped) {
         switch(op) {
             case H5S_SELECT_OR:
             case H5S_SELECT_XOR:
                 /* Add the new disjoint spans to the space */
-                /* A copy of space1's spans to *result, and another copy of space2's spans */
+                /* Copy of space1's spans to *result, and another copy of space2's spans */
                 if(is_result_new)
                     (*result)->select.sel_info.hslab->span_lst = H5S__hyper_copy_span(space1->select.sel_info.hslab->span_lst, space1->extent.rank);
                 if(!can_own_span2) {
@@ -7092,7 +7005,7 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
                     if(H5S__hyper_add_disjoint_spans(*result, b_not_a) < 0)
                         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINSERT, FAIL, "can't append hyperslabs")
 
-                    /* The new_spans is now owned by space, so its memory space should not be released */
+                    /* The new_spans are now owned by 'space', so they should not be released */
                     b_not_a = NULL;
                 } /* end if */
                 else {
@@ -7159,8 +7072,8 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
 
         /* Generate mask for clip operation depending on the op */
         switch(op) {
-            case H5S_SELECT_OR:
-                selector = H5S_HYPER_COMPUTE_B_NOT_A; /* a + b_not_a */
+            case H5S_SELECT_OR: /* a + b_not_a */
+                selector = H5S_HYPER_COMPUTE_B_NOT_A;
                 break;
 
             case H5S_SELECT_XOR: /* a_not_b + b_not_a */
@@ -7213,6 +7126,7 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
                 } /* end if */
 
                 /* Reset the number of items in selection */
+                /* (Will be set below) */
                 (*result)->select.num_elem = 0;
                 break;
 
@@ -7227,7 +7141,9 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
 
         /* Check if there are any non-overlapped selections */
         if(a_not_b) {
-            /* Other than OR, the span_lst is set to NULL. And in OR, a_not_b is not needed */
+            /* Other than OR, the span_lst is set to NULL. And in OR,
+             *      a_not_b is not needed
+             */
             HDassert(NULL == (*result)->select.sel_info.hslab->span_lst);
 
             /* The results dataspace takes ownership of the spans */
@@ -7247,9 +7163,9 @@ H5S__fill_in_new_space(H5S_t *space1, H5S_seloper_t op,
         if(a_and_b) {
             /**
              * 1. Other than OR, the span_lst is set to NULL. And in OR,
-             * a_and_b is not needed
+             *      a_and_b is not needed
              * 2. a_not_b will never be computed together with a_and_b
-             * because merging these two equals to a.
+             *      because merging these two equals to a.
              */
             HDassert(NULL == (*result)->select.sel_info.hslab->span_lst);
 
@@ -7315,7 +7231,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5S_generate_hyperlab
+ * Function:	H5S__generate_hyperlab
  *
  * Purpose:	Generate hyperslab information from H5S_select_hyperslab()
  *
@@ -7786,7 +7702,6 @@ H5S_select_hyperslab(H5S_t *space, H5S_seloper_t op, const hsize_t start[],
                 HGOTO_ERROR(H5E_DATASPACE, H5E_UNINITIALIZED, FAIL, "dataspace does not have span tree")
 
         /* Set selection type */
-        /* (Could be overridden by resetting selection to 'none', below) */
         space->select.type = H5S_sel_hyper;
 
         /* Add in the new hyperslab information */
@@ -7985,14 +7900,8 @@ H5S__fill_in_hyperslab(H5S_t *old_space, H5S_seloper_t op, const hsize_t start[]
         /* Check bound box of both spaces to see if they overlap or border */
 //        overlapped = H5S__check_bound_overlap(old_low_bounds, old_high_bounds,
 //                new_low_bounds, new_high_bounds, old_space->extent.rank);
-        if((old_low_bounds[0] >= new_low_bounds[0] &&
-                    old_low_bounds[0] <= (new_high_bounds[0] + 1)) ||
-                /* condition 2 */
-               ((old_high_bounds[0] + 1) >= new_low_bounds[0] &&
-                    old_high_bounds[0] <= new_high_bounds[0]) ||
-                /* condition 3 */
-               (old_low_bounds[0] < new_low_bounds[0] &&
-                    old_high_bounds[0] > new_high_bounds[0]))
+        if(H5S_RANGE_OVERLAP_OR_BORDER(old_low_bounds[0], old_high_bounds[0],
+                new_low_bounds[0], new_high_bounds[0]))
             overlapped = TRUE;
 
         if(!overlapped) {
