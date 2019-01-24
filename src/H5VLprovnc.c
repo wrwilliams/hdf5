@@ -65,7 +65,8 @@ typedef struct H5VL_provenance_t {
     hid_t  under_vol_id;        /* ID for underlying VOL connector */
     void   *under_object;       /* Info object for underlying VOL connector */
     prov_helper* prov_helper;
-    void* info;
+    H5VL_provenance_info_t* shared_file_info;
+    void* prov_info;
 } H5VL_provenance_t;
 
 /* The pass through VOL wrapper context */
@@ -89,16 +90,21 @@ typedef struct H5VL_prov_datatype_info_t {
 } H5VL_prov_datatype_info_t;
 
 typedef struct H5VL_prov_dataset_info_t {
-    int func_cnt;//stats
     char* dset_name;
+    H5T_class_t dt_class;//data type class
+    H5S_class_t ds_class;//data space class
+    H5D_layout_t layout;
+    unsigned int dimension_cnt;
+    unsigned int dimensions[H5S_MAX_RANK];
     size_t dset_type_size;
-    hsize_t dset_space_size;
-    hsize_t tatal_bytes_read;
-    hsize_t tatal_bytes_written;
-    hsize_t tatal_read_time;
-    hsize_t tatal_write_time;
+    hsize_t dset_space_size;//unsigned long long
+    hsize_t total_bytes_read;
+    hsize_t total_bytes_written;
+    hsize_t total_read_time;
+    hsize_t total_write_time;
     int dataset_read_cnt;
     int dataset_write_cnt;
+    H5VL_provenance_info_t* shared_file_info;
 
 } H5VL_prov_dataset_info_t;
 
@@ -117,9 +123,9 @@ typedef struct H5VL_prov_group_info_t {
 //
 //} H5VL_prov_link_info_t;
 
-typedef struct H5VL_prov_file_info_t {
-    char* func_name;
-    int func_cnt;//stats
+typedef struct H5VL_prov_file_info_t {//assigned when a file is closed, serves to store stats (copied from shared_file_info)
+    int ds_created;
+    int ds_accessed;//ds opened
 } H5VL_prov_file_info_t;
 
 
@@ -342,15 +348,30 @@ void dataset_release_info(H5VL_prov_dataset_info_t* info){
 }
 
 void dataset_stats_prov_write(H5VL_prov_dataset_info_t* ds_info){
-    printf("dataset_stats_prov_write() is yet to be implemented.\n");
+    if(!ds_info)
+        printf("dataset_stats_prov_write(): ds_info is NULL.\n");
+
+    printf("Dataset name = %s,\ndata type class = %d, data space class = %d, data space size = %llu, data type size =%llu.\n", ds_info->dset_name, ds_info->dt_class, ds_info->ds_class,  ds_info->dset_space_size, ds_info->dset_type_size);
+    printf("Dataset is %d dimensions.\n", ds_info->dimension_cnt);
+    printf("Dataset is read %d time, %llu bytes in total, costs %llu us.\n", ds_info->dataset_read_cnt, ds_info->total_bytes_read, ds_info->total_read_time);
+    printf("Dataset is written %d time, %llu bytes in total, costs %llu us.\n", ds_info->dataset_write_cnt, ds_info->total_bytes_written, ds_info->total_write_time);
+
+
 }
 
-void file_stats_prov_write(H5VL_prov_file_info_t* file_info) {
-    printf("file_stats_prov_write() is yet to be implemented.\n");
+//not H5VL_prov_file_info_t!
+void file_stats_prov_write(H5VL_provenance_info_t* file_info) {
+    if(!file_info)
+        printf("file_stats_prov_write(): ds_info is NULL.\n");
+
+    printf("H5 file closed, %d datasets are created, %d datasets are accessed.\n", file_info->ds_created, file_info->ds_accessed);
+
 }
 
 void datatype_stats_prov_write(H5VL_prov_datatype_info_t* dt_info) {
-    printf("datatype_stats_prov_write() is yet to be implemented.\n");
+    if(!dt_info)
+        printf("datatype_stats_prov_write(): ds_info is NULL.\n");
+    printf("Datatype name = %s, commited %d times, datatype get is called %d times.\n", dt_info->dtype_name, dt_info->datatype_commit_cnt, dt_info->datatype_get_cnt);
 }
 
 void group_stats_prov_write(H5VL_prov_group_info_t* grp_info) {
@@ -402,6 +423,16 @@ void prov_helper_teardown(prov_helper* helper){
     }
 }
 
+void file_ds_created(H5VL_provenance_info_t* info){
+    assert(info);
+    info->ds_created++;
+}
+
+void file_ds_accessed(H5VL_provenance_info_t* info){
+    assert(info);
+    info->ds_accessed++;
+}
+
 void ptr_cnt_increment(prov_helper* helper){
     assert(helper);
     //mutex lock
@@ -418,6 +449,7 @@ void ptr_cnt_decrement(prov_helper* helper){
     if(helper->ptr_cnt == 0)
         prov_helper_teardown(helper);
 }
+
 
 void get_time_str(char *str_out){
     time_t rawtime;
@@ -565,7 +597,7 @@ static herr_t
 H5VL_provenance_free_obj(H5VL_provenance_t *obj)
 {
     ptr_cnt_decrement(obj->prov_helper);
-
+    obj->prov_helper = NULL;
     H5Idec_ref(obj->under_vol_id);
     free(obj);
 
@@ -777,9 +809,14 @@ H5VL_provenance_info_free(void *_info)
     /* Release underlying VOL ID and info */
     if(info->under_vol_info)
         H5VLfree_connector_info(info->under_vol_id, info->under_vol_info);
+
     H5Idec_ref(info->under_vol_id);
-    free(info->prov_file_path);
-    free(info->prov_line_format);
+
+    if(info->prov_file_path)
+        free(info->prov_file_path);
+
+    if(info->prov_line_format)
+        free(info->prov_line_format);
     /* Free pass through info object itself */
     free(info);
 
@@ -963,7 +1000,8 @@ H5VL_provenance_get_object(const void *obj)
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL Get object\n");
 #endif
-
+    if(!o)
+        printf("H5VL_provenance_get_object() get a NULL obj as a parameter.");
     void* ret = H5VLget_object(o->under_object, o->under_vol_id);
 
     return ret;
@@ -1371,11 +1409,37 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL DATASET Create\n");
 #endif
-
+    hid_t dt_id = -1;
+    hid_t ds_id = -1;
     under = H5VLdataset_create(o->under_object, loc_params, o->under_vol_id, name, dcpl_id,  dapl_id, dxpl_id, req);
     if(under) {
         dset = H5VL_provenance_new_obj(under, o->under_vol_id, o->prov_helper);
-        dset->info = new_dataset_info();
+        dset->prov_info = new_dataset_info();
+        //dset->shared_file_info = o->shared_file_info;
+        ((H5VL_prov_dataset_info_t*)dset->prov_info)->dset_name = strdup(name);
+
+        file_ds_created(o->shared_file_info);
+
+        H5Pget(dcpl_id, H5VL_PROP_DSET_TYPE_ID, &dt_id);
+
+        ((H5VL_prov_dataset_info_t*)dset->prov_info)->dt_class = H5Tget_class(dt_id);
+
+        H5Pget(dcpl_id, H5VL_PROP_DSET_SPACE_ID, &ds_id);
+
+        ((H5VL_prov_dataset_info_t*)dset->prov_info)->ds_class = H5Sget_simple_extent_type(ds_id);
+
+        if(((H5VL_prov_dataset_info_t*)dset->prov_info)->ds_class == H5S_SIMPLE){
+
+            ((H5VL_prov_dataset_info_t*)dset->prov_info)->dimension_cnt = H5Sget_simple_extent_ndims(ds_id);
+
+            H5Sget_simple_extent_dims(ds_id, ((H5VL_prov_dataset_info_t*)dset->prov_info)->dimensions, NULL);
+
+            ((H5VL_prov_dataset_info_t*)dset->prov_info)->dset_space_size = H5Sget_simple_extent_npoints(ds_id);
+
+        }
+
+        ((H5VL_prov_dataset_info_t*)dset->prov_info)->layout = H5Pget_layout(dcpl_id);
+
         /* Check for async request */
         if(req && *req)
             *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
@@ -1384,6 +1448,13 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
         dset = NULL;
 
     prov_write(o->prov_helper, __func__, get_time_usec() - start);
+
+    if(dt_id != -1)
+        //H5Tclose(dt_id);
+
+    if(ds_id != -1)
+        //H5Sclose(ds_id);
+
     return (void *)dset;
 } /* end H5VL_provenance_dataset_create() */
 
@@ -1412,31 +1483,52 @@ H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
     printf("------- PASS THROUGH VOL DATASET Open\n");
 #endif
 
+    hid_t dcpl_id = -1;
+    hid_t dt_id = -1;
+    hid_t ds_id = -1;
     under = H5VLdataset_open(o->under_object, loc_params, o->under_vol_id, name, dapl_id, dxpl_id, req);
-    if(under) {
+    if (under) {
         dset = H5VL_provenance_new_obj(under, o->under_vol_id, o->prov_helper);
-        dset->info = new_dataset_info();
-
+        dset->prov_info = new_dataset_info();
+        file_ds_accessed(o->shared_file_info);
         /* Check for async request */
-        if(req && *req)
+        if (req && *req)
             *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+
+        dataset_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_DATASET_GET_DCPL, dxpl_id, req, &dcpl_id);
+
+        ((H5VL_prov_dataset_info_t*) dset->prov_info)->dset_name = strdup(name);
+
+        dataset_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_DATASET_GET_TYPE, dxpl_id, req, &dt_id);
+
+        ((H5VL_prov_dataset_info_t*) dset->prov_info)->dt_class = H5Tget_class(dt_id);
+        ((H5VL_prov_dataset_info_t*) dset->prov_info)->dset_type_size = H5Tget_size(dt_id);
+        ((H5VL_prov_dataset_info_t*) dset->prov_info)->dset_name = strdup(name);
+
+        dataset_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_DATASET_GET_SPACE, dxpl_id, req, &ds_id);
+
+        ((H5VL_prov_dataset_info_t*) dset->prov_info)->ds_class = H5Sget_simple_extent_type(ds_id);
+
+        if (((H5VL_prov_dataset_info_t*) dset->prov_info)->ds_class == H5S_SIMPLE) {
+            ((H5VL_prov_dataset_info_t*) dset->prov_info)->dimension_cnt = H5Sget_simple_extent_ndims(ds_id);
+            H5Sget_simple_extent_dims(ds_id, ((H5VL_prov_dataset_info_t*) dset->prov_info)->dimensions, NULL);
+            ((H5VL_prov_dataset_info_t*) dset->prov_info)->dset_space_size = H5Sget_simple_extent_npoints(ds_id);
+        }
+
+        ((H5VL_prov_dataset_info_t*) dset->prov_info)->layout = H5Pget_layout(dcpl_id);
+
     } /* end if */
     else
         dset = NULL;
 
     prov_write(dset->prov_helper, __func__, get_time_usec() - start);
 
-    hid_t dset_type;
-    dataset_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_DATASET_GET_TYPE, dxpl_id, req, &dset_type);
+    if(dt_id != -1)
+        H5Tclose(dt_id);
 
-    ((H5VL_prov_dataset_info_t*)dset->info)->dset_type_size = H5Tget_size(dset_type);
+    if(ds_id != -1)
+        H5Sclose(ds_id);
 
-    H5Tclose(dset_type);
-
-    hid_t dset_space;
-    dataset_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_DATASET_GET_SPACE, dxpl_id, req, &dset_space);
-    ((H5VL_prov_dataset_info_t*)dset->info)->dset_space_size = H5Sget_simple_extent_npoints(dset_space);
-    H5Sclose(dset_space);
 
     return (void *)dset;
 } /* end H5VL_provenance_dataset_open() */
@@ -1475,14 +1567,14 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hsize_t r_size = 0;
     unsigned long time = get_time_usec() - start;
     if(H5S_ALL == mem_space_id){
-        r_size = ((H5VL_prov_dataset_info_t*)o->info)->dset_type_size * ((H5VL_prov_dataset_info_t*)o->info)->dset_space_size;;
+        r_size = ((H5VL_prov_dataset_info_t*)o->prov_info)->dset_type_size * ((H5VL_prov_dataset_info_t*)o->prov_info)->dset_space_size;;
     }else{
-        r_size = ((H5VL_prov_dataset_info_t*)o->info)->dset_type_size * H5Sget_select_npoints(mem_space_id);
+        r_size = ((H5VL_prov_dataset_info_t*)o->prov_info)->dset_type_size * H5Sget_select_npoints(mem_space_id);
     }
 
-    ((H5VL_prov_dataset_info_t*)(o->info))->tatal_bytes_read += r_size;
-    ((H5VL_prov_dataset_info_t*)(o->info))->dataset_read_cnt++;
-    ((H5VL_prov_dataset_info_t*)(o->info))->tatal_read_time += time;
+    ((H5VL_prov_dataset_info_t*)(o->prov_info))->total_bytes_read += r_size;
+    ((H5VL_prov_dataset_info_t*)(o->prov_info))->dataset_read_cnt++;
+    ((H5VL_prov_dataset_info_t*)(o->prov_info))->total_read_time += time;
 
     printf("read size = %llu\n", r_size);
 
@@ -1524,15 +1616,15 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hsize_t w_size = 0;
 
     if(H5S_ALL == mem_space_id){
-        w_size = ((H5VL_prov_dataset_info_t*)o->info)->dset_type_size * ((H5VL_prov_dataset_info_t*)o->info)->dset_space_size;;
+        w_size = ((H5VL_prov_dataset_info_t*)o->prov_info)->dset_type_size * ((H5VL_prov_dataset_info_t*)o->prov_info)->dset_space_size;;
     }else{
-        w_size = ((H5VL_prov_dataset_info_t*)o->info)->dset_type_size * H5Sget_select_npoints(mem_space_id);
+        w_size = ((H5VL_prov_dataset_info_t*)o->prov_info)->dset_type_size * H5Sget_select_npoints(mem_space_id);
     }
     unsigned long time = get_time_usec() - start;
     prov_write(o->prov_helper, __func__, time);
-    ((H5VL_prov_dataset_info_t*)o->info)->tatal_bytes_written += w_size;
-    ((H5VL_prov_dataset_info_t*)(o->info))->dataset_write_cnt++;
-    ((H5VL_prov_dataset_info_t*)(o->info))->tatal_write_time += time;
+    ((H5VL_prov_dataset_info_t*)o->prov_info)->total_bytes_written += w_size;
+    ((H5VL_prov_dataset_info_t*)(o->prov_info))->dataset_write_cnt++;
+    ((H5VL_prov_dataset_info_t*)(o->prov_info))->total_write_time += time;
     printf("write size = %llu\n", w_size);
 
     return ret_value;
@@ -1595,6 +1687,10 @@ H5VL_provenance_dataset_specific(void *obj, H5VL_dataset_specific_t specific_typ
 #endif
 
     ret_value = H5VLdataset_specific(o->under_object, o->under_vol_id, specific_type, dxpl_id, req, arguments);
+
+    if(specific_type == H5VL_DATASET_SET_EXTENT){//user changes the dimensions
+        //TODO: update dimensions data for stats
+    }
 
     /* Check for async request */
     if(req && *req)
@@ -1670,11 +1766,12 @@ H5VL_provenance_dataset_close(void *dset, hid_t dxpl_id, void **req)
     /* Release our wrapper, if underlying dataset was closed */
 
     if(ret_value >= 0){
-        dataset_stats_prov_write(o->info);//output stats
-        prov_write(o->prov_helper, __func__, get_time_usec() - start);
+        dataset_stats_prov_write(o->prov_info);//output stats
 
-        dataset_release_info(o->info);
+
+        dataset_release_info(o->prov_info);
         H5VL_provenance_free_obj(o);
+        prov_write(o->prov_helper, __func__, get_time_usec() - start);
     }
 
 
@@ -1709,6 +1806,7 @@ H5VL_provenance_datatype_commit(void *obj, const H5VL_loc_params_t *loc_params,
     under = H5VLdatatype_commit(o->under_object, loc_params, o->under_vol_id, name, type_id, lcpl_id, tcpl_id, tapl_id, dxpl_id, req);
     if(under) {
         dt = H5VL_provenance_new_obj(under, o->under_vol_id, o->prov_helper);
+        dt->prov_info = new_datatype_info();
 
         /* Check for async request */
         if(req && *req)
@@ -1753,7 +1851,7 @@ H5VL_provenance_datatype_open(void *obj, const H5VL_loc_params_t *loc_params,
         if(req && *req)
             *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
 
-        dt->info = new_datatype_info();
+        dt->prov_info = new_datatype_info();
     } /* end if */
     else
         dt = NULL;
@@ -1892,7 +1990,7 @@ H5VL_provenance_datatype_close(void *dt, hid_t dxpl_id, void **req)
         *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     /* Release our wrapper, if underlying datatype was closed */
-    datatype_stats_prov_write(o->info);
+    datatype_stats_prov_write(o->prov_info);
     prov_write(o->prov_helper, __func__, get_time_usec() - start);
     if(ret_value >= 0)
         H5VL_provenance_free_obj(o);
@@ -1949,7 +2047,9 @@ printf("%s\n", __func__);
     if(under) {
 
         file = H5VL_provenance_new_obj(under, info->under_vol_id, prov_helper);
-        file->info = new_file_info();
+        file->prov_info = new_file_info();
+        file->shared_file_info = calloc(1, sizeof(H5VL_provenance_info_t));
+
         /* Check for async request */
         if(req && *req)
             *req = H5VL_provenance_new_obj(*req, info->under_vol_id, prov_helper);
@@ -2011,7 +2111,10 @@ H5VL_provenance_file_open(const char *name, unsigned flags, hid_t fapl_id,
 
         file = H5VL_provenance_new_obj(under, info->under_vol_id, ph);
         file->prov_helper = ph;
-        file->info = new_file_info();
+
+        file->prov_info = new_file_info();
+        file->shared_file_info = calloc(1, sizeof(H5VL_provenance_info_t));
+
         /* Check for async request */
         if(req && *req)
             *req = H5VL_provenance_new_obj(*req, info->under_vol_id, file->prov_helper);
@@ -2258,7 +2361,8 @@ H5VL_provenance_file_close(void *file, hid_t dxpl_id, void **req)
 
     /* Release our wrapper, if underlying file was closed */
     prov_write(o->prov_helper, __func__, get_time_usec() - start);
-    file_stats_prov_write(o->info);
+
+    file_stats_prov_write(o->shared_file_info);
     if(ret_value >= 0)
         H5VL_provenance_free_obj(o);
 
@@ -2293,7 +2397,7 @@ H5VL_provenance_group_create(void *obj, const H5VL_loc_params_t *loc_params,
     under = H5VLgroup_create(o->under_object, loc_params, o->under_vol_id, name, gcpl_id,  gapl_id, dxpl_id, req);
     if(under) {
         group = H5VL_provenance_new_obj(under, o->under_vol_id, o->prov_helper);
-        group->info = new_group_info();
+        group->prov_info = new_group_info();
         /* Check for async request */
         if(req && *req)
             *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
@@ -2332,7 +2436,7 @@ H5VL_provenance_group_open(void *obj, const H5VL_loc_params_t *loc_params,
     under = H5VLgroup_open(o->under_object, loc_params, o->under_vol_id, name, gapl_id, dxpl_id, req);
     if(under) {
         group = H5VL_provenance_new_obj(under, o->under_vol_id, o->prov_helper);
-        group->info = new_group_info();
+        group->prov_info = new_group_info();
         /* Check for async request */
         if(req && *req)
             *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
@@ -2473,7 +2577,7 @@ H5VL_provenance_group_close(void *grp, hid_t dxpl_id, void **req)
 
     /* Release our wrapper, if underlying file was closed */
     prov_write(o->prov_helper, __func__, get_time_usec() - start);
-    group_stats_prov_write(o->info);
+    group_stats_prov_write(o->prov_info);
     if(ret_value >= 0)
         H5VL_provenance_free_obj(o);
 

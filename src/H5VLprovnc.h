@@ -43,6 +43,8 @@ typedef struct H5VL_provenance_info_t {
     char* prov_file_path;
     Prov_level prov_level;
     char* prov_line_format;
+    int ds_created;
+    int ds_accessed;//ds opened
 } H5VL_provenance_info_t;
 
 
