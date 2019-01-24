@@ -48,13 +48,13 @@ test_open_link_without_leading_slash(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, MISCELLANEOUS_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        HDprintf("    couldn't open container group\n");
         goto error;
     }
 
@@ -69,7 +69,7 @@ test_open_link_without_leading_slash(void)
 
     if ((dset_id = H5Dcreate2(container_group, OPEN_LINK_WITHOUT_SLASH_DSET_NAME, dset_dtype, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create dataset\n");
+        HDprintf("    couldn't create dataset\n");
         goto error;
     }
 
@@ -84,19 +84,19 @@ test_open_link_without_leading_slash(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((group_id = H5Gopen2(file_id, "/", H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open root group\n");
+        HDprintf("    couldn't open root group\n");
         goto error;
     }
 
     if ((dset_id = H5Dopen2(group_id, MISCELLANEOUS_TEST_GROUP_NAME "/" OPEN_LINK_WITHOUT_SLASH_DSET_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open dataset\n");
+        HDprintf("    couldn't open dataset\n");
         goto error;
     }
 
@@ -154,20 +154,20 @@ test_object_creation_by_absolute_path(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, MISCELLANEOUS_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        HDprintf("    couldn't open container group\n");
         goto error;
     }
 
     /* Start by creating a group to hold all the objects for this test */
     if ((group_id = H5Gcreate2(container_group, OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_CONTAINER_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group\n");
+        HDprintf("    couldn't create container group\n");
         goto error;
     }
 
@@ -175,7 +175,7 @@ test_object_creation_by_absolute_path(void)
     if ((sub_group_id = H5Gcreate2(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_CONTAINER_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_SUBGROUP_NAME,
             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create subgroup by absolute pathname\n");
+        HDprintf("    couldn't create subgroup by absolute pathname\n");
         goto error;
     }
 
@@ -192,70 +192,70 @@ test_object_creation_by_absolute_path(void)
     if ((dset_id = H5Dcreate2(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_CONTAINER_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_SUBGROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_DSET_NAME,
             dset_dtype, fspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create dataset\n");
+        HDprintf("    couldn't create dataset\n");
         goto error;
     }
 
     /* Next try to create a committed datatype in the same fashion as the preceding dataset */
     if ((dtype_id = generate_random_datatype(H5T_NO_CLASS)) < 0) {
         H5_FAILED();
-        printf("    couldn't create datatype\n");
+        HDprintf("    couldn't create datatype\n");
         goto error;
     }
 
     if (H5Tcommit2(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_CONTAINER_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_SUBGROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_DTYPE_NAME,
             dtype_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    couldn't commit datatype\n");
+        HDprintf("    couldn't commit datatype\n");
         goto error;
     }
 
     /* Finally try to verify that all of the previously-created objects exist in the correct location */
     if ((link_exists = H5Lexists(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_CONTAINER_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if link exists\n");
+        HDprintf("    couldn't determine if link exists\n");
         goto error;
     }
 
     if (!link_exists) {
         H5_FAILED();
-        printf("    container group didn't exist at the correct location\n");
+        HDprintf("    container group didn't exist at the correct location\n");
         goto error;
     }
 
     if ((link_exists = H5Lexists(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_CONTAINER_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_SUBGROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if link exists\n");
+        HDprintf("    couldn't determine if link exists\n");
         goto error;
     }
 
     if (!link_exists) {
         H5_FAILED();
-        printf("    subgroup didn't exist at the correct location\n");
+        HDprintf("    subgroup didn't exist at the correct location\n");
         goto error;
     }
 
     if ((link_exists = H5Lexists(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_CONTAINER_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_SUBGROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_DSET_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if link exists\n");
+        HDprintf("    couldn't determine if link exists\n");
         goto error;
     }
 
     if (!link_exists) {
         H5_FAILED();
-        printf("    dataset didn't exist at the correct location\n");
+        HDprintf("    dataset didn't exist at the correct location\n");
         goto error;
     }
 
     if ((link_exists = H5Lexists(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_CONTAINER_GROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_SUBGROUP_NAME "/" OBJECT_CREATE_BY_ABSOLUTE_PATH_TEST_DTYPE_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if link exists\n");
+        HDprintf("    couldn't determine if link exists\n");
         goto error;
     }
 
     if (!link_exists) {
         H5_FAILED();
-        printf("    datatype didn't exist at the correct location\n");
+        HDprintf("    datatype didn't exist at the correct location\n");
         goto error;
     }
 
@@ -317,20 +317,20 @@ test_absolute_vs_relative_path(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, MISCELLANEOUS_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        HDprintf("    couldn't open container group\n");
         goto error;
     }
 
     /* Start by creating a group to be used during some of the dataset creation operations */
     if ((group_id = H5Gcreate2(container_group, ABSOLUTE_VS_RELATIVE_PATH_TEST_CONTAINER_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group\n");
+        HDprintf("    couldn't create container group\n");
         goto error;
     }
 
@@ -357,7 +357,7 @@ test_absolute_vs_relative_path(void)
     if ((dset_id1 = H5Dcreate2(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_CONTAINER_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET1_NAME,
             dset_dtype1, fspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create dataset by absolute path from root\n");
+        HDprintf("    couldn't create dataset by absolute path from root\n");
         goto error;
     }
 
@@ -365,7 +365,7 @@ test_absolute_vs_relative_path(void)
     if ((dset_id2 = H5Dcreate2(container_group, ABSOLUTE_VS_RELATIVE_PATH_TEST_CONTAINER_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET2_NAME,
             dset_dtype2, fspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create dataset by relative path from root\n");
+        HDprintf("    couldn't create dataset by relative path from root\n");
         goto error;
     }
 
@@ -373,7 +373,7 @@ test_absolute_vs_relative_path(void)
     if ((dset_id3 = H5Dcreate2(file_id, "./" MISCELLANEOUS_TEST_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_CONTAINER_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET3_NAME,
             dset_dtype3, fspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create dataset by relative path from root with leading '.'\n");
+        HDprintf("    couldn't create dataset by relative path from root with leading '.'\n");
         goto error;
     }
 
@@ -381,7 +381,7 @@ test_absolute_vs_relative_path(void)
     if ((dset_id4 = H5Dcreate2(container_group, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_CONTAINER_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET4_NAME,
             dset_dtype4, fspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create dataset by absolute path from container group\n");
+        HDprintf("    couldn't create dataset by absolute path from container group\n");
         goto error;
     }
 
@@ -389,7 +389,7 @@ test_absolute_vs_relative_path(void)
     if ((dset_id5 = H5Dcreate2(group_id, ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET5_NAME, dset_dtype5,
             fspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create dataset by relative path from container group\n");
+        HDprintf("    couldn't create dataset by relative path from container group\n");
         goto error;
     }
 
@@ -397,80 +397,80 @@ test_absolute_vs_relative_path(void)
     if ((dset_id6 = H5Dcreate2(group_id, "./" ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET6_NAME, dset_dtype6,
             fspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create dataset by relative path from container group with leading '.'\n");
+        HDprintf("    couldn't create dataset by relative path from container group with leading '.'\n");
         goto error;
     }
 
     /* Verify that all of the previously-created datasets exist in the correct locations */
     if ((link_exists = H5Lexists(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_CONTAINER_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET1_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if link exists\n");
+        HDprintf("    couldn't determine if link exists\n");
         goto error;
     }
 
     if (!link_exists) {
         H5_FAILED();
-        printf("    didn't exist at the correct location\n");
+        HDprintf("    didn't exist at the correct location\n");
         goto error;
     }
 
     if ((link_exists = H5Lexists(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_CONTAINER_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET2_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if link exists\n");
+        HDprintf("    couldn't determine if link exists\n");
         goto error;
     }
 
     if (!link_exists) {
         H5_FAILED();
-        printf("    didn't exist at the correct location\n");
+        HDprintf("    didn't exist at the correct location\n");
         goto error;
     }
 
     if ((link_exists = H5Lexists(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_CONTAINER_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET3_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if link exists\n");
+        HDprintf("    couldn't determine if link exists\n");
         goto error;
     }
 
     if (!link_exists) {
         H5_FAILED();
-        printf("    didn't exist at the correct location\n");
+        HDprintf("    didn't exist at the correct location\n");
         goto error;
     }
 
     if ((link_exists = H5Lexists(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_CONTAINER_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET4_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if link exists\n");
+        HDprintf("    couldn't determine if link exists\n");
         goto error;
     }
 
     if (!link_exists) {
         H5_FAILED();
-        printf("    didn't exist at the correct location\n");
+        HDprintf("    didn't exist at the correct location\n");
         goto error;
     }
 
     if ((link_exists = H5Lexists(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_CONTAINER_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET5_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if link exists\n");
+        HDprintf("    couldn't determine if link exists\n");
         goto error;
     }
 
     if (!link_exists) {
         H5_FAILED();
-        printf("    didn't exist at the correct location\n");
+        HDprintf("    didn't exist at the correct location\n");
         goto error;
     }
 
     if ((link_exists = H5Lexists(file_id, "/" MISCELLANEOUS_TEST_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_CONTAINER_GROUP_NAME "/" ABSOLUTE_VS_RELATIVE_PATH_TEST_DSET6_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if link exists\n");
+        HDprintf("    couldn't determine if link exists\n");
         goto error;
     }
 
     if (!link_exists) {
         H5_FAILED();
-        printf("    didn't exist at the correct location\n");
+        HDprintf("    didn't exist at the correct location\n");
         goto error;
     }
 
@@ -595,20 +595,20 @@ test_symbols_in_compound_field_name(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, MISCELLANEOUS_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        HDprintf("    couldn't open container group\n");
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, COMPOUND_WITH_SYMBOLS_IN_MEMBER_NAMES_TEST_SUBGROUP_NAME,
             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container sub-group\n");
+        HDprintf("    couldn't create container sub-group\n");
         goto error;
     }
 
@@ -617,26 +617,26 @@ test_symbols_in_compound_field_name(void)
         total_type_size += H5Tget_size(type_pool[i]);
     }
 
-    snprintf(member_names[0], 256, "{{{ member0");
-    snprintf(member_names[1], 256, "member1 }}}");
-    snprintf(member_names[2], 256, "{{{ member2 }}");
-    snprintf(member_names[3], 256, "{{ member3 }}}");
-    snprintf(member_names[4], 256, "\\\"member4");
-    snprintf(member_names[5], 256, "member5\\\"");
-    snprintf(member_names[6], 256, "mem\\\"ber6");
-    snprintf(member_names[7], 256, "{{ member7\\\" }");
-    snprintf(member_names[8], 256, "{{ member8\\\\");
+    HDsnprintf(member_names[0], 256, "{{{ member0");
+    HDsnprintf(member_names[1], 256, "member1 }}}");
+    HDsnprintf(member_names[2], 256, "{{{ member2 }}");
+    HDsnprintf(member_names[3], 256, "{{ member3 }}}");
+    HDsnprintf(member_names[4], 256, "\\\"member4");
+    HDsnprintf(member_names[5], 256, "member5\\\"");
+    HDsnprintf(member_names[6], 256, "mem\\\"ber6");
+    HDsnprintf(member_names[7], 256, "{{ member7\\\" }");
+    HDsnprintf(member_names[8], 256, "{{ member8\\\\");
 
     if ((compound_type = H5Tcreate(H5T_COMPOUND, total_type_size)) < 0) {
         H5_FAILED();
-        printf("    couldn't create compound datatype\n");
+        HDprintf("    couldn't create compound datatype\n");
         goto error;
     }
 
     for (i = 0, next_offset = 0; i < COMPOUND_WITH_SYMBOLS_IN_MEMBER_NAMES_TEST_NUM_SUBTYPES; i++) {
         if (H5Tinsert(compound_type, member_names[i], next_offset, type_pool[i]) < 0) {
             H5_FAILED();
-            printf("    couldn't insert compound member %zu\n", i);
+            HDprintf("    couldn't insert compound member %zu\n", i);
             goto error;
         }
 
@@ -655,7 +655,7 @@ test_symbols_in_compound_field_name(void)
     if ((dset_id = H5Dcreate2(group_id, COMPOUND_WITH_SYMBOLS_IN_MEMBER_NAMES_TEST_DSET_NAME, compound_type,
             fspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create dataset\n");
+        HDprintf("    couldn't create dataset\n");
         goto error;
     }
 
@@ -664,7 +664,7 @@ test_symbols_in_compound_field_name(void)
 
     if ((dset_id = H5Dopen2(group_id, COMPOUND_WITH_SYMBOLS_IN_MEMBER_NAMES_TEST_DSET_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    failed to open dataset\n");
+        HDprintf("    failed to open dataset\n");
         goto error;
     }
 
@@ -713,17 +713,17 @@ vol_misc_test(void)
     size_t i;
     int    nerrors;
 
-    printf("**********************************************\n");
-    printf("*                                            *\n");
-    printf("*          VOL Miscellaneous Tests           *\n");
-    printf("*                                            *\n");
-    printf("**********************************************\n\n");
+    HDprintf("**********************************************\n");
+    HDprintf("*                                            *\n");
+    HDprintf("*          VOL Miscellaneous Tests           *\n");
+    HDprintf("*                                            *\n");
+    HDprintf("**********************************************\n\n");
 
     for (i = 0, nerrors = 0; i < ARRAY_LENGTH(misc_tests); i++) {
         nerrors += (*misc_tests[i])() ? 1 : 0;
     }
 
-    printf("\n");
+    HDprintf("\n");
 
 done:
     return nerrors;

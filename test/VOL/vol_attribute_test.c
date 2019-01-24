@@ -105,7 +105,7 @@ test_create_attribute_on_root(void)
     hid_t   attr_dtype1 = H5I_INVALID_HID, attr_dtype2 = H5I_INVALID_HID;
     hid_t   space_id = H5I_INVALID_HID;
 
-    TESTING("attribute creation on the root group"); puts("");
+    TESTING("attribute creation on the root group"); HDputs("");
 
     TESTING_2("H5Acreate on the root group")
 
@@ -114,7 +114,7 @@ test_create_attribute_on_root(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
@@ -131,20 +131,20 @@ test_create_attribute_on_root(void)
 
     if ((attr_id = H5Acreate2(file_id, ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME, attr_dtype1, space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute '%s' using H5Acreate\n", ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME);
+        HDprintf("    couldn't create attribute '%s' using H5Acreate\n", ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME);
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(file_id, ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute '%s' exists\n", ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME);
+        HDprintf("    couldn't determine if attribute '%s' exists\n", ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME);
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute '%s' did not exist\n", ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME);
+        HDprintf("    attribute '%s' did not exist\n", ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME);
         goto error;
     }
 
@@ -154,20 +154,20 @@ test_create_attribute_on_root(void)
 
     if ((attr_id2 = H5Acreate_by_name(file_id, "/", ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME2, attr_dtype2, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute on root group using H5Acreate_by_name\n");
+        HDprintf("    couldn't create attribute on root group using H5Acreate_by_name\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(file_id, ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME2)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute '%s' exists\n", ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME2);
+        HDprintf("    couldn't determine if attribute '%s' exists\n", ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME2);
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute '%s' did not exist\n", ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME2);
+        HDprintf("    attribute '%s' did not exist\n", ATTRIBUTE_CREATE_ON_ROOT_ATTR_NAME2);
         goto error;
     }
 
@@ -225,7 +225,7 @@ test_create_attribute_on_dataset(void)
     hid_t   dset_space_id = H5I_INVALID_HID;
     hid_t   attr_space_id = H5I_INVALID_HID;
 
-    TESTING("attribute creation on a dataset"); puts("");
+    TESTING("attribute creation on a dataset"); HDputs("");
 
     TESTING_2("H5Acreate on a dataset")
 
@@ -234,19 +234,19 @@ test_create_attribute_on_dataset(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_CREATE_ON_DATASET_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_CREATE_ON_DATASET_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_CREATE_ON_DATASET_GROUP_NAME);
         goto error;
     }
 
@@ -270,27 +270,27 @@ test_create_attribute_on_dataset(void)
     if ((dset_id = H5Dcreate2(group_id, ATTRIBUTE_CREATE_ON_DATASET_DSET_NAME, dset_dtype,
             dset_space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create dataset\n");
+        HDprintf("    couldn't create dataset\n");
         goto error;
     }
 
     if ((attr_id = H5Acreate2(dset_id, ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME, attr_dtype1,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(dset_id, ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute '%s' exists\n", ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME);
+        HDprintf("    couldn't determine if attribute '%s' exists\n", ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME);
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute '%s' did not exist\n", ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME);
+        HDprintf("    attribute '%s' did not exist\n", ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME);
         goto error;
     }
 
@@ -301,20 +301,20 @@ test_create_attribute_on_dataset(void)
     if ((attr_id2 = H5Acreate_by_name(group_id, ATTRIBUTE_CREATE_ON_DATASET_DSET_NAME, ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME2,
             attr_dtype2, attr_space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute on dataset by name\n");
+        HDprintf("    couldn't create attribute on dataset by name\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(dset_id, ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME2)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute '%s' exists\n", ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME2);
+        HDprintf("    couldn't determine if attribute '%s' exists\n", ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME2);
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute '%s' did not exist\n", ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME2);
+        HDprintf("    attribute '%s' did not exist\n", ATTRIBUTE_CREATE_ON_DATASET_ATTR_NAME2);
         goto error;
     }
 
@@ -384,7 +384,7 @@ test_create_attribute_on_datatype(void)
     hid_t   attr_dtype1 = H5I_INVALID_HID, attr_dtype2 = H5I_INVALID_HID;
     hid_t   space_id = H5I_INVALID_HID;
 
-    TESTING("attribute creation on a committed datatype"); puts("");
+    TESTING("attribute creation on a committed datatype"); HDputs("");
 
     TESTING_2("H5Acreate on a committed datatype")
 
@@ -393,30 +393,30 @@ test_create_attribute_on_datatype(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_CREATE_ON_DATATYPE_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_CREATE_ON_DATATYPE_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_CREATE_ON_DATATYPE_GROUP_NAME);
     }
 
     if ((type_id = generate_random_datatype(H5T_NO_CLASS)) < 0) {
         H5_FAILED();
-        printf("    couldn't create datatype\n");
+        HDprintf("    couldn't create datatype\n");
         goto error;
     }
 
     if (H5Tcommit2(group_id, ATTRIBUTE_CREATE_ON_DATATYPE_DTYPE_NAME, type_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    couldn't commit datatype\n");
+        HDprintf("    couldn't commit datatype\n");
         goto error;
     }
 
@@ -428,7 +428,7 @@ test_create_attribute_on_datatype(void)
 
         if ((type_id = H5Topen2(group_id, ATTRIBUTE_CREATE_ON_DATATYPE_DTYPE_NAME, H5P_DEFAULT)) < 0) {
             H5_FAILED();
-            printf("    couldn't open committed datatype\n");
+            HDprintf("    couldn't open committed datatype\n");
             goto error;
         }
     }
@@ -447,19 +447,19 @@ test_create_attribute_on_datatype(void)
     if ((attr_id = H5Acreate2(type_id, ATTRIBUTE_CREATE_ON_DATATYPE_ATTR_NAME, attr_dtype1,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute on datatype using H5Acreate\n");
+        HDprintf("    couldn't create attribute on datatype using H5Acreate\n");
         goto error;
     }
 
     if ((attr_exists = H5Aexists(type_id, ATTRIBUTE_CREATE_ON_DATATYPE_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -470,20 +470,20 @@ test_create_attribute_on_datatype(void)
     if ((attr_id2 = H5Acreate_by_name(group_id, ATTRIBUTE_CREATE_ON_DATATYPE_DTYPE_NAME,
             ATTRIBUTE_CREATE_ON_DATATYPE_ATTR_NAME2, attr_dtype2, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute on datatype using H5Acreate_by_name\n");
+        HDprintf("    couldn't create attribute on datatype using H5Acreate_by_name\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(type_id, ATTRIBUTE_CREATE_ON_DATATYPE_ATTR_NAME2)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -550,19 +550,19 @@ test_create_attribute_with_null_space(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        HDprintf("    couldn't open container group\n");
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_CREATE_NULL_DATASPACE_TEST_SUBGROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container subgroup\n");
+        HDprintf("    couldn't create container subgroup\n");
         goto error;
     }
 
@@ -575,20 +575,20 @@ test_create_attribute_with_null_space(void)
 
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_CREATE_NULL_DATASPACE_TEST_ATTR_NAME, attr_dtype, space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_CREATE_NULL_DATASPACE_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -597,7 +597,7 @@ test_create_attribute_with_null_space(void)
 
     if ((attr_id = H5Aopen(group_id, ATTRIBUTE_CREATE_NULL_DATASPACE_TEST_ATTR_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open attribute\n");
+        HDprintf("    couldn't open attribute\n");
         goto error;
     }
 
@@ -655,19 +655,19 @@ test_create_attribute_with_scalar_space(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        HDprintf("    couldn't open container group\n");
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_CREATE_SCALAR_DATASPACE_TEST_SUBGROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container subgroup\n");
+        HDprintf("    couldn't create container subgroup\n");
         goto error;
     }
 
@@ -680,20 +680,20 @@ test_create_attribute_with_scalar_space(void)
 
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_CREATE_SCALAR_DATASPACE_TEST_ATTR_NAME, attr_dtype, space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_CREATE_SCALAR_DATASPACE_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -702,7 +702,7 @@ test_create_attribute_with_scalar_space(void)
 
     if ((attr_id = H5Aopen(group_id, ATTRIBUTE_CREATE_SCALAR_DATASPACE_TEST_ATTR_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open attribute\n");
+        HDprintf("    couldn't open attribute\n");
         goto error;
     }
 
@@ -763,19 +763,19 @@ test_create_attribute_with_space_in_name(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        HDprintf("    couldn't open container group\n");
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_CREATE_WITH_SPACE_IN_NAME_GROUP_NAME, H5P_DEFAULT,  H5P_DEFAULT,  H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_CREATE_WITH_SPACE_IN_NAME_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_CREATE_WITH_SPACE_IN_NAME_GROUP_NAME);
         goto error;
     }
 
@@ -791,20 +791,20 @@ test_create_attribute_with_space_in_name(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_CREATE_WITH_SPACE_IN_NAME_ATTR_NAME, attr_dtype,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_CREATE_WITH_SPACE_IN_NAME_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -856,7 +856,7 @@ test_create_attribute_invalid_params(void)
     hid_t   attr_dtype = H5I_INVALID_HID;
     hid_t   space_id = H5I_INVALID_HID;
 
-    TESTING("H5Acreate with invalid parameters"); puts("");
+    TESTING("H5Acreate with invalid parameters"); HDputs("");
 
     TESTING_2("H5Acreate with invalid loc_id")
 
@@ -865,19 +865,19 @@ test_create_attribute_invalid_params(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_CREATE_INVALID_PARAMS_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group\n");
+        HDprintf("    couldn't create container group\n");
         goto error;
     }
 
@@ -896,7 +896,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate with an invalid loc_id!\n");
+        HDprintf("    created attribute using H5Acreate with an invalid loc_id!\n");
         goto error;
     }
 
@@ -910,7 +910,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate with an invalid name!\n");
+        HDprintf("    created attribute using H5Acreate with an invalid name!\n");
         goto error;
     }
 
@@ -920,7 +920,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate with an invalid name!\n");
+        HDprintf("    created attribute using H5Acreate with an invalid name!\n");
         goto error;
     }
 
@@ -935,7 +935,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate with an invalid datatype!\n");
+        HDprintf("    created attribute using H5Acreate with an invalid datatype!\n");
         goto error;
     }
 
@@ -950,7 +950,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate with an invalid dataspace!\n");
+        HDprintf("    created attribute using H5Acreate with an invalid dataspace!\n");
         goto error;
     }
 
@@ -965,7 +965,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate with an invalid ACPL!\n");
+        HDprintf("    created attribute using H5Acreate with an invalid ACPL!\n");
         goto error;
     }
 
@@ -980,13 +980,13 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate with an invalid AAPL!\n");
+        HDprintf("    created attribute using H5Acreate with an invalid AAPL!\n");
         goto error;
     }
 
     PASSED();
 
-    TESTING("H5Acreate_by_name with invalid parameters"); puts("");
+    TESTING("H5Acreate_by_name with invalid parameters"); HDputs("");
 
     TESTING_2("H5Acreate_by_name with an invalid loc_id")
 
@@ -998,7 +998,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid loc_id!\n");
+        HDprintf("    created attribute using H5Acreate_by_name with an invalid loc_id!\n");
         goto error;
     }
 
@@ -1013,7 +1013,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid object name!\n");
+        HDprintf("    created attribute using H5Acreate_by_name with an invalid object name!\n");
         goto error;
     }
 
@@ -1024,7 +1024,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid object name!\n");
+        HDprintf("    created attribute using H5Acreate_by_name with an invalid object name!\n");
         goto error;
     }
 
@@ -1039,7 +1039,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid attribute name!\n");
+        HDprintf("    created attribute using H5Acreate_by_name with an invalid attribute name!\n");
         goto error;
     }
 
@@ -1050,7 +1050,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid attribute name!\n");
+        HDprintf("    created attribute using H5Acreate_by_name with an invalid attribute name!\n");
         goto error;
     }
 
@@ -1066,7 +1066,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid datatype!\n");
+        HDprintf("    created attribute using H5Acreate_by_name with an invalid datatype!\n");
         goto error;
     }
 
@@ -1082,7 +1082,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid dataspace!\n");
+        HDprintf("    created attribute using H5Acreate_by_name with an invalid dataspace!\n");
         goto error;
     }
 
@@ -1098,7 +1098,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid ACPL!\n");
+        HDprintf("    created attribute using H5Acreate_by_name with an invalid ACPL!\n");
         goto error;
     }
 
@@ -1114,7 +1114,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid AAPL!\n");
+        HDprintf("    created attribute using H5Acreate_by_name with an invalid AAPL!\n");
         goto error;
     }
 
@@ -1130,7 +1130,7 @@ test_create_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    created attribute using H5Acreate_by_name with an invalid LAPL!\n");
+        HDprintf("    created attribute using H5Acreate_by_name with an invalid LAPL!\n");
         goto error;
     }
 
@@ -1176,7 +1176,7 @@ test_open_attribute(void)
     hid_t   space_id = H5I_INVALID_HID;
     hid_t   attr_type = H5I_INVALID_HID;
 
-    TESTING("attribute opening"); puts("");
+    TESTING("attribute opening"); HDputs("");
 
     TESTING_2("H5Aopen")
 
@@ -1185,19 +1185,19 @@ test_open_attribute(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_OPEN_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_OPEN_TEST_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_OPEN_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -1212,7 +1212,7 @@ test_open_attribute(void)
 
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_OPEN_TEST_ATTR_NAME, attr_type, space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute '%s'\n", ATTRIBUTE_OPEN_TEST_ATTR_NAME);
+        HDprintf("    couldn't create attribute '%s'\n", ATTRIBUTE_OPEN_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1221,7 +1221,7 @@ test_open_attribute(void)
 
     if ((attr_id = H5Aopen(group_id, ATTRIBUTE_OPEN_TEST_ATTR_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open attribute '%s' using H5Aopen\n", ATTRIBUTE_OPEN_TEST_ATTR_NAME);
+        HDprintf("    couldn't open attribute '%s' using H5Aopen\n", ATTRIBUTE_OPEN_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1239,7 +1239,7 @@ test_open_attribute(void)
     if ((attr_id = H5Aopen_by_name(container_group, ATTRIBUTE_OPEN_TEST_GROUP_NAME,
             ATTRIBUTE_OPEN_TEST_ATTR_NAME, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open attribute '%s' using H5Aopen_by_name\n", ATTRIBUTE_OPEN_TEST_ATTR_NAME);
+        HDprintf("    couldn't open attribute '%s' using H5Aopen_by_name\n", ATTRIBUTE_OPEN_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1253,7 +1253,7 @@ test_open_attribute(void)
     if ((attr_id = H5Aopen_by_idx(container_group, ATTRIBUTE_OPEN_TEST_GROUP_NAME, H5_INDEX_NAME,
             H5_ITER_INC, 0, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open attribute '%s' using H5Aopen_by_idx\n", ATTRIBUTE_OPEN_TEST_ATTR_NAME);
+        HDprintf("    couldn't open attribute '%s' using H5Aopen_by_idx\n", ATTRIBUTE_OPEN_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1305,7 +1305,7 @@ test_open_attribute_invalid_params(void)
     hid_t   space_id = H5I_INVALID_HID;
     hid_t   attr_type = H5I_INVALID_HID;
 
-    TESTING("H5Aopen with invalid parameters"); puts("");
+    TESTING("H5Aopen with invalid parameters"); HDputs("");
 
     TESTING_2("H5Aopen with an invalid loc_id")
 
@@ -1314,19 +1314,19 @@ test_open_attribute_invalid_params(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -1342,7 +1342,7 @@ test_open_attribute_invalid_params(void)
 
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME, attr_type, space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute '%s'\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    couldn't create attribute '%s'\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1355,7 +1355,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen with an invalid loc_id!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen with an invalid loc_id!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1369,7 +1369,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen with an invalid attribute name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen with an invalid attribute name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1379,7 +1379,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen with an invalid attribute name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen with an invalid attribute name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1393,7 +1393,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen with an invalid AAPL!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen with an invalid AAPL!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1408,13 +1408,13 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_name with an invalid loc_id!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_name with an invalid loc_id!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
     PASSED();
 
-    TESTING("H5Aopen_by_name with invalid parameters"); puts("");
+    TESTING("H5Aopen_by_name with invalid parameters"); HDputs("");
 
     TESTING_2("H5Aopen_by_name with an invalid object name")
 
@@ -1424,7 +1424,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_name with an invalid object name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_name with an invalid object name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1434,7 +1434,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_name with an invalid object name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_name with an invalid object name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1448,7 +1448,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_name with an invalid attribute name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_name with an invalid attribute name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1458,7 +1458,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_name with an invalid attribute name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_name with an invalid attribute name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1473,7 +1473,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_name with an invalid AAPL!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_name with an invalid AAPL!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1488,13 +1488,13 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_name with an invalid LAPL!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_name with an invalid LAPL!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
     PASSED();
 
-    TESTING("H5Aopen_by_idx with invalid parameters"); puts("");
+    TESTING("H5Aopen_by_idx with invalid parameters"); HDputs("");
 
     TESTING_2("H5Aopen_by_idx with an invalid loc_id")
 
@@ -1505,7 +1505,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_idx with an invalid loc_id!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_idx with an invalid loc_id!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1519,7 +1519,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_idx with an invalid object name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_idx with an invalid object name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1529,7 +1529,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_idx with an invalid object name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_idx with an invalid object name!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1544,7 +1544,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_idx with an invalid index type!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_idx with an invalid index type!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1555,7 +1555,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_idx with an invalid index type!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_idx with an invalid index type!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1570,7 +1570,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_idx with an invalid iteration order!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_idx with an invalid iteration order!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1581,7 +1581,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_idx with an invalid iteration order!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_idx with an invalid iteration order!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1596,7 +1596,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_idx with an invalid AAPL!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_idx with an invalid AAPL!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1611,7 +1611,7 @@ test_open_attribute_invalid_params(void)
 
     if (attr_id >= 0) {
         H5_FAILED();
-        printf("    opened attribute '%s' using H5Aopen_by_idx with an invalid LAPL!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
+        HDprintf("    opened attribute '%s' using H5Aopen_by_idx with an invalid LAPL!\n", ATTRIBUTE_OPEN_INVALID_PARAMS_TEST_ATTR_NAME);
         goto error;
     }
 
@@ -1670,19 +1670,19 @@ test_write_attribute(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        HDprintf("    couldn't open container group\n");
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_WRITE_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_WRITE_TEST_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_WRITE_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -1695,20 +1695,20 @@ test_write_attribute(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_WRITE_TEST_ATTR_NAME, ATTRIBUTE_WRITE_TEST_ATTR_DTYPE,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_WRITE_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -1716,7 +1716,7 @@ test_write_attribute(void)
         data_size *= dims[i];
     data_size *= ATTRIBUTE_WRITE_TEST_ATTR_DTYPE_SIZE;
 
-    if (NULL == (data = malloc(data_size)))
+    if (NULL == (data = HDmalloc(data_size)))
         TEST_ERROR
 
     for (i = 0; i < data_size / ATTRIBUTE_WRITE_TEST_ATTR_DTYPE_SIZE; i++)
@@ -1724,12 +1724,12 @@ test_write_attribute(void)
 
     if (H5Awrite(attr_id, ATTRIBUTE_WRITE_TEST_ATTR_DTYPE, data) < 0) {
         H5_FAILED();
-        printf("    couldn't write to attribute\n");
+        HDprintf("    couldn't write to attribute\n");
         goto error;
     }
 
     if (data) {
-        free(data);
+        HDfree(data);
         data = NULL;
     }
 
@@ -1752,7 +1752,7 @@ test_write_attribute(void)
 
 error:
     H5E_BEGIN_TRY {
-        if (data) free(data);
+        if (data) HDfree(data);
         H5Sclose(space_id);
         H5Aclose(attr_id);
         H5Gclose(group_id);
@@ -1782,7 +1782,7 @@ test_write_attribute_invalid_params(void)
     hid_t    space_id = H5I_INVALID_HID;
     void    *data = NULL;
 
-    TESTING("H5Awrite with invalid parameters"); puts("");
+    TESTING("H5Awrite with invalid parameters"); HDputs("");
 
     TESTING_2("H5Awrite with an invalid attr_id")
 
@@ -1791,19 +1791,19 @@ test_write_attribute_invalid_params(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_WRITE_INVALID_PARAMS_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_WRITE_INVALID_PARAMS_TEST_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_WRITE_INVALID_PARAMS_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -1816,20 +1816,20 @@ test_write_attribute_invalid_params(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_WRITE_INVALID_PARAMS_TEST_ATTR_NAME, ATTRIBUTE_WRITE_INVALID_PARAMS_TEST_ATTR_DTYPE,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_WRITE_INVALID_PARAMS_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -1837,7 +1837,7 @@ test_write_attribute_invalid_params(void)
         data_size *= dims[i];
     data_size *= ATTRIBUTE_WRITE_INVALID_PARAMS_TEST_ATTR_DTYPE_SIZE;
 
-    if (NULL == (data = malloc(data_size)))
+    if (NULL == (data = HDmalloc(data_size)))
         TEST_ERROR
 
     for (i = 0; i < data_size / ATTRIBUTE_WRITE_INVALID_PARAMS_TEST_ATTR_DTYPE_SIZE; i++)
@@ -1849,7 +1849,7 @@ test_write_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    wrote to attribute using an invalid attr_id!\n");
+        HDprintf("    wrote to attribute using an invalid attr_id!\n");
         goto error;
     }
 
@@ -1863,7 +1863,7 @@ test_write_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    wrote to attribute using an invalid datatype!\n");
+        HDprintf("    wrote to attribute using an invalid datatype!\n");
         goto error;
     }
 
@@ -1877,12 +1877,12 @@ test_write_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    wrote to attribute using an invalid data buffer!\n");
+        HDprintf("    wrote to attribute using an invalid data buffer!\n");
         goto error;
     }
 
     if (data) {
-        free(data);
+        HDfree(data);
         data = NULL;
     }
 
@@ -1905,7 +1905,7 @@ test_write_attribute_invalid_params(void)
 
 error:
     H5E_BEGIN_TRY {
-        if (data) free(data);
+        if (data) HDfree(data);
         H5Sclose(space_id);
         H5Aclose(attr_id);
         H5Gclose(group_id);
@@ -1943,19 +1943,19 @@ test_read_attribute(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_READ_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    could't create container group '%s'\n", ATTRIBUTE_READ_TEST_GROUP_NAME);
+        HDprintf("    could't create container group '%s'\n", ATTRIBUTE_READ_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -1968,20 +1968,20 @@ test_read_attribute(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_READ_TEST_ATTR_NAME, ATTRIBUTE_READ_TEST_ATTR_DTYPE,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_READ_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -1989,9 +1989,9 @@ test_read_attribute(void)
         data_size *= dims[i];
     data_size *= ATTRIBUTE_READ_TEST_ATTR_DTYPE_SIZE;
 
-    if (NULL == (data = malloc(data_size)))
+    if (NULL == (data = HDmalloc(data_size)))
         TEST_ERROR
-    if (NULL == (read_buf = calloc(1, data_size)))
+    if (NULL == (read_buf = HDcalloc(1, data_size)))
         TEST_ERROR
 
     for (i = 0; i < data_size / ATTRIBUTE_READ_TEST_ATTR_DTYPE_SIZE; i++)
@@ -1999,12 +1999,12 @@ test_read_attribute(void)
 
     if (H5Awrite(attr_id, ATTRIBUTE_READ_TEST_ATTR_DTYPE, data) < 0) {
         H5_FAILED();
-        printf("    couldn't write to attribute\n");
+        HDprintf("    couldn't write to attribute\n");
         goto error;
     }
 
     if (data) {
-        free(data);
+        HDfree(data);
         data = NULL;
     }
 
@@ -2013,26 +2013,26 @@ test_read_attribute(void)
 
     if ((attr_id = H5Aopen(group_id, ATTRIBUTE_READ_TEST_ATTR_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open attribute\n");
+        HDprintf("    couldn't open attribute\n");
         goto error;
     }
 
     if (H5Aread(attr_id, ATTRIBUTE_READ_TEST_ATTR_DTYPE, read_buf) < 0) {
         H5_FAILED();
-        printf("    couldn't read from attribute\n");
+        HDprintf("    couldn't read from attribute\n");
         goto error;
     }
 
     for (i = 0; i < data_size / ATTRIBUTE_READ_TEST_ATTR_DTYPE_SIZE; i++) {
         if (((int *) read_buf)[i] != (int) i) {
             H5_FAILED();
-            printf("    data verification failed\n");
+            HDprintf("    data verification failed\n");
             goto error;
         }
     }
 
     if (read_buf) {
-        free(read_buf);
+        HDfree(read_buf);
         read_buf = NULL;
     }
 
@@ -2055,8 +2055,8 @@ test_read_attribute(void)
 
 error:
     H5E_BEGIN_TRY {
-        if (data) free(data);
-        if (read_buf) free(read_buf);
+        if (data) HDfree(data);
+        if (read_buf) HDfree(read_buf);
         H5Sclose(space_id);
         H5Aclose(attr_id);
         H5Gclose(group_id);
@@ -2087,26 +2087,26 @@ test_read_attribute_invalid_params(void)
     void    *data = NULL;
     void    *read_buf = NULL;
 
-    TESTING("H5Aread with invalid parameters"); puts("");
+    TESTING("H5Aread with invalid parameters"); HDputs("");
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_READ_INVALID_PARAMS_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    could't create container group '%s'\n", ATTRIBUTE_READ_INVALID_PARAMS_TEST_GROUP_NAME);
+        HDprintf("    could't create container group '%s'\n", ATTRIBUTE_READ_INVALID_PARAMS_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -2119,20 +2119,20 @@ test_read_attribute_invalid_params(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_READ_INVALID_PARAMS_TEST_ATTR_NAME, ATTRIBUTE_READ_INVALID_PARAMS_TEST_ATTR_DTYPE,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_READ_INVALID_PARAMS_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -2140,9 +2140,9 @@ test_read_attribute_invalid_params(void)
         data_size *= dims[i];
     data_size *= ATTRIBUTE_READ_INVALID_PARAMS_TEST_ATTR_DTYPE_SIZE;
 
-    if (NULL == (data = malloc(data_size)))
+    if (NULL == (data = HDmalloc(data_size)))
         TEST_ERROR
-    if (NULL == (read_buf = calloc(1, data_size)))
+    if (NULL == (read_buf = HDcalloc(1, data_size)))
         TEST_ERROR
 
     for (i = 0; i < data_size / ATTRIBUTE_READ_INVALID_PARAMS_TEST_ATTR_DTYPE_SIZE; i++)
@@ -2150,12 +2150,12 @@ test_read_attribute_invalid_params(void)
 
     if (H5Awrite(attr_id, ATTRIBUTE_READ_INVALID_PARAMS_TEST_ATTR_DTYPE, data) < 0) {
         H5_FAILED();
-        printf("    couldn't write to attribute\n");
+        HDprintf("    couldn't write to attribute\n");
         goto error;
     }
 
     if (data) {
-        free(data);
+        HDfree(data);
         data = NULL;
     }
 
@@ -2164,7 +2164,7 @@ test_read_attribute_invalid_params(void)
 
     if ((attr_id = H5Aopen(group_id, ATTRIBUTE_READ_INVALID_PARAMS_TEST_ATTR_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open attribute\n");
+        HDprintf("    couldn't open attribute\n");
         goto error;
     }
 
@@ -2176,7 +2176,7 @@ test_read_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    read attribute with an invalid attr_id!\n");
+        HDprintf("    read attribute with an invalid attr_id!\n");
         goto error;
     }
 
@@ -2190,7 +2190,7 @@ test_read_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    read attribute with an invalid datatype!\n");
+        HDprintf("    read attribute with an invalid datatype!\n");
         goto error;
     }
 
@@ -2204,7 +2204,7 @@ test_read_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    read attribute with an invalid read buffer!\n");
+        HDprintf("    read attribute with an invalid read buffer!\n");
         goto error;
     }
 
@@ -2227,8 +2227,8 @@ test_read_attribute_invalid_params(void)
 
 error:
     H5E_BEGIN_TRY {
-        if (data) free(data);
-        if (read_buf) free(read_buf);
+        if (data) HDfree(data);
+        if (read_buf) HDfree(read_buf);
         H5Sclose(space_id);
         H5Aclose(attr_id);
         H5Gclose(group_id);
@@ -2257,7 +2257,7 @@ test_close_attribute_invalid_id(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
@@ -2267,7 +2267,7 @@ test_close_attribute_invalid_id(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    H5Aclose succeeded with an invalid attribute ID!\n");
+        HDprintf("    H5Aclose succeeded with an invalid attribute ID!\n");
         goto error;
     }
 
@@ -2309,26 +2309,26 @@ test_get_attribute_space_and_type(void)
     hid_t   tmp_type_id = H5I_INVALID_HID;
     hid_t   tmp_space_id = H5I_INVALID_HID;
 
-    TESTING("retrieval of an attribute's dataspace and datatype"); puts("");
+    TESTING("retrieval of an attribute's dataspace and datatype"); HDputs("");
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_GET_SPACE_TYPE_TEST_GROUP_NAME, H5P_DEFAULT,  H5P_DEFAULT,  H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_GET_SPACE_TYPE_TEST_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_GET_SPACE_TYPE_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -2344,20 +2344,20 @@ test_get_attribute_space_and_type(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_GET_SPACE_TYPE_TEST_ATTR_NAME, attr_dtype,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_GET_SPACE_TYPE_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -2366,7 +2366,7 @@ test_get_attribute_space_and_type(void)
 
     if ((tmp_type_id = H5Aget_type(attr_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve attribute's datatype\n");
+        HDprintf("    couldn't retrieve attribute's datatype\n");
         goto error;
     }
 
@@ -2375,13 +2375,13 @@ test_get_attribute_space_and_type(void)
 
         if (types_equal < 0) {
             H5_FAILED();
-            printf("    datatype was invalid\n");
+            HDprintf("    datatype was invalid\n");
             goto error;
         }
 
         if (!types_equal) {
             H5_FAILED();
-            printf("    attribute's datatype did not match\n");
+            HDprintf("    attribute's datatype did not match\n");
             goto error;
         }
     }
@@ -2392,7 +2392,7 @@ test_get_attribute_space_and_type(void)
 
     if ((tmp_space_id = H5Aget_space(attr_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve attribute's dataspace\n");
+        HDprintf("    couldn't retrieve attribute's dataspace\n");
         goto error;
     }
 
@@ -2405,7 +2405,7 @@ test_get_attribute_space_and_type(void)
         for (i = 0; i < ATTRIBUTE_GET_SPACE_TYPE_TEST_SPACE_RANK; i++)
             if (space_dims[i] != attr_dims[i]) {
                 H5_FAILED();
-                printf("    attribute's dataspace dims didn't match\n");
+                HDprintf("    attribute's dataspace dims didn't match\n");
                 goto error;
             }
     }
@@ -2426,13 +2426,13 @@ test_get_attribute_space_and_type(void)
 
     if ((attr_id = H5Aopen(group_id, ATTRIBUTE_GET_SPACE_TYPE_TEST_ATTR_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open attribute\n");
+        HDprintf("    couldn't open attribute\n");
         goto error;
     }
 
     if ((tmp_type_id = H5Aget_type(attr_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve attribute's datatype\n");
+        HDprintf("    couldn't retrieve attribute's datatype\n");
         goto error;
     }
 
@@ -2441,13 +2441,13 @@ test_get_attribute_space_and_type(void)
 
         if (types_equal < 0) {
             H5_FAILED();
-            printf("    datatype was invalid\n");
+            HDprintf("    datatype was invalid\n");
             goto error;
         }
 
         if (!types_equal) {
             H5_FAILED();
-            printf("    attribute's datatype did not match\n");
+            HDprintf("    attribute's datatype did not match\n");
             goto error;
         }
     }
@@ -2458,7 +2458,7 @@ test_get_attribute_space_and_type(void)
 
     if ((tmp_space_id = H5Aget_space(attr_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve attribute's dataspace\n");
+        HDprintf("    couldn't retrieve attribute's dataspace\n");
         goto error;
     }
 
@@ -2471,7 +2471,7 @@ test_get_attribute_space_and_type(void)
         for (i = 0; i < ATTRIBUTE_GET_SPACE_TYPE_TEST_SPACE_RANK; i++) {
             if (space_dims[i] != attr_dims[i]) {
                 H5_FAILED();
-                printf("    dataspace dims didn't match!\n");
+                HDprintf("    dataspace dims didn't match!\n");
                 goto error;
             }
         }
@@ -2536,26 +2536,26 @@ test_get_attribute_space_and_type_invalid_params(void)
     hid_t   tmp_type_id = H5I_INVALID_HID;
     hid_t   tmp_space_id = H5I_INVALID_HID;
 
-    TESTING("H5Aget_type/H5Aget_space with invalid parameters"); puts("");
+    TESTING("H5Aget_type/H5Aget_space with invalid parameters"); HDputs("");
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_GET_SPACE_TYPE_INVALID_PARAMS_TEST_GROUP_NAME, H5P_DEFAULT,  H5P_DEFAULT,  H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_GET_SPACE_TYPE_INVALID_PARAMS_TEST_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_GET_SPACE_TYPE_INVALID_PARAMS_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -2571,20 +2571,20 @@ test_get_attribute_space_and_type_invalid_params(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_GET_SPACE_TYPE_INVALID_PARAMS_TEST_ATTR_NAME, attr_dtype,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_GET_SPACE_TYPE_INVALID_PARAMS_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -2597,7 +2597,7 @@ test_get_attribute_space_and_type_invalid_params(void)
 
     if (tmp_type_id >= 0) {
         H5_FAILED();
-        printf("    retrieved copy of attribute's datatype using an invalid attr_id!\n");
+        HDprintf("    retrieved copy of attribute's datatype using an invalid attr_id!\n");
         goto error;
     }
 
@@ -2611,7 +2611,7 @@ test_get_attribute_space_and_type_invalid_params(void)
 
     if (tmp_space_id >= 0) {
         H5_FAILED();
-        printf("    retrieved copy of attribute's dataspace using an invalid attr_id!\n");
+        HDprintf("    retrieved copy of attribute's dataspace using an invalid attr_id!\n");
         goto error;
     }
 
@@ -2669,7 +2669,7 @@ test_attribute_property_lists(void)
     hid_t      acpl_id1 = H5I_INVALID_HID, acpl_id2 = H5I_INVALID_HID;
     hid_t      space_id = H5I_INVALID_HID;
 
-    TESTING("attribute property list operations"); puts("");
+    TESTING("attribute property list operations"); HDputs("");
 
     TESTING_2("H5Aget_create_plist")
 
@@ -2678,19 +2678,19 @@ test_attribute_property_lists(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        HDprintf("    couldn't open container group\n");
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_PROPERTY_LIST_TEST_SUBGROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container sub-group\n");
+        HDprintf("    couldn't create container sub-group\n");
         goto error;
     }
 
@@ -2707,27 +2707,27 @@ test_attribute_property_lists(void)
 
     if ((acpl_id1 = H5Pcreate(H5P_ATTRIBUTE_CREATE)) < 0) {
         H5_FAILED();
-        printf("    couldn't create ACPL\n");
+        HDprintf("    couldn't create ACPL\n");
         goto error;
     }
 
     if (H5Pset_char_encoding(acpl_id1, encoding) < 0) {
         H5_FAILED();
-        printf("    couldn't set ACPL property value\n");
+        HDprintf("    couldn't set ACPL property value\n");
         goto error;
     }
 
     if ((attr_id1 = H5Acreate2(group_id, ATTRIBUTE_PROPERTY_LIST_TEST_ATTRIBUTE_NAME1, attr_dtype1,
             space_id, acpl_id1, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     if ((attr_id2 = H5Acreate2(group_id, ATTRIBUTE_PROPERTY_LIST_TEST_ATTRIBUTE_NAME2, attr_dtype2,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
@@ -2737,38 +2737,38 @@ test_attribute_property_lists(void)
     /* Verify the attributes have been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_PROPERTY_LIST_TEST_ATTRIBUTE_NAME1)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_PROPERTY_LIST_TEST_ATTRIBUTE_NAME2)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
     /* Try to retrieve copies of the two property lists, one which ahs the property set and one which does not */
     if ((acpl_id1 = H5Aget_create_plist(attr_id1)) < 0) {
         H5_FAILED();
-        printf("    couldn't get property list\n");
+        HDprintf("    couldn't get property list\n");
         goto error;
     }
 
     if ((acpl_id2 = H5Aget_create_plist(attr_id2)) < 0) {
         H5_FAILED();
-        printf("    couldn't get property list\n");
+        HDprintf("    couldn't get property list\n");
         goto error;
     }
 
@@ -2777,13 +2777,13 @@ test_attribute_property_lists(void)
 
     if (H5Pget_char_encoding(acpl_id1, &encoding) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve ACPL property value\n");
+        HDprintf("    couldn't retrieve ACPL property value\n");
         goto error;
     }
 
     if (H5T_CSET_UTF8 != encoding) {
         H5_FAILED();
-        printf("   ACPL property value was incorrect\n");
+        HDprintf("   ACPL property value was incorrect\n");
         goto error;
     }
 
@@ -2791,13 +2791,13 @@ test_attribute_property_lists(void)
 
     if (H5Pget_char_encoding(acpl_id2, &encoding) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve ACPL property value\n");
+        HDprintf("    couldn't retrieve ACPL property value\n");
         goto error;
     }
 
     if (H5T_CSET_UTF8 == encoding) {
         H5_FAILED();
-        printf("    ACPL property value was set!\n");
+        HDprintf("    ACPL property value was set!\n");
         goto error;
     }
 
@@ -2819,25 +2819,25 @@ test_attribute_property_lists(void)
 
     if ((attr_id1 = H5Aopen(group_id, ATTRIBUTE_PROPERTY_LIST_TEST_ATTRIBUTE_NAME1, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open attribute\n");
+        HDprintf("    couldn't open attribute\n");
         goto error;
     }
 
     if ((attr_id2 = H5Aopen(group_id, ATTRIBUTE_PROPERTY_LIST_TEST_ATTRIBUTE_NAME2, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open attribute\n");
+        HDprintf("    couldn't open attribute\n");
         goto error;
     }
 
     if ((acpl_id1 = H5Aget_create_plist(attr_id1)) < 0) {
         H5_FAILED();
-        printf("    couldn't get property list\n");
+        HDprintf("    couldn't get property list\n");
         goto error;
     }
 
     if ((acpl_id2 = H5Aget_create_plist(attr_id2)) < 0) {
         H5_FAILED();
-        printf("    couldn't get property list\n");
+        HDprintf("    couldn't get property list\n");
         goto error;
     }
 
@@ -2906,26 +2906,26 @@ test_get_attribute_name(void)
     hid_t    space_id = H5I_INVALID_HID;
     char    *name_buf = NULL;
 
-    TESTING("retrieval of an attribute's name"); puts("");
+    TESTING("retrieval of an attribute's name"); HDputs("");
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_GET_NAME_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_GET_NAME_TEST_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_GET_NAME_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -2941,20 +2941,20 @@ test_get_attribute_name(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME, attr_dtype,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -2963,21 +2963,21 @@ test_get_attribute_name(void)
     /* Retrieve the name buffer size */
     if ((name_buf_size = H5Aget_name(attr_id, 0, NULL)) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve name buf size\n");
+        HDprintf("    couldn't retrieve name buf size\n");
         goto error;
     }
 
-    if (NULL == (name_buf = (char *) malloc((size_t) name_buf_size + 1)))
+    if (NULL == (name_buf = (char *) HDmalloc((size_t) name_buf_size + 1)))
         TEST_ERROR
 
     if (H5Aget_name(attr_id, (size_t) name_buf_size + 1, name_buf) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve attribute name\n");
+        HDprintf("    couldn't retrieve attribute name\n");
     }
 
-    if (strcmp(name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME)) {
+    if (HDstrcmp(name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME)) {
         H5_FAILED();
-        printf("    retrieved attribute name '%s' didn't match '%s'\n", name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME);
+        HDprintf("    retrieved attribute name '%s' didn't match '%s'\n", name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME);
         goto error;
     }
 
@@ -2988,13 +2988,13 @@ test_get_attribute_name(void)
     if (H5Aget_name_by_idx(container_group, ATTRIBUTE_GET_NAME_TEST_GROUP_NAME, H5_INDEX_NAME, H5_ITER_INC,
             0, name_buf, (size_t) name_buf_size + 1, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve attribute name by index\n");
+        HDprintf("    couldn't retrieve attribute name by index\n");
         goto error;
     }
 
-    if (strcmp(name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME)) {
+    if (HDstrcmp(name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME)) {
         H5_FAILED();
-        printf("    attribute name didn't match\n");
+        HDprintf("    attribute name didn't match\n");
         goto error;
     }
 
@@ -3008,7 +3008,7 @@ test_get_attribute_name(void)
 
     if ((attr_id = H5Aopen(group_id, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open attribute\n");
+        HDprintf("    couldn't open attribute\n");
         goto error;
     }
 
@@ -3016,13 +3016,13 @@ test_get_attribute_name(void)
 
     if (H5Aget_name(attr_id, (size_t) name_buf_size + 1, name_buf) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve attribute name\n");
+        HDprintf("    couldn't retrieve attribute name\n");
         goto error;
     }
 
-    if (strcmp(name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME)) {
+    if (HDstrcmp(name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME)) {
         H5_FAILED();
-        printf("    attribute name didn't match\n");
+        HDprintf("    attribute name didn't match\n");
         goto error;
     }
 
@@ -3033,18 +3033,18 @@ test_get_attribute_name(void)
     if (H5Aget_name_by_idx(container_group, ATTRIBUTE_GET_NAME_TEST_GROUP_NAME, H5_INDEX_NAME, H5_ITER_INC,
             0, name_buf, (size_t) name_buf_size + 1, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve attribute name by index\n");
+        HDprintf("    couldn't retrieve attribute name by index\n");
         goto error;
     }
 
-    if (strcmp(name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME)) {
+    if (HDstrcmp(name_buf, ATTRIBUTE_GET_NAME_TEST_ATTRIBUTE_NAME)) {
         H5_FAILED();
-        printf("    attribute name didn't match\n");
+        HDprintf("    attribute name didn't match\n");
         goto error;
     }
 
     if (name_buf) {
-        free(name_buf);
+        HDfree(name_buf);
         name_buf = NULL;
     }
 
@@ -3069,7 +3069,7 @@ test_get_attribute_name(void)
 
 error:
     H5E_BEGIN_TRY {
-        if (name_buf) free(name_buf);
+        if (name_buf) HDfree(name_buf);
         H5Sclose(space_id);
         H5Tclose(attr_dtype);
         H5Aclose(attr_id);
@@ -3102,26 +3102,26 @@ test_get_attribute_name_invalid_params(void)
     hid_t    space_id = H5I_INVALID_HID;
     char    *name_buf = NULL;
 
-    TESTING("retrieval of an attribute's name with invalid parameters"); puts("");
+    TESTING("retrieval of an attribute's name with invalid parameters"); HDputs("");
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_GET_NAME_INVALID_PARAMS_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_GET_NAME_INVALID_PARAMS_TEST_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_GET_NAME_INVALID_PARAMS_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -3137,20 +3137,20 @@ test_get_attribute_name_invalid_params(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_GET_NAME_INVALID_PARAMS_TEST_ATTRIBUTE_NAME, attr_dtype,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_GET_NAME_INVALID_PARAMS_TEST_ATTRIBUTE_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -3160,11 +3160,11 @@ test_get_attribute_name_invalid_params(void)
 
     if ((name_buf_size = H5Aget_name(attr_id, 0, NULL)) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve name buf size\n");
+        HDprintf("    couldn't retrieve name buf size\n");
         goto error;
     }
 
-    if (NULL == (name_buf = (char *) malloc((size_t) name_buf_size + 1)))
+    if (NULL == (name_buf = (char *) HDmalloc((size_t) name_buf_size + 1)))
         TEST_ERROR
 
     TESTING_2("H5Aget_name with an invalid attr_id")
@@ -3175,7 +3175,7 @@ test_get_attribute_name_invalid_params(void)
 
     if (name_buf_size >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute name using H5Aget_name with an invalid attr_id!\n");
+        HDprintf("    retrieved attribute name using H5Aget_name with an invalid attr_id!\n");
         goto error;
     }
 
@@ -3184,12 +3184,13 @@ test_get_attribute_name_invalid_params(void)
     TESTING_2("H5Aget_name with an invalid name buffer")
 
     H5E_BEGIN_TRY {
-        name_buf_size = H5Aget_name(attr_id, (size_t) name_buf_size + 1, NULL);
+        name_buf_size = 1;
+        name_buf_size = H5Aget_name(attr_id, (size_t) name_buf_size, NULL);
     } H5E_END_TRY;
 
     if (name_buf_size >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute name using H5Aget_name with an invalid name buffer!\n");
+        HDprintf("    retrieved attribute name using H5Aget_name with an invalid name buffer!\n");
         goto error;
     }
 
@@ -3204,7 +3205,7 @@ test_get_attribute_name_invalid_params(void)
 
     if (name_buf_size >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute name using H5Aget_name_by_idx with an invalid loc_id!\n");
+        HDprintf("    retrieved attribute name using H5Aget_name_by_idx with an invalid loc_id!\n");
         goto error;
     }
 
@@ -3219,7 +3220,7 @@ test_get_attribute_name_invalid_params(void)
 
     if (name_buf_size >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute name using H5Aget_name_by_idx with an invalid object name!\n");
+        HDprintf("    retrieved attribute name using H5Aget_name_by_idx with an invalid object name!\n");
         goto error;
     }
 
@@ -3230,7 +3231,7 @@ test_get_attribute_name_invalid_params(void)
 
     if (name_buf_size >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute name using H5Aget_name_by_idx with an invalid object name!\n");
+        HDprintf("    retrieved attribute name using H5Aget_name_by_idx with an invalid object name!\n");
         goto error;
     }
 
@@ -3245,7 +3246,7 @@ test_get_attribute_name_invalid_params(void)
 
     if (name_buf_size >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute name using H5Aget_name_by_idx with an invalid index type!\n");
+        HDprintf("    retrieved attribute name using H5Aget_name_by_idx with an invalid index type!\n");
         goto error;
     }
 
@@ -3256,7 +3257,7 @@ test_get_attribute_name_invalid_params(void)
 
     if (name_buf_size >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute name using H5Aget_name_by_idx with an invalid index type!\n");
+        HDprintf("    retrieved attribute name using H5Aget_name_by_idx with an invalid index type!\n");
         goto error;
     }
 
@@ -3271,7 +3272,7 @@ test_get_attribute_name_invalid_params(void)
 
     if (name_buf_size >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute name using H5Aget_name_by_idx with an invalid iteration order!\n");
+        HDprintf("    retrieved attribute name using H5Aget_name_by_idx with an invalid iteration order!\n");
         goto error;
     }
 
@@ -3282,7 +3283,7 @@ test_get_attribute_name_invalid_params(void)
 
     if (name_buf_size >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute name using H5Aget_name_by_idx with an invalid iteration order!\n");
+        HDprintf("    retrieved attribute name using H5Aget_name_by_idx with an invalid iteration order!\n");
         goto error;
     }
 
@@ -3291,13 +3292,14 @@ test_get_attribute_name_invalid_params(void)
     TESTING_2("H5Aget_name_by_idx with an invalid name buffer")
 
     H5E_BEGIN_TRY {
+        name_buf_size = 1;
         name_buf_size = H5Aget_name_by_idx(container_group, ATTRIBUTE_GET_NAME_INVALID_PARAMS_TEST_GROUP_NAME,
-                H5_INDEX_NAME, H5_ITER_INC, 0, NULL, (size_t) name_buf_size + 1, H5P_DEFAULT);
+                H5_INDEX_NAME, H5_ITER_INC, 0, NULL, (size_t) name_buf_size, H5P_DEFAULT);
     } H5E_END_TRY;
 
     if (name_buf_size >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute name using H5Aget_name_by_idx with an invalid name buffer!\n");
+        HDprintf("    retrieved attribute name using H5Aget_name_by_idx with an invalid name buffer!\n");
         goto error;
     }
 
@@ -3312,12 +3314,12 @@ test_get_attribute_name_invalid_params(void)
 
     if (name_buf_size >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute name using H5Aget_name_by_idx with an invalid LAPL!\n");
+        HDprintf("    retrieved attribute name using H5Aget_name_by_idx with an invalid LAPL!\n");
         goto error;
     }
 
     if (name_buf) {
-        free(name_buf);
+        HDfree(name_buf);
         name_buf = NULL;
     }
 
@@ -3342,7 +3344,7 @@ test_get_attribute_name_invalid_params(void)
 
 error:
     H5E_BEGIN_TRY {
-        if (name_buf) free(name_buf);
+        if (name_buf) HDfree(name_buf);
         H5Sclose(space_id);
         H5Tclose(attr_dtype);
         H5Aclose(attr_id);
@@ -3385,26 +3387,26 @@ test_get_attribute_info(void)
     hid_t      attr_dtype = H5I_INVALID_HID;
     hid_t      space_id = H5I_INVALID_HID;
 
-    TESTING("retrieval of attribute info"); puts("");
+    TESTING("retrieval of attribute info"); HDputs("");
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        HDprintf("    couldn't open container group\n");
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_GET_INFO_TEST_GROUP_NAME, H5P_DEFAULT,  H5P_DEFAULT,  H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_GET_INFO_TEST_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_GET_INFO_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -3420,20 +3422,20 @@ test_get_attribute_info(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_GET_INFO_TEST_ATTR_NAME, attr_dtype,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_GET_INFO_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -3441,7 +3443,7 @@ test_get_attribute_info(void)
 
     if (H5Aget_info(attr_id, &attr_info) < 0) {
         H5_FAILED();
-        printf("    couldn't get attribute info\n");
+        HDprintf("    couldn't get attribute info\n");
         goto error;
     }
 
@@ -3451,7 +3453,7 @@ test_get_attribute_info(void)
 
     if (H5Aget_info_by_name(group_id, ".", ATTRIBUTE_GET_INFO_TEST_ATTR_NAME, &attr_info, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    couldn't get attribute info by name\n");
+        HDprintf("    couldn't get attribute info by name\n");
         goto error;
     }
 
@@ -3461,7 +3463,7 @@ test_get_attribute_info(void)
 
     if (H5Aget_info_by_idx(group_id, ".", H5_INDEX_NAME, H5_ITER_INC, 0, &attr_info, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    couldn't get attribute info by index\n");
+        HDprintf("    couldn't get attribute info by index\n");
         goto error;
     }
 
@@ -3517,26 +3519,26 @@ test_get_attribute_info_invalid_params(void)
     hid_t      attr_dtype = H5I_INVALID_HID;
     hid_t      space_id = H5I_INVALID_HID;
 
-    TESTING("retrieval of attribute info with invalid parameters"); puts("");
+    TESTING("retrieval of attribute info with invalid parameters"); HDputs("");
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_GET_INFO_INVALID_PARAMS_TEST_GROUP_NAME, H5P_DEFAULT,  H5P_DEFAULT,  H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_GET_INFO_INVALID_PARAMS_TEST_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_GET_INFO_INVALID_PARAMS_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -3552,20 +3554,20 @@ test_get_attribute_info_invalid_params(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_GET_INFO_INVALID_PARAMS_TEST_ATTR_NAME, attr_dtype,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_GET_INFO_INVALID_PARAMS_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -3577,7 +3579,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info with an invalid attr_id!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info with an invalid attr_id!\n");
         goto error;
     }
 
@@ -3591,7 +3593,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info with an invalid attr_id!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info with an invalid attr_id!\n");
         goto error;
     }
 
@@ -3606,7 +3608,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_name with an invalid loc_id!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_name with an invalid loc_id!\n");
         goto error;
     }
 
@@ -3621,7 +3623,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_name with an invalid object name!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_name with an invalid object name!\n");
         goto error;
     }
 
@@ -3632,7 +3634,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_name with an invalid object name!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_name with an invalid object name!\n");
         goto error;
     }
 
@@ -3646,7 +3648,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_name with an invalid attribute name!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_name with an invalid attribute name!\n");
         goto error;
     }
 
@@ -3656,7 +3658,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_name with an invalid attribute name!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_name with an invalid attribute name!\n");
         goto error;
     }
 
@@ -3671,7 +3673,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_name with an invalid attribute info pointer!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_name with an invalid attribute info pointer!\n");
         goto error;
     }
 
@@ -3686,7 +3688,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_name with an invalid LAPL!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_name with an invalid LAPL!\n");
         goto error;
     }
 
@@ -3700,7 +3702,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_idx with an invalid loc_id!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_idx with an invalid loc_id!\n");
         goto error;
     }
 
@@ -3714,7 +3716,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_idx with an invalid object name!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_idx with an invalid object name!\n");
         goto error;
     }
 
@@ -3724,7 +3726,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_idx with an invalid object name!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_idx with an invalid object name!\n");
         goto error;
     }
 
@@ -3738,7 +3740,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_idx with an invalid index type!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_idx with an invalid index type!\n");
         goto error;
     }
 
@@ -3748,7 +3750,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_idx with an invalid index type!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_idx with an invalid index type!\n");
         goto error;
     }
 
@@ -3762,7 +3764,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_idx with an invalid iteration order!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_idx with an invalid iteration order!\n");
         goto error;
     }
 
@@ -3772,7 +3774,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_idx with an invalid iteration order!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_idx with an invalid iteration order!\n");
         goto error;
     }
 
@@ -3786,7 +3788,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_idx with an invalid attribute info pointer!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_idx with an invalid attribute info pointer!\n");
         goto error;
     }
 
@@ -3800,7 +3802,7 @@ test_get_attribute_info_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    retrieved attribute info using H5Aget_info_by_idx with an invalid LAPL!\n");
+        HDprintf("    retrieved attribute info using H5Aget_info_by_idx with an invalid LAPL!\n");
         goto error;
     }
 
@@ -3854,26 +3856,26 @@ test_rename_attribute(void)
     hid_t   attr_dtype = H5I_INVALID_HID;
     hid_t   attr_space_id = H5I_INVALID_HID;
 
-    TESTING("attribute renaming"); puts("");
+    TESTING("attribute renaming"); HDputs("");
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_RENAME_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_RENAME_TEST_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_RENAME_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -3889,39 +3891,39 @@ test_rename_attribute(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_RENAME_TEST_ATTR_NAME, attr_dtype,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     if ((attr_id2 = H5Acreate2(group_id, ATTRIBUTE_RENAME_TEST_ATTR_NAME2, attr_dtype,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attributes have been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_RENAME_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_RENAME_TEST_ATTR_NAME2)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -3929,7 +3931,7 @@ test_rename_attribute(void)
 
     if (H5Arename(group_id, ATTRIBUTE_RENAME_TEST_ATTR_NAME, ATTRIBUTE_RENAME_TEST_NEW_NAME) < 0) {
         H5_FAILED();
-        printf("    couldn't rename attribute '%s' to '%s' using H5Arename\n", ATTRIBUTE_RENAME_TEST_ATTR_NAME, ATTRIBUTE_RENAME_TEST_NEW_NAME);
+        HDprintf("    couldn't rename attribute '%s' to '%s' using H5Arename\n", ATTRIBUTE_RENAME_TEST_ATTR_NAME, ATTRIBUTE_RENAME_TEST_NEW_NAME);
         goto error;
     }
 
@@ -3940,7 +3942,7 @@ test_rename_attribute(void)
     if (H5Arename_by_name(container_group, ATTRIBUTE_RENAME_TEST_GROUP_NAME, ATTRIBUTE_RENAME_TEST_ATTR_NAME2,
             ATTRIBUTE_RENAME_TEST_NEW_NAME2, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    couldn't rename attribute '%s' to '%s' using H5Arename_by_name\n", ATTRIBUTE_RENAME_TEST_ATTR_NAME2, ATTRIBUTE_RENAME_TEST_NEW_NAME2);
+        HDprintf("    couldn't rename attribute '%s' to '%s' using H5Arename_by_name\n", ATTRIBUTE_RENAME_TEST_ATTR_NAME2, ATTRIBUTE_RENAME_TEST_NEW_NAME2);
         goto error;
     }
 
@@ -4002,26 +4004,26 @@ test_rename_attribute_invalid_params(void)
     hid_t   attr_dtype = H5I_INVALID_HID;
     hid_t   attr_space_id = H5I_INVALID_HID;
 
-    TESTING("attribute renaming with invalid parameters"); puts("");
+    TESTING("attribute renaming with invalid parameters"); HDputs("");
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_RENAME_INVALID_PARAMS_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_RENAME_INVALID_PARAMS_TEST_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_RENAME_INVALID_PARAMS_TEST_GROUP_NAME);
         goto error;
     }
 
@@ -4037,39 +4039,39 @@ test_rename_attribute_invalid_params(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_RENAME_INVALID_PARAMS_TEST_ATTR_NAME, attr_dtype,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     if ((attr_id2 = H5Acreate2(group_id, ATTRIBUTE_RENAME_INVALID_PARAMS_TEST_ATTR_NAME2, attr_dtype,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attributes have been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_RENAME_INVALID_PARAMS_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_RENAME_INVALID_PARAMS_TEST_ATTR_NAME2)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -4081,7 +4083,7 @@ test_rename_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    renamed attribute using H5Arename with an invalid loc_id!\n");
+        HDprintf("    renamed attribute using H5Arename with an invalid loc_id!\n");
         goto error;
     }
 
@@ -4095,7 +4097,7 @@ test_rename_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    renamed attribute using H5Arename with an invalid old attribute name!\n");
+        HDprintf("    renamed attribute using H5Arename with an invalid old attribute name!\n");
         goto error;
     }
 
@@ -4105,7 +4107,7 @@ test_rename_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    renamed attribute using H5Arename with an invalid old attribute name!\n");
+        HDprintf("    renamed attribute using H5Arename with an invalid old attribute name!\n");
         goto error;
     }
 
@@ -4119,7 +4121,7 @@ test_rename_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    renamed attribute using H5Arename with an invalid new attribute name!\n");
+        HDprintf("    renamed attribute using H5Arename with an invalid new attribute name!\n");
         goto error;
     }
 
@@ -4129,7 +4131,7 @@ test_rename_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    renamed attribute using H5Arename with an invalid new attribute name!\n");
+        HDprintf("    renamed attribute using H5Arename with an invalid new attribute name!\n");
         goto error;
     }
 
@@ -4144,7 +4146,7 @@ test_rename_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    renamed attribute using H5Arename_by_name with an invalid loc_id!\n");
+        HDprintf("    renamed attribute using H5Arename_by_name with an invalid loc_id!\n");
         goto error;
     }
 
@@ -4159,7 +4161,7 @@ test_rename_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    renamed attribute using H5Arename_by_name with an invalid object name!\n");
+        HDprintf("    renamed attribute using H5Arename_by_name with an invalid object name!\n");
         goto error;
     }
 
@@ -4170,7 +4172,7 @@ test_rename_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    renamed attribute using H5Arename_by_name with an invalid object name!\n");
+        HDprintf("    renamed attribute using H5Arename_by_name with an invalid object name!\n");
         goto error;
     }
 
@@ -4184,7 +4186,7 @@ test_rename_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    renamed attribute using H5Arename_by_name with an invalid old attribute name!\n");
+        HDprintf("    renamed attribute using H5Arename_by_name with an invalid old attribute name!\n");
         goto error;
     }
 
@@ -4194,7 +4196,7 @@ test_rename_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    renamed attribute using H5Arename_by_name with an invalid old attribute name!\n");
+        HDprintf("    renamed attribute using H5Arename_by_name with an invalid old attribute name!\n");
         goto error;
     }
 
@@ -4208,7 +4210,7 @@ test_rename_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    renamed attribute using H5Arename_by_name with an invalid new attribute name!\n");
+        HDprintf("    renamed attribute using H5Arename_by_name with an invalid new attribute name!\n");
         goto error;
     }
 
@@ -4218,7 +4220,7 @@ test_rename_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    renamed attribute using H5Arename_by_name with an invalid new attribute name!\n");
+        HDprintf("    renamed attribute using H5Arename_by_name with an invalid new attribute name!\n");
         goto error;
     }
 
@@ -4233,7 +4235,7 @@ test_rename_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    renamed attribute using H5Arename_by_name with an invalid LAPL!\n");
+        HDprintf("    renamed attribute using H5Arename_by_name with an invalid LAPL!\n");
         goto error;
     }
 
@@ -4295,26 +4297,26 @@ test_attribute_iterate(void)
     hid_t   dset_space_id = H5I_INVALID_HID;
     hid_t   attr_space_id = H5I_INVALID_HID;
 
-    TESTING("attribute iteration"); puts("");
+    TESTING("attribute iteration"); HDputs("");
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        HDprintf("    couldn't open container group\n");
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_ITERATE_TEST_SUBGROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container subgroup\n");
+        HDprintf("    couldn't create container subgroup\n");
         goto error;
     }
 
@@ -4336,84 +4338,84 @@ test_attribute_iterate(void)
     if ((dset_id = H5Dcreate2(group_id, ATTRIBUTE_ITERATE_TEST_DSET_NAME, dset_dtype,
             dset_space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create dataset\n");
+        HDprintf("    couldn't create dataset\n");
         goto error;
     }
 
     if ((attr_id = H5Acreate2(dset_id, ATTRIBUTE_ITERATE_TEST_ATTR_NAME, attr_dtype,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     if ((attr_id2 = H5Acreate2(dset_id, ATTRIBUTE_ITERATE_TEST_ATTR_NAME2, attr_dtype,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     if ((attr_id3 = H5Acreate2(dset_id, ATTRIBUTE_ITERATE_TEST_ATTR_NAME3, attr_dtype,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     if ((attr_id4 = H5Acreate2(dset_id, ATTRIBUTE_ITERATE_TEST_ATTR_NAME4, attr_dtype,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attributes have been created */
     if ((attr_exists = H5Aexists(dset_id, ATTRIBUTE_ITERATE_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
     if ((attr_exists = H5Aexists(dset_id, ATTRIBUTE_ITERATE_TEST_ATTR_NAME2)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
     if ((attr_exists = H5Aexists(dset_id, ATTRIBUTE_ITERATE_TEST_ATTR_NAME3)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
     if ((attr_exists = H5Aexists(dset_id, ATTRIBUTE_ITERATE_TEST_ATTR_NAME4)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -4431,7 +4433,7 @@ test_attribute_iterate(void)
     /* Test basic attribute iteration capability using both index types and both index orders */
     if (H5Aiterate2(dset_id, H5_INDEX_NAME, H5_ITER_INC, NULL, attr_iter_callback1, &i) < 0) {
         H5_FAILED();
-        printf("    H5Aiterate2 by index type name in increasing order failed\n");
+        HDprintf("    H5Aiterate2 by index type name in increasing order failed\n");
         goto error;
     }
 
@@ -4441,7 +4443,7 @@ test_attribute_iterate(void)
 
     if (H5Aiterate2(dset_id, H5_INDEX_NAME, H5_ITER_DEC, NULL, attr_iter_callback1, &i) < 0) {
         H5_FAILED();
-        printf("    H5Aiterate2 by index type name in decreasing order failed\n");
+        HDprintf("    H5Aiterate2 by index type name in decreasing order failed\n");
         goto error;
     }
 
@@ -4451,7 +4453,7 @@ test_attribute_iterate(void)
 
     if (H5Aiterate2(dset_id, H5_INDEX_CRT_ORDER, H5_ITER_INC, NULL, attr_iter_callback1, &i) < 0) {
         H5_FAILED();
-        printf("    H5Aiterate2 by index type creation order in increasing order failed\n");
+        HDprintf("    H5Aiterate2 by index type creation order in increasing order failed\n");
         goto error;
     }
 
@@ -4461,7 +4463,7 @@ test_attribute_iterate(void)
 
     if (H5Aiterate2(dset_id, H5_INDEX_CRT_ORDER, H5_ITER_DEC, NULL, attr_iter_callback1, &i) < 0) {
         H5_FAILED();
-        printf("    H5Aiterate2 by index type creation order in decreasing order failed\n");
+        HDprintf("    H5Aiterate2 by index type creation order in decreasing order failed\n");
         goto error;
     }
 
@@ -4477,7 +4479,7 @@ test_attribute_iterate(void)
     if (H5Aiterate_by_name(file_id, "/" ATTRIBUTE_TEST_GROUP_NAME "/" ATTRIBUTE_ITERATE_TEST_SUBGROUP_NAME "/" ATTRIBUTE_ITERATE_TEST_DSET_NAME,
             H5_INDEX_NAME, H5_ITER_INC, NULL, attr_iter_callback1, &i, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    H5Aiterate_by_name by index type name in increasing order failed\n");
+        HDprintf("    H5Aiterate_by_name by index type name in increasing order failed\n");
         goto error;
     }
 
@@ -4488,7 +4490,7 @@ test_attribute_iterate(void)
     if (H5Aiterate_by_name(file_id, "/" ATTRIBUTE_TEST_GROUP_NAME "/" ATTRIBUTE_ITERATE_TEST_SUBGROUP_NAME "/" ATTRIBUTE_ITERATE_TEST_DSET_NAME,
             H5_INDEX_NAME, H5_ITER_DEC, NULL, attr_iter_callback1, &i, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    H5Aiterate_by_name by index type name in decreasing order failed\n");
+        HDprintf("    H5Aiterate_by_name by index type name in decreasing order failed\n");
         goto error;
     }
 
@@ -4499,7 +4501,7 @@ test_attribute_iterate(void)
     if (H5Aiterate_by_name(file_id, "/" ATTRIBUTE_TEST_GROUP_NAME "/" ATTRIBUTE_ITERATE_TEST_SUBGROUP_NAME "/" ATTRIBUTE_ITERATE_TEST_DSET_NAME,
             H5_INDEX_CRT_ORDER, H5_ITER_INC, NULL, attr_iter_callback1, &i, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    H5Aiterate_by_name by index type creation order in increasing order failed\n");
+        HDprintf("    H5Aiterate_by_name by index type creation order in increasing order failed\n");
         goto error;
     }
 
@@ -4510,7 +4512,7 @@ test_attribute_iterate(void)
     if (H5Aiterate_by_name(file_id, "/" ATTRIBUTE_TEST_GROUP_NAME "/" ATTRIBUTE_ITERATE_TEST_SUBGROUP_NAME "/" ATTRIBUTE_ITERATE_TEST_DSET_NAME,
             H5_INDEX_CRT_ORDER, H5_ITER_DEC, NULL, attr_iter_callback1, &i, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    H5Aiterate_by_name by index type creation order in decreasing order failed\n");
+        HDprintf("    H5Aiterate_by_name by index type creation order in decreasing order failed\n");
         goto error;
     }
 
@@ -4586,26 +4588,26 @@ test_attribute_iterate_invalid_params(void)
     hid_t   attr_dtype = H5I_INVALID_HID;
     hid_t   attr_space_id = H5I_INVALID_HID;
 
-    TESTING("attribute iteration with invalid parameters"); puts("");
+    TESTING("attribute iteration with invalid parameters"); HDputs("");
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        HDprintf("    couldn't open container group\n");
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_SUBGROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container subgroup\n");
+        HDprintf("    couldn't create container subgroup\n");
         goto error;
     }
 
@@ -4621,77 +4623,77 @@ test_attribute_iterate_invalid_params(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_ATTR_NAME, attr_dtype,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     if ((attr_id2 = H5Acreate2(group_id, ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_ATTR_NAME2, attr_dtype,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     if ((attr_id3 = H5Acreate2(group_id, ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_ATTR_NAME3, attr_dtype,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     if ((attr_id4 = H5Acreate2(group_id, ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_ATTR_NAME4, attr_dtype,
             attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attributes have been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_ATTR_NAME2)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_ATTR_NAME3)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_ITERATE_INVALID_PARAMS_TEST_ATTR_NAME4)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
@@ -4703,7 +4705,7 @@ test_attribute_iterate_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    iterated over attributes using H5Aiterate with an invalid loc_id!\n");
+        HDprintf("    iterated over attributes using H5Aiterate with an invalid loc_id!\n");
         goto error;
     }
 
@@ -4717,7 +4719,7 @@ test_attribute_iterate_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    iterated over attributes using H5Aiterate with an invalid index type!\n");
+        HDprintf("    iterated over attributes using H5Aiterate with an invalid index type!\n");
         goto error;
     }
 
@@ -4727,7 +4729,7 @@ test_attribute_iterate_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    iterated over attributes using H5Aiterate with an invalid index type!\n");
+        HDprintf("    iterated over attributes using H5Aiterate with an invalid index type!\n");
         goto error;
     }
 
@@ -4741,7 +4743,7 @@ test_attribute_iterate_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    iterated over attributes using H5Aiterate with an invalid index ordering!\n");
+        HDprintf("    iterated over attributes using H5Aiterate with an invalid index ordering!\n");
         goto error;
     }
 
@@ -4751,7 +4753,7 @@ test_attribute_iterate_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    iterated over attributes using H5Aiterate with an invalid index ordering!\n");
+        HDprintf("    iterated over attributes using H5Aiterate with an invalid index ordering!\n");
         goto error;
     }
 
@@ -4765,7 +4767,7 @@ test_attribute_iterate_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    iterated over attributes using H5Aiterate_by_name with an invalid loc_id!\n");
+        HDprintf("    iterated over attributes using H5Aiterate_by_name with an invalid loc_id!\n");
         goto error;
     }
 
@@ -4779,7 +4781,7 @@ test_attribute_iterate_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    iterated over attributes using H5Aiterate_by_name with an invalid object name!\n");
+        HDprintf("    iterated over attributes using H5Aiterate_by_name with an invalid object name!\n");
         goto error;
     }
 
@@ -4789,7 +4791,7 @@ test_attribute_iterate_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    iterated over attributes using H5Aiterate_by_name with an invalid object name!\n");
+        HDprintf("    iterated over attributes using H5Aiterate_by_name with an invalid object name!\n");
         goto error;
     }
 
@@ -4803,7 +4805,7 @@ test_attribute_iterate_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    iterated over attributes using H5Aiterate_by_name with an invalid index type!\n");
+        HDprintf("    iterated over attributes using H5Aiterate_by_name with an invalid index type!\n");
         goto error;
     }
 
@@ -4813,7 +4815,7 @@ test_attribute_iterate_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    iterated over attributes using H5Aiterate_by_name with an invalid index type!\n");
+        HDprintf("    iterated over attributes using H5Aiterate_by_name with an invalid index type!\n");
         goto error;
     }
 
@@ -4827,7 +4829,7 @@ test_attribute_iterate_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    iterated over attributes using H5Aiterate_by_name with an invalid index ordering!\n");
+        HDprintf("    iterated over attributes using H5Aiterate_by_name with an invalid index ordering!\n");
         goto error;
     }
 
@@ -4837,7 +4839,7 @@ test_attribute_iterate_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    iterated over attributes using H5Aiterate_by_name with an invalid index ordering!\n");
+        HDprintf("    iterated over attributes using H5Aiterate_by_name with an invalid index ordering!\n");
         goto error;
     }
 
@@ -4851,7 +4853,7 @@ test_attribute_iterate_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    iterated over attributes using H5Aiterate_by_name with an invalid LAPL!\n");
+        HDprintf("    iterated over attributes using H5Aiterate_by_name with an invalid LAPL!\n");
         goto error;
     }
 
@@ -4920,19 +4922,19 @@ test_attribute_iterate_0_attributes(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        HDprintf("    couldn't open container group\n");
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_ITERATE_TEST_0_ATTRIBUTES_SUBGROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container subgroup\n");
+        HDprintf("    couldn't create container subgroup\n");
         goto error;
     }
 
@@ -4948,20 +4950,20 @@ test_attribute_iterate_0_attributes(void)
     if ((dset_id = H5Dcreate2(group_id, ATTRIBUTE_ITERATE_TEST_0_ATTRIBUTES_DSET_NAME, dset_dtype,
             dset_space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create dataset\n");
+        HDprintf("    couldn't create dataset\n");
         goto error;
     }
 
     if (H5Aiterate2(dset_id, H5_INDEX_NAME, H5_ITER_INC, NULL, attr_iter_callback2, NULL) < 0) {
         H5_FAILED();
-        printf("    H5Aiterate2 on object with 0 attributes failed\n");
+        HDprintf("    H5Aiterate2 on object with 0 attributes failed\n");
         goto error;
     }
 
     if (H5Aiterate_by_name(group_id, ATTRIBUTE_ITERATE_TEST_0_ATTRIBUTES_DSET_NAME, H5_INDEX_NAME, H5_ITER_INC,
             NULL, attr_iter_callback2, NULL, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    H5Aiterate_by_name on object with 0 attributes failed\n");
+        HDprintf("    H5Aiterate_by_name on object with 0 attributes failed\n");
         goto error;
     }
 
@@ -5014,26 +5016,26 @@ test_delete_attribute(void)
     hid_t   attr_dtype = H5I_INVALID_HID;
     hid_t   space_id = H5I_INVALID_HID;
 
-    TESTING("attribute deletion"); puts("");
+    TESTING("attribute deletion"); HDputs("");
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_DELETION_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_DELETION_TEST_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_DELETION_TEST_GROUP_NAME);
     }
 
     for (i = 0; i < ATTRIBUTE_DELETION_TEST_SPACE_RANK; i++)
@@ -5049,20 +5051,20 @@ test_delete_attribute(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_DELETION_TEST_ATTR_NAME, attr_dtype,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_DELETION_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute didn't exists\n");
+        HDprintf("    attribute didn't exists\n");
         goto error;
     }
 
@@ -5071,20 +5073,20 @@ test_delete_attribute(void)
     /* Delete the attribute */
     if (H5Adelete(group_id, ATTRIBUTE_DELETION_TEST_ATTR_NAME) < 0) {
         H5_FAILED();
-        printf("    failed to delete attribute\n");
+        HDprintf("    failed to delete attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been deleted */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_DELETION_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (attr_exists) {
         H5_FAILED();
-        printf("    attribute exists!\n");
+        HDprintf("    attribute exists!\n");
         goto error;
     }
 
@@ -5099,40 +5101,40 @@ test_delete_attribute(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_DELETION_TEST_ATTR_NAME, attr_dtype,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_DELETION_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute didn't exists\n");
+        HDprintf("    attribute didn't exists\n");
         goto error;
     }
 
     /* Delete the attribute */
     if (H5Adelete_by_name(container_group, ATTRIBUTE_DELETION_TEST_GROUP_NAME, ATTRIBUTE_DELETION_TEST_ATTR_NAME, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    failed to delete attribute\n");
+        HDprintf("    failed to delete attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been deleted */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_DELETION_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (attr_exists) {
         H5_FAILED();
-        printf("    attribute exists!\n");
+        HDprintf("    attribute exists!\n");
         goto error;
     }
 
@@ -5147,39 +5149,39 @@ test_delete_attribute(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_DELETION_TEST_ATTR_NAME, attr_dtype,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_DELETION_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute didn't exists\n");
+        HDprintf("    attribute didn't exists\n");
         goto error;
     }
 
     if (H5Adelete_by_idx(container_group, ATTRIBUTE_DELETION_TEST_GROUP_NAME, H5_INDEX_NAME, H5_ITER_INC, 0, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    failed to delete attribute by index number\n");
+        HDprintf("    failed to delete attribute by index number\n");
         goto error;
     }
 
     /* Verify the attribute has been deleted */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_DELETION_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (attr_exists) {
         H5_FAILED();
-        printf("    attribute exists!\n");
+        HDprintf("    attribute exists!\n");
         goto error;
     }
 
@@ -5235,26 +5237,26 @@ test_delete_attribute_invalid_params(void)
     hid_t   attr_dtype = H5I_INVALID_HID;
     hid_t   space_id = H5I_INVALID_HID;
 
-    TESTING("attribute deletion with invalid parameters"); puts("");
+    TESTING("attribute deletion with invalid parameters"); HDputs("");
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file '%s'\n", vol_test_filename);
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
+        HDprintf("    couldn't open container group '%s'\n", ATTRIBUTE_TEST_GROUP_NAME);
         goto error;
     }
 
     if ((group_id = H5Gcreate2(container_group, ATTRIBUTE_DELETION_INVALID_PARAMS_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create container group '%s'\n", ATTRIBUTE_DELETION_INVALID_PARAMS_TEST_GROUP_NAME);
+        HDprintf("    couldn't create container group '%s'\n", ATTRIBUTE_DELETION_INVALID_PARAMS_TEST_GROUP_NAME);
     }
 
     for (i = 0; i < ATTRIBUTE_DELETION_INVALID_PARAMS_TEST_SPACE_RANK; i++)
@@ -5269,20 +5271,20 @@ test_delete_attribute_invalid_params(void)
     if ((attr_id = H5Acreate2(group_id, ATTRIBUTE_DELETION_INVALID_PARAMS_TEST_ATTR_NAME, attr_dtype,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(group_id, ATTRIBUTE_DELETION_INVALID_PARAMS_TEST_ATTR_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute didn't exists\n");
+        HDprintf("    attribute didn't exists\n");
         goto error;
     }
 
@@ -5294,7 +5296,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete with an invalid loc_id!\n");
+        HDprintf("    deleted an attribute using H5Adelete with an invalid loc_id!\n");
         goto error;
     }
 
@@ -5308,7 +5310,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete with an invalid attribute name!\n");
+        HDprintf("    deleted an attribute using H5Adelete with an invalid attribute name!\n");
         goto error;
     }
 
@@ -5318,7 +5320,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete with an invalid attribute name!\n");
+        HDprintf("    deleted an attribute using H5Adelete with an invalid attribute name!\n");
         goto error;
     }
 
@@ -5332,7 +5334,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete_by_name with an invalid loc_id!\n");
+        HDprintf("    deleted an attribute using H5Adelete_by_name with an invalid loc_id!\n");
         goto error;
     }
 
@@ -5346,7 +5348,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete_by_name with an invalid object name!\n");
+        HDprintf("    deleted an attribute using H5Adelete_by_name with an invalid object name!\n");
         goto error;
     }
 
@@ -5356,7 +5358,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete_by_name with an invalid object name!\n");
+        HDprintf("    deleted an attribute using H5Adelete_by_name with an invalid object name!\n");
         goto error;
     }
 
@@ -5370,7 +5372,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete_by_name with an invalid attribute name!\n");
+        HDprintf("    deleted an attribute using H5Adelete_by_name with an invalid attribute name!\n");
         goto error;
     }
 
@@ -5380,7 +5382,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete_by_name with an invalid attribute name!\n");
+        HDprintf("    deleted an attribute using H5Adelete_by_name with an invalid attribute name!\n");
         goto error;
     }
 
@@ -5394,7 +5396,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete_by_name with an invalid LAPL!\n");
+        HDprintf("    deleted an attribute using H5Adelete_by_name with an invalid LAPL!\n");
         goto error;
     }
 
@@ -5408,7 +5410,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete_by_idx with an invalid loc_id!\n");
+        HDprintf("    deleted an attribute using H5Adelete_by_idx with an invalid loc_id!\n");
         goto error;
     }
 
@@ -5422,7 +5424,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete_by_idx with an invalid object name!\n");
+        HDprintf("    deleted an attribute using H5Adelete_by_idx with an invalid object name!\n");
         goto error;
     }
 
@@ -5432,7 +5434,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete_by_idx with an invalid object name!\n");
+        HDprintf("    deleted an attribute using H5Adelete_by_idx with an invalid object name!\n");
         goto error;
     }
 
@@ -5446,7 +5448,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete_by_idx with an invalid index type!\n");
+        HDprintf("    deleted an attribute using H5Adelete_by_idx with an invalid index type!\n");
         goto error;
     }
 
@@ -5456,7 +5458,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete_by_idx with an invalid index type!\n");
+        HDprintf("    deleted an attribute using H5Adelete_by_idx with an invalid index type!\n");
         goto error;
     }
 
@@ -5470,7 +5472,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete_by_idx with an invalid index ordering!\n");
+        HDprintf("    deleted an attribute using H5Adelete_by_idx with an invalid index ordering!\n");
         goto error;
     }
 
@@ -5480,7 +5482,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete_by_idx with an invalid index ordering!\n");
+        HDprintf("    deleted an attribute using H5Adelete_by_idx with an invalid index ordering!\n");
         goto error;
     }
 
@@ -5494,7 +5496,7 @@ test_delete_attribute_invalid_params(void)
 
     if (err_ret >= 0) {
         H5_FAILED();
-        printf("    deleted an attribute using H5Adelete_by_idx with an invalid LAPL!\n");
+        HDprintf("    deleted an attribute using H5Adelete_by_idx with an invalid LAPL!\n");
         goto error;
     }
 
@@ -5584,13 +5586,13 @@ test_get_number_attributes(void)
 
     if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        printf("    couldn't open file\n");
+        HDprintf("    couldn't open file\n");
         goto error;
     }
 
     if ((container_group = H5Gopen2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't open container group\n");
+        HDprintf("    couldn't open container group\n");
         goto error;
     }
 
@@ -5606,57 +5608,57 @@ test_get_number_attributes(void)
     if ((attr_id = H5Acreate2(container_group, ATTRIBUTE_GET_NUM_ATTRS_TEST_ATTRIBUTE_NAME, attr_dtype,
             space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
-        printf("    couldn't create attribute\n");
+        HDprintf("    couldn't create attribute\n");
         goto error;
     }
 
     /* Verify the attribute has been created */
     if ((attr_exists = H5Aexists(container_group, ATTRIBUTE_GET_NUM_ATTRS_TEST_ATTRIBUTE_NAME)) < 0) {
         H5_FAILED();
-        printf("    couldn't determine if attribute exists\n");
+        HDprintf("    couldn't determine if attribute exists\n");
         goto error;
     }
 
     if (!attr_exists) {
         H5_FAILED();
-        printf("    attribute did not exist\n");
+        HDprintf("    attribute did not exist\n");
         goto error;
     }
 
     /* Now get the number of attributes from the group */
     if (H5Oget_info2(container_group, &obj_info, H5O_INFO_ALL) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve root group info using H5Oget_info2\n");
+        HDprintf("    couldn't retrieve root group info using H5Oget_info2\n");
         goto error;
     }
 
     if (obj_info.num_attrs < 1) {
         H5_FAILED();
-        printf("    invalid number of attributes received\n");
+        HDprintf("    invalid number of attributes received\n");
         goto error;
     }
 
     if (H5Oget_info_by_name2(file_id, "/" ATTRIBUTE_TEST_GROUP_NAME, &obj_info, H5O_INFO_ALL, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve root group info using H5Oget_info_by_name2\n");
+        HDprintf("    couldn't retrieve root group info using H5Oget_info_by_name2\n");
         goto error;
     }
 
     if (obj_info.num_attrs < 1) {
         H5_FAILED();
-        printf("    invalid number of attributes received\n");
+        HDprintf("    invalid number of attributes received\n");
         goto error;
     }
 
     if (H5Oget_info_by_idx2(file_id, ".", H5_INDEX_NAME, H5_ITER_INC, 0, &obj_info, H5O_INFO_ALL, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        printf("    couldn't retrieve root group info using H5Oget_info_by_idx2\n");
+        HDprintf("    couldn't retrieve root group info using H5Oget_info_by_idx2\n");
         goto error;
     }
 
     if (obj_info.num_attrs < 1) {
         H5_FAILED();
-        printf("    invalid number of attributes received\n");
+        HDprintf("    invalid number of attributes received\n");
         goto error;
     }
 
@@ -5700,24 +5702,24 @@ attr_iter_callback1(hid_t location_id, const char *attr_name, const H5A_info_t *
     UNUSED(location_id);
     UNUSED(ainfo);
 
-    if (!strcmp(attr_name, ATTRIBUTE_ITERATE_TEST_ATTR_NAME) &&
+    if (!HDstrcmp(attr_name, ATTRIBUTE_ITERATE_TEST_ATTR_NAME) &&
             (counter_val == 0 || counter_val == 7 || counter_val == 8 || counter_val == 15)) {
         goto done;
     }
-    else if (!strcmp(attr_name, ATTRIBUTE_ITERATE_TEST_ATTR_NAME2) &&
+    else if (!HDstrcmp(attr_name, ATTRIBUTE_ITERATE_TEST_ATTR_NAME2) &&
             (counter_val == 1 || counter_val == 6 || counter_val == 9 || counter_val == 14)) {
         goto done;
     }
-    else if (!strcmp(attr_name, ATTRIBUTE_ITERATE_TEST_ATTR_NAME3) &&
+    else if (!HDstrcmp(attr_name, ATTRIBUTE_ITERATE_TEST_ATTR_NAME3) &&
             (counter_val == 2 || counter_val == 5 || counter_val == 10 || counter_val == 13)) {
         goto done;
     }
-    else if (!strcmp(attr_name, ATTRIBUTE_ITERATE_TEST_ATTR_NAME4) &&
+    else if (!HDstrcmp(attr_name, ATTRIBUTE_ITERATE_TEST_ATTR_NAME4) &&
             (counter_val == 3 || counter_val == 4 || counter_val == 11 || counter_val == 12)) {
         goto done;
     }
 
-    printf("    attribute name didn't match known names\n");
+    HDprintf("    attribute name '%s' didn't match known names or came in the incorrect order\n", attr_name);
 
     ret_val = -1;
 
@@ -5744,17 +5746,17 @@ vol_attribute_test(void)
     size_t i;
     int    nerrors;
 
-    printf("**********************************************\n");
-    printf("*                                            *\n");
-    printf("*            VOL Attribute Tests             *\n");
-    printf("*                                            *\n");
-    printf("**********************************************\n\n");
+    HDprintf("**********************************************\n");
+    HDprintf("*                                            *\n");
+    HDprintf("*            VOL Attribute Tests             *\n");
+    HDprintf("*                                            *\n");
+    HDprintf("**********************************************\n\n");
 
     for (i = 0, nerrors = 0; i < ARRAY_LENGTH(attribute_tests); i++) {
         nerrors += (*attribute_tests[i])() ? 1 : 0;
     }
 
-    printf("\n");
+    HDprintf("\n");
 
 done:
     return nerrors;

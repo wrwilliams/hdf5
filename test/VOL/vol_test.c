@@ -142,7 +142,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 0:
                     if ((datatype = H5Tcopy(H5T_STD_I8BE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -151,7 +151,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 1:
                     if ((datatype = H5Tcopy(H5T_STD_I8LE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -160,7 +160,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 2:
                     if ((datatype = H5Tcopy(H5T_STD_I16BE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -169,7 +169,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 3:
                     if ((datatype = H5Tcopy(H5T_STD_I16LE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -178,7 +178,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 4:
                     if ((datatype = H5Tcopy(H5T_STD_I32BE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -187,7 +187,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 5:
                     if ((datatype = H5Tcopy(H5T_STD_I32LE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -196,7 +196,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 6:
                     if ((datatype = H5Tcopy(H5T_STD_I64BE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -205,7 +205,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 7:
                     if ((datatype = H5Tcopy(H5T_STD_I64LE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -214,7 +214,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 8:
                     if ((datatype = H5Tcopy(H5T_STD_U8BE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -223,7 +223,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 9:
                     if ((datatype = H5Tcopy(H5T_STD_U8LE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -232,7 +232,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 10:
                     if ((datatype = H5Tcopy(H5T_STD_U16BE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -241,7 +241,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 11:
                     if ((datatype = H5Tcopy(H5T_STD_U16LE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -250,7 +250,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 12:
                     if ((datatype = H5Tcopy(H5T_STD_U32BE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -259,7 +259,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 13:
                     if ((datatype = H5Tcopy(H5T_STD_U32LE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -268,7 +268,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 14:
                     if ((datatype = H5Tcopy(H5T_STD_U64BE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -277,7 +277,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 15:
                     if ((datatype = H5Tcopy(H5T_STD_U64LE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined integer type\n");
+                        HDprintf("    couldn't copy predefined integer type\n");
                         goto error;
                     }
 
@@ -285,7 +285,7 @@ generate_random_datatype(H5T_class_t parent_class)
 
                 default:
                     H5_FAILED();
-                    printf("    invalid value for predefined integer type; should not happen\n");
+                    HDprintf("    invalid value for predefined integer type; should not happen\n");
                     goto error;
             }
 
@@ -299,7 +299,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 0:
                     if ((datatype = H5Tcopy(H5T_IEEE_F32BE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined floating-point type\n");
+                        HDprintf("    couldn't copy predefined floating-point type\n");
                         goto error;
                     }
 
@@ -308,7 +308,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 1:
                     if ((datatype = H5Tcopy(H5T_IEEE_F32LE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined floating-point type\n");
+                        HDprintf("    couldn't copy predefined floating-point type\n");
                         goto error;
                     }
 
@@ -317,7 +317,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 2:
                     if ((datatype = H5Tcopy(H5T_IEEE_F64BE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined floating-point type\n");
+                        HDprintf("    couldn't copy predefined floating-point type\n");
                         goto error;
                     }
 
@@ -326,7 +326,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case 3:
                     if ((datatype = H5Tcopy(H5T_IEEE_F64LE)) < 0) {
                         H5_FAILED();
-                        printf("    couldn't copy predefined floating-point type\n");
+                        HDprintf("    couldn't copy predefined floating-point type\n");
                         goto error;
                     }
 
@@ -334,7 +334,7 @@ generate_random_datatype(H5T_class_t parent_class)
 
                 default:
                     H5_FAILED();
-                    printf("    invalid value for floating point type; should not happen\n");
+                    HDprintf("    invalid value for floating point type; should not happen\n");
                     goto error;
             }
 
@@ -359,7 +359,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case H5T_ARRAY:     goto case_array;
                 default:
                     H5_FAILED();
-                    printf("    invalid value for goto\n");
+                    HDprintf("    invalid value for goto\n");
                     break;
             }
 
@@ -377,33 +377,33 @@ generate_random_datatype(H5T_class_t parent_class)
             if (0 == (rand() % 2)) {
                 if ((datatype = H5Tcreate(H5T_STRING, (size_t) (rand() % STRING_TYPE_MAX_SIZE))) < 0) {
                     H5_FAILED();
-                    printf("    couldn't create fixed-length string datatype\n");
+                    HDprintf("    couldn't create fixed-length string datatype\n");
                     goto error;
                 }
 
                 if (H5Tset_strpad(datatype, H5T_STR_NULLPAD) < 0) {
                     H5_FAILED();
-                    printf("    couldn't set H5T_STR_NULLPAD for fixed-length string type\n");
+                    HDprintf("    couldn't set H5T_STR_NULLPAD for fixed-length string type\n");
                     goto error;
                 }
             }
             else {
                 if ((datatype = H5Tcreate(H5T_STRING, H5T_VARIABLE)) < 0) {
                     H5_FAILED();
-                    printf("    couldn't create variable-length string datatype\n");
+                    HDprintf("    couldn't create variable-length string datatype\n");
                     goto error;
                 }
 
                 if (H5Tset_strpad(datatype, H5T_STR_NULLTERM) < 0) {
                     H5_FAILED();
-                    printf("    couldn't set H5T_STR_NULLTERM for variable-length string type\n");
+                    HDprintf("    couldn't set H5T_STR_NULLTERM for variable-length string type\n");
                     goto error;
                 }
             }
 
             if (H5Tset_cset(datatype, H5T_CSET_ASCII) < 0) {
                 H5_FAILED();
-                printf("    couldn't set string datatype character set\n");
+                HDprintf("    couldn't set string datatype character set\n");
                 goto error;
             }
 
@@ -428,7 +428,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case H5T_ARRAY:     goto case_array;
                 default:
                     H5_FAILED();
-                    printf("    invalid value for goto\n");
+                    HDprintf("    invalid value for goto\n");
                     break;
             }
 
@@ -453,7 +453,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case H5T_ARRAY:     goto case_array;
                 default:
                     H5_FAILED();
-                    printf("    invalid value for goto\n");
+                    HDprintf("    invalid value for goto\n");
                     break;
             }
 
@@ -485,14 +485,14 @@ generate_random_datatype(H5T_class_t parent_class)
                     case H5T_ARRAY:     goto case_array;
                     default:
                         H5_FAILED();
-                        printf("    invalid value for goto\n");
+                        HDprintf("    invalid value for goto\n");
                         break;
                 }
             }
 
             if ((datatype = H5Tcreate(H5T_COMPOUND, 1)) < 0) {
                 H5_FAILED();
-                printf("    couldn't create compound datatype\n");
+                HDprintf("    couldn't create compound datatype\n");
                 goto error;
             }
 
@@ -502,17 +502,17 @@ generate_random_datatype(H5T_class_t parent_class)
                 size_t member_size;
                 char   member_name[256];
 
-                snprintf(member_name, 256, "compound_member%zu", i);
+                HDsnprintf(member_name, 256, "compound_member%zu", i);
 
                 if ((compound_members[i] = generate_random_datatype(H5T_NO_CLASS)) < 0) {
                     H5_FAILED();
-                    printf("    couldn't create compound datatype member %zu\n", i);
+                    HDprintf("    couldn't create compound datatype member %zu\n", i);
                     goto error;
                 }
 
                 if (!(member_size = H5Tget_size(compound_members[i]))) {
                     H5_FAILED();
-                    printf("    couldn't get compound member %zu size\n", i);
+                    HDprintf("    couldn't get compound member %zu size\n", i);
                     goto error;
                 }
 
@@ -520,13 +520,13 @@ generate_random_datatype(H5T_class_t parent_class)
 
                 if (H5Tset_size(datatype, compound_size) < 0) {
                     H5_FAILED();
-                    printf("    couldn't set size for compound datatype\n");
+                    HDprintf("    couldn't set size for compound datatype\n");
                     goto error;
                 }
 
                 if (H5Tinsert(datatype, member_name, next_offset, compound_members[i]) < 0) {
                     H5_FAILED();
-                    printf("    couldn't insert compound datatype member %zu\n", i);
+                    HDprintf("    couldn't insert compound datatype member %zu\n", i);
                     goto error;
                 }
 
@@ -556,7 +556,7 @@ generate_random_datatype(H5T_class_t parent_class)
                     case H5T_ARRAY:     goto case_array;
                     default:
                         H5_FAILED();
-                        printf("    invalid value for goto\n");
+                        HDprintf("    invalid value for goto\n");
                         break;
                 }
             }
@@ -564,7 +564,7 @@ generate_random_datatype(H5T_class_t parent_class)
             if (0 == (rand() % 2)) {
                 if ((datatype = H5Tcopy(H5T_STD_REF_OBJ)) < 0) {
                     H5_FAILED();
-                    printf("    couldn't copy object reference datatype\n");
+                    HDprintf("    couldn't copy object reference datatype\n");
                     goto error;
                 }
             }
@@ -584,13 +584,13 @@ generate_random_datatype(H5T_class_t parent_class)
                     case H5T_ARRAY:     goto case_array;
                     default:
                         H5_FAILED();
-                        printf("    invalid value for goto\n");
+                        HDprintf("    invalid value for goto\n");
                         break;
                 }
 
                 if ((datatype = H5Tcopy(H5T_STD_REF_DSETREG)) < 0) {
                     H5_FAILED();
-                    printf("    couldn't copy region reference datatype\n");
+                    HDprintf("    couldn't copy region reference datatype\n");
                     goto error;
                 }
             }
@@ -618,26 +618,26 @@ generate_random_datatype(H5T_class_t parent_class)
                     case H5T_ARRAY:     goto case_array;
                     default:
                         H5_FAILED();
-                        printf("    invalid value for goto\n");
+                        HDprintf("    invalid value for goto\n");
                         break;
                 }
             }
 
             if ((datatype = H5Tenum_create(H5T_NATIVE_INT)) < 0) {
                 H5_FAILED();
-                printf("    couldn't create enum datatype\n");
+                HDprintf("    couldn't create enum datatype\n");
                 goto error;
             }
 
             for (i = 0; i < (size_t) (rand() % ENUM_TYPE_MAX_MEMBERS + 1); i++) {
-                int  value = rand();
                 char name[ENUM_TYPE_MAX_MEMBER_NAME_LENGTH];
+                int  value = rand();
 
-                snprintf(name, ENUM_TYPE_MAX_MEMBER_NAME_LENGTH, "enum_val%zu", i);
+                HDsnprintf(name, ENUM_TYPE_MAX_MEMBER_NAME_LENGTH, "enum_val%zu", i);
 
                 if (H5Tenum_insert(datatype, name, &value) < 0) {
                     H5_FAILED();
-                    printf("    couldn't insert member into enum datatype\n");
+                    HDprintf("    couldn't insert member into enum datatype\n");
                     goto error;
                 }
             }
@@ -663,7 +663,7 @@ generate_random_datatype(H5T_class_t parent_class)
                 case H5T_ARRAY:     goto case_array;
                 default:
                     H5_FAILED();
-                    printf("    invalid value for goto\n");
+                    HDprintf("    invalid value for goto\n");
                     break;
             }
 
@@ -693,14 +693,14 @@ generate_random_datatype(H5T_class_t parent_class)
                     case H5T_ARRAY:     goto case_array;
                     default:
                         H5_FAILED();
-                        printf("    invalid value for goto\n");
+                        HDprintf("    invalid value for goto\n");
                         break;
                 }
             }
 
             ndims = (unsigned) (rand() % ARRAY_TYPE_MAX_DIMS + 1);
 
-            if (NULL == (array_dims = (hsize_t *) malloc(ndims * sizeof(*array_dims))))
+            if (NULL == (array_dims = (hsize_t *) HDmalloc(ndims * sizeof(*array_dims))))
                 TEST_ERROR
 
             for (i = 0; i < ndims; i++)
@@ -708,13 +708,13 @@ generate_random_datatype(H5T_class_t parent_class)
 
             if ((base_datatype = generate_random_datatype(H5T_ARRAY)) < 0) {
                 H5_FAILED();
-                printf("    couldn't create array base datatype\n");
+                HDprintf("    couldn't create array base datatype\n");
                 goto error;
             }
 
             if ((datatype = H5Tarray_create2(base_datatype, ndims, array_dims)) < 0) {
                 H5_FAILED();
-                printf("    couldn't create array datatype\n");
+                HDprintf("    couldn't create array datatype\n");
                 goto error;
             }
 
@@ -723,7 +723,7 @@ generate_random_datatype(H5T_class_t parent_class)
 
         default:
             H5_FAILED();
-            printf("    invalid datatype class\n");
+            HDprintf("    invalid datatype class\n");
             break;
     } /* end if */
 
@@ -734,13 +734,13 @@ error:
         for (i = 0; i < COMPOUND_TYPE_MAX_MEMBERS; i++) {
             if (compound_members[i] > 0 && H5Tclose(compound_members[i]) < 0) {
                 H5_FAILED();
-                printf("    couldn't close compound member %zu\n", i);
+                HDprintf("    couldn't close compound member %zu\n", i);
             }
         }
     }
 
     if (array_dims)
-        free(array_dims);
+        HDfree(array_dims);
 
     return datatype;
 }
@@ -781,7 +781,7 @@ create_test_container(void)
         TEST_ERROR
 
     if ((file_id = H5Fcreate(vol_test_filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
-        printf("    couldn't create testing container file\n");
+        HDprintf("    couldn't create testing container file\n");
         goto error;
     }
 
@@ -790,37 +790,37 @@ create_test_container(void)
      * (group, attribute, dataset, etc.).
      */
     if ((group_id = H5Gcreate2(file_id, GROUP_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
-        printf("    created container group for Group tests\n");
+        HDprintf("    created container group for Group tests\n");
         H5Gclose(group_id);
     }
 
     if ((group_id = H5Gcreate2(file_id, ATTRIBUTE_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
-        printf("    created container group for Attribute tests\n");
+        HDprintf("    created container group for Attribute tests\n");
         H5Gclose(group_id);
     }
 
     if ((group_id = H5Gcreate2(file_id, DATASET_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
-        printf("    created container group for Dataset tests\n");
+        HDprintf("    created container group for Dataset tests\n");
         H5Gclose(group_id);
     }
 
     if ((group_id = H5Gcreate2(file_id, DATATYPE_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
-        printf("    created container group for Datatype tests\n");
+        HDprintf("    created container group for Datatype tests\n");
         H5Gclose(group_id);
     }
 
     if ((group_id = H5Gcreate2(file_id, LINK_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
-        printf("    created container group for Link tests\n");
+        HDprintf("    created container group for Link tests\n");
         H5Gclose(group_id);
     }
 
     if ((group_id = H5Gcreate2(file_id, OBJECT_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
-        printf("    created container group for Object tests\n");
+        HDprintf("    created container group for Object tests\n");
         H5Gclose(group_id);
     }
 
     if ((group_id = H5Gcreate2(file_id, MISCELLANEOUS_TEST_GROUP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
-        printf("    created container group for Miscellaneous tests\n");
+        HDprintf("    created container group for Miscellaneous tests\n");
         H5Gclose(group_id);
     }
 #endif
@@ -863,12 +863,12 @@ int main(int argc, char **argv)
 
     h5_reset();
 
-    srand((unsigned) time(NULL));
+    srand((unsigned) HDtime(NULL));
 
-    snprintf(vol_test_filename, VOL_TEST_FILENAME_MAX_LENGTH, "%s", TEST_FILE_NAME);
+    HDsnprintf(vol_test_filename, VOL_TEST_FILENAME_MAX_LENGTH, "%s", TEST_FILE_NAME);
 
     if (NULL == (vol_connector_name = HDgetenv("HDF5_VOL_CONNECTOR"))) {
-        printf("No VOL connector selected; using native VOL connector\n");
+        HDprintf("No VOL connector selected; using native VOL connector\n");
         vol_connector_name = "native";
     }
 
@@ -876,14 +876,14 @@ int main(int argc, char **argv)
      * XXX: Add support for running multiple times with different VOL connectors.
      */
     for (i = 0; i < 1; i++) {
-        printf("Running VOL tests with VOL connector '%s'\n\n", vol_connector_name);
+        HDprintf("Running VOL tests with VOL connector '%s'\n\n", vol_connector_name);
 
 #ifdef H5_HAVE_PARALLEL
         if (MAINPROCESS) {
 #endif
-            printf("Test parameters:\n");
-            printf("  - Test file name: '%s'\n", vol_test_filename);
-            printf("\n\n");
+            HDprintf("Test parameters:\n");
+            HDprintf("  - Test file name: '%s'\n", vol_test_filename);
+            HDprintf("\n\n");
 #ifdef H5_HAVE_PARALLEL
         }
 #endif
@@ -898,7 +898,7 @@ int main(int argc, char **argv)
          * before attempting to use it.
          */
         if (test_vol_connector_setup()) {
-            fprintf(stderr, "Unable to initialize VOL connector '%s'\n", vol_connector_name);
+            HDfprintf(stderr, "Unable to initialize VOL connector '%s'\n", vol_connector_name);
             continue;
         }
 
@@ -907,7 +907,7 @@ int main(int argc, char **argv)
          * except for those which test file creation.
          */
         if (create_test_container() < 0) {
-            fprintf(stderr, "Unable to create testing container file\n");
+            HDfprintf(stderr, "Unable to create testing container file\n");
             continue;
         }
 
@@ -924,14 +924,14 @@ int main(int argc, char **argv)
 #ifdef H5_HAVE_PARALLEL
             if (MAINPROCESS)
 #endif
-                printf("*** %d TEST%s FAILED WITH VOL CONNECTOR '%s' ***\n", nerrors, (!nerrors || nerrors > 1) ? "S" : "", vol_connector_name);
+                HDprintf("*** %d TEST%s FAILED WITH VOL CONNECTOR '%s' ***\n", nerrors, (!nerrors || nerrors > 1) ? "S" : "", vol_connector_name);
             continue;
         }
 
 #ifdef H5_HAVE_PARALLEL
         if (MAINPROCESS)
 #endif
-            printf("All VOL tests passed with VOL connector '%s'\n\n", vol_connector_name);
+            HDprintf("All VOL tests passed with VOL connector '%s'\n\n", vol_connector_name);
     } /* end for */
 
 done:
@@ -944,5 +944,5 @@ done:
     MPI_Finalize();
 #endif
 
-    exit((nerrors ? EXIT_FAILURE : EXIT_SUCCESS));
+    HDexit((nerrors ? EXIT_FAILURE : EXIT_SUCCESS));
 }
