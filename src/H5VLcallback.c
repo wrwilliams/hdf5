@@ -660,25 +660,27 @@ done:
 void *
 H5VLget_object(void *obj, hid_t connector_id)
 {
+    printf("%s:%d\n", __func__, __LINE__);
     H5VL_class_t *cls;                  /* VOL connector's class struct */
     void *ret_value = NULL;             /* Return value */
-
+    printf("%s:%d\n", __func__, __LINE__);
     FUNC_ENTER_API_NOINIT
     H5TRACE2("*x", "*xi", obj, connector_id);
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Check args */
     if(NULL == obj)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid object")
     if(NULL == (cls = (H5VL_class_t *)H5I_object_verify(connector_id, H5I_VOL)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a VOL connector ID")
-
+        printf("%s:%d\n", __func__, __LINE__);
     /* Check for 'get_object' callback in connector */
     if(cls->get_object)
         ret_value = (cls->get_object)(obj);
     else
         ret_value = obj;
-
+    printf("%s:%d\n", __func__, __LINE__);
 done:
+printf("%s:%d\n", __func__, __LINE__);
     FUNC_LEAVE_API_NOINIT(ret_value)
 } /* H5VLget_object */
 
@@ -1754,6 +1756,7 @@ H5VL__dataset_create(void *obj, const H5VL_loc_params_t *loc_params, const H5VL_
         HGOTO_ERROR(H5E_VOL, H5E_CANTCREATE, NULL, "dataset create failed")
 
 done:
+    printf("=================================== H5VL__dataset_create: returns %p\n", ret_value);
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL__dataset_create() */
 
@@ -1790,7 +1793,7 @@ done:
     /* Reset object wrapping info in API context */
     if(vol_wrapper_set && H5VL_reset_vol_wrapper() < 0)
         HDONE_ERROR(H5E_VOL, H5E_CANTRESET, NULL, "can't reset VOL wrapper info")
-
+    printf("=================================== H5VL_dataset_create: returns %p\n", ret_value);
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL_dataset_create() */
 
@@ -3193,20 +3196,28 @@ H5VL__file_close(void *obj, const H5VL_class_t *cls, hid_t dxpl_id, void **req)
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_STATIC
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Sanity check */
     HDassert(obj);
+    printf("%s:%d\n", __func__, __LINE__);
     HDassert(cls);
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Check if the corresponding VOL callback exists */
     if(NULL == cls->file_cls.close)
         HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "VOL connector has no 'file close' method")
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Call the corresponding VOL callback */
+    if(!cls){
+        printf("%s:%d: cls is NULL ======================\n", __func__, __LINE__);
+    }
+    if(cls->file_cls.close){
+        printf("%s:%d: cls->file_cls.close is NULL ======================\n", __func__, __LINE__);
+    }
     if((cls->file_cls.close)(obj, dxpl_id, req) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTCLOSEFILE, FAIL, "file close failed")
-
+    printf("%s:%d\n", __func__, __LINE__);
 done:
+printf("%s:%d\n", __func__, __LINE__);
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL__file_close() */
 
@@ -3262,21 +3273,24 @@ H5VLfile_close(void *obj, hid_t connector_id, hid_t dxpl_id, void **req)
 {
     H5VL_class_t *cls;                  /* VOL connector's class struct */
     herr_t ret_value = SUCCEED;         /* Return value */
-
+    printf("%s:%d\n", __func__, __LINE__);
     FUNC_ENTER_API_NOINIT
     H5TRACE4("e", "*xii**x", obj, connector_id, dxpl_id, req);
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Check args and get class pointer */
     if(NULL == obj)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid object")
+
+    printf("%s:%d\n", __func__, __LINE__);
     if(NULL == (cls = (H5VL_class_t *)H5I_object_verify(connector_id, H5I_VOL)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a VOL connector ID")
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Call the corresponding internal VOL routine */
     if(H5VL__file_close(obj, cls, dxpl_id, req) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTCLOSEFILE, FAIL, "unable to close file")
-
+    printf("%s:%d\n", __func__, __LINE__);
 done:
+    printf("%s:%d\n", __func__, __LINE__);
     FUNC_LEAVE_API_NOINIT(ret_value)
 } /* end H5VLfile_close() */
 

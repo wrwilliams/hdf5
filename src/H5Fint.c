@@ -1163,28 +1163,34 @@ H5F__dest(H5F_t *f, hbool_t flush)
     herr_t       ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_PACKAGE
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Sanity check */
     HDassert(f);
     HDassert(f->shared);
-
+    printf("%s:%d\n", __func__, __LINE__);
     if(1 == f->shared->nrefs) {
+        printf("%s:%d\n", __func__, __LINE__);
         int actype;                         /* metadata cache type (enum value) */
 
         /* Flush at this point since the file will be closed (phase 1).
          * Only try to flush the file if it was opened with write access, and if
          * the caller requested a flush.
          */
-        if((H5F_ACC_RDWR & H5F_INTENT(f)) && flush)
-            if(H5F__flush_phase1(f) < 0)
+        printf("%s:%d\n", __func__, __LINE__);
+        if((H5F_ACC_RDWR & H5F_INTENT(f)) && flush){
+            printf("%s:%d\n", __func__, __LINE__);
+            if(H5F__flush_phase1(f) < 0){
+                printf("%s:%d\n", __func__, __LINE__);
                 /* Push error, but keep going*/
                 HDONE_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "unable to flush cached data (phase 1)")
-
+            }
+        }
         /* Notify the metadata cache that the file is about to be closed.
          * This allows the cache to set up for creating a metadata cache
          * image if this has been requested.
          */
-        if(H5AC_prep_for_file_close(f) < 0)
+        printf("%s:%d\n", __func__, __LINE__);
+                if(H5AC_prep_for_file_close(f) < 0)
             /* Push error, but keep going */
             HDONE_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "metadata cache prep for close failed")
 
@@ -1192,6 +1198,7 @@ H5F__dest(H5F_t *f, hbool_t flush)
          * Only try to flush the file if it was opened with write access, and if
          * the caller requested a flush.
          */
+        printf("%s:%d\n", __func__, __LINE__);
         if((H5F_ACC_RDWR & H5F_INTENT(f)) && flush)
             if(H5F__flush_phase2(f, TRUE) < 0)
                 /* Push error, but keep going */
@@ -1399,13 +1406,14 @@ H5F__dest(H5F_t *f, hbool_t flush)
 
     }
     else if(f->shared->nrefs > 0) {
+        printf("%s:%d\n", __func__, __LINE__);
         /*
          * There are other references to the shared part of the file.
          * Only decrement the reference count.
          */
         --f->shared->nrefs;
     }
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Free the non-shared part of the file */
     f->open_name = (char *)H5MM_xfree(f->open_name);
     f->actual_name = (char *)H5MM_xfree(f->actual_name);
@@ -1414,7 +1422,7 @@ H5F__dest(H5F_t *f, hbool_t flush)
         HDONE_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "problems closing file")
     f->shared = NULL;
     f = H5FL_FREE(H5F_t, f);
-
+    printf("%s:%d\n", __func__, __LINE__);
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F__dest() */
 
@@ -1991,11 +1999,13 @@ H5F__close(H5F_t *f)
 
     /* Sanity check */
     HDassert(f);
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Perform checks for "semi" file close degree here, since closing the
      * file is not allowed if there are objects still open.
      */
+
     if(f->shared->fc_degree == H5F_CLOSE_SEMI) {
+        printf("%s:%d\n", __func__, __LINE__);
         unsigned nopen_files = 0;       /* Number of open files in file/mount hierarchy */
         unsigned nopen_objs = 0;        /* Number of open objects in file/mount hierarchy */
 
@@ -2008,17 +2018,18 @@ H5F__close(H5F_t *f)
          * without decrementing the file ID's reference count and triggering
          * a "real" attempt at closing the file.
          */
+        printf("%s:%d\n", __func__, __LINE__);
         if(nopen_files == 1 && nopen_objs > 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "can't close file, there are objects still open")
     }
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Reset the file ID for this file */
     f->id_exists = FALSE;
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Attempt to close the file/mount hierarchy */
     if(H5F_try_close(f, NULL) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "can't close file")
-
+    printf("%s:%d\n", __func__, __LINE__);
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F__close() */
@@ -2044,11 +2055,11 @@ H5F_try_close(H5F_t *f, hbool_t *was_closed /*out*/)
     herr_t              ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Sanity check */
     HDassert(f);
     HDassert(f->shared);
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Set the was_closed flag to the default value.
      * This flag lets downstream code know if the file struct is
      * still accessible and/or likely to contain useful data.
@@ -2060,11 +2071,12 @@ H5F_try_close(H5F_t *f, hbool_t *was_closed /*out*/)
 
     /* Check if this file is already in the process of closing */
     if(f->closing) {
+        printf("%s:%d\n", __func__, __LINE__);
         if(was_closed)
             *was_closed = TRUE;
         HGOTO_DONE(SUCCEED)
     }
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Get the number of open objects and open files on this file/mount hierarchy */
     if(H5F__mount_count_ids(f, &nopen_files, &nopen_objs) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_MOUNT, FAIL, "problem checking mount hierarchy")
@@ -2079,7 +2091,9 @@ H5F_try_close(H5F_t *f, hbool_t *was_closed /*out*/)
      *  H5F_CLOSE_STRONG:    if there are still objects open, close them
      *            first, then close file.
      */
+    printf("%s:%d\n", __func__, __LINE__);
     switch(f->shared->fc_degree) {
+    printf("%s:%d\n", __func__, __LINE__);
         case H5F_CLOSE_WEAK:
             /*
              * If file or object IDS are still open then delay deletion of
@@ -2116,10 +2130,10 @@ H5F_try_close(H5F_t *f, hbool_t *was_closed /*out*/)
         default:
             HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "can't close file, unknown file close degree")
     } /* end switch */
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Mark this file as closing (prevents re-entering file shutdown code below) */
     f->closing = TRUE;
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* If the file close degree is "strong", close all the open objects in this file */
     if(f->shared->fc_degree == H5F_CLOSE_STRONG) {
         HDassert(nopen_files ==  0);
@@ -2160,18 +2174,18 @@ H5F_try_close(H5F_t *f, hbool_t *was_closed /*out*/)
                 HGOTO_ERROR(H5E_INTERNAL, H5E_BADITER, FAIL, "H5F_get_obj_ids failed(2)")
         } /* end if */
     } /* end if */
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Check if this is a child file in a mounting hierarchy & proceed up the
      * hierarchy if so.
      */
     if(f->parent)
         if(H5F_try_close(f->parent, NULL) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "can't close parent file")
-
+        printf("%s:%d\n", __func__, __LINE__);
     /* Unmount and close each child before closing the current file. */
     if(H5F__close_mounts(f) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "can't unmount child files")
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* If there is more than one reference to the shared file struct and the
      * file has an external file cache, we should see if it can be closed.  This
      * can happen if a cycle is formed with external file caches.
@@ -2179,7 +2193,7 @@ H5F_try_close(H5F_t *f, hbool_t *was_closed /*out*/)
     if(f->shared->efc && (f->shared->nrefs > 1))
         if(H5F__efc_try_close(f) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't attempt to close EFC")
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Delay flush until the shared file struct is closed, in H5F__dest.  If the
      * application called H5Fclose, it would have been flushed in that function
      * (unless it will have been flushed in H5F__dest anyways).
@@ -2189,9 +2203,10 @@ H5F_try_close(H5F_t *f, hbool_t *was_closed /*out*/)
      * shared H5F_file_t struct. If the reference count for the H5F_file_t
      * struct reaches zero then destroy it also.
      */
+    printf("%s:%d\n", __func__, __LINE__);
     if(H5F__dest(f, TRUE) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "problems closing file")
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Since we closed the file, this should be set to TRUE */
     if(was_closed)
         *was_closed = TRUE;

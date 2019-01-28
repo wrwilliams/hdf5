@@ -23,12 +23,6 @@ int main(int argc, char* argv[]) {
      herr_t      status;
      int         i, j, dset_data[4][6];
 
-
-    //prov_helper_init("./prov.txt", File_and_print, "");
-    //printf("prov_helper_init done\n");
-
-
-
     printf("1\n");
     const char* file_name = "prov_test.h5";
 
@@ -53,7 +47,7 @@ int main(int argc, char* argv[]) {
     printf("6\n");
     /* Close the file. */
     status = H5Fclose(file_id);
-    //file_id = H5Fcreate(file_name , H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
+
     printf("7\n");
 
     /* Initialize the dataset. */
@@ -74,11 +68,10 @@ int main(int argc, char* argv[]) {
     status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
                      dset_data);
     printf("11\n");
-    /* Close the dataset. */
-    status = H5Dclose(dataset_id);
-    printf("12\n");
+//    /* Close the dataset. */
+//    printf("12\n");
     H5Pclose(fapl);
-    printf("13\n");
+//    printf("13\n");
     H5Fclose(file_id);
     printf("14\n");
     printf("HDF5 provenance VOL test done.\n");

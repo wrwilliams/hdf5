@@ -104,7 +104,7 @@ typedef struct H5VL_prov_dataset_info_t {
     hsize_t total_write_time;
     int dataset_read_cnt;
     int dataset_write_cnt;
-    H5VL_provenance_info_t* shared_file_info;
+    //H5VL_provenance_info_t* shared_file_info;
 
 } H5VL_prov_dataset_info_t;
 
@@ -342,39 +342,50 @@ H5VL_prov_file_info_t* new_file_info(void) {
 }
 
 void dataset_release_info(H5VL_prov_dataset_info_t* info){
+    if(!info)
+        return;
+
     if(info->dset_name)
         free(info->dset_name);
+
     free(info);
 }
 
 void dataset_stats_prov_write(H5VL_prov_dataset_info_t* ds_info){
-    if(!ds_info)
+    if(!ds_info){
         printf("dataset_stats_prov_write(): ds_info is NULL.\n");
-
+        return;
+    }
     printf("Dataset name = %s,\ndata type class = %d, data space class = %d, data space size = %llu, data type size =%llu.\n", ds_info->dset_name, ds_info->dt_class, ds_info->ds_class,  ds_info->dset_space_size, ds_info->dset_type_size);
     printf("Dataset is %d dimensions.\n", ds_info->dimension_cnt);
     printf("Dataset is read %d time, %llu bytes in total, costs %llu us.\n", ds_info->dataset_read_cnt, ds_info->total_bytes_read, ds_info->total_read_time);
     printf("Dataset is written %d time, %llu bytes in total, costs %llu us.\n", ds_info->dataset_write_cnt, ds_info->total_bytes_written, ds_info->total_write_time);
-
-
 }
 
 //not H5VL_prov_file_info_t!
 void file_stats_prov_write(H5VL_provenance_info_t* file_info) {
-    if(!file_info)
+    if(!file_info){
         printf("file_stats_prov_write(): ds_info is NULL.\n");
+        return;
+    }
 
     printf("H5 file closed, %d datasets are created, %d datasets are accessed.\n", file_info->ds_created, file_info->ds_accessed);
 
 }
 
 void datatype_stats_prov_write(H5VL_prov_datatype_info_t* dt_info) {
-    if(!dt_info)
+    if(!dt_info){
         printf("datatype_stats_prov_write(): ds_info is NULL.\n");
+        return;
+    }
     printf("Datatype name = %s, commited %d times, datatype get is called %d times.\n", dt_info->dtype_name, dt_info->datatype_commit_cnt, dt_info->datatype_get_cnt);
 }
 
 void group_stats_prov_write(H5VL_prov_group_info_t* grp_info) {
+    if(!grp_info){
+        printf("group_stats_prov_write(): grp_info is NULL.\n");
+        return;
+    }
     printf("group_stats_prov_write() is yet to be implemented.\n");
 }
 
@@ -419,8 +430,28 @@ void prov_helper_teardown(prov_helper* helper){
             fflush(helper->prov_file_handle);
             fclose(helper->prov_file_handle);
         }
+        if(helper->prov_file_path)
+            free(helper->prov_file_path);
+        if(helper->prov_line_format)
+            free(helper->prov_line_format);
+
         free(helper);
     }
+}
+
+void shared_file_info_free(H5VL_provenance_info_t* info){
+    if(!info){
+        printf("H5VL_provenance_info_t* info is NULL, return.\n");
+        return;
+    }
+
+    if(info->prov_file_path)
+        free(info->prov_file_path);
+    if(info->prov_line_format)
+        free(info->prov_line_format);
+    if(info->under_vol_info)
+        free(info->under_vol_info);
+    free(info);
 }
 
 void file_ds_created(H5VL_provenance_info_t* info){
@@ -434,9 +465,13 @@ void file_ds_accessed(H5VL_provenance_info_t* info){
 }
 
 void ptr_cnt_increment(prov_helper* helper){
+    //if(!helper)
+        //printf("%s:%d: helper is NULL.\n", __func__, __LINE__);
     assert(helper);
+    //printf("%s:%d, helper->ptr_cnt = %d\n", __func__, __LINE__, helper->ptr_cnt);
     //mutex lock
     helper->ptr_cnt++;
+    //printf("%s:%d\n", __func__, __LINE__);
     //mutex unlock
 }
 
@@ -452,11 +487,12 @@ void ptr_cnt_decrement(prov_helper* helper){
 
 
 void get_time_str(char *str_out){
-    time_t rawtime;
-    struct tm * timeinfo;
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );
-    sprintf(str_out, "%d/%d/%d %d:%d:%d", timeinfo->tm_mon + 1, timeinfo->tm_mday, timeinfo->tm_year + 1900, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+    *str_out = '\0';
+//    time_t rawtime;
+//    struct tm * timeinfo;
+//    time ( &rawtime );
+//    timeinfo = localtime ( &rawtime );
+//    sprintf(str_out, "%d/%d/%d %d:%d:%d", timeinfo->tm_mon + 1, timeinfo->tm_mday, timeinfo->tm_year + 1900, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 }
 
 unsigned long get_time_usec() {
@@ -473,6 +509,7 @@ void dataset_get_wrapper(void *dset, hid_t driver_id, H5VL_dataset_get_t get_typ
 }
 
 int prov_write(prov_helper* helper_in, const char* msg, unsigned long duration){
+    assert(helper_in);
     char time[64];
     get_time_str(time);
     char pline[512];
@@ -502,8 +539,8 @@ int prov_write(prov_helper* helper_in, const char* msg, unsigned long duration){
             break;
 
         case File_and_print:
-            fputs(pline, helper_in->prov_file_handle);
-            printf("%s", pline);
+            //fputs(pline, helper_in->prov_file_handle);
+            //printf("%s", pline);
             break;
 
         case Print_only:
@@ -565,16 +602,18 @@ H5VL_provenance_new_obj(void *under_obj, hid_t under_vol_id, prov_helper* helper
 {
 
     H5VL_provenance_t *new_obj;
-
+    printf("%s:%d\n", __func__, __LINE__);
     new_obj = (H5VL_provenance_t *)calloc(1, sizeof(H5VL_provenance_t));
     new_obj->under_object = under_obj;
     new_obj->under_vol_id = under_vol_id;
-
+    printf("%s:%d\n", __func__, __LINE__);
     new_obj->prov_helper = helper;
+    printf("%s:%d\n", __func__, __LINE__);
     ptr_cnt_increment(helper);
+    printf("%s:%d\n", __func__, __LINE__);
 
     H5Iinc_ref(new_obj->under_vol_id);
-
+    printf("%s:%d\n", __func__, __LINE__);
 
     return new_obj;
 } /* end H5VL__provenance_new_obj() */
@@ -899,7 +938,7 @@ herr_t provenance_file_setup(char* str_in, char* file_path_out, int* level_out, 
         char *p;
         p = strtok(tmp_str, ";");
         while(p != NULL) {
-            //printf("%s\n", p);
+            printf("p=[%s], i=%d\n", p, i);
             toklist[i] = strdup(p);
             //printf("toklist[%d] = %s\n", i, toklist[i]);
             p = strtok(NULL, ";");
@@ -912,7 +951,7 @@ herr_t provenance_file_setup(char* str_in, char* file_path_out, int* level_out, 
 
         sscanf(toklist[3], "format=%s", format_out);
 
-        for(int i = 0; i<3; i++){
+        for(int i = 0; i<=3; i++){
             if(toklist[i]){
                 free(toklist[i]);
             }
@@ -996,14 +1035,23 @@ static void *
 H5VL_provenance_get_object(const void *obj)
 {
     const H5VL_provenance_t *o = (const H5VL_provenance_t *)obj;
-
+    printf("%s:%d\n", __func__, __LINE__);
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL Get object\n");
 #endif
-    if(!o)
-        printf("H5VL_provenance_get_object() get a NULL obj as a parameter.");
-    void* ret = H5VLget_object(o->under_object, o->under_vol_id);
+    printf("%s:%d\n", __func__, __LINE__);
+    if(!o){
+        printf("H5VLget_object() get a NULL o as a parameter.");
+    }
+    printf("%s:%d\n", __func__, __LINE__);
+    if(!(o->under_object)){
+        printf("H5VLget_object() get a NULL o->under_object as a parameter.");
+    }
 
+    printf("%s:%d\n", __func__, __LINE__);
+
+    void* ret = H5VLget_object(o->under_object, o->under_vol_id);
+    printf("%s:%d\n", __func__, __LINE__);
     return ret;
 
 } /* end H5VL_provenance_get_object() */
@@ -1411,11 +1459,15 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 #endif
     hid_t dt_id = -1;
     hid_t ds_id = -1;
+    printf("%s:%d\n", __func__, __LINE__);
     under = H5VLdataset_create(o->under_object, loc_params, o->under_vol_id, name, dcpl_id,  dapl_id, dxpl_id, req);
+    printf("%s:%d\n", __func__, __LINE__);
     if(under) {
+        printf("%s:%d\n", __func__, __LINE__);
         dset = H5VL_provenance_new_obj(under, o->under_vol_id, o->prov_helper);
+        printf("%s:%d\n", __func__, __LINE__);
         dset->prov_info = new_dataset_info();
-        //dset->shared_file_info = o->shared_file_info;
+
         ((H5VL_prov_dataset_info_t*)dset->prov_info)->dset_name = strdup(name);
 
         file_ds_created(o->shared_file_info);
@@ -1429,15 +1481,16 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
         ((H5VL_prov_dataset_info_t*)dset->prov_info)->ds_class = H5Sget_simple_extent_type(ds_id);
 
         if(((H5VL_prov_dataset_info_t*)dset->prov_info)->ds_class == H5S_SIMPLE){
-
+            printf("%s:%d\n", __func__, __LINE__);
             ((H5VL_prov_dataset_info_t*)dset->prov_info)->dimension_cnt = H5Sget_simple_extent_ndims(ds_id);
 
             H5Sget_simple_extent_dims(ds_id, ((H5VL_prov_dataset_info_t*)dset->prov_info)->dimensions, NULL);
 
             ((H5VL_prov_dataset_info_t*)dset->prov_info)->dset_space_size = H5Sget_simple_extent_npoints(ds_id);
+            printf("%s:%d\n", __func__, __LINE__);
 
         }
-
+        printf("%s:%d\n", __func__, __LINE__);
         ((H5VL_prov_dataset_info_t*)dset->prov_info)->layout = H5Pget_layout(dcpl_id);
 
         /* Check for async request */
@@ -1446,7 +1499,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     } /* end if */
     else
         dset = NULL;
-
+    printf("================================%s:%d: dset = %p\n", __func__, __LINE__, dset);
     prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     if(dt_id != -1)
@@ -1486,11 +1539,18 @@ H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
     hid_t dcpl_id = -1;
     hid_t dt_id = -1;
     hid_t ds_id = -1;
+    printf("%s:%d\n", __func__, __LINE__);
     under = H5VLdataset_open(o->under_object, loc_params, o->under_vol_id, name, dapl_id, dxpl_id, req);
+    printf("%s:%d\n", __func__, __LINE__);
+    //assert(under);
+
     if (under) {
         dset = H5VL_provenance_new_obj(under, o->under_vol_id, o->prov_helper);
+
         dset->prov_info = new_dataset_info();
+
         file_ds_accessed(o->shared_file_info);
+
         /* Check for async request */
         if (req && *req)
             *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
@@ -1503,7 +1563,7 @@ H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
 
         ((H5VL_prov_dataset_info_t*) dset->prov_info)->dt_class = H5Tget_class(dt_id);
         ((H5VL_prov_dataset_info_t*) dset->prov_info)->dset_type_size = H5Tget_size(dt_id);
-        ((H5VL_prov_dataset_info_t*) dset->prov_info)->dset_name = strdup(name);
+
 
         dataset_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_DATASET_GET_SPACE, dxpl_id, req, &ds_id);
 
@@ -1520,8 +1580,9 @@ H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
     } /* end if */
     else
         dset = NULL;
-
-    prov_write(dset->prov_helper, __func__, get_time_usec() - start);
+    printf("%s:%d\n", __func__, __LINE__);
+    if(under)
+        prov_write(dset->prov_helper, __func__, get_time_usec() - start);
 
     if(dt_id != -1)
         H5Tclose(dt_id);
@@ -1767,13 +1828,10 @@ H5VL_provenance_dataset_close(void *dset, hid_t dxpl_id, void **req)
 
     if(ret_value >= 0){
         dataset_stats_prov_write(o->prov_info);//output stats
-
-
+        prov_write(o->prov_helper, __func__, get_time_usec() - start);
         dataset_release_info(o->prov_info);
         H5VL_provenance_free_obj(o);
-        prov_write(o->prov_helper, __func__, get_time_usec() - start);
     }
-
 
     return ret_value;
 } /* end H5VL_provenance_dataset_close() */
@@ -2034,6 +2092,11 @@ printf("%s\n", __func__);
 
     /* Copy the FAPL */
     under_fapl_id = H5Pcopy(fapl_id);
+//H5Pget_driver(fapl_id) == src/H5FDmpio.h:H5FD_MPIO
+//d_info = H5Pget_driver_info(fapl_id);
+//d_info is a void* points to a H5FD_MPIO, which contains a MPI_COMM, and can be used later for parallel info collection.
+//put the mpi_comm in file_shared
+
 
     /* Set the VOL ID and info for the underlying FAPL */
     H5Pset_vol(under_fapl_id, info->under_vol_id, info->under_vol_info);
@@ -2352,20 +2415,33 @@ H5VL_provenance_file_close(void *file, hid_t dxpl_id, void **req)
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL FILE Close\n");
 #endif
+    printf("%s:%d\n", __func__, __LINE__);
+    if(!req){
+        //printf("%s:%d: req is NULL! ===============================\n", __func__, __LINE__);
+    }
+    if(!o)
+        prov_write(o->prov_helper, __func__, get_time_usec() - start);
+    printf("%s:%d\n", __func__, __LINE__);
+    if(!o)
+        file_stats_prov_write(o->shared_file_info);
+    if(!o)
+        shared_file_info_free(o->shared_file_info);
+    //prov_helper_teardown(o->prov_helper);
+    printf("%s:%d\n", __func__, __LINE__);
 
+    free(o->prov_info);
+    free(o->shared_file_info);
     ret_value = H5VLfile_close(o->under_object, o->under_vol_id, dxpl_id, req);
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Check for async request */
     if(req && *req)
         *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Release our wrapper, if underlying file was closed */
-    prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
-    file_stats_prov_write(o->shared_file_info);
     if(ret_value >= 0)
         H5VL_provenance_free_obj(o);
-
+    printf("%s:%d\n", __func__, __LINE__);
 
     return ret_value;
 } /* end H5VL_provenance_file_close() */
@@ -3036,11 +3112,11 @@ H5VL_provenance_request_wait(void *obj, uint64_t timeout,
 #endif
 
     ret_value = H5VLrequest_wait(o->under_object, o->under_vol_id, timeout, status);
-
+    prov_write(o->prov_helper, __func__, get_time_usec() - start);
     if(ret_value >= 0 && *status != H5ES_STATUS_IN_PROGRESS)
         H5VL_provenance_free_obj(o);
 
-    prov_write(o->prov_helper, __func__, get_time_usec() - start);
+
     return ret_value;
 } /* end H5VL_provenance_request_wait() */
 
@@ -3070,11 +3146,11 @@ H5VL_provenance_request_notify(void *obj, H5VL_request_notify_t cb, void *ctx)
 #endif
 
     ret_value = H5VLrequest_notify(o->under_object, o->under_vol_id, cb, ctx);
-
+    prov_write(o->prov_helper, __func__, get_time_usec() - start);
     if(ret_value >= 0)
         H5VL_provenance_free_obj(o);
 
-    prov_write(o->prov_helper, __func__, get_time_usec() - start);
+
     return ret_value;
 } /* end H5VL_provenance_request_notify() */
 
@@ -3103,11 +3179,12 @@ H5VL_provenance_request_cancel(void *obj)
 #endif
 
     ret_value = H5VLrequest_cancel(o->under_object, o->under_vol_id);
+    prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     if(ret_value >= 0)
         H5VL_provenance_free_obj(o);
 
-    prov_write(o->prov_helper, __func__, get_time_usec() - start);
+
     return ret_value;
 } /* end H5VL_provenance_request_cancel() */
 

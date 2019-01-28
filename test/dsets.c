@@ -386,7 +386,7 @@ test_create(hid_t file)
     /* Close the dataset */
     if(H5Dclose(dataset) < 0) goto error;
 
-    /* Add a comment to the dataset */
+//    /* Add a comment to the dataset */
     status = H5Oset_comment_by_name(file, DSET_DEFAULT_NAME, "This is a dataset", H5P_DEFAULT);
     if(status < 0) goto error;
 
@@ -395,9 +395,12 @@ test_create(hid_t file)
      * dataset can only be created once.  Temporarily turn off error
      * reporting.
      */
+
     H5E_BEGIN_TRY {
+        printf("before H5Dcreate2\n");
     dataset = H5Dcreate2(file, DSET_DEFAULT_NAME, H5T_NATIVE_DOUBLE, space,
                 H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    printf("after H5Dcreate2\n");
     } H5E_END_TRY;
     if(dataset >= 0) {
         H5_FAILED();
@@ -12826,54 +12829,57 @@ test_compact_open_close_dirty(hid_t fapl)
     /* Create a compact dataset */
     if((did = H5Dcreate2(fid, DSET_COMPACT_MAX_NAME, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
         TEST_ERROR
-
+        printf("%s:%d\n", __func__, __LINE__);
     /* Write to the dataset */
     if(H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf) < 0)
         TEST_ERROR
-
+        printf("%s:%d\n", __func__, __LINE__);
     /* Close the dataset */
     if(H5Dclose(did) < 0)
         TEST_ERROR
-
+        printf("%s:%d\n", __func__, __LINE__);
     /* Verify the repeated open/close of the dataset will not fail */
     for(i = 0; i < 20;i++) {
         H5E_BEGIN_TRY {
             did = H5Dopen2 (fid, DSET_COMPACT_MAX_NAME, H5P_DEFAULT);
+            printf("%s:%d\n", __func__, __LINE__);
         } H5E_END_TRY;
         if(did < 0)
             TEST_ERROR
         if(H5Dclose(did) < 0)
             TEST_ERROR
+        printf("%s:%d\n", __func__, __LINE__);
     }
 
     /* Open the dataset */
     if((did = H5Dopen2(fid, DSET_COMPACT_MAX_NAME, H5P_DEFAULT)) < 0)
         TEST_ERROR
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Retrieve the "dirty" flag from the compact dataset layout */
     if(H5D__layout_compact_dirty_test(did, &dirty) < 0)
         TEST_ERROR
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Verify that the "dirty" flag is false */
     if(dirty)
         TEST_ERROR
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Close the dataset */
     if(H5Dclose(did) < 0)
         TEST_ERROR
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Close the dataspace */
     if(H5Sclose(sid) < 0)
         TEST_ERROR
 
+    printf("%s:%d\n", __func__, __LINE__);
     /* Close the dataset creation property list */
     if(H5Pclose(dcpl) < 0)
         TEST_ERROR
-
+    printf("%s:%d\n", __func__, __LINE__);
     /* Close the file */
     if(H5Fclose(fid) < 0)
         TEST_ERROR
-
+    printf("%s:%d\n", __func__, __LINE__);
      PASSED();
      return SUCCEED;
 
@@ -13276,9 +13282,10 @@ main(void)
                 goto error;
 
             nerrors += (test_create(file) < 0             ? 1 : 0);
+////------------passed-------------
             nerrors += (test_simple_io(envval, my_fapl) < 0        ? 1 : 0);
-            nerrors += (test_compact_io(my_fapl) < 0          ? 1 : 0);
-            nerrors += (test_max_compact(my_fapl) < 0        ? 1 : 0);
+            nerrors += (test_compact_io(my_fapl) < 0          ? 1 : 0);//problem
+            nerrors += (test_max_compact(my_fapl) < 0        ? 1 : 0); //problem
             nerrors += (test_compact_open_close_dirty(my_fapl) < 0     ? 1 : 0);
             nerrors += (test_conv_buffer(file) < 0            ? 1 : 0);
             nerrors += (test_tconv(file) < 0            ? 1 : 0);
@@ -13293,14 +13300,20 @@ main(void)
             nerrors += (test_nbit_compound_3(file) < 0         ? 1 : 0);
             nerrors += (test_nbit_int_size(file) < 0         ? 1 : 0);
             nerrors += (test_nbit_flt_size(file) < 0         ? 1 : 0);
+
             nerrors += (test_scaleoffset_int(file) < 0         ? 1 : 0);
             nerrors += (test_scaleoffset_int_2(file) < 0             ? 1 : 0);
             nerrors += (test_scaleoffset_float(file) < 0             ? 1 : 0);
             nerrors += (test_scaleoffset_float_2(file) < 0             ? 1 : 0);
             nerrors += (test_scaleoffset_double(file) < 0             ? 1 : 0);
             nerrors += (test_scaleoffset_double_2(file) < 0     ? 1 : 0);
+
             nerrors += (test_multiopen (file) < 0                ? 1 : 0);
-            nerrors += (test_types(file) < 0                       ? 1 : 0);
+
+          nerrors += (test_types(file) < 0                       ? 1 : 0);
+
+
+//------------passed-------------
             nerrors += (test_userblock_offset(envval, my_fapl, new_format) < 0  ? 1 : 0);
             nerrors += (test_missing_filter(file) < 0        ? 1 : 0);
             nerrors += (test_can_apply(file) < 0                ? 1 : 0);
@@ -13318,15 +13331,24 @@ main(void)
 #ifndef H5_NO_DEPRECATED_SYMBOLS
             nerrors += (test_deprec(file) < 0            ? 1 : 0);
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
-
+//------------passed-------------
             nerrors += (test_huge_chunks(my_fapl) < 0        ? 1 : 0);
+
             nerrors += (test_chunk_cache(my_fapl) < 0        ? 1 : 0);
+
             nerrors += (test_big_chunks_bypass_cache(my_fapl) < 0   ? 1 : 0);
-            nerrors += (test_chunk_fast(envval, my_fapl) < 0    ? 1 : 0);
+            nerrors += (test_chunk_fast(envval, my_fapl) < 0    ? 1 : 0);  //long running
+
             nerrors += (test_reopen_chunk_fast(my_fapl) < 0        ? 1 : 0);
             nerrors += (test_chunk_fast_bug1(my_fapl) < 0           ? 1 : 0);
+
+
             nerrors += (test_chunk_expand(my_fapl) < 0        ? 1 : 0);
             nerrors += (test_layout_extend(my_fapl) < 0        ? 1 : 0);
+
+
+
+//passed
             nerrors += (test_fixed_array(my_fapl) < 0        ? 1 : 0);
             nerrors += (test_idx_compatible() < 0            ? 1 : 0);
             nerrors += (test_unfiltered_edge_chunks(my_fapl) < 0    ? 1 : 0);
@@ -13337,6 +13359,8 @@ main(void)
             nerrors += (test_power2up(my_fapl) < 0                  ? 1 : 0);
 
             nerrors += (test_swmr_non_latest(envval, my_fapl) < 0   ? 1 : 0);
+
+//passed
             nerrors += (test_earray_hdr_fd(envval, my_fapl) < 0     ? 1 : 0);
             nerrors += (test_farray_hdr_fd(envval, my_fapl) < 0     ? 1 : 0);
             nerrors += (test_bt2_hdr_fd(envval, my_fapl) < 0        ? 1 : 0);
@@ -13353,21 +13377,22 @@ main(void)
     if(H5Pclose(fcpl2) < 0) TEST_ERROR
 
     /* Tests that do not use files */
+//passed
     nerrors += (test_scatter() < 0                          ? 1 : 0);
     nerrors += (test_gather() < 0                           ? 1 : 0);
     nerrors += (test_scatter_error() < 0                    ? 1 : 0);
     nerrors += (test_gather_error() < 0                     ? 1 : 0);
 
-    /* Tests version bounds using its own file */
+//    /* Tests version bounds using its own file */
     nerrors += (test_versionbounds() < 0             ? 1 : 0);
 
     nerrors += (test_object_header_minimization_dcpl() < 0 ? 1 : 0);
 
-    /* Run misc tests */
+//    /* Run misc tests */
     nerrors += dls_01_main();
 
     /* Verify symbol table messages are cached */
-    nerrors += (h5_verify_cached_stabs(FILENAME, fapl) < 0 ? 1 : 0);
+/*seg fault gone?*/    nerrors += (h5_verify_cached_stabs(FILENAME, fapl) < 0 ? 1 : 0);
 
     if(nerrors)
         goto error;
