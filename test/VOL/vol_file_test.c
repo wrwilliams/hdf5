@@ -21,22 +21,24 @@ static int test_open_nonexistent_file(void);
 static int test_file_permission(void);
 static int test_reopen_file(void);
 static int test_close_file_invalid_id(void);
-static int test_file_close_degree(void);
 static int test_flush_file(void);
 static int test_file_is_accessible(void);
 static int test_file_property_lists(void);
 static int test_get_file_intent(void);
 static int test_get_file_obj_count(void);
-static int test_get_file_id(void);
-static int test_get_file_vfd_handle(void);
 static int test_file_mounts(void);
+static int test_get_file_name(void);
+static int test_filespace_info(void);
+#if 0 /* for native VOL connector test only */
+static int test_get_file_id(void);
+static int test_file_close_degree(void);
 static int test_get_file_free_sections(void);
 static int test_get_file_size(void);
 static int test_get_file_image(void);
-static int test_get_file_name(void);
 static int test_get_file_info(void);
-static int test_filespace_info(void);
+static int test_get_file_vfd_handle(void);
 static int test_double_group_open(void);
+#endif /* for native VOL connector test only */
 
 /*
  * The array of file tests to be performed.
@@ -51,22 +53,24 @@ static int (*file_tests[])(void) = {
         test_file_permission,
         test_reopen_file,
         test_close_file_invalid_id,
-        test_file_close_degree,
         test_flush_file,
         test_file_is_accessible,
         test_file_property_lists,
         test_get_file_intent,
         test_get_file_obj_count,
-        test_get_file_id,
-        test_get_file_vfd_handle,
         test_file_mounts,
+        test_get_file_name,
+        test_filespace_info,
+#if 0 /* for native VOL connector test only */
+        test_get_file_id,
+        test_file_close_degree,
         test_get_file_free_sections,
         test_get_file_size,
         test_get_file_image,
-        test_get_file_name,
         test_get_file_info,
-        test_filespace_info,
+        test_get_file_vfd_handle,
         test_double_group_open
+#endif /* for native VOL connector test only */
 };
 
 /*
@@ -147,6 +151,16 @@ test_create_file_invalid_params(void)
     TESTING_2("H5Fcreate with invalid flags");
 
     H5E_BEGIN_TRY {
+        file_id = H5Fcreate(FILE_CREATE_INVALID_PARAMS_FILE_NAME, H5F_ACC_RDONLY, H5P_DEFAULT, fapl_id);
+    } H5E_END_TRY;
+
+    if (file_id >= 0) {
+        H5_FAILED();
+        HDprintf("    file was created with invalid flag H5F_ACC_RDONLY!\n");
+        goto error;
+    }
+
+    H5E_BEGIN_TRY {
         file_id = H5Fcreate(FILE_CREATE_INVALID_PARAMS_FILE_NAME, H5F_ACC_RDWR, H5P_DEFAULT, fapl_id);
     } H5E_END_TRY;
 
@@ -214,7 +228,7 @@ static int
 test_create_file_excl(void)
 {
     hid_t file_id = H5I_INVALID_HID, file_id2 = H5I_INVALID_HID;
-    hid_t fapl_id = H5I_INVALID_HID, fcpl_id = H5I_INVALID_HID;
+    hid_t fapl_id = H5I_INVALID_HID;
 
     TESTING("H5Fcreate with H5F_ACC_EXCL/H5F_ACC_TRUNC flag");
 
@@ -224,19 +238,6 @@ test_create_file_excl(void)
     if ((file_id = H5Fcreate(FILE_CREATE_EXCL_FILE_NAME, H5F_ACC_EXCL, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
         HDprintf("    couldn't create first file\n");
-        goto error;
-    }
-
-    /* Try to create the same file with H5F_ACC_TRUNC. This should fail
-     * because fid1 is the same file and is currently open.
-     */
-    H5E_BEGIN_TRY {
-        file_id2 = H5Fcreate(FILE_CREATE_EXCL_FILE_NAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
-    } H5E_END_TRY;
-
-    if (file_id2 >= 0) {
-        H5_FAILED();
-        HDprintf("    created already opened file using H5F_ACC_TRUNC flag!\n");
         goto error;
     }
 
@@ -264,58 +265,7 @@ test_create_file_excl(void)
         goto error;
     }
 
-    /* Try to truncate first file again. This should fail because fid1 is the
-     * same file and is currently open.
-     */
-    H5E_BEGIN_TRY {
-        file_id2 = H5Fcreate(FILE_CREATE_EXCL_FILE_NAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
-    } H5E_END_TRY;
-
-    if (file_id2 >= 0) {
-        H5_FAILED();
-        HDprintf("    created already opened file using H5F_ACC_TRUNC flag!\n");
-        goto error;
-    }
-
-    /* Try with H5F_ACC_EXCL. This should fail too because the file already
-     * exists.
-     */
-    H5E_BEGIN_TRY {
-        file_id2 = H5Fcreate(FILE_CREATE_EXCL_FILE_NAME, H5F_ACC_EXCL, H5P_DEFAULT, fapl_id);
-    } H5E_END_TRY;
-
-    if (file_id2 >= 0) {
-        H5_FAILED();
-        HDprintf("    created already opened file using H5F_ACC_EXCL flag!\n");
-        goto error;
-    }
-
     if (H5Fclose(file_id) < 0)
-        TEST_ERROR
-
-    /* Create a new file with a user block */
-    if ((fcpl_id = H5Pcreate(H5P_FILE_CREATE)) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't a file creation property list\n");
-        goto error;
-    }
-
-    if (H5Pset_userblock(fcpl_id, FILE_USERBLOCK_SIZE) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't set user block\n");
-        goto error;
-    }
-
-    if ((file_id = H5Fcreate(FILE_CREATE_USER_BLOCK_NAME, H5F_ACC_TRUNC, fcpl_id, fapl_id)) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't create file with user block\n");
-        goto error;
-    }
-
-    if (H5Fclose(file_id) < 0)
-        TEST_ERROR
-
-    if (H5Pclose(fcpl_id) < 0)
         TEST_ERROR
 
     if (H5Pclose(fapl_id) < 0)
@@ -327,7 +277,6 @@ test_create_file_excl(void)
 
 error:
     H5E_BEGIN_TRY {
-        H5Pclose(fcpl_id);
         H5Pclose(fapl_id);
         H5Fclose(file_id);
         H5Fclose(file_id2);
@@ -343,8 +292,6 @@ static int
 test_open_file(void)
 {
     hid_t   file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
-    hid_t   fcpl_id = H5I_INVALID_HID;
-    hsize_t ublock;        /*sizeof user block        */
 
     TESTING("H5Fopen");
 
@@ -370,39 +317,6 @@ test_open_file(void)
      * XXX: SWMR open flags
      */
 
-    if (H5Fclose(file_id) < 0)
-        TEST_ERROR
-
-    /* Open the file created with user block (in test_create_file_excl) and check
-     * the size of the user block.
-     */
-    if ((file_id = H5Fopen(FILE_CREATE_USER_BLOCK_NAME, H5F_ACC_RDONLY, fapl_id)) < 0) {
-        H5_FAILED();
-        HDprintf("    unable to open file '%s' in read-only mode\n", FILE_CREATE_USER_BLOCK_NAME);
-        goto error;
-    }
-
-    if ((fcpl_id = H5Fget_create_plist(file_id)) < 0) {
-        H5_FAILED();
-        HDprintf("   couldn't get file creation property list\n");
-        goto error;
-    }
-
-    if (H5Pget_userblock(fcpl_id, &ublock) < 0) {
-        H5_FAILED();
-        HDprintf("   couldn't get user block size\n");
-        goto error;
-    }
-
-    if (ublock != FILE_USERBLOCK_SIZE) {
-        H5_FAILED();
-        HDprintf("   wrong user block size\n");
-        goto error;
-    }
-
-    if (H5Pclose(fcpl_id) < 0)
-        TEST_ERROR
-
     if (H5Pclose(fapl_id) < 0)
         TEST_ERROR
 
@@ -415,7 +329,6 @@ test_open_file(void)
 
 error:
     H5E_BEGIN_TRY {
-        H5Pclose(fcpl_id);
         H5Pclose(fapl_id);
         H5Fclose(file_id);
     } H5E_END_TRY;
@@ -556,7 +469,7 @@ test_file_permission(void)
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
-    if ((file_id = H5Fcreate(FILE_CREATE_TEST_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
+    if ((file_id = H5Fcreate(FILE_PERMISSION_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
         HDprintf("    couldn't create file '%s'\n", FILE_CREATE_TEST_FILENAME);
         goto error;
@@ -580,7 +493,7 @@ test_file_permission(void)
         TEST_ERROR
 
     /* Open the file (with read-only permission) */
-    if ((file_id = H5Fopen(FILE_CREATE_TEST_FILENAME, H5F_ACC_RDONLY, fapl_id)) < 0) {
+    if ((file_id = H5Fopen(FILE_PERMISSION_FILENAME, H5F_ACC_RDONLY, fapl_id)) < 0) {
         H5_FAILED();
         HDprintf("    couldn't open file\n");
         goto error;
@@ -705,108 +618,6 @@ error:
 }
 
 /*
- * A test to check the file close degree
- */
-static int
-test_file_close_degree(void)
-{
-    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
-    hid_t    file_id2 = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
-
-    TESTING("file close degree")
-
-    if ((fapl_id = h5_fileaccess()) < 0)
-        TEST_ERROR
-
-    if ((file_id = H5Fcreate(FILE_CLOSE_DEGREE_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't create file '%s'\n", FILE_GET_ID_TEST_FILENAME);
-        goto error;
-    }
-
-    if (H5Pset_fclose_degree(fapl_id, H5F_CLOSE_STRONG) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't set file close degree\n");
-        goto error;
-    }
-
-    /* Trying to open the same file should fail */
-    H5E_BEGIN_TRY {
-        file_id2 = H5Fopen(FILE_CLOSE_DEGREE_FILENAME, H5F_ACC_RDWR, fapl_id);
-    } H5E_END_TRY;
-
-    if (file_id2 >= 0) {
-        H5_FAILED();
-        HDprintf("    file was opened with a wrong close degree!\n");
-        goto error;
-    }
-
-    /* Allow objects in file remain open after file is closed */
-    if (H5Pset_fclose_degree(fapl_id, H5F_CLOSE_WEAK) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't set file close degree\n");
-        goto error;
-    }
-
-    /* Trying to open the same file should succeed */
-    if ((file_id2 = H5Fopen(FILE_CLOSE_DEGREE_FILENAME, H5F_ACC_RDWR, fapl_id)) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't open file '%s'\n", FILE_GET_ID_TEST_FILENAME);
-        goto error;
-    }
-
-    /* Close the second opening of the file */
-    if (H5Fclose(file_id2) < 0)
-        TEST_ERROR
-
-    /* Create a group in the file */
-    if ((group_id = H5Gcreate2(file_id, GRP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't create group '%s'\n", GRP_NAME);
-        goto error;
-    }
-
-    /* Close the file */
-    if (H5Fclose(file_id) < 0)
-        TEST_ERROR
-
-    /* Verify the group ID is still valid */
-    if (H5Iis_valid(group_id) <= 0) {
-        H5_FAILED();
-        HDprintf("    group ID is not valid anymore\n");
-        goto error;
-    }
-
-    /* Verify the ID is a group */
-    if (H5Iget_type(group_id) != H5I_GROUP) {
-        H5_FAILED();
-        HDprintf("    ID is not a group\n");
-        goto error;
-    }
-
-    /* The group should still be open and can be closed now */
-    if (H5Gclose(group_id) < 0)
-        TEST_ERROR
-
-    if (H5Pclose(fapl_id) < 0)
-        TEST_ERROR
-
-    PASSED();
-
-    return 0;
-
-error:
-    H5E_BEGIN_TRY {
-        H5Gclose(group_id);
-        H5Pclose(fapl_id);
-        H5Fclose(file_id);
-        H5Fclose(file_id2);
-    } H5E_END_TRY;
-
-    return 1;
-}
-
-/*
  * A test to check that a file can be flushed using H5Fflush.
  */
 static int
@@ -822,7 +633,7 @@ test_flush_file(void)
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
-    if ((file_id = H5Fcreate(FILE_GET_ID_TEST_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
+    if ((file_id = H5Fcreate(FILE_FLUSH_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
         HDprintf("    couldn't create file '%s'\n", FILE_GET_ID_TEST_FILENAME);
         goto error;
@@ -874,6 +685,7 @@ test_flush_file(void)
 error:
     H5E_BEGIN_TRY {
         H5Sclose(dspace_id);
+        H5Dclose(dset_id);
         H5Pclose(fapl_id);
         H5Fclose(file_id);
     } H5E_END_TRY;
@@ -889,12 +701,8 @@ test_file_is_accessible(void)
 {
     htri_t   is_accessible;
     hid_t    fapl_id = H5I_INVALID_HID;
-    int      fd;              /* POSIX file descriptor */
-    ssize_t  nbytes;          /* Number of bytes written */
-    unsigned char buf[1024];  /* Buffer of data to write */
-    unsigned u;
 
-    TESTING("H5Fis_accessible and H5Fis_hdf5")
+    TESTING("H5Fis_accessible")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
@@ -902,51 +710,6 @@ test_file_is_accessible(void)
     if ((is_accessible = H5Fis_accessible(vol_test_filename, fapl_id)) < 0) {
         H5_FAILED();
         HDprintf("    file '%s' is not accessible with VOL connector\n", vol_test_filename);
-        goto error;
-    }
-
-    /* Verify that the file is an HDF5 file */
-    if (H5Fis_hdf5(vol_test_filename) != TRUE) {
-        H5_FAILED();
-        HDprintf("    file '%s' should be an HDF5 file\n", vol_test_filename);
-        goto error;
-    }
-
-    /* Create a non-HDF5 file and check it */
-    if ((fd = HDopen(NON_HDF5_FILE, O_RDWR|O_CREAT|O_TRUNC, H5_POSIX_CREATE_MODE_RW)) < 0) {
-        H5_FAILED();
-        HDprintf("    unable to create a non-HDF5 file '%s'\n", NON_HDF5_FILE);
-        goto error;
-    }
-
-    /* Initialize information to write */
-    for (u=0; u<1024; u++)
-        buf[u]=(unsigned char)u;
-
-    /* Write some information */
-    if ((nbytes = HDwrite(fd, buf, (size_t)1024)) != 1024) {
-        H5_FAILED();
-        HDprintf("    unable to write data to non-HDF5 file '%s'\n", NON_HDF5_FILE);
-        goto error;
-    }
-
-    /* Close the file */
-    if (HDclose(fd) < 0) {
-        H5_FAILED();
-        HDprintf("    unable to close non-HDF5 file '%s'\n", NON_HDF5_FILE);
-        goto error;
-    }
-
-    if ((is_accessible = H5Fis_accessible(NON_HDF5_FILE, fapl_id)) != FALSE) {
-        H5_FAILED();
-        HDprintf("    file '%s' should not be accessible with VOL connector\n", NON_HDF5_FILE);
-        goto error;
-    }
-
-    /* Verify that the file is not an HDF5 file */
-    if (H5Fis_hdf5(NON_HDF5_FILE) != FALSE) {
-        H5_FAILED();
-        HDprintf("    file '%s' should not be an HDF5 file\n", NON_HDF5_FILE);
         goto error;
     }
 
@@ -1291,7 +1054,7 @@ test_get_file_obj_count(void)
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
-    if ((file_id = H5Fcreate(FILE_GET_ID_TEST_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
+    if ((file_id = H5Fcreate(GET_OBJ_COUNT_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
         HDprintf("    couldn't create file '%s'\n", FILE_GET_ID_TEST_FILENAME);
         goto error;
@@ -1351,6 +1114,240 @@ error:
     return 1;
 }
 
+/*
+ * A test to check that file mounting and unmounting works
+ * correctly.
+ */
+static int
+test_file_mounts(void)
+{
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t    child_fid = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+
+    TESTING("file mounting/unmounting")
+
+    if ((fapl_id = h5_fileaccess()) < 0)
+        TEST_ERROR
+
+    if ((file_id = H5Fcreate(FILE_MOUNT_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't create file '%s'\n", FILE_GET_ID_TEST_FILENAME);
+        goto error;
+    }
+
+    if ((group_id = H5Gcreate2(file_id, GRP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't create group '%s'\n", GRP_NAME);
+        goto error;
+    }
+
+    if ((child_fid = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
+        goto error;
+    }
+
+    /* Mount one file (child_fid) to the group of another file (file_id) */
+    if (H5Fmount(file_id, GRP_NAME, child_fid, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't mount file\n");
+        goto error;
+    }
+
+    if (H5Funmount(file_id, GRP_NAME) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't mount file\n");
+        goto error;
+    }
+
+    if (H5Gclose(group_id) < 0)
+        TEST_ERROR
+    if (H5Pclose(fapl_id) < 0)
+        TEST_ERROR
+    if (H5Fclose(file_id) < 0)
+        TEST_ERROR
+    if (H5Fclose(child_fid) < 0)
+        TEST_ERROR
+
+    PASSED();
+
+    return 0;
+
+error:
+    H5E_BEGIN_TRY {
+        H5Gclose(group_id);
+        H5Pclose(fapl_id);
+        H5Fclose(file_id);
+        H5Fclose(child_fid);
+    } H5E_END_TRY;
+
+    return 1;
+
+}
+
+/*
+ * A test to ensure that a file's name can be retrieved.
+ */
+static int
+test_get_file_name(void)
+{
+    ssize_t  file_name_buf_len = 0;
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    char    *file_name_buf = NULL;
+
+    TESTING("retrieval of file name")
+
+    if ((fapl_id = h5_fileaccess()) < 0)
+        TEST_ERROR
+
+    if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't open file\n");
+        goto error;
+    }
+
+    /* Retrieve the size of the file name */
+    if ((file_name_buf_len = H5Fget_name(file_id, NULL, 0)) < 0)
+        TEST_ERROR
+
+    /* Allocate buffer for file name */
+    if (NULL == (file_name_buf = (char *) HDmalloc((size_t) file_name_buf_len + 1)))
+        TEST_ERROR
+
+    /* Retrieve the actual file name */
+    if (H5Fget_name(file_id, file_name_buf, (size_t) file_name_buf_len + 1) < 0)
+        TEST_ERROR
+
+    if (HDstrncmp(file_name_buf, vol_test_filename, (size_t) file_name_buf_len)) {
+        H5_FAILED();
+        HDprintf("    file name '%s' didn't match expected name '%s'\n", file_name_buf, vol_test_filename);
+        goto error;
+    }
+
+    if (file_name_buf) {
+        HDfree(file_name_buf);
+        file_name_buf = NULL;
+    }
+
+    if (H5Pclose(fapl_id) < 0)
+        TEST_ERROR
+    if (H5Fclose(file_id) < 0)
+        TEST_ERROR
+
+    PASSED();
+
+    return 0;
+
+error:
+    H5E_BEGIN_TRY {
+        if (file_name_buf)
+            HDfree(file_name_buf);
+        H5Pclose(fapl_id);
+        H5Fclose(file_id);
+    } H5E_END_TRY;
+
+    return 1;
+}
+
+/*
+ * Tests that H5Pget/set_file_space_strategy() and H5Pget/set_file_space_page_size()
+ * work correctly.
+ */
+static int
+test_filespace_info(void)
+{
+    hid_t file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    hid_t fcpl_id = H5I_INVALID_HID, fcpl_id2 = H5I_INVALID_HID;
+    hsize_t threshold = 1, threshold_out;
+    H5F_fspace_strategy_t strategy;     /* File space strategy */
+    hbool_t persist;                    /* Persist free-space or not */
+    hsize_t fsp_size;                   /* File space page size */
+
+    TESTING("retrieval of filespace info")
+
+    if ((fapl_id = h5_fileaccess()) < 0)
+        TEST_ERROR
+
+    if ((fcpl_id = H5Pcreate(H5P_FILE_CREATE)) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't a file creation property list\n");
+        goto error;
+    }
+
+    /* Set file space information */
+    if (H5Pset_file_space_strategy(fcpl_id, H5F_FSPACE_STRATEGY_FSM_AGGR, TRUE, threshold) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't set file space strategy\n");
+        goto error;
+    }
+
+    if (H5Pset_file_space_page_size(fcpl_id, FSP_SIZE512) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't set file space page size\n");
+        goto error;
+    }
+
+    if ((file_id = H5Fcreate(FILESPACE_INFO_FILENAME, H5F_ACC_TRUNC, fcpl_id, fapl_id)) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't create file '%s'\n", FILE_CREATE_TEST_FILENAME);
+        goto error;
+    }
+
+    if ((fcpl_id2 = H5Fget_create_plist(file_id)) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't get file creation property list\n");
+        goto error;
+    }
+
+    if (H5Pget_file_space_strategy(fcpl_id2, &strategy, &persist, &threshold_out) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't get file space strategy\n");
+        goto error;
+    }
+
+    if (strategy != H5F_FSPACE_STRATEGY_FSM_AGGR || persist != TRUE || threshold_out != threshold) {
+        H5_FAILED();
+        HDprintf("    wrong file space strategy\n");
+        goto error;
+    }
+
+    if (H5Pget_file_space_page_size(fcpl_id2, &fsp_size) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't get file space page size\n");
+        goto error;
+    }
+
+    if (fsp_size != FSP_SIZE512) {
+        H5_FAILED();
+        HDprintf("    wrong file space page size\n");
+        goto error;
+    }
+
+    if (H5Pclose(fcpl_id) < 0)
+        TEST_ERROR
+    if (H5Pclose(fcpl_id2) < 0)
+        TEST_ERROR
+    if (H5Pclose(fapl_id) < 0)
+        TEST_ERROR
+    if (H5Fclose(file_id) < 0)
+        TEST_ERROR
+
+    PASSED();
+
+    return 0;
+
+error:
+    H5E_BEGIN_TRY {
+        H5Pclose(fcpl_id);
+        H5Pclose(fcpl_id2);
+        H5Pclose(fapl_id);
+        H5Fclose(file_id);
+    } H5E_END_TRY;
+
+    return 1;
+}
+
+#if 0 /* for native VOL connector test only */
 /*
  * A test to check H5Iget_file_id()
  */
@@ -1436,98 +1433,90 @@ error:
 }
 
 /*
- * A test to check that the VFD handle can be retrieved using
- * the native VOL connector.
+ * A test to check the file close degree
  */
 static int
-test_get_file_vfd_handle(void)
+test_file_close_degree(void)
 {
     hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
-    void     *vfd_handle = NULL;
+    hid_t    file_id2 = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
 
-    TESTING("retrieval of VFD handle")
+    TESTING("file close degree")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
-    if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
-        goto error;
-    }
-
-    if (H5Fget_vfd_handle(file_id, fapl_id, &vfd_handle) < 0 || !vfd_handle) {
-        H5_FAILED();
-        HDprintf("    unable to get VFD handle\n");
-        goto error;
-    }
-
-    PASSED();
-
-    return 0;
-
-error:
-    H5E_BEGIN_TRY {
-        H5Pclose(fapl_id);
-        H5Fclose(file_id);
-    } H5E_END_TRY;
-
-    return 1;
-}
-
-/*
- * A test to check that file mounting and unmounting works
- * correctly.
- */
-static int
-test_file_mounts(void)
-{
-    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
-    hid_t    child_fid = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
-
-    TESTING("file mounting/unmounting")
-
-    if ((fapl_id = h5_fileaccess()) < 0)
-        TEST_ERROR
-
-    if ((file_id = H5Fcreate(FILE_GET_ID_TEST_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
+    if ((file_id = H5Fcreate(FILE_CLOSE_DEGREE_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
         HDprintf("    couldn't create file '%s'\n", FILE_GET_ID_TEST_FILENAME);
         goto error;
     }
 
+    if (H5Pset_fclose_degree(fapl_id, H5F_CLOSE_STRONG) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't set file close degree\n");
+        goto error;
+    }
+
+    /* Trying to open the same file should fail */
+    H5E_BEGIN_TRY {
+        file_id2 = H5Fopen(FILE_CLOSE_DEGREE_FILENAME, H5F_ACC_RDWR, fapl_id);
+    } H5E_END_TRY;
+
+    if (file_id2 >= 0) {
+        H5_FAILED();
+        HDprintf("    file was opened with a wrong close degree!\n");
+        goto error;
+    }
+
+    /* Allow objects in file remain open after file is closed */
+    if (H5Pset_fclose_degree(fapl_id, H5F_CLOSE_WEAK) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't set file close degree\n");
+        goto error;
+    }
+
+    /* Trying to open the same file should succeed */
+    if ((file_id2 = H5Fopen(FILE_CLOSE_DEGREE_FILENAME, H5F_ACC_RDWR, fapl_id)) < 0) {
+        H5_FAILED();
+        HDprintf("    couldn't open file '%s'\n", FILE_GET_ID_TEST_FILENAME);
+        goto error;
+    }
+
+    /* Close the second opening of the file */
+    if (H5Fclose(file_id2) < 0)
+        TEST_ERROR
+
+    /* Create a group in the file */
     if ((group_id = H5Gcreate2(file_id, GRP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         H5_FAILED();
         HDprintf("    couldn't create group '%s'\n", GRP_NAME);
         goto error;
     }
 
-    if ((child_fid = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
-        goto error;
-    }
-
-    /* Mount one file (child_fid) to the group of another file (file_id) */
-    if (H5Fmount(file_id, GRP_NAME, child_fid, H5P_DEFAULT) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't mount file\n");
-        goto error;
-    }
-
-    if (H5Funmount(file_id, GRP_NAME) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't mount file\n");
-        goto error;
-    }
-
-    if (H5Gclose(group_id) < 0)
-        TEST_ERROR
-    if (H5Pclose(fapl_id) < 0)
-        TEST_ERROR
+    /* Close the file */
     if (H5Fclose(file_id) < 0)
         TEST_ERROR
-    if (H5Fclose(child_fid) < 0)
+
+    /* Verify the group ID is still valid */
+    if (H5Iis_valid(group_id) <= 0) {
+        H5_FAILED();
+        HDprintf("    group ID is not valid anymore\n");
+        goto error;
+    }
+
+    /* Verify the ID is a group */
+    if (H5Iget_type(group_id) != H5I_GROUP) {
+        H5_FAILED();
+        HDprintf("    ID is not a group\n");
+        goto error;
+    }
+
+    /* The group should still be open and can be closed now */
+    if (H5Gclose(group_id) < 0)
+        TEST_ERROR
+
+    if (H5Pclose(fapl_id) < 0)
         TEST_ERROR
 
     PASSED();
@@ -1539,11 +1528,10 @@ error:
         H5Gclose(group_id);
         H5Pclose(fapl_id);
         H5Fclose(file_id);
-        H5Fclose(child_fid);
+        H5Fclose(file_id2);
     } H5E_END_TRY;
 
     return 1;
-
 }
 
 /*
@@ -1578,7 +1566,7 @@ test_get_file_free_sections(void)
     if (H5Pset_file_space_strategy(fcpl_id, H5F_FSPACE_STRATEGY_PAGE, TRUE, (hsize_t)1) < 0)
         TEST_ERROR
 
-    if ((file_id = H5Fcreate(FILE_GET_ID_TEST_FILENAME, H5F_ACC_TRUNC, fcpl_id, fapl_id)) < 0) {
+    if ((file_id = H5Fcreate(GET_FREE_SECTIONS_FILENAME, H5F_ACC_TRUNC, fcpl_id, fapl_id)) < 0) {
         H5_FAILED();
         HDprintf("    couldn't create file '%s'\n", FILE_GET_ID_TEST_FILENAME);
         goto error;
@@ -1657,7 +1645,7 @@ test_get_file_free_sections(void)
     if (H5Fclose(file_id) < 0)
         TEST_ERROR
 
-    if ((file_id = H5Fopen(FILE_GET_ID_TEST_FILENAME, H5F_ACC_RDONLY, fapl_id)) < 0) {
+    if ((file_id = H5Fopen(GET_FREE_SECTIONS_FILENAME, H5F_ACC_RDONLY, fapl_id)) < 0) {
         H5_FAILED();
         HDprintf("    couldn't open file '%s'\n", FILE_GET_ID_TEST_FILENAME);
         goto error;
@@ -1700,8 +1688,10 @@ test_get_file_free_sections(void)
     if (H5Fclose(file_id) < 0)
         TEST_ERROR
 
-    if(section_info)
+    if(section_info) {
         HDfree(section_info);
+        section_info = NULL;
+    }
 
     PASSED();
 
@@ -1709,6 +1699,9 @@ test_get_file_free_sections(void)
 
 error:
     H5E_BEGIN_TRY {
+        if(section_info)
+            HDfree(section_info);
+
         H5Sclose(dset_id);
         H5Sclose(dspace_id);
         H5Pclose(dcpl_id);
@@ -1716,9 +1709,6 @@ error:
         H5Pclose(fapl_id);
         H5Fclose(file_id);
     } H5E_END_TRY;
-
-    if(section_info)
-        HDfree(section_info);
 
     return 1;
 }
@@ -1737,7 +1727,7 @@ test_get_file_size(void)
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
-    if ((file_id = H5Fcreate(FILE_CREATE_TEST_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
+    if ((file_id = H5Fcreate(FILE_SIZE_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
         HDprintf("    couldn't create file '%s'\n", FILE_CREATE_TEST_FILENAME);
         goto error;
@@ -1800,83 +1790,25 @@ test_get_file_image(void)
     }
 
     /* Get the image size first */
-    if ((file_image_size = H5Fget_file_image(file_id, NULL, 0)) <= 0) {
+    if ((file_image_size = H5Fget_file_image(file_id, NULL, 0)) < 0) {
         H5_FAILED();
         HDprintf("    unable to get file image size\n");
         goto error;
     }
 
-    buf = HDmalloc(file_image_size);
+    if (file_image_size > 0) {
+        buf = HDmalloc(file_image_size);
 
-    if (H5Fget_file_image(file_id, buf, (size_t)file_image_size) < 0) {
-        H5_FAILED();
-        HDprintf("    unable to get file image\n");
-        goto error;
-    }
+        if (H5Fget_file_image(file_id, buf, (size_t)file_image_size) < 0) {
+            H5_FAILED();
+            HDprintf("    unable to get file image\n");
+            goto error;
+        }
 
-    if (buf)
-        HDfree(buf);
-
-    if (H5Pclose(fapl_id) < 0)
-        TEST_ERROR
-    if (H5Fclose(file_id) < 0)
-        TEST_ERROR
-
-    PASSED();
-
-    return 0;
-
-error:
-    H5E_BEGIN_TRY {
-        H5Pclose(fapl_id);
-        H5Fclose(file_id);
-    } H5E_END_TRY;
-
-    return 1;
-}
-
-/*
- * A test to ensure that a file's name can be retrieved.
- */
-static int
-test_get_file_name(void)
-{
-    ssize_t  file_name_buf_len = 0;
-    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
-    char    *file_name_buf = NULL;
-
-    TESTING("retrieval of file name")
-
-    if ((fapl_id = h5_fileaccess()) < 0)
-        TEST_ERROR
-
-    if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't open file\n");
-        goto error;
-    }
-
-    /* Retrieve the size of the file name */
-    if ((file_name_buf_len = H5Fget_name(file_id, NULL, 0)) < 0)
-        TEST_ERROR
-
-    /* Allocate buffer for file name */
-    if (NULL == (file_name_buf = (char *) HDmalloc((size_t) file_name_buf_len + 1)))
-        TEST_ERROR
-
-    /* Retrieve the actual file name */
-    if (H5Fget_name(file_id, file_name_buf, (size_t) file_name_buf_len + 1) < 0)
-        TEST_ERROR
-
-    if (HDstrncmp(file_name_buf, vol_test_filename, (size_t) file_name_buf_len)) {
-        H5_FAILED();
-        HDprintf("    file name '%s' didn't match expected name '%s'\n", file_name_buf, vol_test_filename);
-        goto error;
-    }
-
-    if (file_name_buf) {
-        HDfree(file_name_buf);
-        file_name_buf = NULL;
+        if (buf) {
+            HDfree(buf);
+            buf = NULL;
+        }
     }
 
     if (H5Pclose(fapl_id) < 0)
@@ -1890,12 +1822,11 @@ test_get_file_name(void)
 
 error:
     H5E_BEGIN_TRY {
+        if (buf)
+            HDfree(buf);
         H5Pclose(fapl_id);
         H5Fclose(file_id);
     } H5E_END_TRY;
-
-    if (file_name_buf)
-        HDfree(file_name_buf);
 
     return 1;
 }
@@ -1944,7 +1875,7 @@ test_get_file_info(void)
     /* Creating a file with the non-default file creation property list should
      * create a version 2 superblock
      */
-    if ((file_id = H5Fcreate(FILE_CREATE_TEST_FILENAME, H5F_ACC_TRUNC, fcpl_id, fapl_id)) < 0) {
+    if ((file_id = H5Fcreate(FILE_INFO_FILENAME, H5F_ACC_TRUNC, fcpl_id, fapl_id)) < 0) {
         H5_FAILED();
         HDprintf("    couldn't create file '%s'\n", FILE_CREATE_TEST_FILENAME);
         goto error;
@@ -1987,87 +1918,31 @@ error:
 }
 
 /*
- * Tests that H5Pget/set_file_space_strategy() and H5Pget/set_file_space_page_size()
- * work correctly.
+ * A test to check that the VFD handle can be retrieved using
+ * the native VOL connector.
  */
 static int
-test_filespace_info(void)
+test_get_file_vfd_handle(void)
 {
-    hid_t file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
-    hid_t fcpl_id = H5I_INVALID_HID, fcpl_id2 = H5I_INVALID_HID;
-    hsize_t threshold = 1, threshold_out;
-    H5F_fspace_strategy_t strategy;     /* File space strategy */
-    hbool_t persist;                    /* Persist free-space or not */
-    hsize_t fsp_size;                   /* File space page size */
+    hid_t    file_id = H5I_INVALID_HID, fapl_id = H5I_INVALID_HID;
+    void     *vfd_handle = NULL;
 
-    TESTING("retrieval of filespace info")
+    TESTING("retrieval of VFD handle")
 
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
-    if ((fcpl_id = H5Pcreate(H5P_FILE_CREATE)) < 0) {
+    if ((file_id = H5Fopen(vol_test_filename, H5F_ACC_RDWR, fapl_id)) < 0) {
         H5_FAILED();
-        HDprintf("    couldn't a file creation property list\n");
+        HDprintf("    couldn't open file '%s'\n", vol_test_filename);
         goto error;
     }
 
-    /* Set file space information */
-    if (H5Pset_file_space_strategy(fcpl_id, H5F_FSPACE_STRATEGY_FSM_AGGR, TRUE, threshold) < 0) {
+    if (H5Fget_vfd_handle(file_id, fapl_id, &vfd_handle) < 0 || !vfd_handle) {
         H5_FAILED();
-        HDprintf("    couldn't set file space strategy\n");
+        HDprintf("    unable to get VFD handle\n");
         goto error;
     }
-
-    if (H5Pset_file_space_page_size(fcpl_id, FSP_SIZE512) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't set file space page size\n");
-        goto error;
-    }
-
-    if ((file_id = H5Fcreate(FILE_CREATE_TEST_FILENAME, H5F_ACC_TRUNC, fcpl_id, fapl_id)) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't create file '%s'\n", FILE_CREATE_TEST_FILENAME);
-        goto error;
-    }
-
-    if ((fcpl_id2 = H5Fget_create_plist(file_id)) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't get file creation property list\n");
-        goto error;
-    }
-
-    if (H5Pget_file_space_strategy(fcpl_id2, &strategy, &persist, &threshold_out) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't get file space strategy\n");
-        goto error;
-    }
-
-    if (strategy != H5F_FSPACE_STRATEGY_FSM_AGGR || persist != TRUE || threshold_out != threshold) {
-        H5_FAILED();
-        HDprintf("    wrong file space strategy\n");
-        goto error;
-    }
-
-    if (H5Pget_file_space_page_size(fcpl_id2, &fsp_size) < 0) {
-        H5_FAILED();
-        HDprintf("    couldn't get file space page size\n");
-        goto error;
-    }
-
-    if (fsp_size != FSP_SIZE512) {
-        H5_FAILED();
-        HDprintf("    wrong file space page size\n");
-        goto error;
-    }
-
-    if (H5Pclose(fcpl_id) < 0)
-        TEST_ERROR
-    if (H5Pclose(fcpl_id2) < 0)
-        TEST_ERROR
-    if (H5Pclose(fapl_id) < 0)
-        TEST_ERROR
-    if (H5Fclose(file_id) < 0)
-        TEST_ERROR
 
     PASSED();
 
@@ -2075,8 +1950,6 @@ test_filespace_info(void)
 
 error:
     H5E_BEGIN_TRY {
-        H5Pclose(fcpl_id);
-        H5Pclose(fcpl_id2);
         H5Pclose(fapl_id);
         H5Fclose(file_id);
     } H5E_END_TRY;
@@ -2100,14 +1973,14 @@ test_double_group_open(void)
     if ((fapl_id = h5_fileaccess()) < 0)
         TEST_ERROR
 
-    if ((file_id = H5Fcreate(FILE_GET_ID_TEST_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
+    if ((file_id = H5Fcreate(DOUBLE_GROUP_OPEN_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
         HDprintf("    couldn't create file '%s'\n", FILE_GET_ID_TEST_FILENAME);
         goto error;
     }
 
     /* Open the file for the second time for read-only */
-    if ((file_id2 = H5Fopen(FILE_GET_ID_TEST_FILENAME, H5F_ACC_RDONLY, fapl_id)) < 0) {
+    if ((file_id2 = H5Fopen(DOUBLE_GROUP_OPEN_FILENAME, H5F_ACC_RDONLY, fapl_id)) < 0) {
         H5_FAILED();
         HDprintf("    couldn't open file '%s'\n", FILE_GET_ID_TEST_FILENAME);
         goto error;
@@ -2152,6 +2025,7 @@ error:
 
     return 1;
 }
+#endif /* for native VOL connector test only */
 
 /*
  * Cleanup temporary test files
@@ -2160,14 +2034,23 @@ void cleanup_files(void)
 {
     HDremove(FILE_CREATE_TEST_FILENAME);
     HDremove(FILE_CREATE_EXCL_FILE_NAME);
-    HDremove(FILE_CREATE_USER_BLOCK_NAME);
     HDremove(FILE_CREATE_INVALID_PARAMS_FILE_NAME);
-    HDremove(FILE_GET_ID_TEST_FILENAME);
-    HDremove(FILE_INTENT_TEST_FILENAME);
-    HDremove(FILE_CLOSE_DEGREE_FILENAME);
+    HDremove(FILE_PERMISSION_FILENAME);
+    HDremove(FILE_FLUSH_FILENAME);
     HDremove(FILE_PROPERTY_LIST_TEST_FNAME1);
     HDremove(FILE_PROPERTY_LIST_TEST_FNAME2);
-    HDremove(NON_HDF5_FILE);
+    HDremove(FILE_INTENT_TEST_FILENAME);
+    HDremove(GET_OBJ_COUNT_FILENAME);
+    HDremove(FILE_MOUNT_FILENAME);
+    HDremove(FILESPACE_INFO_FILENAME);
+#if 0 /* for native VOL connector test only */
+    HDremove(FILE_GET_ID_TEST_FILENAME);
+    HDremove(FILE_CLOSE_DEGREE_FILENAME);
+    HDremove(GET_FREE_SECTIONS_FILENAME);
+    HDremove(FILE_SIZE_FILENAME);
+    HDremove(FILE_INFO_FILENAME);
+    HDremove(DOUBLE_GROUP_OPEN_FILENAME);
+#endif /* for native VOL connector test only */
 }
 
 int
