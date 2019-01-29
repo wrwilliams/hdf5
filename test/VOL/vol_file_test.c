@@ -28,8 +28,8 @@ static int test_get_file_intent(void);
 static int test_get_file_obj_count(void);
 static int test_file_mounts(void);
 static int test_get_file_name(void);
-static int test_filespace_info(void);
 #if 0 /* for native VOL connector test only */
+static int test_filespace_info(void);
 static int test_get_file_id(void);
 static int test_file_close_degree(void);
 static int test_get_file_free_sections(void);
@@ -60,8 +60,8 @@ static int (*file_tests[])(void) = {
         test_get_file_obj_count,
         test_file_mounts,
         test_get_file_name,
-        test_filespace_info,
 #if 0 /* for native VOL connector test only */
+        test_filespace_info,
         test_get_file_id,
         test_file_close_degree,
         test_get_file_free_sections,
@@ -635,7 +635,7 @@ test_flush_file(void)
 
     if ((file_id = H5Fcreate(FILE_FLUSH_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
-        HDprintf("    couldn't create file '%s'\n", FILE_GET_ID_TEST_FILENAME);
+        HDprintf("    couldn't create file '%s'\n", FILE_FLUSH_FILENAME);
         goto error;
     }
 
@@ -1056,7 +1056,7 @@ test_get_file_obj_count(void)
 
     if ((file_id = H5Fcreate(GET_OBJ_COUNT_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
         H5_FAILED();
-        HDprintf("    couldn't create file '%s'\n", FILE_GET_ID_TEST_FILENAME);
+        HDprintf("    couldn't create file '%s'\n", GET_OBJ_COUNT_FILENAME); 
         goto error;
     }
 
@@ -1249,6 +1249,7 @@ error:
     return 1;
 }
 
+#if 0 /* for native VOL connector test only */
 /*
  * Tests that H5Pget/set_file_space_strategy() and H5Pget/set_file_space_page_size()
  * work correctly.
@@ -1347,7 +1348,6 @@ error:
     return 1;
 }
 
-#if 0 /* for native VOL connector test only */
 /*
  * A test to check H5Iget_file_id()
  */
@@ -2042,8 +2042,8 @@ void cleanup_files(void)
     HDremove(FILE_INTENT_TEST_FILENAME);
     HDremove(GET_OBJ_COUNT_FILENAME);
     HDremove(FILE_MOUNT_FILENAME);
-    HDremove(FILESPACE_INFO_FILENAME);
 #if 0 /* for native VOL connector test only */
+    HDremove(FILESPACE_INFO_FILENAME);
     HDremove(FILE_GET_ID_TEST_FILENAME);
     HDremove(FILE_CLOSE_DEGREE_FILENAME);
     HDremove(GET_FREE_SECTIONS_FILENAME);
