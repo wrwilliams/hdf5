@@ -1773,29 +1773,32 @@ h5_verify_cached_stabs(const char *base_name[], hid_t fapl)
     while(base_name[i]) {
         if (h5_fixname(base_name[i], fapl, filename, sizeof(filename)) == NULL)
             continue;
-
+printf("%s:%d\n", __func__, __LINE__);
         H5E_BEGIN_TRY {
-            file = H5Fopen(filename, H5F_ACC_RDONLY, fapl);
+            printf("%s:%d\n", __func__, __LINE__);
+			file = H5Fopen(filename, H5F_ACC_RDONLY, fapl);
+			printf("%s:%d\n", __func__, __LINE__);
         } H5E_END_TRY
         if(file < 0) {
             i++;
             continue;
         } /* end if */
-
+printf("%s:%d\n", __func__, __LINE__);
         if(H5Ovisit2(file, H5_INDEX_NAME, H5_ITER_NATIVE,
                 h5_verify_cached_stabs_cb, NULL, H5O_INFO_BASIC) < 0)
             goto error;
-
+printf("%s:%d\n", __func__, __LINE__);
         if(H5Fclose(file) < 0)
             goto error;
         file = -1;
 
         i++;
     } /* end while */
-
+printf("%s:%d\n", __func__, __LINE__);
     return 0;
 
 error:
+	printf("%s:%d\n", __func__, __LINE__);
     H5E_BEGIN_TRY {
         H5Fclose(file);
     } H5E_END_TRY;

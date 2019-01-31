@@ -169,7 +169,7 @@
 
 /* Define if parallel library will contain instrumentation to detect correct
    optimization operation */
-#define H5_HAVE_INSTRUMENTED_LIBRARY 1
+/* #undef H5_HAVE_INSTRUMENTED_LIBRARY */
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define H5_HAVE_INTTYPES_H 1
@@ -241,7 +241,7 @@
 /* #undef H5_HAVE_MPI_MULTI_LANG_Info */
 
 /* Define if we have parallel support */
-#define H5_HAVE_PARALLEL 1
+/* #undef H5_HAVE_PARALLEL */
 
 /* Define to 1 if you have the <pthread.h> header file. */
 /* #undef H5_HAVE_PTHREAD_H */

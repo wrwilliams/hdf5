@@ -14,8 +14,8 @@
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Created:		Jan 22, 2019
- *			Tonglin Li <tonglin@DOE8026939.local>
+ * Created:		Jan 28, 2019
+ *			Tonglin Li <tonglin@DOE8026939.dhcp.lbnl.us>
  *
  * Purpose:		This machine-generated source code contains
  *			information about the various integer and

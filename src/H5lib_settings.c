@@ -14,8 +14,8 @@
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Created:		Jan 22, 2019
- *			Tonglin Li <tonglin@DOE8026939.local>
+ * Created:		Jan 28, 2019
+ *			Tonglin Li <tonglin@DOE8026939.dhcp.lbnl.us>
  *
  * Purpose:		This machine-generated source code contains
  *			information about the library build configuration
@@ -35,10 +35,10 @@ char H5libhdf5_settings[]=
 	"General Information:\n"
 	"-------------------\n"
 	"                   HDF5 Version: 1.11.4\n"
-	"                  Configured on: Tue Jan 15 16:18:39 PST 2019\n"
-	"                  Configured by: tonglin@DOE8026939.local\n"
+	"                  Configured on: Mon Jan 28 16:09:22 PST 2019\n"
+	"                  Configured by: tonglin@DOE8026939.dhcp.lbnl.us\n"
 	"                    Host system: x86_64-apple-darwin17.7.0\n"
-	"              Uname information: Darwin DOE8026939.local 17.7.0 Darwin Kernel Version 17.7.0: Wed Oct 10 23:06:14 PDT 2018; root:xnu-4570.71.13~1/RELEASE_X86_64 x86_64\n"
+	"              Uname information: Darwin DOE8026939.dhcp.lbnl.us 17.7.0 Darwin Kernel Version 17.7.0: Wed Oct 10 23:06:14 PDT 2018; root:xnu-4570.71.13~1/RELEASE_X86_64 x86_64\n"
 	"                       Byte sex: little-endian\n"
 	"             Installation point: /Users/tonglin/nersc_dev_sync/hdf5_dev/hdf5\n"
 	"\n"
@@ -65,12 +65,12 @@ char H5libhdf5_settings[]=
 	"Languages:\n"
 	"----------\n"
 	"                              C: yes\n"
-	"                     C Compiler: /usr/local/bin/mpicc\n"
+	"                     C Compiler: /usr/bin/clang ( Apple LLVM version 10.0.0 )\n"
 	"                       CPPFLAGS: \n"
 	"                    H5_CPPFLAGS:   -UNDEBUG -DH5AC_DEBUG -DH5B2_DEBUG -DH5CX_DEBUG -DH5D_DEBUG -DH5F_DEBUG -DH5HL_DEBUG -DH5I_DEBUG -DH5O_DEBUG -DH5S_DEBUG -DH5ST_DEBUG -DH5T_DEBUG -DH5Z_DEBUG -DH5_DEBUG_API\n"
 	"                    AM_CPPFLAGS: \n"
 	"                        C Flags: \n"
-	"                     H5 C Flags:     \n"
+	"                     H5 C Flags:  -g -O0   \n"
 	"                     AM C Flags: \n"
 	"               Shared C Library: no\n"
 	"               Static C Library: yes\n"
@@ -85,15 +85,15 @@ char H5libhdf5_settings[]=
 	"\n"
 	"Features:\n"
 	"---------\n"
-	"                   Parallel HDF5: yes\n"
-	"Parallel Filtered Dataset Writes: yes\n"
-	"              Large Parallel I/O: yes\n"
+	"                   Parallel HDF5: no\n"
+	"Parallel Filtered Dataset Writes: no\n"
+	"              Large Parallel I/O: no\n"
 	"              High-level library: yes\n"
 	"                    Threadsafety: no\n"
 	"             Default API mapping: v112\n"
 	"  With deprecated public symbols: yes\n"
 	"          I/O filters (external): deflate(zlib)\n"
-	"                             MPE: \n"
+	"                             MPE: no\n"
 	"                      Direct VFD: no\n"
 	"                         dmalloc: no\n"
 	"  Packages w/ extra debug output: AC,B2,CX,D,F,HL,I,O,S,ST,T,Z\n"
@@ -102,6 +102,6 @@ char H5libhdf5_settings[]=
 	" Memory allocation sanity checks: yes\n"
 	"          Function stack tracing: no\n"
 	"       Strict file format checks: yes\n"
-	"    Optimization instrumentation: yes\n"
+	"    Optimization instrumentation: no\n"
 ;
 
