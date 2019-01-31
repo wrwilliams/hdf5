@@ -145,15 +145,18 @@ typedef enum {
 /* Information about 'diminfo' form of hyperslab selection */
 typedef struct {
     /* 'opt' points to a [potentially] optimized version of the user's
-     * hyperslab information.  'app' points to the actual parameters
-     * that the application used for setting the hyperslab selection.  These
-     * are only used for regurgitating the original values used to set the
-     * hyperslab to the application when it queries the hyperslab selection
-     * information. */
-    H5S_hyper_dim_t opt[H5S_MAX_RANK];  /* per-dim selection info */
-    H5S_hyper_dim_t app[H5S_MAX_RANK];  /* per-dim selection info */
+     * regular hyperslab information.  'app' points to the actual parameters
+     * that the application used for setting the hyperslab selection.
+     *
+     * The 'app' values are only used for regurgitating the original values
+     * used to set the hyperslab to the application when it queries the
+     * hyperslab selection information.
+     */
+    H5S_hyper_dim_t app[H5S_MAX_RANK];  /* Application-set per-dim selection info */
+    H5S_hyper_dim_t opt[H5S_MAX_RANK];  /* Optimized per-dim selection info */
 
-    /* The following two fields defines the bounding box of the diminfo selection, relative to the offset */
+    /* The following two fields defines the bounding box of the diminfo selection */
+    /* (relative to the offset) */
     hsize_t low_bounds[H5S_MAX_RANK];   /* The smallest element selected in each dimension */
     hsize_t high_bounds[H5S_MAX_RANK];  /* The largest element selected in each dimension */
 } H5S_hyper_diminfo_t;
