@@ -1074,21 +1074,19 @@ H5D__chunk_io_init(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
     if((file_space_normalized = H5S_hyper_normalize_offset((H5S_t *)file_space, old_offset)) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "unable to normalize selection")
 
-    /* Decide the number of chunks in each dimension*/
-    for(u = 0; u < f_ndims; u++) {
+    /* Decide the number of chunks in each dimension */
+    for(u = 0; u < f_ndims; u++)
         /* Keep the size of the chunk dimensions as hsize_t for various routines */
         fm->chunk_dim[u] = fm->layout->u.chunk.dim[u];
-    } /* end for */
 
 #ifdef H5_HAVE_PARALLEL
     /* Calculate total chunk in file map*/
     fm->select_chunk = NULL;
     if(io_info->using_mpi_vfd) {
         H5_CHECK_OVERFLOW(fm->layout->u.chunk.nchunks, hsize_t, size_t);
-        if(fm->layout->u.chunk.nchunks) {
+        if(fm->layout->u.chunk.nchunks)
             if(NULL == (fm->select_chunk = (H5D_chunk_info_t **)H5MM_calloc((size_t)fm->layout->u.chunk.nchunks * sizeof(H5D_chunk_info_t *))))
                 HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate chunk info")
-        }
     } /* end if */
 #endif /* H5_HAVE_PARALLEL */
 
@@ -1130,10 +1128,9 @@ H5D__chunk_io_init(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
         HDassert(fm->single_space);
 
         /* Allocate the single chunk information */
-        if(NULL == dataset->shared->cache.chunk.single_chunk_info) {
+        if(NULL == dataset->shared->cache.chunk.single_chunk_info)
             if(NULL == (dataset->shared->cache.chunk.single_chunk_info = H5FL_MALLOC(H5D_chunk_info_t)))
                 HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate chunk info")
-        } /* end if */
         fm->single_chunk_info = dataset->shared->cache.chunk.single_chunk_info;
         HDassert(fm->single_chunk_info);
 
@@ -1148,10 +1145,9 @@ H5D__chunk_io_init(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
         hbool_t sel_hyper_flag;         /* Whether file selection is a hyperslab */
 
         /* Initialize skip list for chunk selections */
-        if(NULL == dataset->shared->cache.chunk.sel_chunks) {
+        if(NULL == dataset->shared->cache.chunk.sel_chunks)
             if(NULL == (dataset->shared->cache.chunk.sel_chunks = H5SL_create(H5SL_TYPE_HSIZE, NULL)))
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTCREATE, FAIL, "can't create skip list for chunk selections")
-        } /* end if */
         fm->sel_chunks = dataset->shared->cache.chunk.sel_chunks;
         HDassert(fm->sel_chunks);
 

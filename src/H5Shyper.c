@@ -112,8 +112,8 @@ static void H5S__hyper_free_span(H5S_hyper_span_t *span);
 static herr_t H5S__hyper_span_blocklist(const H5S_hyper_span_info_t *spans,
     hsize_t start[], hsize_t end[], hsize_t rank, hsize_t *startblock, hsize_t *numblocks,
     hsize_t **buf);
-static herr_t H5S__get_select_hyper_blocklist(H5S_t *space, hbool_t internal,
-    hsize_t startblock, hsize_t numblocks, hsize_t *buf);
+static herr_t H5S__get_select_hyper_blocklist(H5S_t *space, hsize_t startblock,
+    hsize_t numblocks, hsize_t *buf);
 static H5S_hyper_span_t *H5S__hyper_coord_to_span(unsigned rank, const hsize_t *coords);
 static herr_t H5S__hyper_append_span(H5S_hyper_span_info_t **span_tree,
     H5S_hyper_span_t **prev_span, unsigned ndims, hsize_t low, hsize_t high,
@@ -2755,7 +2755,8 @@ done:
  REVISION LOG
 --------------------------------------------------------------------------*/
 static herr_t
-H5S__get_select_hyper_blocklist(H5S_t *space, hbool_t internal, hsize_t startblock, hsize_t numblocks, hsize_t *buf)
+H5S__get_select_hyper_blocklist(H5S_t *space, hsize_t startblock,
+    hsize_t numblocks, hsize_t *buf)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
@@ -2786,26 +2787,19 @@ H5S__get_select_hyper_blocklist(H5S_t *space, hbool_t internal, hsize_t startblo
         fast_dim = ndims - 1;
 
         /* Check which set of dimension information to use */
-        if(internal)
+        if(space->select.sel_info.hslab->unlim_dim >= 0)
             /*
-             * Use the "optimized dimension information" to pass back information
-             * on the blocks set, not the "application information".
+             * There is an unlimited dimension so we must use diminfo.opt as
+             * it has been "clipped" to the current extent.
              */
             diminfo = space->select.sel_info.hslab->diminfo.opt;
         else
-            if(space->select.sel_info.hslab->unlim_dim >= 0)
-                /*
-                 * There is an unlimited dimension so we must use diminfo.opt as
-                 * it has been "clipped" to the current extent.
-                 */
-                diminfo = space->select.sel_info.hslab->diminfo.opt;
-            else
-                /*
-                 * Use the "application dimension information" to pass back to
-                 * the user the blocks they set, not the optimized, internal
-                 * information.
-                 */
-                diminfo = space->select.sel_info.hslab->diminfo.app;
+            /*
+             * Use the "application dimension information" to pass back to
+             * the user the blocks they set, not the optimized, internal
+             * information.
+             */
+            diminfo = space->select.sel_info.hslab->diminfo.app;
 
         /* Build the tables of count sizes as well as the initial offset */
         for(u = 0; u < ndims; u++) {
@@ -2947,7 +2941,7 @@ H5Sget_select_hyper_blocklist(hid_t spaceid, hsize_t startblock,
 
     /* Go get the correct number of blocks */
     if(numblocks > 0)
-        ret_value = H5S__get_select_hyper_blocklist(space, 0, startblock, numblocks, buf);
+        ret_value = H5S__get_select_hyper_blocklist(space, startblock, numblocks, buf);
     else
         ret_value = SUCCEED;      /* Successfully got 0 blocks... */
 
@@ -3420,7 +3414,9 @@ H5S__hyper_is_single(const H5S_t *space)
     HDassert(space);
 
     /* Check for a "single" hyperslab selection */
-    /* (No need to rebuild the dimension info yet -QAK) */
+    /* (No need to rebuild the dimension info yet, since the span-tree
+     *  algorithm is fast -QAK)
+     */
     if(space->select.sel_info.hslab->diminfo_valid == H5S_DIMINFO_VALID_YES) {
         unsigned u;                     /* index variable */
 
@@ -4014,17 +4010,16 @@ H5S__hyper_intersect_block_helper(H5S_hyper_span_info_t *spans,
                 HGOTO_DONE(FALSE)
             /* block & span overlap */
             else {
+                /* If this is the bottom dimension, then the span tree overlaps the block */
                 if(curr->down == NULL)
                     HGOTO_DONE(TRUE)
+                /* Recursively check spans in next dimension down */
                 else {
-                    hbool_t status;         /* Status from recursive call */
-
-                    /* Recursively check spans in next dimension down */
-                    status = H5S__hyper_intersect_block_helper(curr->down, rank - 1, start + 1, end + 1, op_gen);
-
-                    /* If there is a span intersection in the down dimensions, the span trees overlap */
-                    if(status == TRUE)
-                        HGOTO_DONE(TRUE);
+                    /* If there is an intersection in the "down" dimensions,
+                     * the span trees overlap.
+                     */
+                    if(H5S__hyper_intersect_block_helper(curr->down, rank - 1, start + 1, end + 1, op_gen))
+                        HGOTO_DONE(TRUE)
 
                     /* No intersection in down dimensions, advance to next span */
                     curr = curr->next;
@@ -4059,37 +4054,127 @@ done:
     Quickly detect intersections between span tree and block
  GLOBAL VARIABLES
  COMMENTS, BUGS, ASSUMPTIONS
+    Does not use selection offset.
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
 htri_t
 H5S_hyper_intersect_block(H5S_t *space, const hsize_t *start, const hsize_t *end)
 {
-    uint64_t op_gen;            /* Operation generation value */
+    const hsize_t *low_bounds, *high_bounds;    /* Pointers to the correct pair of low & high bounds */
+    unsigned u;                 /* Local index variable */
     htri_t ret_value = FAIL;    /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity check */
     HDassert(space);
+    HDassert(H5S_SEL_HYPERSLABS == H5S_GET_SELECT_TYPE(space));
     HDassert(start);
     HDassert(end);
 
-    /* Check for 'all' selection, instead of a hyperslab selection */
-    /* (Technically, this shouldn't be in the "hyperslab" routines...) */
-    if(H5S_GET_SELECT_TYPE(space) == H5S_SEL_ALL)
-        HGOTO_DONE(TRUE);
+    /* Attempt to rebuild diminfo if it is invalid and has not been confirmed
+     * to be impossible.
+     */
+    if(space->select.sel_info.hslab->diminfo_valid == H5S_DIMINFO_VALID_NO)
+        H5S__hyper_rebuild(space);
 
-    /* Check that the space selection has a span tree */
-    if(NULL == space->select.sel_info.hslab->span_lst)
-        if(H5S__hyper_generate_spans(space) < 0)
-            HGOTO_ERROR(H5E_DATASPACE, H5E_UNINITIALIZED, FAIL, "dataspace does not have span tree")
+    /* Check which set of low & high bounds we should be using */
+    if(space->select.sel_info.hslab->diminfo_valid == H5S_DIMINFO_VALID_YES) {
+        low_bounds = space->select.sel_info.hslab->diminfo.low_bounds;
+        high_bounds = space->select.sel_info.hslab->diminfo.high_bounds;
+    } /* end if */
+    else {
+        low_bounds = space->select.sel_info.hslab->span_lst->low_bounds;
+        high_bounds = space->select.sel_info.hslab->span_lst->high_bounds;
+    } /* end else */
 
-    /* Acquire an operation generation value for this operation */
-    op_gen = H5S__hyper_get_op_gen();
+    /* Loop over selection bounds and block, checking for overlap */
+    for(u = 0; u < space->extent.rank; u++)
+        /* If selection bounds & block don't overlap, can leave now */
+        if(!H5S_RANGE_OVERLAP(low_bounds[u], high_bounds[u], start[u], end[u]))
+            HGOTO_DONE(FALSE)
 
-    /* Perform the span-by-span intersection check */
-    ret_value = H5S__hyper_intersect_block_helper(space->select.sel_info.hslab->span_lst, space->extent.rank, start, end, op_gen);
+    /* Check for regular hyperslab intersection */
+    if(space->select.sel_info.hslab->diminfo_valid == H5S_DIMINFO_VALID_YES) {
+        hbool_t single_block;   /* Whether the regular selection is a single block */
+
+        /* Check for a single block */
+        /* For a regular hyperslab to be single, it must have only one block
+         * (i.e. count == 1 in all dimensions).
+         */
+        single_block = TRUE;
+        for(u = 0; u < space->extent.rank; u++)
+            if(space->select.sel_info.hslab->diminfo.opt[u].count > 1)
+                single_block = FALSE;
+
+        /* Single blocks have already been "compared" above, in the low / high
+         * bound checking, so just return TRUE if we've reached here - they
+         * would have been rejected earlier, if they didn't intersect.
+         */
+        if(single_block)
+            HGOTO_DONE(TRUE)
+        else {
+            /* Loop over the dimensions, checking for an intersection */
+            for(u = 0; u < space->extent.rank; u++) {
+                /* If the block's start is <= the hyperslab start, they intersect */
+                /* (So, if the start is > the hyperslab start, check more conditions) */
+                if(start[u] > space->select.sel_info.hslab->diminfo.opt[u].start) {
+                    hsize_t adj_start;  /* Start coord, adjusted for hyperslab selection parameters */
+                    hsize_t nstride;    /* Number of strides into the selection */
+
+                    /* Adjust start coord for selection's 'start' offset */
+                    adj_start = start[u] - space->select.sel_info.hslab->diminfo.opt[u].start;
+
+                    /* Compute # of strides into the selection */
+                    nstride = adj_start / space->select.sel_info.hslab->diminfo.opt[u].stride;
+
+                    /* Sanity check */
+                    HDassert(nstride <= space->select.sel_info.hslab->diminfo.opt[u].count);
+
+                    /* "Rebase" the adjusted start coord into the same range
+                     *      range of values as the selections's first block.
+                     */
+                    adj_start -= nstride * space->select.sel_info.hslab->diminfo.opt[u].stride;
+
+                    /* If the adjusted start doesn't fall within the first hyperslab
+                     *  span, check for the block overlapping with the next one.
+                     */
+                    if(adj_start >= space->select.sel_info.hslab->diminfo.opt[u].block) {
+                        hsize_t adj_end;    /* End coord, adjusted for hyperslab selection parameters */
+
+                        /* Adjust end coord for selection's 'start' offset */
+                        adj_end = end[u] - space->select.sel_info.hslab->diminfo.opt[u].start;
+
+                        /* "Rebase" the adjusted end coord into the same range
+                         *      range of values as the selections's first block.
+                         */
+                        adj_end -= nstride * space->select.sel_info.hslab->diminfo.opt[u].stride;
+
+                        /* If block doesn't extend over beginning of next span,
+                         *  it doesn't intersect.
+                         */
+                        if(adj_end < space->select.sel_info.hslab->diminfo.opt[u].stride)
+                            HGOTO_DONE(FALSE)
+                    } /* end if */
+                } /* end if */
+            } /* end for */ 
+
+            /* If we've looped through all dimensions and none of them didn't
+             *  overlap, then all of them do, so we report TRUE.
+             */
+            HGOTO_DONE(TRUE)
+        } /* end else */
+    } /* end if */
+    else {
+        uint64_t op_gen;            /* Operation generation value */
+
+        /* Acquire an operation generation value for this operation */
+        op_gen = H5S__hyper_get_op_gen();
+
+        /* Perform the span-by-span intersection check */
+        ret_value = H5S__hyper_intersect_block_helper(space->select.sel_info.hslab->span_lst, space->extent.rank, start, end, op_gen);
+    } /* end else */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
