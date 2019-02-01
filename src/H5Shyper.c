@@ -167,6 +167,7 @@ static herr_t H5S__hyper_get_seq_list(const H5S_t *space, unsigned flags,
     size_t *nseq, size_t *nbytes, hsize_t *off, size_t *len);
 static herr_t H5S__hyper_release(H5S_t *space);
 static htri_t H5S__hyper_is_valid(const H5S_t *space);
+static hsize_t H5S__hyper_span_nblocks(H5S_hyper_span_info_t *spans);
 static hssize_t H5S__hyper_serial_size(const H5S_t *space);
 static herr_t H5S__hyper_serialize(const H5S_t *space, uint8_t **p);
 static herr_t H5S__hyper_deserialize(H5S_t *space, uint32_t version, uint8_t flags,
@@ -2025,12 +2026,13 @@ done:
 
 /*--------------------------------------------------------------------------
  NAME
-    H5S__hyper_span_nblocks
+    H5S__hyper_span_nblocks_helper
  PURPOSE
-    Count the number of blocks in a span tree
+    Helper routine to count the number of blocks in a span tree
  USAGE
-    hsize_t H5S__hyper_span_nblocks(spans)
-        const H5S_hyper_span_info_t *spans; IN: Hyperslab span tree to count elements of
+    hsize_t H5S__hyper_span_nblocks_helper(spans)
+        H5S_hyper_span_info_t *spans; IN: Hyperslab span tree to count blocks of
+        uint64_t op_gen;   IN: Operation generation
  RETURNS
     Number of blocks in span tree on success; negative on failure
  DESCRIPTION
@@ -2041,7 +2043,72 @@ done:
  REVISION LOG
 --------------------------------------------------------------------------*/
 static hsize_t
-H5S__hyper_span_nblocks(const H5S_hyper_span_info_t *spans)
+H5S__hyper_span_nblocks_helper(H5S_hyper_span_info_t *spans, uint64_t op_gen)
+{
+    hsize_t ret_value = 0;      /* Return value */
+
+    FUNC_ENTER_STATIC_NOERR
+
+    /* Sanity check */
+    HDassert(spans);
+
+    /* Check if the span tree was already counted */
+    if(spans->op_gen == op_gen)
+        /* Just return the # of blocks in the already counted span tree */
+        ret_value = spans->u.nelmts;
+    else {      /* Count the number of elements in the span tree */
+        H5S_hyper_span_t *span;     /* Hyperslab span */
+
+        span = spans->head;
+        if(span->down) {
+            while(span) {
+                /* If there are down spans, add the total down span blocks */
+                ret_value += H5S__hyper_span_nblocks_helper(span->down, op_gen);
+
+                /* Advance to next span */
+                span = span->next;
+            } /* end while */
+        } /* end if */
+        else {
+            while(span) {
+                /* If there are no down spans, just count the block in this span */
+                ret_value++;
+
+                /* Advance to next span */
+                span = span->next;
+            } /* end while */
+        } /* end else */
+
+        /* Set the operation generation for this span tree, to avoid re-computing */
+        spans->op_gen = op_gen;
+
+        /* Hold a copy of the # of blocks */
+        spans->u.nelmts = ret_value;
+    } /* end else */
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5S__hyper_span_nblocks_helper() */
+
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5S__hyper_span_nblocks
+ PURPOSE
+    Count the number of blocks in a span tree
+ USAGE
+    hsize_t H5S__hyper_span_nblocks(spans)
+        H5S_hyper_span_info_t *spans; IN: Hyperslab span tree to count blocks of
+ RETURNS
+    Number of blocks in span tree on success; negative on failure
+ DESCRIPTION
+    Counts the number of blocks described by the spans in a span tree.
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
+static hsize_t
+H5S__hyper_span_nblocks(H5S_hyper_span_info_t *spans)
 {
     hsize_t ret_value = 0;      /* Return value */
 
@@ -2049,21 +2116,13 @@ H5S__hyper_span_nblocks(const H5S_hyper_span_info_t *spans)
 
     /* Count the number of elements in the span tree */
     if(spans != NULL) {
-        H5S_hyper_span_t *span;     /* Hyperslab span */
+        uint64_t op_gen;            /* Operation generation value */
 
-        span = spans->head;
-        while(span != NULL) {
-            /* If there are down spans, add the total down span blocks */
-            if(span->down != NULL)
-                ret_value += H5S__hyper_span_nblocks(span->down);
-            /* If there are no down spans, just count the block in this span */
-            else
-                ret_value++;
+        /* Acquire an operation generation value for this operation */
+        op_gen = H5S__hyper_get_op_gen();
 
-            /* Advance to next span */
-            span = span->next;
-        } /* end while */
-    } /* end else */
+        ret_value = H5S__hyper_span_nblocks_helper(spans, op_gen);
+    } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5S__hyper_span_nblocks() */
