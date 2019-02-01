@@ -736,22 +736,14 @@ void *
 H5VL_object_data(const H5VL_object_t *vol_obj)
 {
     void *ret_value = NULL;
-    printf("%s:%d\n", __func__, __LINE__);
+
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Check for 'get_object' callback in connector */
-    printf("%s:%d\n", __func__, __LINE__);
-    if(vol_obj->connector->cls->get_object){
-        printf("%s:%d----\n", __func__, __LINE__);
+    if(vol_obj->connector->cls->get_object)
         ret_value = (vol_obj->connector->cls->get_object)(vol_obj->data);
-        printf("%s:%d\n", __func__, __LINE__);
-    }
-    else{
-        printf("%s:%d\n", __func__, __LINE__);
+    else
         ret_value = vol_obj->data;
-    }
-
-    printf("%s:%d\n", __func__, __LINE__);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL_object_data() */

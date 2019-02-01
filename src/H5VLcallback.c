@@ -1754,7 +1754,6 @@ H5VL__dataset_create(void *obj, const H5VL_loc_params_t *loc_params, const H5VL_
         HGOTO_ERROR(H5E_VOL, H5E_CANTCREATE, NULL, "dataset create failed")
 
 done:
-    printf("=================================== H5VL__dataset_create: returns %p\n", ret_value);
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL__dataset_create() */
 
@@ -1791,7 +1790,7 @@ done:
     /* Reset object wrapping info in API context */
     if(vol_wrapper_set && H5VL_reset_vol_wrapper() < 0)
         HDONE_ERROR(H5E_VOL, H5E_CANTRESET, NULL, "can't reset VOL wrapper info")
-    printf("=================================== H5VL_dataset_create: returns %p\n", ret_value);
+
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL_dataset_create() */
 
@@ -3197,7 +3196,6 @@ H5VL__file_close(void *obj, const H5VL_class_t *cls, hid_t dxpl_id, void **req)
 
     /* Sanity check */
     HDassert(obj);
-
     HDassert(cls);
 
     /* Check if the corresponding VOL callback exists */
@@ -3209,7 +3207,6 @@ H5VL__file_close(void *obj, const H5VL_class_t *cls, hid_t dxpl_id, void **req)
         HGOTO_ERROR(H5E_VOL, H5E_CANTCLOSEFILE, FAIL, "file close failed")
 
 done:
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL__file_close() */
 
@@ -3237,7 +3234,7 @@ H5VL_file_close(const H5VL_object_t *vol_obj, hid_t dxpl_id, void **req)
         HGOTO_ERROR(H5E_VOL, H5E_CANTSET, FAIL, "can't set VOL wrapper info")
     vol_wrapper_set = TRUE;
 
-    /* Call the corresponding internal VOL routine */src/H5VLint.c
+    /* Call the corresponding internal VOL routine */
     if(H5VL__file_close(vol_obj->data, vol_obj->connector->cls, dxpl_id, req) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_CANTCLOSEFILE, FAIL, "file close failed")
 
@@ -3272,8 +3269,6 @@ H5VLfile_close(void *obj, hid_t connector_id, hid_t dxpl_id, void **req)
     /* Check args and get class pointer */
     if(NULL == obj)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid object")
-
-
     if(NULL == (cls = (H5VL_class_t *)H5I_object_verify(connector_id, H5I_VOL)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a VOL connector ID")
 
@@ -3282,7 +3277,6 @@ H5VLfile_close(void *obj, hid_t connector_id, hid_t dxpl_id, void **req)
         HGOTO_ERROR(H5E_VOL, H5E_CANTCLOSEFILE, FAIL, "unable to close file")
 
 done:
-
     FUNC_LEAVE_API_NOINIT(ret_value)
 } /* end H5VLfile_close() */
 

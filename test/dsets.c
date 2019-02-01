@@ -13317,93 +13317,70 @@ main(void)
                 goto error;
 
             nerrors += (test_create(file) < 0             ? 1 : 0);
-            printf("%s:%d\n", __func__, __LINE__);
 ////------------passed-------------
-//            nerrors += (test_simple_io(envval, my_fapl) < 0        ? 1 : 0);
-//            nerrors += (test_compact_io(my_fapl) < 0          ? 1 : 0);//problem
-//            nerrors += (test_max_compact(my_fapl) < 0        ? 1 : 0); //problem
-//            printf("%s:%d\n", __func__, __LINE__);
-//            nerrors += (test_compact_open_close_dirty(my_fapl) < 0     ? 1 : 0);
-//            printf("%s:%d\n", __func__, __LINE__);
-//            nerrors += (test_conv_buffer(file) < 0            ? 1 : 0);
-//            nerrors += (test_tconv(file) < 0            ? 1 : 0);
-//            nerrors += (test_filters(file, my_fapl) < 0        ? 1 : 0);
-//            nerrors += (test_onebyte_shuffle(file) < 0         ? 1 : 0);
-//            nerrors += (test_nbit_int(file) < 0                 ? 1 : 0);
-//            nerrors += (test_nbit_float(file) < 0                     ? 1 : 0);
-//            nerrors += (test_nbit_double(file) < 0                     ? 1 : 0);
-//            nerrors += (test_nbit_array(file) < 0                 ? 1 : 0);
-//            printf("%s:%d\n", __func__, __LINE__);
-//            nerrors += (test_nbit_compound(file) < 0         ? 1 : 0);
-//            nerrors += (test_nbit_compound_2(file) < 0         ? 1 : 0);
-//            nerrors += (test_nbit_compound_3(file) < 0         ? 1 : 0);
-//            nerrors += (test_nbit_int_size(file) < 0         ? 1 : 0);
-//            nerrors += (test_nbit_flt_size(file) < 0         ? 1 : 0);
-//////
-//            nerrors += (test_scaleoffset_int(file) < 0         ? 1 : 0);
-//            nerrors += (test_scaleoffset_int_2(file) < 0             ? 1 : 0);
-//            nerrors += (test_scaleoffset_float(file) < 0             ? 1 : 0);
-//            nerrors += (test_scaleoffset_float_2(file) < 0             ? 1 : 0);
-//            nerrors += (test_scaleoffset_double(file) < 0             ? 1 : 0);
-//            nerrors += (test_scaleoffset_double_2(file) < 0     ? 1 : 0);
-//            printf("%s:%d\n", __func__, __LINE__);
-//
-//            nerrors += (test_multiopen (file) < 0                ? 1 : 0);
-//            printf("%s:%d\n", __func__, __LINE__);
-//          nerrors += (test_types(file) < 0                       ? 1 : 0);
-//            printf("%s:%d\n", __func__, __LINE__);
-//
-////------------passed-------------
-//            nerrors += (test_userblock_offset(envval, my_fapl, new_format) < 0  ? 1 : 0);
-//            nerrors += (test_missing_filter(file) < 0        ? 1 : 0);
-//            nerrors += (test_can_apply(file) < 0                ? 1 : 0);
-//            nerrors += (test_can_apply2(file) < 0                ? 1 : 0);
-//            nerrors += (test_set_local(my_fapl) < 0                ? 1 : 0);
-//            nerrors += (test_can_apply_szip(file) < 0        ? 1 : 0);
-//            nerrors += (test_compare_dcpl(file) < 0                ? 1 : 0);
-//            nerrors += (test_copy_dcpl(file, my_fapl) < 0            ? 1 : 0);
-//            nerrors += (test_filter_delete(file) < 0        ? 1 : 0);
-//            nerrors += (test_filters_endianess() < 0            ? 1 : 0);
-//            nerrors += (test_zero_dims(file) < 0                ? 1 : 0);
-//            nerrors += (test_missing_chunk(file) < 0        ? 1 : 0);
-//            nerrors += (test_random_chunks(my_fapl) < 0        ? 1 : 0);
-//            printf("%s:%d\n", __func__, __LINE__);
+            nerrors += (test_simple_io(envval, my_fapl) < 0        ? 1 : 0);
+            nerrors += (test_compact_io(my_fapl) < 0          ? 1 : 0);
+            nerrors += (test_max_compact(my_fapl) < 0        ? 1 : 0);
+            nerrors += (test_compact_open_close_dirty(my_fapl) < 0     ? 1 : 0);
+            nerrors += (test_conv_buffer(file) < 0            ? 1 : 0);
+            nerrors += (test_tconv(file) < 0            ? 1 : 0);
+            nerrors += (test_filters(file, my_fapl) < 0        ? 1 : 0);
+            nerrors += (test_onebyte_shuffle(file) < 0         ? 1 : 0);
+            nerrors += (test_nbit_int(file) < 0                 ? 1 : 0);
+            nerrors += (test_nbit_float(file) < 0                     ? 1 : 0);
+            nerrors += (test_nbit_double(file) < 0                     ? 1 : 0);
+            nerrors += (test_nbit_array(file) < 0                 ? 1 : 0);
+            nerrors += (test_nbit_compound(file) < 0         ? 1 : 0);
+            nerrors += (test_nbit_compound_2(file) < 0         ? 1 : 0);
+            nerrors += (test_nbit_compound_3(file) < 0         ? 1 : 0);
+            nerrors += (test_nbit_int_size(file) < 0         ? 1 : 0);
+            nerrors += (test_nbit_flt_size(file) < 0         ? 1 : 0);
+            nerrors += (test_scaleoffset_int(file) < 0         ? 1 : 0);
+            nerrors += (test_scaleoffset_int_2(file) < 0             ? 1 : 0);
+            nerrors += (test_scaleoffset_float(file) < 0             ? 1 : 0);
+            nerrors += (test_scaleoffset_float_2(file) < 0             ? 1 : 0);
+            nerrors += (test_scaleoffset_double(file) < 0             ? 1 : 0);
+            nerrors += (test_scaleoffset_double_2(file) < 0     ? 1 : 0);
+            nerrors += (test_multiopen (file) < 0                ? 1 : 0);
+            nerrors += (test_types(file) < 0                       ? 1 : 0);
+            nerrors += (test_userblock_offset(envval, my_fapl, new_format) < 0  ? 1 : 0);
+            nerrors += (test_missing_filter(file) < 0        ? 1 : 0);
+            nerrors += (test_can_apply(file) < 0                ? 1 : 0);
+            nerrors += (test_can_apply2(file) < 0                ? 1 : 0);
+            nerrors += (test_set_local(my_fapl) < 0                ? 1 : 0);
+            nerrors += (test_can_apply_szip(file) < 0        ? 1 : 0);
+            nerrors += (test_compare_dcpl(file) < 0                ? 1 : 0);
+            nerrors += (test_copy_dcpl(file, my_fapl) < 0            ? 1 : 0);
+            nerrors += (test_filter_delete(file) < 0        ? 1 : 0);
+            nerrors += (test_filters_endianess() < 0            ? 1 : 0);
+            nerrors += (test_zero_dims(file) < 0                ? 1 : 0);
+            nerrors += (test_missing_chunk(file) < 0        ? 1 : 0);
+            nerrors += (test_random_chunks(my_fapl) < 0        ? 1 : 0);
+
 #ifndef H5_NO_DEPRECATED_SYMBOLS
             nerrors += (test_deprec(file) < 0            ? 1 : 0);
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
 //------------passed-------------
-//            nerrors += (test_huge_chunks(my_fapl) < 0        ? 1 : 0);
-//
-//            nerrors += (test_chunk_cache(my_fapl) < 0        ? 1 : 0);
-//
-//            nerrors += (test_big_chunks_bypass_cache(my_fapl) < 0   ? 1 : 0);
-//            //nerrors += (test_chunk_fast(envval, my_fapl) < 0    ? 1 : 0);  //long running
-//
-//            nerrors += (test_reopen_chunk_fast(my_fapl) < 0        ? 1 : 0);
-//            nerrors += (test_chunk_fast_bug1(my_fapl) < 0           ? 1 : 0);
-//
-//
-//            nerrors += (test_chunk_expand(my_fapl) < 0        ? 1 : 0);
-//            nerrors += (test_layout_extend(my_fapl) < 0        ? 1 : 0);
-
-
-
-////passed
-//            nerrors += (test_fixed_array(my_fapl) < 0        ? 1 : 0);
-//            nerrors += (test_idx_compatible() < 0            ? 1 : 0);
-//            nerrors += (test_unfiltered_edge_chunks(my_fapl) < 0    ? 1 : 0);
-//            nerrors += (test_single_chunk(my_fapl) < 0              ? 1 : 0);
-//            nerrors += (test_large_chunk_shrink(my_fapl) < 0        ? 1 : 0);
-//            nerrors += (test_zero_dim_dset(my_fapl) < 0             ? 1 : 0);
-//            nerrors += (test_storage_size(my_fapl) < 0              ? 1 : 0);
-//            nerrors += (test_power2up(my_fapl) < 0                  ? 1 : 0);
-//
-//            nerrors += (test_swmr_non_latest(envval, my_fapl) < 0   ? 1 : 0);
-//
-////passed
-//            nerrors += (test_earray_hdr_fd(envval, my_fapl) < 0     ? 1 : 0);
-//            nerrors += (test_farray_hdr_fd(envval, my_fapl) < 0     ? 1 : 0);
-//            nerrors += (test_bt2_hdr_fd(envval, my_fapl) < 0        ? 1 : 0);
+            nerrors += (test_huge_chunks(my_fapl) < 0        ? 1 : 0);
+            nerrors += (test_chunk_cache(my_fapl) < 0        ? 1 : 0);
+            nerrors += (test_big_chunks_bypass_cache(my_fapl) < 0   ? 1 : 0);
+            nerrors += (test_chunk_fast(envval, my_fapl) < 0    ? 1 : 0);  //long running
+            nerrors += (test_reopen_chunk_fast(my_fapl) < 0        ? 1 : 0);
+            nerrors += (test_chunk_fast_bug1(my_fapl) < 0           ? 1 : 0);
+            nerrors += (test_chunk_expand(my_fapl) < 0        ? 1 : 0);
+            nerrors += (test_layout_extend(my_fapl) < 0        ? 1 : 0);
+            nerrors += (test_fixed_array(my_fapl) < 0        ? 1 : 0);
+            nerrors += (test_idx_compatible() < 0            ? 1 : 0);
+            nerrors += (test_unfiltered_edge_chunks(my_fapl) < 0    ? 1 : 0);
+            nerrors += (test_single_chunk(my_fapl) < 0              ? 1 : 0);
+            nerrors += (test_large_chunk_shrink(my_fapl) < 0        ? 1 : 0);
+            nerrors += (test_zero_dim_dset(my_fapl) < 0             ? 1 : 0);
+            nerrors += (test_storage_size(my_fapl) < 0              ? 1 : 0);
+            nerrors += (test_power2up(my_fapl) < 0                  ? 1 : 0);
+            nerrors += (test_swmr_non_latest(envval, my_fapl) < 0   ? 1 : 0);
+            nerrors += (test_earray_hdr_fd(envval, my_fapl) < 0     ? 1 : 0);
+            nerrors += (test_farray_hdr_fd(envval, my_fapl) < 0     ? 1 : 0);
+            nerrors += (test_bt2_hdr_fd(envval, my_fapl) < 0        ? 1 : 0);
 
             if(H5Fclose(file) < 0)
                 goto error;
@@ -13419,21 +13396,19 @@ main(void)
     printf("%s:%d\n", __func__, __LINE__);
     /* Tests that do not use files */
 //passed
-//    nerrors += (test_scatter() < 0                          ? 1 : 0);
-//    nerrors += (test_gather() < 0                           ? 1 : 0);
-//    nerrors += (test_scatter_error() < 0                    ? 1 : 0);
-//    nerrors += (test_gather_error() < 0                     ? 1 : 0);
+    nerrors += (test_scatter() < 0                          ? 1 : 0);
+    nerrors += (test_gather() < 0                           ? 1 : 0);
+    nerrors += (test_scatter_error() < 0                    ? 1 : 0);
+    nerrors += (test_gather_error() < 0                     ? 1 : 0);
 
 //    /* Tests version bounds using its own file */
     nerrors += (test_versionbounds() < 0             ? 1 : 0);
-
     nerrors += (test_object_header_minimization_dcpl() < 0 ? 1 : 0);
-
 //    /* Run misc tests */
     nerrors += dls_01_main();
     printf("%s:%d\n", __func__, __LINE__);
     /* Verify symbol table messages are cached */
-/*seg fault*/    nerrors += (h5_verify_cached_stabs(FILENAME, fapl) < 0 ? 1 : 0);
+    nerrors += (h5_verify_cached_stabs(FILENAME, fapl) < 0 ? 1 : 0);
 
     if(nerrors)
         goto error;
