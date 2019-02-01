@@ -4186,7 +4186,10 @@ H5S_hyper_intersect_block(H5S_t *space, const hsize_t *start, const hsize_t *end
                     adj_start = start[u] - space->select.sel_info.hslab->diminfo.opt[u].start;
 
                     /* Compute # of strides into the selection */
-                    nstride = adj_start / space->select.sel_info.hslab->diminfo.opt[u].stride;
+                    if(space->select.sel_info.hslab->diminfo.opt[u].count > 1)
+                        nstride = adj_start / space->select.sel_info.hslab->diminfo.opt[u].stride;
+                    else
+                        nstride = 0;
 
                     /* Sanity check */
                     HDassert(nstride <= space->select.sel_info.hslab->diminfo.opt[u].count);
@@ -10226,7 +10229,7 @@ H5S__hyper_get_clip_diminfo(hsize_t start, hsize_t stride, hsize_t *count,
  RETURNS
     Non-negative on success/Negative on failure.
  DESCRIPTION
-    This function changes the unlimited selection into a limited selection
+    This function changes the unlimited selection into a fixed-dimensio selection
     with the extent of the formerly unlimited dimension specified by clip_size.
  GLOBAL VARIABLES
  COMMENTS, BUGS, ASSUMPTIONS
@@ -10596,13 +10599,13 @@ H5S_t *
 H5S_hyper_get_unlim_block(const H5S_t *space, hsize_t block_index)
 {
     H5S_hyper_sel_t *hslab;     /* Convenience pointer to hyperslab info */
-    H5S_t *space_out = NULL;
-    hsize_t start[H5S_MAX_RANK];
+    H5S_t *space_out = NULL;    /* Dataspace to return */
+    hsize_t start[H5S_MAX_RANK];/* Hyperslab selection info for unlim. selection */
     hsize_t stride[H5S_MAX_RANK];
     hsize_t count[H5S_MAX_RANK];
     hsize_t block[H5S_MAX_RANK];
-    unsigned u;
-    H5S_t *ret_value = NULL;
+    unsigned u;                 /* Local index variable */
+    H5S_t *ret_value = NULL;    /* Return value */
 
     FUNC_ENTER_NOAPI(NULL)
 
