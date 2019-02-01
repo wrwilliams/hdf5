@@ -26,7 +26,11 @@
 #ifndef _H5Spkg_H
 #define _H5Spkg_H
 
+/* Get package's private header */
 #include "H5Sprivate.h"
+
+/* Other private headers needed by this file */
+#include "H5Oprivate.h"		/* Object headers		  	*/
 
 /* Flags to indicate special dataspace features are active */
 #define H5S_VALID_MAX	0x01
