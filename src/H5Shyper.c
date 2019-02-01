@@ -4413,17 +4413,22 @@ H5S__hyper_project_scalar(const H5S_t *space, hsize_t *offset)
         /* Advance down selected spans */
         curr = space->select.sel_info.hslab->span_lst->head;
         curr_dim = 0;
-        while(curr) {
-            /* Sanity check for more than one span */
+        while(1) {
+            /* Sanity checks */
             HDassert(NULL == curr->next);
             HDassert(curr->low == curr->high);
+            HDassert(curr_dim < space->extent.rank);
 
             /* Save the location of the selection in current dimension */
             block[curr_dim] = curr->low;
 
             /* Advance down to next dimension */
-            curr = curr->down->head;
-            curr_dim++;
+            if(curr->down) {
+                curr = curr->down->head;
+                curr_dim++;
+            } /* end if */
+            else
+                break;
         } /* end while */
     } /* end else */
 
@@ -4595,7 +4600,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5S__hyper_project_simple(const H5S_t *base_space, H5S_t *new_space, hsize_t *offset)
+H5S__hyper_project_simple(const H5S_t *base_space, H5S_t *new_space,
+    hsize_t *offset)
 {
     herr_t ret_value = SUCCEED;         /* Return value */
 
@@ -5682,6 +5688,13 @@ H5S__hyper_clip_spans(H5S_hyper_span_info_t *a_spans, H5S_hyper_span_info_t *b_s
             if(span_a != NULL && span_b == NULL) {
                 /* Check if need to merge/add 'a' spans with/to a_not_b list */
                 if(need_a_not_b) {
+                    /* (This loop, and the similar one below for 'b' spans,
+                     *  could be replaced with an optimized routine that quickly
+                     *  appended the remaining spans to the 'not' list, but
+                     *  until it looks like it's taking a lot of time for an
+                     *  important use case, it's been left generic, and similar
+                     *  to other code above. -QAK, 2019/02/01)
+                     */
                     while(span_a != NULL) {
                         /* Copy span 'a' and add to a_not_b list */
                         if(H5S__hyper_append_span(a_not_b, &last_a_not_b, ndims, span_a->low, span_a->high, span_a->down) < 0)
@@ -5701,6 +5714,13 @@ H5S__hyper_clip_spans(H5S_hyper_span_info_t *a_spans, H5S_hyper_span_info_t *b_s
             else if(span_a == NULL && span_b != NULL) {
                 /* Check if need to merge/add 'b' spans with/to b_not_a list */
                 if(need_b_not_a) {
+                    /* (This loop, and the similar one above for 'a' spans,
+                     *  could be replaced with an optimized routine that quickly
+                     *  appended the remaining spans to the 'not' list, but
+                     *  until it looks like it's taking a lot of time for an
+                     *  important use case, it's been left generic, and similar
+                     *  to other code above. -QAK, 2019/02/01)
+                     */
                     while(span_b != NULL) {
                         /* Copy span 'b' and add to b_not_a list */
                         if(H5S__hyper_append_span(b_not_a, &last_b_not_a, ndims, span_b->low, span_b->high, span_b->down) < 0)
@@ -5716,6 +5736,9 @@ H5S__hyper_clip_spans(H5S_hyper_span_info_t *a_spans, H5S_hyper_span_info_t *b_s
                         H5S__hyper_free_span(span_b);
                 } /* end else */
             } /* end if */
+            else
+                /* Sanity check */
+                HDasssert(span_a == NULL && span_b == NULL);
         } /* end else */
     } /* end else */
 
@@ -5743,6 +5766,7 @@ done:
     the merged set.
  GLOBAL VARIABLES
  COMMENTS, BUGS, ASSUMPTIONS
+    Handles merging span trees that overlap.
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
@@ -6057,9 +6081,7 @@ done:
  RETURNS
     non-negative on success, negative on failure
  DESCRIPTION
-    Add a set of hyperslab spans to an existing hyperslab selection.  The
-    new spans are required to be non-overlapping with the existing spans in
-    the dataspace's current hyperslab selection.
+    Add a set of hyperslab spans to an existing hyperslab selection.
  GLOBAL VARIABLES
  COMMENTS, BUGS, ASSUMPTIONS
  EXAMPLES
