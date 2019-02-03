@@ -2055,7 +2055,7 @@ H5S__hyper_span_nblocks_helper(H5S_hyper_span_info_t *spans, uint64_t op_gen)
     /* Check if the span tree was already counted */
     if(spans->op_gen == op_gen)
         /* Just return the # of blocks in the already counted span tree */
-        ret_value = spans->u.nelmts;
+        ret_value = spans->u.nblocks;
     else {      /* Count the number of elements in the span tree */
         H5S_hyper_span_t *span;     /* Hyperslab span */
 
@@ -2083,7 +2083,7 @@ H5S__hyper_span_nblocks_helper(H5S_hyper_span_info_t *spans, uint64_t op_gen)
         spans->op_gen = op_gen;
 
         /* Hold a copy of the # of blocks */
-        spans->u.nelmts = ret_value;
+        spans->u.nblocks = ret_value;
     } /* end else */
 
     FUNC_LEAVE_NOAPI(ret_value)

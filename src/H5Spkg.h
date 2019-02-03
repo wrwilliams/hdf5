@@ -131,6 +131,7 @@ struct H5S_hyper_span_info_t {
     union {
         struct H5S_hyper_span_info_t *copied;  /* Pointer to already copied span tree */
         hsize_t nelmts;         /* # of elements */
+        hsize_t nblocks;        /* # of blocks */
     }u;
 
     struct H5S_hyper_span_t *head;  /* Pointer to the first span of list of spans in the current dimension */
