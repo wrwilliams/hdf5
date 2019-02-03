@@ -1235,7 +1235,7 @@ H5S__hyper_iter_next_block(H5S_sel_iter_t *iter)
     FUNC_ENTER_STATIC_NOERR
 
     /* Check for the special case of just one H5Sselect_hyperslab call made */
-    /* (i.e. a regular hyperslab selection */
+    /* (i.e. a regular hyperslab selection) */
     if(iter->u.hyp.diminfo_valid) {
         const H5S_hyper_dim_t *tdiminfo;    /* Temporary pointer to diminfo information */
         hsize_t iter_offset[H5S_MAX_RANK];
@@ -4162,6 +4162,7 @@ H5S__get_select_hyper_blocklist(H5S_t *space, hsize_t startblock,
         const H5S_hyper_dim_t *diminfo; /* Alias for dataspace's diminfo information */
         hsize_t tmp_count[H5S_MAX_RANK]; /* Temporary hyperslab counts */
         hsize_t offset[H5S_MAX_RANK];   /* Offset of element in dataspace */
+        hsize_t end[H5S_MAX_RANK];  /* End of elements in dataspace */
         unsigned fast_dim;          /* Rank of the fastest changing dimension for the dataspace */
         unsigned ndims;             /* Rank of the dataspace */
         hbool_t done;               /* Whether we are done with the iteration */
@@ -4190,6 +4191,7 @@ H5S__get_select_hyper_blocklist(H5S_t *space, hsize_t startblock,
         for(u = 0; u < ndims; u++) {
             tmp_count[u] = diminfo[u].count;
             offset[u] = diminfo[u].start;
+            end[u] = diminfo[u].start + (diminfo[u].block - 1);
         } /* end for */
 
         /* We're not done with the iteration */
@@ -4197,31 +4199,45 @@ H5S__get_select_hyper_blocklist(H5S_t *space, hsize_t startblock,
 
         /* Go iterate over the hyperslabs */
         while(!done && numblocks > 0) {
-            hsize_t temp_off;           /* Offset in a given dimension */
+            /* Skip over initial blocks */
+            if(startblock > 0) {
+                /* Skip all blocks in row */
+                if(startblock >= tmp_count[fast_dim]) {
+                    startblock -= tmp_count[fast_dim];
+                    tmp_count[fast_dim] = 0;
+                } /* end if */
+                else {
+                    /* Move the offset to the next sequence to start */
+                    offset[fast_dim] += diminfo[fast_dim].stride * startblock;
+                    end[fast_dim] += diminfo[fast_dim].stride * startblock;
+
+                    /* Decrement the block count */
+                    tmp_count[fast_dim] -= startblock;
+
+                    /* Done with starting blocks */
+                    startblock = 0;
+                } /* end else */
+            } /* end if */
 
             /* Iterate over the blocks in the fastest dimension */
             while(tmp_count[fast_dim] > 0 && numblocks > 0) {
+                /* Sanity check */
+                HDassert(startblock == 0);
 
-                /* Check if we should copy this block information */
-                if(startblock == 0) {
-                    /* Copy the starting location */
-                    HDmemcpy(buf, offset, sizeof(hsize_t) * ndims);
-                    buf += ndims;
+                /* Copy the starting location */
+                HDmemcpy(buf, offset, sizeof(hsize_t) * ndims);
+                buf += ndims;
 
-                    /* Compute the ending location */
-                    HDmemcpy(buf, offset, sizeof(hsize_t) * ndims);
-                    for(u = 0; u < ndims; u++)
-                        buf[u] += (diminfo[u].block - 1);
-                    buf += ndims;
+                /* Compute the ending location */
+                HDmemcpy(buf, end, sizeof(hsize_t) * ndims);
+                buf += ndims;
 
-                    /* Decrement the number of blocks to retrieve */
-                    numblocks--;
-                } /* end if */
-                else
-                    startblock--;
+                /* Decrement the number of blocks to retrieve */
+                numblocks--;
 
                 /* Move the offset to the next sequence to start */
                 offset[fast_dim] += diminfo[fast_dim].stride;
+                end[fast_dim] += diminfo[fast_dim].stride;
 
                 /* Decrement the block count */
                 tmp_count[fast_dim]--;
@@ -4244,23 +4260,24 @@ H5S__get_select_hyper_blocklist(H5S_t *space, hsize_t startblock,
                     if(tmp_count[temp_dim] > 0)
                         break;
 
+                    /* Reset the block count in this dimension */
+                    tmp_count[temp_dim] = diminfo[temp_dim].count;
+
                     /* Check for getting out of iterator */
                     if(temp_dim == 0)
                         done = TRUE;
-
-                    /* Reset the block count in this dimension */
-                    tmp_count[temp_dim] = diminfo[temp_dim].count;
 
                     /* Wrapped a dimension, go up to next dimension */
                     temp_dim--;
                 } /* end while */
             } /* end if */
 
-            /* Re-compute offset array */
-            for(u = 0; u < ndims; u++) {
-                temp_off = diminfo[u].start + diminfo[u].stride * (diminfo[u].count - tmp_count[u]);
-                offset[u] = temp_off;
-            } /* end for */
+            /* Re-compute offset & end arrays */
+            if(!done)
+                for(u = 0; u < ndims; u++) {
+                    offset[u] = diminfo[u].start + diminfo[u].stride * (diminfo[u].count - tmp_count[u]);
+                    end[u] = offset[u] + (diminfo[u].block - 1);
+                } /* end for */
         } /* end while */
     } /* end if */
     else {
