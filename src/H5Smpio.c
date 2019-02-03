@@ -514,7 +514,7 @@ H5S__mpio_permute_type(const H5S_t *space, size_t elmt_size, hsize_t **permute,
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, FAIL, "can't allocate array of displacements")
 
     /* Initialize selection iterator */
-    if(H5S_select_iter_init(&sel_iter, space, elmt_size) < 0)
+    if(H5S_select_iter_init(&sel_iter, space, elmt_size, 0) < 0)
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to initialize selection iterator")
     sel_iter_init = TRUE;	/* Selection iteration info has been initialized */
 
@@ -531,7 +531,7 @@ H5S__mpio_permute_type(const H5S_t *space, size_t elmt_size, hsize_t **permute,
         size_t curr_seq;            /* Current sequence being worked on */
 
         /* Get the sequences of bytes */
-        if(H5S_SELECT_GET_SEQ_LIST(space, 0, &sel_iter, (size_t)H5D_IO_VECTOR_SIZE, max_elem, &nseq, &nelem, off, len) < 0)
+        if(H5S_SELECT_ITER_GET_SEQ_LIST(&sel_iter, (size_t)H5D_IO_VECTOR_SIZE, max_elem, &nseq, &nelem, off, len) < 0)
             HGOTO_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, FAIL, "sequence length generation failed")
 
         /* Loop, while sequences left to process */
@@ -651,7 +651,7 @@ H5S__mpio_reg_hyper_type(const H5S_t *space, size_t elmt_size,
     HDassert(sizeof(MPI_Aint) >= sizeof(elmt_size));
 
     /* Initialize selection iterator */
-    if(H5S_select_iter_init(&sel_iter, space, elmt_size) < 0)
+    if(H5S_select_iter_init(&sel_iter, space, elmt_size, 0) < 0)
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to initialize selection iterator")
     sel_iter_init = TRUE;	/* Selection iteration info has been initialized */
 

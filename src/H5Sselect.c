@@ -215,43 +215,6 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5S_select_get_seq_list
- *
- * Purpose:	Retrieves the next sequence of offset/length pairs for an
- *              iterator on a dataspace
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Tuesday, May 18, 2004
- *
- * Note: This routine participates in the "Inlining C function pointers"
- *      pattern, don't call it directly, use the appropriate macro
- *      defined in H5Sprivate.h.
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5S_select_get_seq_list(const H5S_t *space, unsigned flags,
-    H5S_sel_iter_t *iter, size_t maxseq, size_t maxelmts,
-    size_t *nseq, size_t *nelmts, hsize_t *off, size_t *len)
-{
-    herr_t ret_value = FAIL;    /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT
-
-    HDassert(space);
-
-    /* Call the selection type's get_seq_list function */
-    if((ret_value = (*space->select.type->get_seq_list)(space, flags, iter, maxseq, maxelmts, nseq, nelmts, off, len)) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTGET, FAIL, "unable to get selection sequence list")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-}   /* end H5S_select_get_seq_list() */
-
-
-/*-------------------------------------------------------------------------
  * Function:	H5S_select_serial_size
  *
  * Purpose:	Determines the number of bytes required to store the current
@@ -1068,11 +1031,12 @@ H5S_select_project_simple(const H5S_t *space, H5S_t *new_space, hsize_t *offset)
  PURPOSE
     Initializes iteration information for a selection.
  USAGE
-    herr_t H5S_select_iter_init(sel_iter, space, elmt_size)
+    herr_t H5S_select_iter_init(sel_iter, space, elmt_size, flags)
         H5S_sel_iter_t *sel_iter; OUT: Selection iterator to initialize.
         H5S_t *space;           IN: Dataspace object containing selection to
                                     iterate over
         size_t elmt_size;       IN: Size of elements in the selection
+        unsigned flags;         IN: Flags to control iteration behavior
  RETURNS
      Non-negative on success, negative on failure.
  DESCRIPTION
@@ -1080,7 +1044,8 @@ H5S_select_project_simple(const H5S_t *space, H5S_t *new_space, hsize_t *offset)
     in the dataspace's selection.
 --------------------------------------------------------------------------*/
 herr_t
-H5S_select_iter_init(H5S_sel_iter_t *sel_iter, const H5S_t *space, size_t elmt_size)
+H5S_select_iter_init(H5S_sel_iter_t *sel_iter, const H5S_t *space,
+    size_t elmt_size, unsigned flags)
 {
     herr_t ret_value = FAIL;    /* Return value */
 
@@ -1095,17 +1060,23 @@ H5S_select_iter_init(H5S_sel_iter_t *sel_iter, const H5S_t *space, size_t elmt_s
     /* Save the dataspace's rank */
     sel_iter->rank = space->extent.rank;
 
-    /* Point to the dataspace dimensions, if there are any */
-    if(sel_iter->rank > 0)
-        sel_iter->dims = space->extent.size;
-    else
-        sel_iter->dims = NULL;
+    /* If dims > 0, copy the dataspace dimensions & selection offset */
+    if(sel_iter->rank > 0) {
+        HDmemcpy(sel_iter->dims, space->extent.size, sizeof(hsize_t) * space->extent.rank);
+        HDmemcpy(sel_iter->sel_off, space->select.offset, sizeof(hsize_t) * space->extent.rank);
+    } /* end if */
 
     /* Save the element size */
     sel_iter->elmt_size = elmt_size;
 
+    /* Initialize the number of elements to iterate over */
+    sel_iter->elmt_left = space->select.num_elem;
+
+    /* Set the flags for the iterator */
+    sel_iter->flags = flags;
+
     /* Call initialization routine for selection type */
-    ret_value = (*space->select.type->iter_init)(sel_iter, space);
+    ret_value = (*space->select.type->iter_init)(space, sel_iter);
     HDassert(sel_iter->type);
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1358,6 +1329,43 @@ H5S_select_iter_next_block(H5S_sel_iter_t *iter)
 #endif /* LATER */
 
 
+/*-------------------------------------------------------------------------
+ * Function:	H5S_select_iter_get_seq_list
+ *
+ * Purpose:	Retrieves the next sequence of offset/length pairs for an
+ *              iterator on a dataspace
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *		Tuesday, May 18, 2004
+ *
+ * Note: This routine participates in the "Inlining C function pointers"
+ *      pattern, don't call it directly, use the appropriate macro
+ *      defined in H5Sprivate.h.
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5S_select_iter_get_seq_list(H5S_sel_iter_t *iter, size_t maxseq, size_t maxelmts,
+    size_t *nseq, size_t *nelmts, hsize_t *off, size_t *len)
+{
+    herr_t ret_value = FAIL;    /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    /* Sanity check */
+    HDassert(iter);
+
+    /* Call the selection type's get_seq_list function */
+    if((ret_value = (*iter->type->iter_get_seq_list)(iter, maxseq, maxelmts, nseq, nelmts, off, len)) < 0)
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTGET, FAIL, "unable to get selection sequence list")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+}   /* end H5S_select_iter_get_seq_list() */
+
+
 /*--------------------------------------------------------------------------
  NAME
     H5S_select_iter_release
@@ -1456,7 +1464,7 @@ H5S_select_iterate(void *buf, const H5T_t *type, const H5S_t *space,
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, FAIL, "can't allocate selection iterator")
 
     /* Initialize iterator */
-    if(H5S_select_iter_init(iter, space, elmt_size) < 0)
+    if(H5S_select_iter_init(iter, space, elmt_size, 0) < 0)
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to initialize selection iterator")
     iter_init = TRUE;	/* Selection iteration info has been initialized */
 
@@ -1490,7 +1498,7 @@ H5S_select_iterate(void *buf, const H5T_t *type, const H5S_t *space,
         size_t curr_seq;            /* Current sequence being worked on */
 
         /* Get the sequences of bytes */
-        if(H5S_SELECT_GET_SEQ_LIST(space, 0, iter, (size_t)H5D_IO_VECTOR_SIZE, max_elem, &nseq, &nelem, off, len) < 0)
+        if(H5S_SELECT_ITER_GET_SEQ_LIST(iter, (size_t)H5D_IO_VECTOR_SIZE, max_elem, &nseq, &nelem, off, len) < 0)
             HGOTO_ERROR(H5E_INTERNAL, H5E_UNSUPPORTED, FAIL, "sequence length generation failed")
 
         /* Loop, while sequences left to process */
@@ -1888,10 +1896,10 @@ H5S_select_shape_same(const H5S_t *space1, const H5S_t *space2)
              * that the selection iterator shouldn't be "flattened", since we
              * aren't actually going to be doing I/O with the iterators.
              */
-            if(H5S_select_iter_init(iter_a, space_a, (size_t)0) < 0)
+            if(H5S_select_iter_init(iter_a, space_a, (size_t)0, 0) < 0)
                 HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to initialize selection iterator a")
             iter_a_init = TRUE;
-            if(H5S_select_iter_init(iter_b, space_b, (size_t)0) < 0)
+            if(H5S_select_iter_init(iter_b, space_b, (size_t)0, 0) < 0)
                 HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to initialize selection iterator b")
             iter_b_init = TRUE;
 
@@ -2328,7 +2336,7 @@ H5S_select_fill(const void *fill, size_t fill_size, const H5S_t *space, void *_b
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, FAIL, "can't allocate selection iterator")
 
     /* Initialize iterator */
-    if(H5S_select_iter_init(iter, space, fill_size) < 0)
+    if(H5S_select_iter_init(iter, space, fill_size, 0) < 0)
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to initialize selection iterator")
     iter_init = 1;	/* Selection iteration info has been initialized */
 
@@ -2352,7 +2360,7 @@ H5S_select_fill(const void *fill, size_t fill_size, const H5S_t *space, void *_b
         size_t nelem;               /* Number of elements used in sequences */
 
         /* Get the sequences of bytes */
-        if(H5S_SELECT_GET_SEQ_LIST(space, 0, iter, (size_t)H5D_IO_VECTOR_SIZE, max_elem, &nseq, &nelem, off, len) < 0)
+        if(H5S_SELECT_ITER_GET_SEQ_LIST(iter, (size_t)H5D_IO_VECTOR_SIZE, max_elem, &nseq, &nelem, off, len) < 0)
             HGOTO_ERROR(H5E_INTERNAL, H5E_UNSUPPORTED, FAIL, "sequence length generation failed")
 
         /* Loop over sequences */

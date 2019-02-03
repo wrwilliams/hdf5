@@ -182,10 +182,6 @@ typedef struct {
 /* Selection information methods */
 /* Method to copy a selection */
 typedef herr_t (*H5S_sel_copy_func_t)(H5S_t *dst, const H5S_t *src, hbool_t share_selection);
-/* Method to retrieve a list of offset/length sequences for selection */
-typedef herr_t (*H5S_sel_get_seq_list_func_t)(const H5S_t *space, unsigned flags,
-    H5S_sel_iter_t *iter, size_t maxseq, size_t maxbytes,
-    size_t *nseq, size_t *nbytes, hsize_t *off, size_t *len);
 /* Method to release current selection */
 typedef herr_t (*H5S_sel_release_func_t)(H5S_t *space);
 /* Method to determine if current selection is valid for dataspace */
@@ -219,7 +215,7 @@ typedef herr_t (*H5S_sel_project_scalar)(const H5S_t *space, hsize_t *offset);
 /* Method to construct selection projection onto/into simple dataspace */
 typedef herr_t (*H5S_sel_project_simple)(const H5S_t *space, H5S_t *new_space, hsize_t *offset);
 /* Method to initialize iterator for current selection */
-typedef herr_t (*H5S_sel_iter_init_func_t)(H5S_sel_iter_t *sel_iter, const H5S_t *space);
+typedef herr_t (*H5S_sel_iter_init_func_t)(const H5S_t *space, H5S_sel_iter_t *sel_iter);
 
 /* Selection class information */
 typedef struct {
@@ -227,7 +223,6 @@ typedef struct {
 
     /* Methods */
     H5S_sel_copy_func_t copy;                   /* Method to make a copy of a selection */
-    H5S_sel_get_seq_list_func_t get_seq_list;   /* Method to retrieve a list of offset/length sequences for selection */
     H5S_sel_release_func_t release;             /* Method to release current selection */
     H5S_sel_is_valid_func_t is_valid;           /* Method to determine if current selection is valid for dataspace */
     H5S_sel_serial_size_func_t serial_size;     /* Method to determine number of bytes required to store current selection */
@@ -280,6 +275,10 @@ typedef htri_t (*H5S_sel_iter_has_next_block_func_t)(const H5S_sel_iter_t *iter)
 typedef herr_t (*H5S_sel_iter_next_func_t)(H5S_sel_iter_t *iter, size_t nelem);
 /* Method to move selection iterator to the next block in the selection */
 typedef herr_t (*H5S_sel_iter_next_block_func_t)(H5S_sel_iter_t *iter);
+/* Method to retrieve a list of offset/length sequences for selection iterator */
+typedef herr_t (*H5S_sel_iter_get_seq_list_func_t)(H5S_sel_iter_t *iter,
+    size_t maxseq, size_t maxbytes, size_t *nseq, size_t *nbytes, hsize_t *off,
+    size_t *len);
 /* Method to release iterator for current selection */
 typedef herr_t (*H5S_sel_iter_release_func_t)(H5S_sel_iter_t *iter);
 
@@ -294,6 +293,7 @@ typedef struct H5S_sel_iter_class_t {
     H5S_sel_iter_has_next_block_func_t iter_has_next_block;         /* Method to query if there is another block left in the selection */
     H5S_sel_iter_next_func_t iter_next;         /* Method to move selection iterator to the next element in the selection */
     H5S_sel_iter_next_block_func_t iter_next_block;     /* Method to move selection iterator to the next block in the selection */
+    H5S_sel_iter_get_seq_list_func_t iter_get_seq_list; /* Method to retrieve a list of offset/length sequences for selection iterator */
     H5S_sel_iter_release_func_t iter_release;   /* Method to release iterator for current selection */
 } H5S_sel_iter_class_t;
 
