@@ -132,6 +132,9 @@ struct H5S_hyper_span_info_t {
         struct H5S_hyper_span_info_t *copied;  /* Pointer to already copied span tree */
         hsize_t nelmts;         /* # of elements */
         hsize_t nblocks;        /* # of blocks */
+#ifdef H5_HAVE_PARALLEL
+        MPI_Datatype down_type; /* MPI datatype for span tree */
+#endif  /* H5_HAVE_PARALLEL */
     }u;
 
     struct H5S_hyper_span_t *head;  /* Pointer to the first span of list of spans in the current dimension */
@@ -323,6 +326,7 @@ H5_DLL herr_t H5S_extent_copy_real(H5S_extent_t *dst, const H5S_extent_t *src,
     hbool_t copy_max);
 
 /* Operations on selections */
+H5_DLL uint64_t H5S__hyper_get_op_gen(void);
 H5_DLL void H5S__hyper_rebuild(H5S_t *space);
 H5_DLL herr_t H5S__modify_select(H5S_t *space1, H5S_seloper_t op, H5S_t *space2);
 H5_DLL herr_t H5S__hyper_project_intersection(const H5S_t *src_space,

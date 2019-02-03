@@ -99,7 +99,6 @@ typedef hsize_t hbounds_t;
 #ifdef H5_HAVE_THREADSAFE
 static uint64_t *H5S__hyper_op_gen(void);
 #endif /* H5_HAVE_THREADSAFE */
-static uint64_t H5S__hyper_get_op_gen(void);
 static H5S_hyper_span_t *H5S__hyper_new_span(hsize_t low, hsize_t high,
     H5S_hyper_span_info_t *down, H5S_hyper_span_t *next);
 static H5S_hyper_span_info_t *H5S__hyper_new_span_info(unsigned rank);
@@ -560,12 +559,12 @@ H5S__hyper_op_gen(void)
  *
  *-------------------------------------------------------------------------
  */
-static uint64_t
+uint64_t
 H5S__hyper_get_op_gen(void)
 {
     uint64_t *op_gen = H5S_hyper_get_my_op_gen();  /* Get the pointer to the hyperslab operation generation, for this thread */
 
-    FUNC_ENTER_STATIC_NOERR
+    FUNC_ENTER_PACKAGE_NOERR
 
     /* Check args */
     HDassert(op_gen);
