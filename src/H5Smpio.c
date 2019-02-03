@@ -1202,7 +1202,7 @@ H5S__obtain_datatype(H5S_hyper_span_info_t *spans, const hsize_t *down,
             /* Loop over span nodes */
             outercount = 0;
             while(span) {
-                MPI_Datatype *down_type = NULL;    /* Temporary MPI datatype for a span tree node's children */
+                MPI_Datatype down_type;     /* Temporary MPI datatype for a span tree node's children */
                 hsize_t nelmts;             /* # of elements covered by current span */
 
                 /* Check if we need to increase the size of the buffers */
@@ -1233,7 +1233,7 @@ H5S__obtain_datatype(H5S_hyper_span_info_t *spans, const hsize_t *down,
                 blocklen[outercount]  = 1;
 
                 /* Generate MPI datatype for next dimension down */
-                if(H5S__obtain_datatype(span->down, down + 1, elmt_size, elmt_type, down_type, op_gen) < 0)
+                if(H5S__obtain_datatype(span->down, down + 1, elmt_size, elmt_type, &down_type, op_gen) < 0)
                     HGOTO_ERROR(H5E_DATASPACE, H5E_BADTYPE, FAIL, "couldn't obtain MPI derived data type")
 
                 /* Compute the number of elements to attempt in this span */
@@ -1241,7 +1241,7 @@ H5S__obtain_datatype(H5S_hyper_span_info_t *spans, const hsize_t *down,
 
                 /* Build the MPI datatype for this node */
                 H5_CHECK_OVERFLOW(nelmts, hsize_t, int)
-                if(MPI_SUCCESS != (mpi_code = MPI_Type_create_hvector((int)nelmts, 1, stride, *down_type, &inner_type[outercount])))
+                if(MPI_SUCCESS != (mpi_code = MPI_Type_create_hvector((int)nelmts, 1, stride, down_type, &inner_type[outercount])))
                     HMPI_GOTO_ERROR(FAIL, "MPI_Type_create_hvector failed", mpi_code)
 
                 span = span->next;
